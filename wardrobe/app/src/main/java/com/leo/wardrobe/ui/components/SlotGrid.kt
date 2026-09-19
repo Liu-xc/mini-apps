@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,61 +27,63 @@ import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.ui.theme.editorialColors
+import java.io.File
 
 /**
- * 迷你品类格（it-003，W1 一屏网格）：格内 HorizontalPager 左右滑换衣，
- * 左上品类徽标 + 右上序号，图下当前单品名；空品类为 ＋ 占位。
+ * 着装位卡片（it-005，W1 人体布局）：格内 HorizontalPager 左右滑换衣；
+ * 左上品类徽标、右上序号、卡底名称遮罩条；空品类为 ＋ 占位。
+ * aspect 为宽/高比，由着装位决定（帽近方、上身竖长、下装通栏、鞋扁平）。
  */
 @Composable
 fun SlotCell(
     category: WardrobeCategory,
     items: List<Item>,
     pagerState: PagerState,
-    imageFileOf: (String) -> java.io.File?,
+    imageFileOf: (String) -> File?,
     onCardTap: (Item) -> Unit,
     onAddEmpty: () -> Unit,
     modifier: Modifier = Modifier,
+    aspect: Float = 0.8f,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        if (items.isEmpty()) {
-            Surface(
-                onClick = onAddEmpty,
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.8f),
-            ) {
-                Column(
-                    Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+    Column(modifier = modifier) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(aspect),
+        ) {
+            if (items.isEmpty()) {
+                Surface(
+                    onClick = onAddEmpty,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    Text("＋", style = MaterialTheme.typography.titleMedium, color = editorialColors().inkFaint)
-                    Text(
-                        category.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = editorialColors().inkFaint,
-                    )
+                    Column(
+                        Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text("＋", style = MaterialTheme.typography.titleSmall, color = editorialColors().inkFaint)
+                        Text(
+                            category.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = editorialColors().inkFaint,
+                        )
+                    }
                 }
-            }
-        } else {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.8f),
-            ) {
+            } else {
                 HorizontalPager(
                     state = pagerState,
                     contentPadding = PaddingValues(0.dp),
                     pageSpacing = 0.dp,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp)),
                 ) { page ->
                     val item = items[page]
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onCardTap(item) },
                     ) {
                         PhotoCard(
@@ -114,18 +117,25 @@ fun SlotCell(
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
+                        // 当前单品名（卡底遮罩条）
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(Color(0x8C000000)),
+                        ) {
+                            Text(
+                                items.getOrNull(pagerState.currentPage)?.name ?: "",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                            )
+                        }
                     }
                 }
             }
         }
-        // 当前单品名
-        Text(
-            items.getOrNull(pagerState.currentPage)?.name ?: "",
-            style = MaterialTheme.typography.labelMedium,
-            color = editorialColors().ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 5.dp),
-        )
     }
 }

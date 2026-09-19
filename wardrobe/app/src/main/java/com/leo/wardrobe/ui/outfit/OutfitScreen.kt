@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,10 +16,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Star
@@ -27,7 +26,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -168,46 +166,44 @@ fun OutfitScreen(
                 onAction = onAddItem,
             )
         } else {
-            // 3×3 一屏网格（8 品类格 + 第 9 格添加）；极小屏时允许滚动兜底
+            // it-005 人体着装位布局：中轴（帽→上身→下装→鞋）+ 两侧挂件（包/配饰）
             Column(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 14.dp),
+                    .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                (0..2).forEach { row ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        (0..2).forEach { col ->
-                            val index = row * 3 + col
-                            when {
-                                index < WardrobeCategory.entries.size -> {
-                                    val category = WardrobeCategory.entries[index]
-                                    SlotCell(
-                                        category = category,
-                                        items = catItems[category].orEmpty(),
-                                        pagerState = pagerStates[category] ?: PlaceholderPager(),
-                                        imageFileOf = vm::imageFileOf,
-                                        onCardTap = { onOpenItem(it.id) },
-                                        onAddEmpty = onAddItem,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                                index == WardrobeCategory.entries.size -> AddCell(
-                                    onAdd = onAddItem,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                else -> Spacer(Modifier.weight(1f))
-                            }
-                        }
-                    }
+                // 头：帽子（小卡居中）
+                OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    Modifier.fillMaxWidth(0.38f), aspect = 1f)
+                Spacer(Modifier.height(8.dp))
+                // 上身行：包(左挂) | 外套 | 上装 | 连衣裙 | 配饰(右挂)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(0.78f))
+                    OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(1f))
+                    OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(1f))
+                    OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(1f))
+                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(0.78f))
                 }
+                Spacer(Modifier.height(8.dp))
+                // 腿：下装（通栏长卡）
+                OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    Modifier.fillMaxWidth(), aspect = 1.9f)
+                Spacer(Modifier.height(8.dp))
+                // 脚：鞋（扁平通栏）
+                OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    Modifier.fillMaxWidth(0.82f), aspect = 2.1f)
             }
         }
 
@@ -262,40 +258,27 @@ fun OutfitScreen(
 @Composable
 private fun PlaceholderPager(): PagerState = rememberPagerState(pageCount = { 0 })
 
-/** 第 9 格：＋ 添加衣物 */
+/** 人体布局的着装位卡片（it-005） */
 @Composable
-private fun AddCell(onAdd: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            onClick = onAdd,
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                editorialColors().hairline,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(0.8f),
-        ) {
-            Column(
-                Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    Icons.Rounded.Add,
-                    contentDescription = null,
-                    tint = editorialColors().accent,
-                )
-                Text(
-                    "添加衣物",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = editorialColors().inkFaint,
-                )
-            }
-        }
-        Spacer(Modifier.padding(top = 5.dp))
-        Text("", style = MaterialTheme.typography.labelMedium)
-    }
+private fun OutfitSlot(
+    category: WardrobeCategory,
+    catItems: Map<WardrobeCategory, List<Item>>,
+    pagerStates: Map<WardrobeCategory, PagerState>,
+    vm: AppViewModel,
+    onOpenItem: (String) -> Unit,
+    onAddItem: () -> Unit,
+    modifier: Modifier = Modifier,
+    aspect: Float = 0.8f,
+) {
+    SlotCell(
+        category = category,
+        items = catItems[category].orEmpty(),
+        pagerState = pagerStates[category] ?: PlaceholderPager(),
+        imageFileOf = vm::imageFileOf,
+        onCardTap = { onOpenItem(it.id) },
+        onAddEmpty = onAddItem,
+        modifier = modifier,
+        aspect = aspect,
+    )
 }
+
