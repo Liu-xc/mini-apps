@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Android / Gradle
+*.apk.unaligned
+*.aab
+.cxx/
+local.properties
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.cursor/
+
+# Kotlin
+*.kotlin_metadata
+
+# Logs
+*.log
