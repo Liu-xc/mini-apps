@@ -61,7 +61,8 @@ fun ItemEditScreen(
     val data by vm.data.collectAsState()
     val existing = remember(itemId, data) { itemId?.let { data.itemById(it) } }
 
-    var photoUri by remember { mutableStateOf<String?>(null) }
+    var importedFile by remember { mutableStateOf<String?>(null) } // 选择后立即导入落盘的文件名
+    var importing by remember { mutableStateOf(false) }
     var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
     var category by remember(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
     var color by remember(existing?.id) { mutableStateOf(existing?.color ?: "") }
@@ -71,12 +72,18 @@ fun ItemEditScreen(
 
     val pickPhoto = rememberPhotoPicker { uri ->
         if (uri != null) {
-            photoUri = uri.toString()
-            photoMissing = false
+            importing = true
+            vm.importPhoto(uri) { file ->
+                importing = false
+                if (file != null) {
+                    importedFile = file
+                    photoMissing = false
+                }
+            }
         }
     }
 
-    val hasPhoto = photoUri != null || existing != null
+    val hasPhoto = importedFile != null || existing != null
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -92,7 +99,7 @@ fun ItemEditScreen(
                         if (!hasPhoto) {
                             photoMissing = true
                         } else {
-                            vm.saveItem(existing, photoUri, name, category, color, desc, tags) { ok ->
+                            vm.saveItem(existing, importedFile, name, category, color, desc, tags) { ok ->
                                 if (ok) onBack()
                             }
                         }
@@ -110,10 +117,10 @@ fun ItemEditScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // 照片预览 + 选择入口
-            if (photoUri != null) {
+            // 照片预览（已落盘的本地文件）
+            if (importedFile != null) {
                 PhotoCard(
-                    file = android.net.Uri.parse(photoUri),
+                    file = vm.imageFileOf(importedFile!!),
                     contentDescription = "新照片预览",
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,7 +156,11 @@ fun ItemEditScreen(
                         tint = editorialColors().inkFaint,
                     )
                     Text(
-                        if (hasPhoto) "点击更换照片（必填）" else "📷 从相册选择照片（必填）",
+                        when {
+                            importing -> "正在导入照片…"
+                            hasPhoto -> "点击更换照片（必填）"
+                            else -> "📷 从相册选择照片（必填）"
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = editorialColors().ink,
                     )

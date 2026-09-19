@@ -1,4 +1,4 @@
-package com.leo.wardrobe.data.image
+package com.leo.eats.data.image
 
 import android.content.ContentResolver
 import android.content.Context
@@ -8,43 +8,34 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
-import com.leo.wardrobe.domain.model.newId
-import com.leo.wardrobe.domain.repository.ImageStore
+import com.leo.eats.domain.model.newId
+import com.leo.eats.domain.repository.ImageStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * 图片文件存储：所有照片（单品/成品图）统一存为 images 目录下的 WebP，
- * 导入时 EXIF 摆正 + 最长边压至 1440 + 质量 82（specs/03-data-model.md）。
+ * 图片文件存储：门面/菜品/Visit 照片统一存为 images 目录下的 WebP，
+ * 导入时 EXIF 摆正 + 最长边压至 1440 + 质量 82（specs/03-data-model.md，与 wardrobe 同参）。
  */
 class ImageFileStore(
     context: Context,
     private val resolver: ContentResolver = context.contentResolver,
 ) : ImageStore {
 
-    private val filesRoot = context.filesDir
-    private val dir = File(filesRoot, "images").apply { mkdirs() }
-
-    /** 合成图等导出临时文件目录（FileProvider export 路径） */
-    fun exportDir(): File = File(filesRoot, "export").apply { mkdirs() }
+    private val dir = File(context.filesDir, "images").apply { mkdirs() }
 
     override suspend fun importFromUri(uri: String): String? = withContext(Dispatchers.IO) {
         runCatching {
-            val bitmap = decodeScaled(Uri.parse(uri)) ?: run {
-                android.util.Log.e(TAG, "decode failed: open/decode/bounds 阶段返回空 uri=$uri")
-                return@runCatching null
-            }
+            val bitmap = decodeScaled(Uri.parse(uri)) ?: return@runCatching null
             val name = "${newId()}.webp"
             val out = File(dir, name)
             out.outputStream().use { fos ->
                 val ok = compressWebp(bitmap, fos)
-                if (!ok) android.util.Log.e(TAG, "webp compress returned false")
                 bitmap.recycle()
                 if (ok) name else null
             }
-        }.onFailure { android.util.Log.e(TAG, "importFromUri 异常 uri=$uri", it) }
-            .getOrNull()
+        }.getOrNull()
     }
 
     override fun file(file: String): File = File(dir, file)
@@ -52,11 +43,6 @@ class ImageFileStore(
     override suspend fun delete(file: String) = withContext(Dispatchers.IO) {
         File(dir, file).delete()
         Unit
-    }
-
-    /** 读取存储位图（UI/合成图用；失败返回 null） */
-    suspend fun decode(file: String): Bitmap? = withContext(Dispatchers.IO) {
-        runCatching { BitmapFactory.decodeFile(File(dir, file).absolutePath) }.getOrNull()
     }
 
     private fun compressWebp(bitmap: Bitmap, out: java.io.OutputStream): Boolean =
@@ -68,18 +54,9 @@ class ImageFileStore(
         }
 
     private fun decodeScaled(uri: Uri): Bitmap? {
-        // 第一遍：只量尺寸（inJustDecodeBounds 模式下 decodeStream 按设计返回 null，
-        // 返回值不可当失败信号——hotfix it-002+1 修复的根因，判断依据是 bounds 尺寸）
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        val stream = resolver.openInputStream(uri) ?: run {
-            android.util.Log.e(TAG, "openInputStream 为 null uri=$uri")
-            return null
-        }
-        stream.use { BitmapFactory.decodeStream(it, null, bounds) }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            android.util.Log.e(TAG, "尺寸解析失败（格式不支持?）w=${bounds.outWidth} h=${bounds.outHeight} uri=$uri")
-            return null
-        }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) } ?: return null
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_SIDE) sample *= 2
@@ -126,6 +103,5 @@ class ImageFileStore(
     companion object {
         const val MAX_SIDE = 1440
         const val QUALITY = 82
-        private const val TAG = "Wardrobe"
     }
 }

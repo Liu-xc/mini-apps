@@ -1,0 +1,330 @@
+package com.leo.eats.ui.detail
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.leo.eats.domain.model.Visit
+import com.leo.eats.domain.model.statsOf
+import com.leo.eats.domain.model.visitsOf
+import com.leo.eats.ui.AppViewModel
+import com.leo.eats.ui.components.KindChip
+import com.leo.eats.ui.components.LinkChips
+import com.leo.eats.ui.components.PhotoStrip
+import com.leo.eats.ui.components.RatingStars
+import com.leo.eats.ui.components.RelativeTimeText
+import com.leo.eats.ui.components.TagRow
+import com.leo.eats.ui.components.formatVisitTime
+import com.leo.eats.ui.components.label
+import com.leo.eats.ui.theme.menuColors
+import com.leo.eats.ui.visit.LogVisitSheet
+import java.io.File
+
+/**
+ * W5 详情（US-06）：基本信息 + 派生统计 + 照片 + 链接跳转 + Visit 时间线（倒序可删）。
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun PlaceDetailScreen(
+    vm: AppViewModel,
+    placeId: String,
+    onBack: () -> Unit,
+    onEdit: (String) -> Unit,
+    onShowOnMap: (String) -> Unit,
+) {
+    val data by vm.data.collectAsState()
+    val stats = remember(data, placeId) { data.statsOf(placeId) }
+    val visits = remember(data, placeId) { data.visitsOf(placeId) }
+    val place = stats.place
+
+    var showLogVisit by remember { mutableStateOf(false) }
+    var deleteVisitTarget by remember { mutableStateOf<Visit?>(null) }
+
+    LaunchedEffect(data, placeId) {
+        if (data.places.none { it.id == placeId }) onBack()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(place.name) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onEdit(place.id) }) {
+                        Icon(Icons.Rounded.Edit, contentDescription = "编辑")
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+        ) {
+            // 标题区
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    place.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = menuColors().ink,
+                )
+                KindChip(place.kind)
+            }
+            if (place.cuisine.isNotBlank()) {
+                Text(
+                    place.cuisine,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = menuColors().inkFaint,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+
+            // 派生统计（ADR-008）
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RatingStars(rating = place.rating, size = 16.dp)
+                Text("·", color = menuColors().inkFaint)
+                Text("上次 ", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                RelativeTimeText(at = stats.lastVisitAt, highlight = true)
+                Text("·", color = menuColors().inkFaint)
+                Text(
+                    "共 ${stats.visitCount} 次",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = menuColors().inkFaint,
+                )
+                if (stats.avgVisitRating != null) {
+                    Text("·", color = menuColors().inkFaint)
+                    Text(
+                        "均分 %.1f".format(stats.avgVisitRating),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = menuColors().accent,
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+
+            // 地址与地图跳转
+            if (place.located || place.address.isNotBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        tint = menuColors().inkFaint,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        place.address.ifBlank { "已定位（无地址文本）" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = menuColors().inkFaint,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (place.located) {
+                        TextButton(onClick = { onShowOnMap(place.id) }) { Text("在地图上看 ↗") }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (place.tags.isNotEmpty()) {
+                TagRow(place.tags)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            PhotoStrip(models = place.photos.map { vm.imageFileOf(it) })
+            Spacer(Modifier.height(8.dp))
+
+            LinkChips(
+                links = place.links,
+                onOpen = { url -> vm.linkOpener.open(url) { vm.toast("没有可打开该链接的应用") } },
+            )
+            if (place.links.isNotEmpty()) Spacer(Modifier.height(8.dp))
+
+            if (place.notes.isNotBlank()) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        place.notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = menuColors().ink,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // 主操作（US-03）
+            Button(
+                onClick = { showLogVisit = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) { Text("＋ 记一笔今天吃了") }
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = menuColors().hairline)
+            Spacer(Modifier.height(12.dp))
+
+            // Visit 时间线（倒序）
+            Text(
+                "吃过记录 (${visits.size})",
+                style = MaterialTheme.typography.titleMedium,
+                color = menuColors().ink,
+            )
+            Spacer(Modifier.height(6.dp))
+            if (visits.isEmpty()) {
+                Text(
+                    "还没吃过，记第一笔吧",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = menuColors().inkFaint,
+                )
+            }
+            visits.forEach { v ->
+                VisitCard(
+                    visit = v,
+                    fileOf = { vm.imageFileOf(it) },
+                    onDelete = { deleteVisitTarget = v },
+                )
+            }
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    if (showLogVisit) {
+        LogVisitSheet(
+            vm = vm,
+            placeName = place.name,
+            onLog = { at, rating, cost, text, uris ->
+                vm.logVisit(place.id, at, rating, cost, text, uris) { showLogVisit = false }
+            },
+            onDismiss = { showLogVisit = false },
+        )
+    }
+
+    deleteVisitTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteVisitTarget = null },
+            title = { Text("删除这条记录？") },
+            text = { Text("${formatVisitTime(target.at)} 的记录及其照片将被删除。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteVisit(target.id)
+                    deleteVisitTarget = null
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteVisitTarget = null }) { Text("取消") } },
+        )
+    }
+}
+
+@Composable
+private fun VisitCard(visit: Visit, fileOf: (String) -> File?, onDelete: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = menuColors().surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    formatVisitTime(visit.at),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = menuColors().ink,
+                )
+                Spacer(Modifier.width(8.dp))
+                RatingStars(rating = visit.rating, size = 13.dp)
+                Spacer(Modifier.weight(1f))
+                if (visit.cost != null) {
+                    Text(
+                        "¥" + visit.cost.toString().removeSuffix(".0"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = menuColors().inkFaint,
+                    )
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "删除这条记录",
+                        tint = menuColors().inkFaint,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            if (visit.text.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    visit.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = menuColors().ink,
+                )
+            }
+            if (visit.photos.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(visit.photos) { photo ->
+                        fileOf(photo)?.let { f ->
+                            AsyncImage(
+                                model = f,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(width = 88.dp, height = 66.dp)
+                                    .clip(MaterialTheme.shapes.small),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

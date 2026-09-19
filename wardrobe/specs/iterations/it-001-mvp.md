@@ -68,6 +68,11 @@ US-01 ~ US-14 全部（见 [01-user-stories.md](../01-user-stories.md)），NFR-
 2. Kotlin 块注释嵌套陷阱：注释文本含 `images/*.webp`，`/*` 开启嵌套注释导致「Unclosed comment」——glob 写法已从注释中清除。
 3. material3 1.4.0 稳定版 Expressive API 仍为 internal（ADR-004 已改判），空状态动画由 Lottie 改为自绘 Canvas 衣架摇摆（观感等价、零资产依赖）。
 
+**后补 hotfix（2026-09-20，用户真机反馈「保存服装失败」）**
+4. **【根因】BitmapFactory bounds 模式返回值误用（W4 添加自 it-001 起必现失败）**：`inJustDecodeBounds=true` 时 `decodeStream` 按设计恒返回 null，原代码 `stream?.use{decodeStream(...)} ?: return null` 把它当失败信号 → 任何照片导入必然失败。it-001 模拟器验证时该链路未实测（当时 adb 输入名称失败致按钮禁用，未触达导入），真机首次使用即暴露。修复：bounds 阶段忽略 decodeStream 返回值、以 `bounds.outWidth/Height` 判定。QA AVD 全流程实测：选图→即时导入→保存→列表/搭配页联动 ✓。
+5. **导入时机前移**：改为选中照片瞬间即导入落盘（原为点保存时才读 URI，存在转屏/进程重建/部分 ROM 授权过期的失败窗口）。
+6. **可观测性**：导入/保存各失败分支打 Log("Wardrobe") + 细分 toast；saveItem 协程异常兜底（防崩溃）。
+
 **遗留（真机验收项 / 后续迭代）**
 - [ ] 真机：Photo Picker 实际选图导入（W4）、成品图录入（W6/W7）、剪贴板图片粘贴到生图 Agent、分享面板
 - [ ] 真机：返回键关闭 ModalBottomSheet（模拟器 keyevent 未生效，遮罩点击可关）

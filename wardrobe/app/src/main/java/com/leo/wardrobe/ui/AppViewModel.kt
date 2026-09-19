@@ -110,35 +110,52 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- Item ----
-    fun saveItem(existing: Item?, photoUri: String?, name: String, category: WardrobeCategory,
+
+    /**
+     * 选中照片后立即导入落盘（hotfix it-002+1）：
+     * Photo Picker 的 URI 授权可能随转屏/进程重建/部分 ROM 策略失效，
+     * 若拖到点「保存」才导入会静默失败。改为选择瞬间导入，保存时只用本地文件。
+     */
+    fun importPhoto(uri: android.net.Uri, onDone: (String?) -> Unit) {
+        viewModelScope.launch {
+            val file = container.imageStore.importFromUri(uri.toString())
+            if (file == null) toast("照片导入失败：无法读取该图片（可换个相册里的普通照片试试）")
+            onDone(file)
+        }
+    }
+
+    /** photoFile 为已落盘的图片文件名（选择时即导入）；编辑时为 null 表示沿用旧照片 */
+    fun saveItem(existing: Item?, photoFile: String?, name: String, category: WardrobeCategory,
                  color: String, desc: String, tags: List<String>, onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val person = currentPerson.value ?: repo.ensureDefaultPerson()
-            val file = when {
-                photoUri != null -> container.imageStore.importFromUri(photoUri)
-                existing != null -> existing.imageFile
-                else -> null
+            try {
+                val person = currentPerson.value ?: repo.ensureDefaultPerson()
+                val file = photoFile ?: existing?.imageFile
+                if (file == null) { toast("请先选择照片"); onDone(false); return@launch }
+                val item = Item(
+                    id = existing?.id ?: newId(),
+                    personId = existing?.personId ?: person.id,
+                    category = category,
+                    name = name.trim().ifEmpty { category.label },
+                    color = color.trim(),
+                    desc = desc.trim(),
+                    imageFile = file,
+                    tags = tags.distinct().take(10),
+                    createdAt = existing?.createdAt ?: System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis(),
+                )
+                repo.upsertItem(item)
+                // 新照片替换旧照片时删除旧文件
+                if (existing != null && photoFile != null && existing.imageFile != file) {
+                    container.imageStore.delete(existing.imageFile)
+                }
+                toast(if (existing == null) "已添加「${item.name}」" else "已更新「${item.name}」")
+                onDone(true)
+            } catch (t: Throwable) {
+                android.util.Log.e("Wardrobe", "saveItem failed", t)
+                toast("保存失败：${t.message ?: t.javaClass.simpleName}")
+                onDone(false)
             }
-            if (file == null) { toast("照片保存失败"); onDone(false); return@launch }
-            val item = Item(
-                id = existing?.id ?: newId(),
-                personId = existing?.personId ?: person.id,
-                category = category,
-                name = name.trim().ifEmpty { category.label },
-                color = color.trim(),
-                desc = desc.trim(),
-                imageFile = file,
-                tags = tags.distinct().take(10),
-                createdAt = existing?.createdAt ?: System.currentTimeMillis(),
-                updatedAt = System.currentTimeMillis(),
-            )
-            repo.upsertItem(item)
-            // 新照片替换旧照片时删除旧文件
-            if (existing != null && photoUri != null && existing.imageFile != file) {
-                container.imageStore.delete(existing.imageFile)
-            }
-            toast(if (existing == null) "已添加「${item.name}」" else "已更新「${item.name}」")
-            onDone(true)
         }
     }
 
