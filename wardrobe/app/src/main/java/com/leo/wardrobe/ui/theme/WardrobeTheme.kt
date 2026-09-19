@@ -3,6 +3,7 @@ package com.leo.wardrobe.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -41,6 +42,10 @@ fun WardrobeTheme(
         darkColorScheme(
             primary = WardrobePalette.AccentDark,
             onPrimary = WardrobePalette.PaperDark,
+            primaryContainer = Color(0xFF5A2A1E),
+            onPrimaryContainer = Color(0xFFF6E3DC),
+            secondaryContainer = Color(0xFF2C2926),
+            onSecondaryContainer = Color(0xFFD8D2C7),
             background = WardrobePalette.PaperDark,
             onBackground = WardrobePalette.InkDark,
             surface = WardrobePalette.SurfaceDark,
@@ -55,6 +60,10 @@ fun WardrobeTheme(
         lightColorScheme(
             primary = WardrobePalette.Accent,
             onPrimary = WardrobePalette.Paper,
+            primaryContainer = Color(0xFFF6E3DC),
+            onPrimaryContainer = Color(0xFF7A2E1D),
+            secondaryContainer = Color(0xFFEFE9DF),
+            onSecondaryContainer = Color(0xFF4A463F),
             background = WardrobePalette.Paper,
             onBackground = WardrobePalette.Ink,
             surface = WardrobePalette.SurfaceLight,

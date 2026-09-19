@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -74,6 +75,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setSlot(category: WardrobeCategory, itemId: String?) {
         val person = currentPerson.value ?: return
         viewModelScope.launch { prefs.saveSlotSelection(person.id, category, itemId) }
+    }
+
+    /** 组合记忆首值（恢复槽位用）：等待 DataStore 首个值，避免与 pager 初始化竞态 */
+    suspend fun firstSlotSelection(personId: String?, category: WardrobeCategory): String? {
+        if (personId == null) return null
+        return prefs.slotSelections(personId).firstOrNull()?.get(category.name)
     }
 
     // ---- Person ----

@@ -210,10 +210,11 @@ fun OutfitThumb(
 
 @Composable
 private fun ThumbCell(file: File?, modifier: Modifier = Modifier) {
+    // 0.86 = 成品图卡 aspectRatio，让拼贴总高与成品图卡对齐
     if (file == null) {
         Box(
             modifier
-                .aspectRatio(1f)
+                .aspectRatio(0.86f)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         )
         return
@@ -222,6 +223,6 @@ private fun ThumbCell(file: File?, modifier: Modifier = Modifier) {
         model = file,
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        modifier = modifier.aspectRatio(1f),
+        modifier = modifier.aspectRatio(0.86f),
     )
 }

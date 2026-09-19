@@ -5,6 +5,7 @@
 | 应用 | 目录 | 说明 | 状态 |
 |---|---|---|---|
 | 衣橱 | [`wardrobe/`](wardrobe/) | 安卓原生应用：多角色衣橱管理、滑动组合穿搭、导出生图素材给 AI 生图 Agent、成品效果图回录与单品双向关联 | 开发中 (it-001) |
+| 吃啥 | [`eats/`](eats/) | 安卓原生应用：堂食/外卖/自做三类吃饭记录，地图标记 + 最近一次追踪 + 转盘快速决策 | 提案中 (it-001) |
 
 ## 仓库约定
 
@@ -15,4 +16,4 @@
 
 ## 环境要求
 
-- 衣橱（安卓应用）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见 [wardrobe/README.md](wardrobe/README.md)。
+- 安卓应用（衣橱、吃啥）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见各应用目录的 README：[wardrobe/README.md](wardrobe/README.md)、[eats/README.md](eats/README.md)。

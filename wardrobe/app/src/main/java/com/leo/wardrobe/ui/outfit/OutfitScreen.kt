@@ -77,12 +77,14 @@ fun OutfitScreen(
             return@forEach
         }
         key(items.map { it.id }) {
-            val initial = items.indexOfFirst { it.id == slotSel[category.name] }
-                .let { if (it >= 0) it else 0 }
-            val state = rememberPagerState(initialPage = initial, pageCount = { items.size })
+            val state = rememberPagerState(initialPage = 0, pageCount = { items.size })
             LaunchedEffect(state) { pagerStates[category] = state }
-            // 翻页落定 → 持久化组合记忆（US-06）
+            // 组合记忆（US-06）：先等待 DataStore 首值并 snap 恢复，再开始持久化翻页——
+            // 顺序执行消除竞态（否则 page0 的首次持久化会覆盖记忆）
             LaunchedEffect(state, items) {
+                val saved = vm.firstSlotSelection(personId, category)
+                val idx = items.indexOfFirst { it.id == saved }
+                if (idx > 0) state.scrollToPage(idx)
                 snapshotFlow { state.settledPage }.collect { page ->
                     items.getOrNull(page)?.let { vm.setSlot(category, it.id) }
                 }

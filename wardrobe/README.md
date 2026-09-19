@@ -9,7 +9,7 @@
 ```bash
 # 首次：确保 JDK 17 与 Android SDK(platform 35) 可用，local.properties 指向 SDK
 ./gradlew assembleDebug
-# 产物: app/build/outputs/apk/debug/app-debug.apk
+# 产物: app/build/outputs/apk/debug/app-debug.apk（当前版本 it-001，2026-09-19 构建）
 ```
 
 安装到连接的设备：`./gradlew installDebug` 或 `adb install -r app/build/outputs/apk/debug/app-debug.apk`。
