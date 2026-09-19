@@ -53,7 +53,12 @@ fun LocationPickerSheet(
         skipPartiallyExpanded = true,
     )
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        Column(Modifier.padding(horizontal = 20.dp)) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .height(600.dp),
+        ) {
             Text("选择位置", style = MaterialTheme.typography.titleLarge)
             Text(
                 "长按地图放置标记",
@@ -64,7 +69,7 @@ fun LocationPickerSheet(
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(360.dp),
+                    .weight(1f),
             ) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -110,12 +115,14 @@ fun LocationPickerSheet(
                 Button(
                     onClick = { pin?.let(onConfirm) },
                     enabled = pin != null,
+                    modifier = Modifier.height(48.dp),
                 ) { Text("确认选点") }
             }
         }
     }
 
-    // MapView 生命周期跟随组合（onResume/onPause），离开时释放
+    // MapView 生命周期跟随组合；宿主已处于 RESUMED 时（弹层中途打开是常态）
+    // 立即补 onResume，否则 osmdroid 瓦片线程不启动、地图空白
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(map, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -126,6 +133,9 @@ fun LocationPickerSheet(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            map?.onResume()
+        }
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
             map?.onPause()

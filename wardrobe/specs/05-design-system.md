@@ -40,7 +40,7 @@
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
-| 1 | 槽位轮播 | HorizontalPager + `graphicsLayer`：`pagerState.currentPageOffsetFraction` 驱动两侧卡片 scale(1→0.86)/alpha(1→0.5)，照片轻微视差 | W1 |
+| 1 | 槽位轮播 | ~~HorizontalPager + graphicsLayer 缩放形变~~ → it-003 起为 3×3 迷你格内 HorizontalPager（吸附换衣保留；迷你尺寸下取消缩放/透明形变） | W1 |
 | 2 | 🎲 老虎机 | 逐槽位 `animateScrollToPage` 随机目标，槽间 100ms stagger，落定 spring 轻弹（scale 1→1.03→1） | W1 |
 | 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图、穿搭格→W7 成品图，无缝放大 | W1→W5、W8→W7 |
 | 4 | 复制成功 | 按钮内容 AnimatedContent morph 成 ✓，同时 Canvas 自绘彩屑粒子（15-20 粒，砖红/墨黑/米白三色，重力下落 600ms） | W6 |

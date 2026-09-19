@@ -13,7 +13,7 @@
 │ data/      Repository 实现、JSON 存储、图片  │  实现 domain 接口
 ├───────────────────────────────────────────┤
 │ map/       osmdroid 封装（MapView 生命周期、 │  Android 专用；marker/选点/瓦片缓存
-│            marker 工厂、选点控制器）         │
+│            marker 工厂、选点、瓦片源）        │
 ├───────────────────────────────────────────┤
 │ platform/  系统交互门面（LinkOpener 等）     │  Android 专用；UI 不直接碰 Intent
 └───────────────────────────────────────────┘
@@ -39,6 +39,7 @@ com.leo.eats/
 │  └─ image/ImageFileStore.kt     # URI→WebP 压缩落盘 / 删除
 ├─ map/
 │  ├─ MapController.kt            # MapView 生命周期 / 瓦片缓存
+│  ├─ ChinaTileSource.kt          # 高德栅格瓦片源（ADR-002 修订，国内可达）
 │  ├─ PlaceMarkerFactory.kt       # 类型 → 颜色 / 图标
 │  └─ PickLocationController.kt   # 长按选点
 ├─ platform/

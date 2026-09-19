@@ -108,9 +108,9 @@ fun MapScreen(
         }
         vm.consumeMapFocus()    }
 
-    // MapView 生命周期跟随组合
+    // MapView 生命周期跟随组合；宿主已 RESUMED 时立即补 onResume（瓦片线程启动）
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(map, lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> map?.onResume()
@@ -119,7 +119,13 @@ fun MapScreen(
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            map?.onResume()
+        }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            map?.onPause()
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
