@@ -2,11 +2,11 @@
 
 > 每条决策：背景 → 决策 → 理由 → 后果。不可逆或影响深远的决策必须在此登记。
 
-## ADR-001 Compose Multiplatform 一套代码双端（而非双原生 / Flutter）
-- **背景**：用户要求 Mac + Android 双端同款应用；开发者已有 Compose（wardrobe）经验。
-- **决策**：Kotlin + Compose Multiplatform，`composeApp` 单模块（commonMain/androidMain/desktopMain）；domain/data/UI 共享，平台能力走 `platform/` 接口。版本在脚手架落地时锁定并回填于此。
-- **理由**：复用既有 Compose 技能与 wardrobe 验证过的 JSON 存储/SSOT/手动 DI 模式；一套 UI 两端。双原生（SwiftUI + Compose）维护成本翻倍；Flutter/Dart 零积累且桌面端手感需另起炉灶。
-- **后果**：Mac 侧为 JVM 常驻（内存 ~200MB 级、冷启动较原生慢），对菜单栏工具是真实代价，接受；若日后不可接受，commonMain 的 domain/data 可原样迁入原生壳，UI 重写。
+## ADR-001 双端分开原生实现：Android Kotlin/Compose + macOS SwiftUI（否决 Compose Multiplatform）
+- **背景**：提案初版（2026-09-20）为 CMP 一套代码双端；用户随后定调「分开实现，双端功能不必一致」。且菜单栏工具对常驻内存与呼出速度敏感，JVM 常驻（~200MB 级）本就是 CMP 方案的最大软肋。
+- **决策**：`clips/` 下两个独立工程——`android/`（Kotlin + Compose，与 wardrobe 完全同栈，直接复用其分层/JSON 存储/SSOT/手动 DI 模式）与 `mac/`（SwiftUI + AppKit 原生菜单栏应用）。共享层只有 specs 文档与 clips.json 数据契约（ADR-009），不共享代码。
+- **理由**：各端用最顺手的原生栈——Mac 原生常驻约 30MB、毫秒级呼出，热键/自动粘贴/开机自启是系统一等公民；Android 复用既有栈与经验。双端功能本就受平台限制不对称（ADR-003），强行一套代码会被两端的最小公分母拖累。
+- **后果**：去重/淘汰/类型启发式等核心逻辑实现两份（Kotlin/Swift），靠「同一份 03-data-model + 双端同一组单测用例」防漂移；放弃跨端代码复用红利。
 
 ## ADR-002 v1 仅文本类剪贴（不含图片/文件）
 - **背景**：图片剪贴（截图等）是 Mac 刚需之一，但引入图片文件管理、容量、缩略图一整套复杂度，与本应用「低存储」的初衷相悖。
@@ -25,11 +25,11 @@
 - **理由**：可整文件备份/导入导出；零迁移框架；模式已在 wardrobe 验证（其 ADR-002）。
 - **后果**：全量读写（文件常态 <100KB，性能无虞）。
 
-## ADR-005 Mac 全局热键与自动粘贴的实现选型
-- **背景**：需要全局 ⌘⇧V 与「选中后自动 ⌘V 粘贴到原应用」。
-- **决策**：热键用 `com.github.kwhat:jnativehook`（JVM 全局键鼠监听）；自动粘贴用 `osascript` 发送 System Events 按键；默认关闭，开启时引导授予「辅助功能」权限；权限缺失/发送失败一律降级为「仅复制」并提示一次。
-- **理由**：两者均可从 JVM 直接调用，无需原生桥；降级路径保证无任何权限也能完整使用核心功能。
-- **后果**：自动粘贴依赖系统安全授权（macOS 现实如此）；jnativehook 为新增第三方依赖（版本随脚手架锁定记录于构建脚本）。
+## ADR-005 Mac 原生机制选型：changeCount 轮询 + Carbon 热键 + CGEvent 自动粘贴
+- **背景**：需要后台感知剪贴板变化、全局 ⌘⇧V、可选「选中后自动 ⌘V 粘贴到原应用」。
+- **决策**：捕获 = Timer 轮询 `NSPasteboard.general.changeCount`（~0.8s）；热键 = Carbon `RegisterEventHotKey`；自动粘贴 = Accessibility/CGEvent 发送 ⌘V，默认关闭，开启时引导授予「辅助功能」权限，权限缺失/失败一律降级为「仅复制」并提示一次；开机自启 = `SMAppService`（macOS 13+）。
+- **理由**：全部为系统原生 API，零第三方依赖；降级路径保证无任何授权也能完整使用核心功能。
+- **后果**：自动粘贴依赖系统安全授权（macOS 现实如此）；Carbon API 虽标记 deprecated 但仍是标准途径（Maccy 等同源），若未来被移除再迁移社区 HotKey 包。
 
 ## ADR-006 双端数据互不同步（v1）
 - **背景**：两台设备各有独立历史即可满足核心诉求；任何同步通道（云/飞书/局域网）都与「无网络权限」的隐私承诺冲突。
@@ -44,5 +44,11 @@
 
 ## ADR-008 命名：目录 clips / 应用名「剪贴盒」/ 包名 com.leo.clips
 - **背景**：仓库一应用一目录，命名需与 wardrobe 的约定对齐。
-- **决策**：目录 `clips/`，中文名「剪贴盒」，包名 `com.leo.clips`。
+- **决策**：目录 `clips/`（内含 `android/` 与 `mac/` 两个独立工程），中文名「剪贴盒」，Android 包名 `com.leo.clips`。
 - **后果**：无。
+
+## ADR-009 数据格式即跨端契约（双端不共享代码）
+- **背景**：双端分开实现后，唯一需要强一致的只有数据可互换性与行为不变量。
+- **决策**：clips.json 的 schema、TypeHint 判定规则、去重/淘汰不变量以 [03-data-model.md](03-data-model.md) 为唯一契约；双端各自实现、各自单测对齐**同一组用例**；一端导出的 JSON 另一端必须可导入。schema 变更必须双端同步升 schemaVersion 并在此登记。
+- **理由**：契约集中在一处、用测试钉死，两端即可自由演进互不拖累。
+- **后果**：契约演进成本 = 双端同步修改 + 双份测试更新；换来实现自由。

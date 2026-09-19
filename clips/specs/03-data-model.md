@@ -44,9 +44,11 @@
 
 ## 存储格式
 
-- 单文件 `files/clips.json`，kotlinx.serialization；原子写（tmp → rename），每次成功写后留 `clips.json.bak`（上一版本），启动时损坏则回退 bak。模式与 wardrobe 的 JsonFileStore 一致（见其 ADR-002）。
+> `clips.json` 是双端唯一数据契约（ADR-009）：schema、TypeHint 判定规则、去重/淘汰不变量以本文件为准，双端各自实现、各自单测对齐同一组用例；一端导出的文件另一端必须可导入。
+
+- 单文件 `clips.json`（Android：应用私有目录 `files/`；macOS：`~/Library/Application Support/Clips/`；序列化 Android 用 kotlinx.serialization、macOS 用 Codable）；原子写（tmp → rename），每次成功写后留 `clips.json.bak`（上一版本），启动时损坏则回退 bak。模式与 wardrobe 的 JsonFileStore 一致（见其 ADR-002）。
 - 文件头 `schemaVersion`，升级时运行迁移函数。
-- 规模估算：默认 50 条 × 平均 0.3KB ≈ 15KB；上限 1000 条的极端情况（条条 10k 字符）≈ 10MB——仅理论峰值，正常使用远小于此。无图片，无其他文件。
+- 规模估算：默认容量（Mac 200 / Android 50 条）× 平均 0.3KB ≈ 15–60KB；上限 1000 条的极端情况（条条 10k 字符）≈ 10MB——仅理论峰值，正常使用远小于此。无图片，无其他文件。
 
 ### JSON 结构示例
 

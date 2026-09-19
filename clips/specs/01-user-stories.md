@@ -1,6 +1,6 @@
 # 01 · 用户故事与验收标准
 
-编号规则：`US-XX` 用户故事，`UC-XX` 对应用例/界面（W 编号见 [02-wireframes.md](02-wireframes.md)）。验收标准采用 Given/When/Then。涉及平台时以【Mac】【Android】标注。
+编号规则：`US-XX` 用户故事，`UC-XX` 对应用例/界面（W 编号见 [02-wireframes.md](02-wireframes.md)）。验收标准采用 Given/When/Then。涉及平台时以【Mac】【Android】标注；未标注者为双端共有。双端分开实现、功能按平台取舍（见 [00-overview.md](00-overview.md)），故各端 US 集合本就不相同。
 
 ## 捕获
 
@@ -55,14 +55,15 @@
 - Given 设置页，When 清空全部（含置顶），Then 二次确认后历史清空
 
 ### US-10 容量与自动淘汰
-- Given 容量上限（默认 50，可设 20–1000），When 入库后超限，Then 从最旧的未置顶条目开始淘汰
+- Given 容量上限（默认 Mac 200 / Android 50，均可设 20–1000），When 入库后超限，Then 从最旧的未置顶条目开始淘汰
 - Given 设置页修改上限，Then 立即按新上限执行一次淘汰
 
 ## 数据与设置
 
 ### US-11 设置
-- 设置项：容量上限；暂停记录（双端）；【Mac】自动粘贴开关、热键展示（v1 固定 ⌘⇧V）
+- 设置项：容量上限；暂停记录（双端）；【Mac】自动粘贴开关、开机自启、热键展示（v1 固定 ⌘⇧V）
 - Given 暂停记录开启，Then Mac 托盘图标呈暂停态、Android 列表顶部显示提示条
+- Given Mac 设置开启「开机自启」，When 注销并重新登录，Then 应用自动以菜单栏形态常驻
 - 深色模式跟随系统（不设开关）
 
 ### US-12 备份导出/导入

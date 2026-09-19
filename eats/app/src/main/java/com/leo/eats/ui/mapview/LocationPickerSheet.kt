@@ -29,10 +29,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.leo.eats.domain.model.GeoLoc
 import com.leo.eats.map.MapController
-import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 
 /**
@@ -74,22 +72,52 @@ fun LocationPickerSheet(
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
-                        MapController().create(ctx).apply {
+                        val mapView = MapController().create(ctx).apply {
                             controller.setZoom(16.0)
                             controller.setCenter(GeoPoint(initial?.lat ?: 31.23, initial?.lng ?: 121.47))
-                            overlays.add(
-                                MapEventsOverlay(object : MapEventsReceiver {
-                                    override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean = false
-                                    override fun longPressHelper(p: GeoPoint?): Boolean {
-                                        pin = p?.let { GeoLoc(it.latitude, it.longitude) }
-                                        return true
+                        }
+                        // BottomSheet 内 AndroidView 收不到手势（实测），长按检测放在
+                        // dispatchTouchEvent 层（先于子 View、纯 View 体系），命中后按投影换算经纬度
+                        val slop = android.view.ViewConfiguration.get(ctx).scaledTouchSlop
+                        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                        var downX = 0f
+                        var downY = 0f
+                        var pending = false
+                        val longPress = Runnable {
+                            pending = false
+                            val gp = mapView.projection.fromPixels(downX.toInt(), downY.toInt())
+                            pin = GeoLoc(gp.latitude, gp.longitude)
+                        }
+                        object : android.widget.FrameLayout(ctx) {
+                            override fun dispatchTouchEvent(e: android.view.MotionEvent): Boolean {
+                                when (e.actionMasked) {
+                                    android.view.MotionEvent.ACTION_DOWN -> {
+                                        downX = e.x; downY = e.y; pending = true
+                                        handler.postDelayed(longPress, android.view.ViewConfiguration.getLongPressTimeout().toLong())
                                     }
-                                }),
+                                    android.view.MotionEvent.ACTION_MOVE ->
+                                        if (pending && (kotlin.math.abs(e.x - downX) > slop || kotlin.math.abs(e.y - downY) > slop)) {
+                                            handler.removeCallbacks(longPress); pending = false
+                                        }
+                                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                                        handler.removeCallbacks(longPress); pending = false
+                                    }
+                                }
+                                return super.dispatchTouchEvent(e)
+                            }
+                        }.apply {
+                            addView(
+                                mapView,
+                                android.widget.FrameLayout.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                ),
                             )
-                            map = this
+                            map = mapView
                         }
                     },
-                    update = { m ->
+                    update = { _ ->
+                        val m = map ?: return@AndroidView
                         val target = pin
                         m.overlays.removeAll { it is Marker }
                         if (target != null) {

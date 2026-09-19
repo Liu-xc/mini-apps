@@ -13,6 +13,7 @@ import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.WardrobeData
 import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.outfitById
+import com.leo.wardrobe.domain.model.outfitWithItems
 import com.leo.wardrobe.domain.model.personById
 import com.leo.wardrobe.domain.model.newId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -165,7 +166,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- Outfit ----
-    /** ☆收藏：按当前组合创建穿搭（US-08） */
+
+    /** 组合去重查询（it-004）：当前选中组合是否已保存为穿搭 */
+    fun savedOutfitFor(itemIds: List<String>): Outfit? {
+        val person = currentPerson.value ?: return null
+        return data.value.outfitWithItems(person.id, itemIds)
+    }
+
+    /** 保存当前组合为穿搭（去重）：已存在则复用（有新标签时更新），不重复创建 */
+    fun saveOutfitDedup(itemIds: List<String>, tags: List<String> = emptyList(), existing: Outfit? = null) {
+        viewModelScope.launch {
+            val person = currentPerson.value ?: return@launch
+            val found = existing ?: data.value.outfitWithItems(person.id, itemIds)
+            if (found != null) {
+                if (tags.isNotEmpty() && tags.toSet() != found.tags.toSet()) {
+                    repo.updateOutfit(found.copy(tags = tags.distinct()))
+                }
+                toast("这套已在穿搭记录中")
+            } else {
+                repo.createOutfit(person.id, itemIds, tags)
+                toast("已保存这套穿搭")
+            }
+        }
+    }
+
+    /** ☆收藏：按当前组合创建穿搭（US-08，保留旧入口兼容） */
     fun createOutfit(itemIds: List<String>, tags: List<String>, onDone: (Outfit?) -> Unit = {}) =
         viewModelScope.launch {
             val person = currentPerson.value ?: return@launch

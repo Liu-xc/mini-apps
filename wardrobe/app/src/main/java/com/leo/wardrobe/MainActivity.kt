@@ -196,6 +196,7 @@ private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
                 vm = vm,
                 onOpenItem = openItem,
                 onAddItem = { editItem(null) },
+                onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
             )
             Tab.RECORDS -> RecordsScreen(vm = vm, onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) })
             Tab.WARDROBE -> WardrobeScreen(vm = vm, onEditItem = editItem)

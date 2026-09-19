@@ -237,12 +237,8 @@ fun ExportSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = {
-                            val tags = selections.values.toList()
-                            if (existingOutfit != null) {
-                                vm.updateOutfitTags(existingOutfit.id, tags)
-                            } else {
-                                vm.createOutfit(items.map { it.id }, tags)
-                            }
+                            // it-004：去重保存（已存在则复用并更新标签，不重复创建）
+                            vm.saveOutfitDedup(items.map { it.id }, selections.values.toList(), existing = existingOutfit)
                             collected = true
                         },
                         modifier = Modifier.weight(1f),
@@ -252,7 +248,7 @@ fun ExportSheet(
                             contentDescription = null,
                             tint = editorialColors().accent,
                         )
-                        Text(if (collected) "已收藏" else "收藏这套")
+                        Text("收藏这套")
                     }
                     Button(onClick = { pickEffectImage() }, modifier = Modifier.weight(1f)) {
                         Text("＋ 录入成品图")

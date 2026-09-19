@@ -24,6 +24,14 @@ fun WardrobeData.notesOf(parentType: NoteParent, parentId: String): List<Note> =
 fun WardrobeData.outfitsContaining(itemId: String): List<Outfit> =
     outfits.filter { itemId in it.itemIds }.sortedByDescending { it.updatedAt }
 
+/** 组合去重（it-004）：itemIds 集合相等（顺序无关）且同角色的既有穿搭 */
+fun WardrobeData.outfitWithItems(personId: String, itemIds: Collection<String>): Outfit? {
+    val target = itemIds.toSet()
+    return outfits
+        .filter { it.personId == personId && it.itemIds.toSet() == target }
+        .maxByOrNull { it.updatedAt }
+}
+
 /** 某角色下实际使用过的所有标签（筛选条数据源，按热度排序） */
 fun WardrobeData.tagsUsedIn(personId: String): List<String> {
     val counts = LinkedHashMap<String, Int>()

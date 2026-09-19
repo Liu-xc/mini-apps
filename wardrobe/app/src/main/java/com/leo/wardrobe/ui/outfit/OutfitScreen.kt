@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,16 +56,18 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 /**
- * W1 搭配页（it-003：一屏 3×3 网格，一套尽收 + 格内滑动换衣 + 🎲 + 组合记忆）。
+ * W1 搭配页（it-003：一屏 3×3 网格；it-004：底部 ☆ 保存这套 + 去重检测）。
  */
 @Composable
 fun OutfitScreen(
     vm: AppViewModel,
     onOpenItem: (String) -> Unit,
     onAddItem: () -> Unit,
+    onOpenOutfit: (String) -> Unit,
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
+    val slotSel by vm.slotSelections.collectAsState()
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
@@ -102,6 +106,16 @@ fun OutfitScreen(
         if (items.isEmpty() || state == null) null
         else items.getOrNull(state.currentPage)
     }
+
+    /**
+     * 基于组合记忆（slotSel，落定值）推导当前组合（it-004）：
+     * 与 pager 注册时机解耦、随记忆变化响应式更新；记忆未覆盖时回退该品类第一件。
+     */
+    val currentItemsFromMemory: List<Item> = catItems.entries.mapNotNull { (_, items) ->
+        items.firstOrNull { it.id == slotSel[it.category.name] } ?: items.firstOrNull()
+    }
+    val currentIdsFromMemory = currentItemsFromMemory.map { it.id }
+    val savedOutfit = if (personId != null) vm.savedOutfitFor(currentIdsFromMemory) else null
 
     Column(Modifier.fillMaxSize()) {
         // 顶栏：角色名 + 随机一套
@@ -197,7 +211,7 @@ fun OutfitScreen(
             }
         }
 
-        // 底部常驻：复制长图 / 分享（W6 入口）
+        // 底部常驻：复制长图（W6 入口）+ ☆ 保存这套（it-004 去重检测）
         Row(
             Modifier
                 .fillMaxWidth()
@@ -205,14 +219,29 @@ fun OutfitScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Button(
-                onClick = { exportItems = currentSelection() },
+                onClick = { exportItems = currentItemsFromMemory },
                 enabled = allItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),
             ) { Text("📋 复制长图") }
             OutlinedButton(
-                onClick = { exportItems = currentSelection() },
+                onClick = {
+                    val outfit = savedOutfit
+                    if (outfit != null) {
+                        onOpenOutfit(outfit.id)
+                    } else {
+                        vm.saveOutfitDedup(currentIdsFromMemory)
+                    }
+                },
                 enabled = allItems.isNotEmpty(),
-            ) { Text("↗") }
+            ) {
+                Icon(
+                    if (savedOutfit != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    contentDescription = null,
+                    tint = editorialColors().accent,
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(if (savedOutfit != null) "已保存" else "保存这套")
+            }
         }
     }
 
