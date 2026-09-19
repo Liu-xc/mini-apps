@@ -20,3 +20,7 @@
 ```bash
 tools/demo-data.sh [device-serial]   # 生成 8 家食堂/11 条记录并推入设备（debug 包，经 run-as）
 ```
+
+## 素材署名
+
+应用图标与界面 3D 图标来自 [Thiings](https://www.thiings.co)（免费素材，个人非商业用途）。

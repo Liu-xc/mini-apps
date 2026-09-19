@@ -157,6 +157,7 @@ fun SpinScreen(
                 emoji = "🍜",
                 title = "还没有食堂",
                 hint = "先去列表添加几家，回来转一把",
+                imageRes = com.leo.eats.R.drawable.eats_empty,
                 actionLabel = "去添加",
                 onAction = onAddPlace,
             )

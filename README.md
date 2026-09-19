@@ -14,6 +14,10 @@
 - 新增应用：在根目录建 `应用名/` 子目录，复制 `wardrobe/specs/` 的文档骨架作为起点。
 - 根目录不放任何应用代码。
 
+## 素材署名
+
+各应用的应用图标与界面 3D 图标来自 [Thiings](https://www.thiings.co)（免费素材，个人非商业用途）。
+
 ## 环境要求
 
 - 安卓应用（衣橱、吃啥）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见各应用目录的 README：[wardrobe/README.md](wardrobe/README.md)、[eats/README.md](eats/README.md)。

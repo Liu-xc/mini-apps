@@ -1,25 +1,22 @@
 package com.leo.eats.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DeliveryDining
-import androidx.compose.material.icons.rounded.Restaurant
-import androidx.compose.material.icons.rounded.SoupKitchen
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.leo.eats.R
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.ui.theme.kindColor
 
@@ -30,14 +27,15 @@ val PlaceKind.label: String
         PlaceKind.HOME -> "自做"
     }
 
-val PlaceKind.icon: ImageVector
+/** 类型 3D 图标（thiings.co 素材，README 署名） */
+val PlaceKind.iconRes: Int
     get() = when (this) {
-        PlaceKind.RESTAURANT -> Icons.Rounded.Restaurant
-        PlaceKind.TAKEOUT -> Icons.Rounded.DeliveryDining
-        PlaceKind.HOME -> Icons.Rounded.SoupKitchen
+        PlaceKind.RESTAURANT -> R.drawable.kind_restaurant
+        PlaceKind.TAKEOUT -> R.drawable.kind_takeout
+        PlaceKind.HOME -> R.drawable.kind_home
     }
 
-/** 类型小圆点（W3 列表行、详情用） */
+/** 类型小圆点（列表行辅助标识） */
 @Composable
 fun KindDot(kind: PlaceKind, modifier: Modifier = Modifier) {
     androidx.compose.foundation.layout.Box(
@@ -47,7 +45,7 @@ fun KindDot(kind: PlaceKind, modifier: Modifier = Modifier) {
     )
 }
 
-/** 类型 chip：色点 + 图标 + 文案 */
+/** 类型 chip：3D 图标 + 文案 */
 @Composable
 fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = false) {
     Surface(
@@ -59,11 +57,11 @@ fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = 
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            Icon(
-                kind.icon,
+            Image(
+                painter = painterResource(kind.iconRes),
                 contentDescription = kind.label,
-                tint = kindColor(kind),
-                modifier = Modifier.size(if (compact) 13.dp else 15.dp),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(if (compact) 14.dp else 17.dp),
             )
             if (!compact) {
                 Text(
@@ -77,22 +75,24 @@ fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = 
     }
 }
 
-/** 无图占位：按类型着色的 emoji 图标块 */
+/** 无图占位：3D 类型插画块 */
 @Composable
-fun KindPlaceholder(kind: PlaceKind, modifier: Modifier = Modifier, contentColor: Color = Color.Unspecified) {
+fun KindPlaceholder(kind: PlaceKind, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = kindColor(kind).copy(alpha = 0.14f),
+        color = kindColor(kind).copy(alpha = 0.10f),
     ) {
         androidx.compose.foundation.layout.Box(
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                kind.icon,
+            Image(
+                painter = painterResource(kind.iconRes),
                 contentDescription = null,
-                tint = if (contentColor == Color.Unspecified) kindColor(kind) else contentColor,
-                modifier = Modifier.size(22.dp),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(30.dp),
             )
         }
     }

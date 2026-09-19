@@ -219,6 +219,7 @@ fun ListScreen(
                     emoji = "🍜",
                     title = "还没有食堂",
                     hint = "把常去的餐厅、点的外卖、拿手的菜加进来",
+                    imageRes = com.leo.eats.R.drawable.eats_empty,
                     actionLabel = "添加第一家",
                     onAction = { onEditPlace(null) },
                 )
