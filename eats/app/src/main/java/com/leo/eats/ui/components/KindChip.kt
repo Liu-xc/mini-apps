@@ -75,9 +75,9 @@ fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = 
     }
 }
 
-/** 无图占位：3D 类型插画块 */
+/** 无图占位：3D 类型插画块（it-002 R2：插画随容器放大，hero 友好） */
 @Composable
-fun KindPlaceholder(kind: PlaceKind, modifier: Modifier = Modifier) {
+fun KindPlaceholder(kind: PlaceKind, modifier: Modifier = Modifier, iconSize: androidx.compose.ui.unit.Dp = 30.dp) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -91,8 +91,8 @@ fun KindPlaceholder(kind: PlaceKind, modifier: Modifier = Modifier) {
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .padding(6.dp)
-                    .size(30.dp),
+                    .padding(12.dp)
+                    .size(iconSize),
             )
         }
     }

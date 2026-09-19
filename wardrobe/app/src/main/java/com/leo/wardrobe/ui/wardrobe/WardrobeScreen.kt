@@ -109,7 +109,7 @@ fun WardrobeScreen(
                 LazyColumn(
                     Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     WardrobeCategory.entries.forEach { category ->
                         val catItems = filtered.filter { it.category == category }

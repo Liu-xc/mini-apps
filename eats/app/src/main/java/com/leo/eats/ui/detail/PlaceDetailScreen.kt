@@ -1,9 +1,13 @@
 package com.leo.eats.ui.detail
 
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,13 +52,14 @@ import com.leo.eats.domain.model.statsOf
 import com.leo.eats.domain.model.visitsOf
 import com.leo.eats.ui.AppViewModel
 import com.leo.eats.ui.components.KindChip
+import com.leo.eats.ui.components.KindPlaceholder
 import com.leo.eats.ui.components.LinkChips
 import com.leo.eats.ui.components.PhotoStrip
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.RelativeTimeText
 import com.leo.eats.ui.components.TagRow
 import com.leo.eats.ui.components.formatVisitTime
-import com.leo.eats.ui.components.label
+import com.leo.eats.ui.components.sharedPhoto
 import com.leo.eats.ui.theme.menuColors
 import com.leo.eats.ui.visit.LogVisitSheet
 import java.io.File
@@ -99,7 +104,7 @@ fun PlaceDetailScreen(
                 },
             )
         },
-    ) { padding ->
+        ) { padding ->
         Column(
             Modifier
                 .padding(padding)
@@ -107,6 +112,36 @@ fun PlaceDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
         ) {
+            // hero（it-002 R1：列表缩略图 → 详情头部共享元素）
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+                    .aspectRatio(16f / 9f)
+                    .sharedPhoto("place-$placeId"),
+            ) {
+                val hero = place.photos.firstOrNull()?.let { vm.imageFileOf(it) }
+                if (hero != null) {
+                    AsyncImage(
+                        model = hero,
+                        contentDescription = place.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.extraLarge),
+                    )
+                } else {
+                    KindPlaceholder(
+                        kind = place.kind,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(MaterialTheme.shapes.extraLarge),
+                        iconSize = 96.dp,
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+
             // 标题区
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -125,7 +160,8 @@ fun PlaceDetailScreen(
             }
             Spacer(Modifier.height(8.dp))
 
-            // 派生统计（ADR-008）
+            // 派生统计（ADR-008；次数数字滚动 it-002 R1）
+            val animatedCount by animateIntAsState(stats.visitCount, label = "visitCount")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 RatingStars(rating = place.rating, size = 16.dp)
                 Text("·", color = menuColors().inkFaint)
@@ -133,7 +169,7 @@ fun PlaceDetailScreen(
                 RelativeTimeText(at = stats.lastVisitAt, highlight = true)
                 Text("·", color = menuColors().inkFaint)
                 Text(
-                    "共 ${stats.visitCount} 次",
+                    "共 $animatedCount 次",
                     style = MaterialTheme.typography.labelMedium,
                     color = menuColors().inkFaint,
                 )
@@ -206,7 +242,7 @@ fun PlaceDetailScreen(
                 onClick = { showLogVisit = true },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(top = 16.dp, bottom = 8.dp),
             ) { Text("＋ 记一笔今天吃了") }
 
             Spacer(Modifier.height(8.dp))
@@ -227,10 +263,11 @@ fun PlaceDetailScreen(
                     color = menuColors().inkFaint,
                 )
             }
-            visits.forEach { v ->
+            visits.forEachIndexed { index, v ->
                 VisitCard(
                     visit = v,
                     fileOf = { vm.imageFileOf(it) },
+                    isLast = index == visits.lastIndex,
                     onDelete = { deleteVisitTarget = v },
                 )
             }
@@ -265,62 +302,106 @@ fun PlaceDetailScreen(
     }
 }
 
+/**
+ * Visit 时间线条目（it-002 R2）：左列日期 + 竖线节点母题，内容卡右置。
+ * isLast：最后一条竖线截止（R3）。
+ */
 @Composable
-private fun VisitCard(visit: Visit, fileOf: (String) -> File?, onDelete: () -> Unit) {
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = menuColors().surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    formatVisitTime(visit.at),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = menuColors().ink,
+private fun VisitCard(visit: Visit, fileOf: (String) -> File?, isLast: Boolean = false, onDelete: () -> Unit) {
+    val date = remember(visit.at) {
+        java.time.Instant.ofEpochMilli(visit.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    }
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        // 日期左列
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(top = 10.dp),
+        ) {
+            Text(
+                "${date.monthValue}/${date.dayOfMonth}",
+                style = MaterialTheme.typography.labelMedium,
+                color = menuColors().inkFaint,
+            )
+            Text(
+                formatVisitTime(visit.at).substringAfter("· ").take(5),
+                style = MaterialTheme.typography.labelSmall,
+                color = menuColors().inkFaint.copy(alpha = 0.7f),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        // 竖线 + 节点
+        Box(
+            Modifier
+                .width(14.dp)
+                .fillMaxWidth(),
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp)
+                    .size(8.dp)
+                    .background(menuColors().accent, androidx.compose.foundation.shape.CircleShape),
+            )
+            if (!isLast) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 26.dp)
+                        .width(1.dp)
+                        .height(999.dp)
+                        .background(menuColors().hairline),
                 )
-                Spacer(Modifier.width(8.dp))
-                RatingStars(rating = visit.rating, size = 13.dp)
-                Spacer(Modifier.weight(1f))
-                if (visit.cost != null) {
+            }
+        }
+        // 内容卡
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = menuColors().surface,
+            tonalElevation = 1.dp,
+            modifier = Modifier.weight(1f),
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RatingStars(rating = visit.rating, size = 13.dp)
+                    Spacer(Modifier.weight(1f))
+                    if (visit.cost != null) {
+                        Text(
+                            "¥" + visit.cost.toString().removeSuffix(".0"),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = menuColors().inkFaint,
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            Icons.Rounded.Delete,
+                            contentDescription = "删除这条记录",
+                            tint = menuColors().inkFaint,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                if (visit.text.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "¥" + visit.cost.toString().removeSuffix(".0"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = menuColors().inkFaint,
+                        visit.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = menuColors().ink,
                     )
                 }
-                IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        Icons.Rounded.Delete,
-                        contentDescription = "删除这条记录",
-                        tint = menuColors().inkFaint,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-            }
-            if (visit.text.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    visit.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = menuColors().ink,
-                )
-            }
-            if (visit.photos.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(visit.photos) { photo ->
-                        fileOf(photo)?.let { f ->
-                            AsyncImage(
-                                model = f,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(width = 88.dp, height = 66.dp)
-                                    .clip(MaterialTheme.shapes.small),
-                            )
+                if (visit.photos.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(visit.photos) { photo ->
+                            fileOf(photo)?.let { f ->
+                                AsyncImage(
+                                    model = f,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(width = 88.dp, height = 66.dp)
+                                        .clip(MaterialTheme.shapes.small),
+                                )
+                            }
                         }
                     }
                 }

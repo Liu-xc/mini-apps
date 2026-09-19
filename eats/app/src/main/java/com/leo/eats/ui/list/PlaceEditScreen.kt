@@ -90,6 +90,27 @@ fun PlaceEditScreen(
 
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) newUris += uri.toString() }
 
+    // it-002 R4：顶栏保存——长表单无需滚到底即可落盘
+    fun doSave() {
+        if (name.isBlank()) { vm.toast("名称必填"); return }
+        if (saving) return
+        saving = true
+        vm.savePlace(
+            existing = existing,
+            name = name,
+            kind = kind,
+            cuisine = cuisine,
+            location = location,
+            address = address,
+            rating = rating,
+            tags = tags.toList(),
+            keptPhotos = photos.toList(),
+            newPhotoUris = newUris.toList(),
+            links = links.toList(),
+            notes = notes,
+        ) { ok -> if (ok) onBack() else saving = false }
+    }
+
     // 数据里已无此条（被删除）时退出
     LaunchedEffect(data, placeId) {
         if (placeId != null && data.placeById(placeId) == null) onBack()
@@ -109,6 +130,9 @@ fun PlaceEditScreen(
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "删除食堂")
                         }
+                    }
+                    TextButton(onClick = { doSave() }, enabled = !saving && name.isNotBlank()) {
+                        Text("保存", style = MaterialTheme.typography.titleSmall)
                     }
                 },
             )
@@ -255,23 +279,7 @@ fun PlaceEditScreen(
 
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = {
-                    saving = true
-                    vm.savePlace(
-                        existing = existing,
-                        name = name,
-                        kind = kind,
-                        cuisine = cuisine,
-                        location = location,
-                        address = address,
-                        rating = rating,
-                        tags = tags.toList(),
-                        keptPhotos = photos.toList(),
-                        newPhotoUris = newUris.toList(),
-                        links = links.toList(),
-                        notes = notes,
-                    ) { ok -> if (ok) onBack() else saving = false }
-                },
+                onClick = { doSave() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !saving,
             ) { Text(if (existing == null) "保存" else "更新") }

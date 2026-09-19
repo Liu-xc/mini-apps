@@ -1,12 +1,18 @@
 package com.leo.eats.ui.spin
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -164,13 +170,14 @@ fun SpinScreen(
             return@Column
         }
 
-        // ---- 过滤器 ----
+        // ---- 过滤器（it-002 R2：单行收纳，把视觉主角还给转盘） ----
+        val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(vertical = 4.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
-            Text("类型:", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+            Text("类型", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
             PlaceKind.entries.forEach { k ->
                 val selected = k in config.kinds
                 FilterChip(
@@ -182,30 +189,28 @@ fun SpinScreen(
                     label = { Text(k.label) },
                 )
             }
-        }
-
-        val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
-        if (allTags.isNotEmpty()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text("忌口:", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
-                allTags.take(8).forEach { tag ->
-                    val selected = tag in config.excludedTags
-                    FilterChip(
-                        selected = selected,
-                        onClick = {
-                            val next = if (selected) config.excludedTags - tag else config.excludedTags + tag
-                            vm.setSpinExcludedTags(next)
-                        },
-                        label = { Text("#$tag") },
-                    )
-                }
+            Text(
+                "忌口",
+                style = MaterialTheme.typography.labelMedium,
+                color = menuColors().inkFaint,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+            allTags.forEach { tag ->
+                val selected = tag in config.excludedTags
+                FilterChip(
+                    selected = selected,
+                    onClick = {
+                        val next = if (selected) config.excludedTags - tag else config.excludedTags + tag
+                        vm.setSpinExcludedTags(next)
+                    },
+                    label = { Text("#$tag") },
+                )
             }
         }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 2.dp),
+        ) {
             Switch(
                 checked = config.excludeRecentDays != null,
                 onCheckedChange = { on ->
@@ -218,9 +223,13 @@ fun SpinScreen(
                 TextButton(onClick = {
                     val next = RECENT_DAY_OPTIONS[(RECENT_DAY_OPTIONS.indexOf(days) + 1) % RECENT_DAY_OPTIONS.size]
                     vm.setSpinExcludeRecent(true, next)
-                }) { Text("排除最近 $days 天吃过的") }
+                }) { Text("排除最近 $days 天吃过的", style = MaterialTheme.typography.labelMedium) }
             } else {
-                Text("排除最近吃过的", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
+                Text(
+                    "排除最近吃过的",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = menuColors().inkFaint,
+                )
             }
         }
 
@@ -235,58 +244,65 @@ fun SpinScreen(
                 rotationDegrees = rotation.value,
                 sectors = sectors,
                 modifier = Modifier.size(300.dp),
+                spinning = phase is SpinPhase.Spinning,
             ) {
                 Surface(
                     shape = MaterialTheme.shapes.extraLarge,
                     color = menuColors().surface,
-                    border = BorderStroke(1.dp, menuColors().hairline),
+                    border = BorderStroke(1.5.dp, menuColors().hairline),
                     modifier = Modifier.size(132.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            text = when (val p = phase) {
-                                is SpinPhase.Result -> p.winner.place.name
-                                else -> currentLabel.ifBlank { if (sectors.isEmpty()) "空" else "开转" }
+                        val label = when (val p = phase) {
+                            is SpinPhase.Result -> p.winner.place.name
+                            else -> currentLabel.ifBlank { if (sectors.isEmpty()) "空" else "开转" }
+                        }
+                        // 中心文案扫掠（it-002 R1）：掠过扇区时上滑切换
+                        AnimatedContent(
+                            targetState = label,
+                            transitionSpec = {
+                                (slideInVertically { it / 2 } + fadeIn(tween(90)))
+                                    .togetherWith(slideOutVertically { -it / 2 } + fadeOut(tween(60)))
                             },
-                            style = MaterialTheme.typography.titleMedium,
-                            color = menuColors().ink,
-                            maxLines = 3,
-                        )
+                            label = "wheelCenter",
+                        ) { text ->
+                            Text(
+                                text = text,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = menuColors().ink,
+                                maxLines = 3,
+                            )
+                        }
                     }
                 }
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "候选 ${candidates.size} 家",
-                style = MaterialTheme.typography.labelMedium,
-                color = menuColors().inkFaint,
-            )
-            if (rerollExcluded.isNotEmpty()) {
-                TextButton(onClick = { rerollExcluded.clear() }) { Text("· 清除重转排除") }
+        // 重转排除提示（候选数已并入按钮，it-002 R3）
+        if (rerollExcluded.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                TextButton(onClick = { rerollExcluded.clear() }) { Text("已排除重转 ${rerollExcluded.size} 家 · 清除") }
             }
         }
 
-        // ---- 开始按钮与原因提示 ----
+        // ---- 开始按钮（it-002 R3：候选数并入按钮，减少一行） ----
         Button(
             onClick = { spin() },
             enabled = candidates.size >= 2 && phase !is SpinPhase.Spinning,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            colors = ButtonDefaults.buttonColors(),
+                .padding(top = 4.dp)
+                .height(54.dp),
         ) {
             Icon(Icons.Rounded.Casino, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(
                 when (phase) {
                     is SpinPhase.Spinning -> "转动中…"
-                    else -> "开始转"
+                    else -> if (candidates.isEmpty()) "开始转" else "开始转 · ${candidates.size} 家"
                 },
                 style = MaterialTheme.typography.titleMedium,
             )

@@ -78,13 +78,15 @@ fun MapScreen(
         }.toArgb()
     }
 
-    // marker 随数据全量同步（个人级规模），首次进入框住所有点
-    LaunchedEffect(located, map) {
+    // marker 随数据全量同步（个人级规模），选中态放大描环（it-002 R1），首次进入框住所有点
+    LaunchedEffect(located, map, selected) {
         val m = map ?: return@LaunchedEffect
+        val selectedId = selected?.place?.id
         PlaceMarkerFactory.sync(
             map = m,
             places = located,
             argbOf = { kind -> kindArgb.getValue(kind) },
+            selectedId = selectedId,
             onClick = { s -> selected = s },
         )
         if (!cameraInitialized && located.isNotEmpty()) {
@@ -157,7 +159,7 @@ fun MapScreen(
 
         AnimatedVisibility(
             visible = selected != null,
-            enter = slideInVertically(EatsMotion.smooth()) { it } + fadeIn(),
+            enter = slideInVertically(EatsMotion.bouncy()) { it } + fadeIn(),
             exit = slideOutVertically(EatsMotion.smooth()) { it } + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {

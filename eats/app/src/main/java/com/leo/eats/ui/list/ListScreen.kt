@@ -1,12 +1,16 @@
 package com.leo.eats.ui.list
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,11 +20,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -31,8 +39,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.leo.eats.domain.model.PlaceKind
@@ -57,7 +69,10 @@ import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.RelativeTimeText
 import com.leo.eats.ui.components.TagRow
 import com.leo.eats.ui.components.label
+import com.leo.eats.ui.components.relativeTimeText
+import com.leo.eats.ui.components.sharedPhoto
 import com.leo.eats.ui.theme.menuColors
+import com.leo.eats.ui.visit.LogVisitSheet
 import java.io.File
 
 /** 列表排序（US-05） */
@@ -84,9 +99,10 @@ private val kindFilterOptions: List<Pair<KindFilter, String>> = listOf(
 )
 
 /**
- * W3 列表页（US-05）：搜索 + 类型/标签筛选 + 排序 + FAB。
- * focusNoLocation：由地图页「N 条未上地图」带入的过滤意图。
+ * W3 列表页：搜索 + 类型/标签筛选 + 排序 + FAB。
+ * it-002 R1：瀑布入场、滑动删除、行内共享元素、长按快速记一笔。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListScreen(
     vm: AppViewModel,
@@ -101,6 +117,8 @@ fun ListScreen(
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var sort by remember { mutableStateOf(ListSort.LAST) }
     var sortMenuOpen by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<PlaceWithStats?>(null) }
+    var quickLog by remember { mutableStateOf<PlaceWithStats?>(null) }
 
     LaunchedEffect(focusNoLocation) {
         if (focusNoLocation) {
@@ -109,9 +127,7 @@ fun ListScreen(
         }
     }
 
-    val allTags = remember(data) {
-        data.places.flatMap { it.tags }.distinct().sorted()
-    }
+    val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
 
     val rows = remember(data, query, kindFilter, tagFilter, sort) {
         val filtered = data.statsOfAll().filter { s ->
@@ -136,6 +152,8 @@ fun ListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { onEditPlace(null) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
                 text = { Text("添加食堂") },
             )
@@ -178,6 +196,7 @@ fun ListScreen(
                 placeholder = { Text("搜索名称 / 菜系 / 笔记", style = MaterialTheme.typography.bodySmall) },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 singleLine = true,
+                shape = MaterialTheme.shapes.large,
             )
 
             Row(
@@ -228,48 +247,150 @@ fun ListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 20.dp, end = 20.dp, top = 4.dp, bottom = 96.dp,
-                    ),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(rows, key = { it.place.id }) { s ->
-                        PlaceRow(s, fileOf = { vm.imageFileOf(it) }, onClick = { onOpenDetail(s.place.id) })
+                    itemsIndexed(rows, key = { _, s -> s.place.id }) { index, s ->
+                        StaggeredEntrance(index = index) {
+                            SwipeToDeleteRow(
+                                s = s,
+                                fileOf = { vm.imageFileOf(it) },
+                                onDelete = { pendingDelete = s },
+                                onClick = { onOpenDetail(s.place.id) },
+                                onLongClick = { quickLog = s },
+                            )
+                        }
                     }
                 }
             }
         }
     }
+
+    pendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("删除「${target.place.name}」？") },
+            text = { Text("将一并删除它的全部吃过记录与照片，不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deletePlace(target.place.id)
+                    pendingDelete = null
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("取消") } },
+        )
+    }
+
+    quickLog?.let { target ->
+        LogVisitSheet(
+            vm = vm,
+            placeName = target.place.name,
+            onLog = { at, rating, cost, text, uris ->
+                vm.logVisit(target.place.id, at, rating, cost, text, uris) { }
+                quickLog = null
+            },
+            onDismiss = { quickLog = null },
+        )
+    }
 }
 
+/** 首屏瀑布入场：透明度 + 上移，逐项 24ms 错峰（it-002 R1） */
 @Composable
-private fun PlaceRow(s: PlaceWithStats, fileOf: (String) -> File?, onClick: () -> Unit) {
+private fun StaggeredEntrance(index: Int, content: @Composable () -> Unit) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay((index.coerceAtMost(12)) * 24L)
+        progress.animateTo(1f, tween(360))
+    }
+    Box(
+        Modifier.graphicsLayer {
+            alpha = progress.value
+            translationY = (1f - progress.value) * 28f
+        },
+    ) { content() }
+}
+
+/** 左滑删除行（对齐 wardrobe W3 交互，it-002 R1） */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SwipeToDeleteRow(
+    s: PlaceWithStats,
+    fileOf: (String) -> File?,
+    onDelete: () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) { onDelete(); true } else false
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(
+                    Icons.Rounded.Delete,
+                    contentDescription = "删除",
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(end = 24.dp),
+                )
+            }
+        },
+    ) {
+        PlaceRow(s = s, fileOf = fileOf, onClick = onClick, onLongClick = onLongClick)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PlaceRow(
+    s: PlaceWithStats,
+    fileOf: (String) -> File?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     Surface(
         shape = MaterialTheme.shapes.large,
         color = menuColors().surface,
+        tonalElevation = 1.dp,
+        shadowElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clip(MaterialTheme.shapes.large)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val thumb = s.place.photos.firstOrNull()?.let { fileOf(it) }
-            if (thumb != null) {
-                AsyncImage(
-                    model = thumb,
-                    contentDescription = s.place.name,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .padding(4.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                )
-            } else {
-                KindPlaceholder(kind = s.place.kind, modifier = Modifier.size(56.dp).padding(4.dp))
+            Box(
+                Modifier
+                    .size(56.dp)
+                    .sharedPhoto("place-${s.place.id}"),
+            ) {
+                val thumb = s.place.photos.firstOrNull()?.let { fileOf(it) }
+                if (thumb != null) {
+                    AsyncImage(
+                        model = thumb,
+                        contentDescription = s.place.name,
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(14.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    )
+                } else {
+                    KindPlaceholder(kind = s.place.kind, modifier = Modifier.size(56.dp))
+                }
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     s.place.name,
@@ -295,12 +416,15 @@ private fun PlaceRow(s: PlaceWithStats, fileOf: (String) -> File?, onClick: () -
             }
             Column(horizontalAlignment = Alignment.End) {
                 RatingStars(rating = s.place.rating, size = 13.dp)
-                Spacer(Modifier.height(4.dp))
-                RelativeTimeText(at = s.lastVisitAt, highlight = s.lastVisitAt == null)
+                Spacer(Modifier.height(6.dp))
+                // it-002 R3：相对时间与次数合并单行，右列两行统一节奏
                 Text(
-                    if (s.visitCount == 0) "还没吃过" else "${s.visitCount} 次",
+                    buildString {
+                        append(relativeTimeText(s.lastVisitAt))
+                        append(if (s.visitCount == 0) " · 还没吃过" else " · ${s.visitCount} 次")
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = menuColors().inkFaint,
+                    color = if (s.lastVisitAt == null) menuColors().accent else menuColors().inkFaint,
                 )
             }
         }

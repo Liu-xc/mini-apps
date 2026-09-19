@@ -214,7 +214,8 @@ fun OutfitScreen(
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Button(
+            // it-006 R2：主操作改 tonal 轻样式，减轻对主体内容的压迫（原全宽实心）
+            androidx.compose.material3.FilledTonalButton(
                 onClick = { exportItems = currentItemsFromMemory },
                 enabled = allItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),

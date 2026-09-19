@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +24,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,6 +40,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.leo.eats.ui.AppViewModel
+import com.leo.eats.ui.components.LocalNavAnimatedVisibilityScope
+import com.leo.eats.ui.components.LocalSharedTransitionScope
 import com.leo.eats.ui.detail.PlaceDetailScreen
 import com.leo.eats.ui.list.ListScreen
 import com.leo.eats.ui.list.PlaceEditScreen
@@ -68,6 +73,7 @@ private enum class Tab(val label: String) {
     SPIN("吃什么"), MAP("地图"), LIST("列表"),
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun EatsRoot() {
     val vm: AppViewModel = viewModel()
@@ -116,54 +122,65 @@ private fun EatsRoot() {
             }
         },
     ) { padding ->
-        NavHost(
-            navController = nav,
-            startDestination = Routes.HOME,
-            modifier = Modifier.padding(padding),
-            enterTransition = {
-                fadeIn(tween(220)) + slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    animationSpec = tween(280),
-                )
-            },
-            exitTransition = { fadeOut(tween(180)) },
-            popEnterTransition = { fadeIn(tween(220)) },
-            popExitTransition = {
-                fadeOut(tween(180)) + slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.End,
-                    animationSpec = tween(280),
-                )
-            },
-        ) {
-            composable(Routes.HOME) {
-                HomeTabs(
-                    vm = vm,
-                    nav = nav,
-                    tab = tab,
-                    onSwitchTab = { tab = it },
-                    noLocationFocus = noLocationFocus,
-                    setNoLocationFocus = { noLocationFocus = it },
-                )
-            }
-            composable(Routes.PLACE_EDIT) { entry ->
-                PlaceEditScreen(
-                    vm = vm,
-                    placeId = entry.arguments?.getString("placeId"),
-                    onBack = { nav.popBackStack() },
-                )
-            }
-            composable(Routes.PLACE_DETAIL) { entry ->
-                val id = entry.arguments?.getString("placeId").orEmpty()
-                PlaceDetailScreen(
-                    vm = vm,
-                    placeId = id,
-                    onBack = { nav.popBackStack() },
-                    onEdit = { nav.navigate(Routes.placeEdit(it)) },
-                    onShowOnMap = { placeId ->
-                        vm.focusOnMap(placeId)
-                        tab = Tab.MAP
+        SharedTransitionLayout(Modifier.padding(padding)) {
+            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                NavHost(
+                    navController = nav,
+                    startDestination = Routes.HOME,
+                    enterTransition = {
+                        fadeIn(tween(220)) + slideIntoContainer(
+                            AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(280),
+                        )
                     },
-                )
+                    exitTransition = { fadeOut(tween(180)) },
+                    popEnterTransition = { fadeIn(tween(220)) },
+                    popExitTransition = {
+                        fadeOut(tween(180)) + slideOutOfContainer(
+                            AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(280),
+                        )
+                    },
+                ) {
+                    composable(Routes.HOME) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            HomeTabs(
+                                vm = vm,
+                                nav = nav,
+                                tab = tab,
+                                onSwitchTab = { tab = it },
+                                noLocationFocus = noLocationFocus,
+                                setNoLocationFocus = { noLocationFocus = it },
+                            )
+                        }
+                    }
+                    composable(Routes.PLACE_EDIT) { entry ->
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            PlaceEditScreen(
+                                vm = vm,
+                                placeId = entry.arguments?.getString("placeId"),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                    }
+                    composable(Routes.PLACE_DETAIL) { entry ->
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            val id = entry.arguments?.getString("placeId").orEmpty()
+                            PlaceDetailScreen(
+                                vm = vm,
+                                placeId = id,
+                                onBack = { nav.popBackStack() },
+                                onEdit = { nav.navigate(Routes.placeEdit(it)) },
+                                onShowOnMap = { placeId ->
+                                    // it-002 R4：详情是独立路由，需先回 HOME 再切地图 Tab 聚焦
+                                    nav.popBackStack(Routes.HOME, false)
+                                    vm.focusOnMap(placeId)
+                                    tab = Tab.MAP
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
     }

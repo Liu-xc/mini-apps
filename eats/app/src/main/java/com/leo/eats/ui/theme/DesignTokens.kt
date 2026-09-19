@@ -19,9 +19,9 @@ object EatsPalette {
     val Accent = Color(0xFFC8502E)
     val Hairline = Color(0xFFEAE2D4)
 
-    // 深色（墨纸）
+    // 深色（墨纸；R5：surface 提亮半档拉开与背景层次）
     val PaperDark = Color(0xFF161412)
-    val SurfaceDark = Color(0xFF201D1A)
+    val SurfaceDark = Color(0xFF26221E)
     val InkDark = Color(0xFFF2EDE4)
     val InkFaintDark = Color(0xFF9C9488)
     val AccentDark = Color(0xFFE07B54)

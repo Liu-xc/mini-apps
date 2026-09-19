@@ -1,12 +1,22 @@
 package com.leo.eats.ui.visit
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -30,11 +40,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import com.leo.eats.ui.components.ConfettiBurst
 import com.leo.eats.ui.components.PhotoStrip
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.formatVisitTime
 import com.leo.eats.ui.components.rememberPhotoPicker
 import com.leo.eats.ui.theme.menuColors
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -58,6 +70,10 @@ fun LogVisitSheet(
     val uris = remember { mutableStateListOf<String>() }
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
+    // 落账成功编排（it-002 R1）：按钮 ✓ 形变 + 彩屑，700ms 后再走父级落账/收起
+    var succeeding by remember { mutableStateOf(false) }
+    var confettiTrigger by remember { mutableStateOf(0) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) uris += uri.toString() }
 
@@ -132,10 +148,48 @@ fun LogVisitSheet(
             )
 
             Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { onLog(at, rating, cost.trim().toDoubleOrNull(), text, uris.toList()) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("落账") }
+            Box {
+                Button(
+                    onClick = {
+                        if (succeeding) return@Button
+                        succeeding = true
+                        confettiTrigger++
+                        scope.launch {
+                            kotlinx.coroutines.delay(700)
+                            onLog(at, rating, cost.trim().toDoubleOrNull(), text, uris.toList())
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !succeeding,
+                ) {
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = succeeding,
+                        transitionSpec = {
+                            (fadeIn() + scaleIn(initialScale = 0.6f)).togetherWith(fadeOut())
+                        },
+                        label = "logButton",
+                    ) { done ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (done) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Rounded.Check,
+                                    contentDescription = null,
+                                )
+                                Spacer(Modifier.padding(start = 6.dp))
+                                Text("已落账")
+                            } else {
+                                Text("落账")
+                            }
+                        }
+                    }
+                }
+                ConfettiBurst(
+                    trigger = confettiTrigger,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .size(220.dp, 160.dp),
+                )
+            }
         }
     }
 
