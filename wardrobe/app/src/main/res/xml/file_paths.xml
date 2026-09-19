@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 剪贴板图片与分享用：应用私有 files 目录下的图片 -->
+    <files-path name="images" path="images/" />
+    <!-- 合成图等临时导出文件 -->
+    <files-path name="export" path="export/" />
+</paths>

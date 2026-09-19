@@ -34,9 +34,9 @@
 - 屏幕边距 20dp；槽位之间 hairline 分隔；照片卡宽高比 4:5（衣物的自然比例）
 - 阴影极轻或无，层次靠留白与 hairline
 
-## 动效清单（Material 3 Expressive 弹簧基调）
+## 动效清单（统一弹簧基调：EditorialMotion）
 
-全局 `MaterialMotionScheme.expressive()`（material3 1.4+），组件默认动效即弹簧物理。
+> material3 1.4.0 稳定版未公开 Expressive motionScheme（ADR-004），全局动效由 `EditorialMotion` 统一弹簧参数承担：`smooth`（高阻尼丝滑）/`pop`（轻过冲）/`bouncy`（弹跳）。
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|

@@ -20,11 +20,10 @@
 - **理由**：零注解处理器、构建快、依赖关系显式可读；测试时手工替换假实现。
 - **后果**：新增依赖需手动装配（成本极低）。
 
-## ADR-004 Material 3 Expressive + 版本锁定
+## ADR-004 Material 3 稳定版 + 自建弹簧动效基调（Expressive 暂缓）
 - **背景**：要求"最好看的组件库 + 炫酷动画"。
-- **决策**：material3 1.4+ 的 `MaterialExpressiveTheme` + `MaterialMotionScheme.expressive()` 作为全局动效基调；已知 1.4.0+ BottomSheet 动效硬编码问题（Google issue 452071842），接受其默认表现，不强行自定义 bottom sheet 动画。
-- **理由**：官方最新表现力体系，全局一致、免自造轮子。
-- **后果**：升级 material3 时回归检查 bottom sheet/弹层动效。
+- **决策**（2026-09-19 修订）：material3 锁定 **1.4.0 稳定版** + 标准 MaterialTheme；全局动效基调由 `EditorialMotion`（自建统一弹簧参数：smooth/pop/bouncy）承担。1.4.0 稳定版中 MaterialExpressiveTheme/MotionScheme 仍为 internal；公开版本存在于 1.5.0-alpha28，但其依赖 compose 1.13.0-alpha01 全链 alpha 且需 platform 36，整体风险不可接受。
+- **后果**：内置 M3 组件默认动效为标准曲线（差异细微）；我们的自定义动画（轮播/老虎机/共享元素/彩屑/staggered）全部走 EditorialMotion，观感不受影响。material3 1.5 稳定后回归评估替换。
 
 ## ADR-005 衬线标题用系统字体（暂不打包 Noto Serif SC）
 - **背景**：编辑风需要衬线大标题；打包完整 CJK 衬线字体 +20MB。
