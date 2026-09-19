@@ -1,6 +1,6 @@
 # it-002 · 飞书多维表格云同步（调研与提案）
 
-- **状态**：调研完成；**2026-09-20 用户定调**：以多维表格数据为准做轻量同步（低实时、几乎无并行编辑），多人分发为核心诉求。剩 2 个细节待确认（文末，均带默认值）
+- **状态**：调研完成 → SDK 已实现（2026-09-20：libs/store 落地并接入 wardrobe；libs/sync 契约 + bitable 适配器就绪、按计划未接入 App）。App 接入（US-15a/b/c）与真机实测清单留待后续迭代
 - **提案日期**：2026-09-19
 - **范围**：多端数据同步 —— 以飞书多维表格（Bitable）作为云端同步后端
 
@@ -208,6 +208,34 @@ it-001 是纯本机存储（JSON + WebP，无账号无服务端），「云端�
 - **容量测算**：个人云空间 15GB ≈ 单图 300KB 可存 5 万张，本项目峰值用不到 10%。行数风险点在 Notes（按每天 10 条评论 ×10 年 ≈ 3.65 万行，可能触顶免费版约 1–2 万行/表的口径）→ 缓解：Notes 按年分表或定期归档导出。
 - **数据主权兜底**：现有 zip 导出保留，另加「从云端全量导出」——数据本来就是我们自己的结构，随时可整体拉走迁移到任何底座（含未来换 LeanCloud/CloudBase）。
 
+### 15. SDK 化路径（2026-09-20 记录：预判此能力为 mini-apps 公共底座）
+
+用户判断：飞书多维表格接入可能成为本仓库多个 app 的公共能力（潜在消费方：wardrobe 现在需要；eats、clips 未来；clips 的 Mac SwiftUI 端则按契约独立实现）。
+
+**分层边界（it-002 起即按此实现，暂不物理拆库）**：
+
+```
+┌ 通用层（未来 SDK 内容，零业务概念）────────────────┐
+│ FeishuAuth      token 获取/缓存/2h 自动续期          │
+│ BitableClient   ~8 个 REST 端点（表/记录/附件上传）  │
+│ RateLimiter     串行写队列 + 429 指数退避            │
+│ BitableError    错误分类（403 / 1061073 / 1061061 / 429）│
+│ CredentialStore 加密存储 + 连接配置模型（三参数）    │
+├ 半通用层（SDK 给骨架，App 填策略）─────────────────┤
+│ SyncEngine      待推队列 + 增量拉取 + 对账循环        │
+│                 （钩子：实体↔记录映射、冲突策略）     │
+├ 应用层（各 App 自写，永不进 SDK）──────────────────┤
+│ wardrobe：Person/Item/Outfit/Note ↔ 4 张表映射      │
+│ UI（设置页/同步状态）、业务语义                      │
+└───────────────────────────────────────────────────┘
+```
+
+**节奏：先边界、后拆库。** it-002 在 wardrobe 内按上述边界实现（包结构 `data/sync/` 内部再分 `client/` 与 `engine/`），约束只有一条：**通用层不得 import 任何 wardrobe 业务类型**。第二个消费方出现时（eats/clips 接入）再物理拆出 `libs/feishu-bitable-sdk`，用 Gradle composite build（`includeBuild`）接入——免发版、源码同仓、各 app 独立构建不受影响。提前拆库的风险：没有第二消费者时抽象必然切错层。
+
+**契约先行**：SDK 落地时同步写一份语言无关的契约文档（REST 端点清单 + 字段类型映射规范 + 轻同步语义 + 错误码处理约定），clips 的 Mac SwiftUI 端按同一契约独立实现——与 clips it-001「契约 = specs + 双端单测对齐」的做法一致。
+
+**2026-09-20 更新（数据架构三次演进）：**①「SDK 先行设计」；②「后端可低成本切换」→ 重构为中立契约 + 适配器（[libs/sync/specs/00-architecture.md](../../../libs/sync/specs/00-architecture.md)：contract 层 SyncSource + 后端无关引擎，feishu-bitable 只是首个适配器，record_id/串行写等细节不外泄；换后端 = 换适配器，后端间迁移是契约层工具）；③「本地存储也是一套 SDK」→ [libs/store/specs/00-architecture.md](../../../libs/store/specs/00-architecture.md)（it-001 数据层的通用化抽取：原子快照/bak/迁移链/SSOT/媒体/zip，备份格式契约不变）。两 SDK 互不依赖，app 数据层组合：**store=本地正本（mutate.writeHook 接 sync 待推队列），sync=云端镜像**。it-002 实现路径：先以 store SDK 替换 wardrobe 数据层（纯重构，测试护栏），再按 sync 设计 §9 接入；过渡期源码可先落在 wardrobe 内，但包结构按 `store/`、`sync/contract`、`sync/backend/bitable` 分明，拆库纯搬移。
+
 ## 待用户确认的问题
 
 **已确认（2026-09-20 用户拍板）**：
@@ -229,11 +257,24 @@ it-001 是纯本机存储（JSON + WebP，无账号无服务端），「云端�
 - `01-user-stories.md`：新增 US-15a（云连接配置）/ US-15b（同步与对账）/ US-15c（二维码分发接入）及验收标准
 - `03-data-model.md`：新增 Bitable 表结构映射小节、软删字段
 - `04-architecture.md`：新增 `data/sync/` 分层说明
-- `06-decisions.md`：ADR-011 飞书多维表格作为同步后端（含替代方案取舍）
+- `06-decisions.md`：ADR-011 飞书多维表格作为同步后端（含替代方案取舍）；ADR-012 SDK 边界与拆库时机（§15：先边界后拆库、composite build、契约文档）
+- 仓库布局（远期）：代码落地时新增 `libs/sync/`（contract + backends + android，composite build），届时修订根 AGENTS.md「不在应用目录外放代码」条款（SDK 属基础设施例外）
 
 ## 验证记录
 
-（实现后回填）
+**2026-09-20 · SDK 阶段（it-002 前置工程）**
+
+| 项 | 结果 |
+|---|---|
+| libs/store 单测 | 20/20 通过（原子写、三级恢复、迁移链、SSOT 回滚、writeHook、孤儿清理、zip 往返） |
+| wardrobe 单测 | `:app:testDebugUnitTest` 全绿（原 JsonFileStore 测试随职责移入 SDK 退役） |
+| wardrobe APK | `assembleDebug` 通过（composite build 依赖替换正常，APK 24.7MB） |
+| libs/sync 单测 | 49/49 通过（contract 24：队列合并/对账/冲突裁决/状态机/附件隔离；bitable 25：建表/补列/收编/分页/退避/错误折叠/codec） |
+| 依赖边界审计 | grep 全通过：store 不依赖 Android/app；contract 不依赖 bitable/Android/app/store；bitable 不依赖 app/store；wardrobe 不依赖 sync |
+| review 修复 | ① push/pull 成功不落 Done 状态 ② 传输级失败不落 Failed ③ 附件上传失败会中断整批 → 均已修复并补 5 个状态机单测 |
+| 已知边界 | FakeTransport 仅验证我方请求构造与响应解析，真实飞书链路（token/附件 extra 参数/临时下载 URL 形态）仍需按实测清单真机验证 |
+
+**App 接入（US-15a/b/c：设置页、扫二维码、同步织入）未开始**——按用户目标「多维表 SDK 先实现、不接入」执行。
 
 ## 主要参考
 

@@ -8,7 +8,7 @@
 ├───────────────────────────────────────────┤
 │ domain/    实体、Repository 接口、UseCase   │  纯 Kotlin，无 Android 依赖（JVM 可测）
 ├───────────────────────────────────────────┤
-│ data/      Repository 实现、JSON 存储、图片  │  实现 domain 接口
+│ data/      Repository 实现、图片编解码        │  实现 domain 接口；持久化机制由 libs/store 承担
 ├───────────────────────────────────────────┤
 │ export/    合成图/文案/剪贴板分享（门面）    │  Android 图形与系统交互
 └───────────────────────────────────────────┘
@@ -29,9 +29,8 @@ com.leo.wardrobe/
 │  ├─ repository/ WardrobeRepository(接口) ImageStore(接口)
 │  └─ usecase/    ComposeOutfitImage BuildOutfitPrompt PickRandomOutfit ImportItemPhoto(接口层)
 ├─ data/
-│  ├─ json/JsonFileStore.kt       # 读写 wardrobe.json（原子写 + schemaVersion 迁移 + bak）
-│  ├─ repo/WardrobeRepositoryImpl.kt
-│  └─ image/ImageFileStore.kt     # URI→WebP 压缩落盘、删除、查找
+│  ├─ repo/WardrobeRepositoryImpl.kt   # 继承 store SDK 的 SsotRepository（SSOT+原子落盘+广播；writeHook 预留同步登记）
+│  └─ image/ImageFileStore.kt          # 解码/EXIF 摆正/WebP 压缩（Android 能力）；文件管理走 store SDK FileMediaStore
 ├─ export/
 │  ├─ OutfitImageComposer.kt      # Bitmap 拼合成图（2列网格+品类标签）
 │  ├─ PromptBuilder.kt            # 文案模板（策略：可替换模板）
@@ -51,7 +50,7 @@ com.leo.wardrobe/
 | 模式 | 用在哪 |
 |---|---|
 | Repository | `domain.repository` 定接口、`data.repo` 实现；UI 不感知持久化 |
-| SSOT 单一数据源 | `WardrobeRepositoryImpl` 持内存快照，暴露 `StateFlow<WardrobeData>`；任何写操作：更新快照 → 原子持久化 → 流自动广播。三 Tab 与角色过滤全部是流上 `map` |
+| SSOT 单一数据源 | 基类 `SsotRepository`（libs/store）：内存快照 + `StateFlow`；写操作「改快照→原子落盘→广播」，落盘失败回滚。三 Tab 与角色过滤全部是流上 `map` |
 | MVVM + UDF | 每屏 `ViewModel` 暴露 `StateFlow<UiState>`；用户操作走 sealed interface Event；state 向下、event 向上 |
 | 组合根 + 构造器注入 | `AppContainer` 手动装配，替换假仓库即可测 ViewModel |
 | 值对象 | WardrobeCategory、OutfitImage、Tag(=String) |
@@ -77,4 +76,5 @@ com.leo.wardrobe/
 ## 构建配置
 
 - compileSdk 35 / targetSdk 35 / minSdk 26；AGP 8.7.x + Gradle 8.9 + Kotlin 2.0.x（compose 插件）
+- composite build：`includeBuild("../libs/store")`，依赖坐标 `com.leo.libs:store`（自动替换为同仓源码，ADR-012）
 - 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、JUnit4 + kotlinx-coroutines-test

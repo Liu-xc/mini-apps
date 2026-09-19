@@ -1,7 +1,15 @@
 # 00 · store 架构设计（本地存储 SDK）
 
-- **状态**：设计稿 v1（2026-09-20），待用户评审后进入实现
+- **状态**：已实现 v0.1.0（2026-09-20 落地并接入 wardrobe，20 单测全绿）。与 v1 设计稿的偏差见 §「实现状态」
 - **参考实现**：wardrobe it-001 数据层（JsonFileStore / ImageFileStore / SSOT 快照 / zip 导出，15 个 JVM 单测已验证）——本 SDK 是它的通用化抽取，不是全新设计
+
+## 0. 实现状态（v0.1.0 与设计稿的偏差）
+
+- **单模块落地**（未拆 core/android）：`MediaStore` 接口与 `FileMediaStore` 都在 core；图片编解码归 app 注入（wardrobe 的 ImageFileStore 负责 WebP/EXIF），因此不需要 android 模块。
+- API 定名：`Migration(fromVersion){transform}` 迁移链；`LoadOutcome.Loaded(source, migratedFrom)/DefaultUsed`；组合缝命名 `writeHook`。
+- `MediaStore.file()` 返回文件句柄不校验存在性（读取用 `read()`）；`put(bytes, ext, preferredName)`。
+- `BackupCodec` v1 仅 Replace 整包恢复；zip 条目 `snapshot.json` + `media/<name>`。
+- `load()` 为同步读（rename 原子性保证与并发 commit 安全），`commit()` 为 suspend + Mutex 串行。
 
 ## 1. 定位与目标
 

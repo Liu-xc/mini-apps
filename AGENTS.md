@@ -51,6 +51,6 @@ feat|fix|docs|spec|chore(scope): 一句话描述 (#it-XXX)
 
 ## 其他
 
-- 不要在应用目录外放应用代码；不要在根目录放业务逻辑。
+- 不要在应用目录外放应用代码；不要在根目录放业务逻辑。唯一例外：跨应用公共 SDK 放 `libs/`（如 `libs/store`、`libs/sync`），经 composite build（includeBuild）接入各应用，同样 specs 先行（`libs/<名>/specs/`），依赖方向只能「应用 → libs」「libs → libs 的 contract」，不得反向。
 - 依赖变更、版本升级必须记录 ADR（06-decisions.md）。
 - 演示/测试数据的生成脚本放 `应用名/tools/`，并可在 it-XXX 中引用。

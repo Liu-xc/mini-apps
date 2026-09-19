@@ -1,7 +1,15 @@
 # 00 · sync 架构设计（中立契约 + 后端适配器）
 
-- **状态**：设计稿 v2（2026-09-20，v1 为单一 bitable SDK，因「后端须可低成本切换」重构），待用户评审后进入实现
+- **状态**：已实现 v0.1.0（2026-09-20，contract + bitable 49 单测全绿；按计划未接入任何应用）。与 v2 设计稿的偏差见 §「实现状态」
 - **上游依据**：wardrobe [it-002 调研](../../../wardrobe/specs/iterations/it-002-feishu-bitable-sync.md)
+
+## 0. 实现状态（v0.1.0 与设计稿的偏差）
+
+- 模块结构：`contract/` + `bitable/` 两个 Gradle 子模块（未设 backends/ 子目录与 android 模块；OkHttp 依赖在 bitable）。
+- 草案的 `TableMapping<E>` 落地为 **`CollectionAdapter`**：引擎只说 `SyncEntity`（映射全部在 app 侧），附件经 `attachmentsFor()/onPushed()` 钩子两段式处理（取代 AttachmentSlot 泛型）。
+- 状态机：`SyncState.Done(at, pulled, pushed, deleted, rejected)`；`connect` 失败返回 `Result`，`push/pull` 失败抛出并落 `Failed(retryable)`。
+- BitableSource 细节：字段类型注册表驱动解码（未知字段折叠 `JsonText` 不炸同步）；`updatedAt = last_modified_time`，兜底实体 `updatedAt` 列；`WriteGate` 全局串行写 + 按 `x-ogw-ratelimit-reset` 退避；`RecordIndex` JSON 文件持久化（entityId↔recordId）；单选列解码为 `Options(单值)`。
+- 测试策略落地：FakeTransport 脚本化桩 + 请求体断言（我方请求构造正确性）；真实链路行为属 it-002 真机实测清单范围。
 
 ## 1. 定位与目标
 

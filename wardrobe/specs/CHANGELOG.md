@@ -23,6 +23,14 @@
 - 修复：以 `bounds.outWidth/Height` 判定尺寸解析结果；照片改为选中瞬间即导入落盘（消除授权过期窗口）；导入/保存失败分支补全日志与细分提示、协程异常兜底
 - QA 模拟器全流程实测通过：选图即时导入 → 填名保存 → 列表/搭配页联动
 
+## [0.2.1-it002-sdk] — 2026-09-20
+
+### it-002（云同步前置）— 两套公共 SDK 落地 + wardrobe 数据层接入 store SDK
+- `libs/store` 0.1.0：SnapshotStore（原子写/三级恢复/迁移链）、SsotRepository（writeHook 同步缝）、FileMediaStore、BackupCodec（zip）——20 单测
+- wardrobe 接入：JsonFileStore 退役；WardrobeRepositoryImpl 继承 SsotRepository；ImageFileStore 文件管理改走 FileMediaStore；行为与备份格式不变，单测全绿、assembleDebug 通过
+- `libs/sync` 0.1.0：契约（SyncValue 七值 / SyncEngine 轻同步 / FilePendingOpQueue / SyncError 折叠）+ feishu-bitable 适配器（自动建表补列、UI 手建行收编、WriteGate 串行 + 429 退避）——49 单测；**按计划暂不接入 App**
+- 架构 review：依赖边界 grep 审计通过；修复引擎 3 处缺陷并补状态机测试；ADR-011/012、AGENTS.md、各 specs 同步更新
+
 ## [0.2.0-it002] — 2026-09-20
 
 ### it-002 — 导出重构：单张长图 + 多维度 Prompt 选择器
