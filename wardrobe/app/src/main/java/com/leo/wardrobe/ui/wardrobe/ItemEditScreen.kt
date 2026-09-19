@@ -3,6 +3,7 @@
 package com.leo.wardrobe.ui.wardrobe
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,12 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagInput
+import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
@@ -185,7 +190,17 @@ fun ItemEditScreen(
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
-                        label = { Text(c.label) },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(c.iconRes),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Text(c.label, modifier = Modifier.padding(start = 4.dp))
+                            }
+                        },
                     )
                 }
             }

@@ -115,12 +115,12 @@ fun WardrobeScreen(
                         val catItems = filtered.filter { it.category == category }
                         if (catItems.isEmpty()) return@forEach
                         item(key = "header-${category.name}") {
-                            Text(
-                                "▍${category.label}（${catItems.size}）",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = editorialColors().inkFaint,
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
-                            )
+                            ) {
+                                com.leo.wardrobe.ui.components.CategoryLabel(category, count = catItems.size)
+                            }
                         }
                         catItems.forEach { item ->
                             item(key = item.id) { ItemRow(vm, item, onEdit = { onEditItem(item.id) }, onSwipeDelete = { pendingDelete = item }) }

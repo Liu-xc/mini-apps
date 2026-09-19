@@ -16,6 +16,10 @@
 
 单元测试：`./gradlew test`
 
+## 素材署名
+
+应用图标与品类 3D 图标来自 [Thiings](https://www.thiings.co)（免费素材，个人非商业用途）。
+
 ## 技术栈速览
 
 Kotlin · Jetpack Compose (Material 3 Expressive) · MVVM + 单向数据流 · Repository + JSON 文件存储（kotlinx.serialization）· Coil · Lottie。详见 [specs/04-architecture.md](specs/04-architecture.md) 与 [specs/06-decisions.md](specs/06-decisions.md)。
