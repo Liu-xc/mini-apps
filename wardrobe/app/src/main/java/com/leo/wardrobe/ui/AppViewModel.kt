@@ -83,6 +83,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return prefs.slotSelections(personId).firstOrNull()?.get(category.name)
     }
 
+    /** 生图文案的人物描述（全局记住，it-002） */
+    val personNote: StateFlow<String> = prefs.personNote
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun setPersonNote(note: String) {
+        viewModelScope.launch { prefs.setPersonNote(note) }
+    }
+
     // ---- Person ----
     fun addPerson(name: String, emoji: String) = viewModelScope.launch {
         val p = repo.addPerson(name, emoji)

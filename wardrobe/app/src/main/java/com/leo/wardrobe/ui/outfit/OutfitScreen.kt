@@ -183,7 +183,7 @@ fun OutfitScreen(
                 onClick = { exportItems = currentSelection() },
                 enabled = allItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),
-            ) { Text("📋 复制图片+文本") }
+            ) { Text("📋 复制长图") }
             OutlinedButton(
                 onClick = { exportItems = currentSelection() },
                 enabled = allItems.isNotEmpty(),

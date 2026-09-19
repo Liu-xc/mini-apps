@@ -18,16 +18,12 @@ class ShareClipboard(private val context: Context) {
     }
 
     /**
-     * 图片 + 文本同时进剪贴板。
-     * 图片以 content URI 挂载（FLAG_GRANT_READ_URI_PERMISSION），
-     * 文本作为附加 Item——支持文本粘贴的应用拿到文案，支持图片的拿到图。
-     * 返回是否成功（个别 ROM 可能拒绝）。
+     * 只复制一张图片（it-002 主通道）：Prompt 已绘制在长图底部并写入 EXIF，
+     * 生图 Agent 粘贴一张图即可。返回是否成功。
      */
-    fun copyImageAndText(image: File, text: String): Boolean = runCatching {
+    fun copyImage(image: File): Boolean = runCatching {
         val uri = FileProvider.getUriForFile(context, "$AUTHORITY", image)
-        val clip = ClipData.newUri(context.contentResolver, "outfit", uri).apply {
-            addItem(ClipData.Item(text))
-        }
+        val clip = ClipData.newUri(context.contentResolver, "outfit", uri)
         clipboard().setPrimaryClip(clip)
         true
     }.getOrDefault(false)

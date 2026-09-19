@@ -17,6 +17,7 @@ private val Context.store by preferencesDataStore("wardrobe_prefs")
 class PrefsStore(private val context: Context) {
 
     private val keyPerson = stringPreferencesKey("current_person")
+    private val keyPersonNote = stringPreferencesKey("person_note")
 
     private fun slotKey(personId: String) = stringSetPreferencesKey("slots_$personId")
 
@@ -24,6 +25,13 @@ class PrefsStore(private val context: Context) {
 
     suspend fun setCurrentPerson(id: String) {
         context.store.edit { it[keyPerson] = id }
+    }
+
+    /** 生图文案的「人物描述」（it-002）：一次输入，全局记住 */
+    val personNote: Flow<String> = context.store.data.map { it[keyPersonNote] ?: "" }
+
+    suspend fun setPersonNote(note: String) {
+        context.store.edit { it[keyPersonNote] = note }
     }
 
     /** 该角色各槽位选中：Map<品类.name, itemId>（存储格式 "TOP=itemId"） */

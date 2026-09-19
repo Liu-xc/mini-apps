@@ -14,6 +14,8 @@
 ├───────────────────────────────────────────┤
 │ map/       osmdroid 封装（MapView 生命周期、 │  Android 专用；marker/选点/瓦片缓存
 │            marker 工厂、选点控制器）         │
+├───────────────────────────────────────────┤
+│ platform/  系统交互门面（LinkOpener 等）     │  Android 专用；UI 不直接碰 Intent
 └───────────────────────────────────────────┘
 di/AppContainer.kt = 组合根，手动构造器注入
 ```
@@ -28,7 +30,7 @@ com.leo.eats/
 ├─ MainActivity.kt                # 单 Activity：NavHost + 底部三 Tab + 主题
 ├─ di/AppContainer.kt             # 组合根
 ├─ domain/
-│  ├─ model/      Place Visit PlaceKind GeoLoc TagPresets EatsData PlaceWithStats
+│  ├─ model/      Place Visit PlaceKind GeoLoc PlaceLink LinkSource TagPresets EatsData PlaceWithStats
 │  ├─ repository/ EatsRepository(接口) ImageStore(接口)
 │  └─ usecase/    BuildCandidates(过滤) SpinWheel(加权抽取) ComputeStats(派生统计)
 ├─ data/
@@ -39,9 +41,11 @@ com.leo.eats/
 │  ├─ MapController.kt            # MapView 生命周期 / 瓦片缓存
 │  ├─ PlaceMarkerFactory.kt       # 类型 → 颜色 / 图标
 │  └─ PickLocationController.kt   # 长按选点
+├─ platform/
+│  └─ LinkOpener.kt               # ACTION_VIEW 打开链接 + 无处理组件兜底（门面）
 └─ ui/
    ├─ theme/       DesignTokens Typography EatsTheme
-   ├─ components/  PhotoStrip RatingStars TagChipInput VisitTimeline EmptyState KindChip…
+   ├─ components/  PhotoStrip RatingStars TagChipInput VisitTimeline EmptyState KindChip LinkChips…
    ├─ AppViewModel.kt             # 全局数据流出口（SSOT）
    ├─ spin/        SpinScreen(W1) WheelCanvas
    ├─ mapview/     MapScreen(W2) PlaceSummaryCard
@@ -60,6 +64,7 @@ com.leo.eats/
 | 组合根 + 构造器注入 | AppContainer 手动装配；替换假仓库即可测 ViewModel |
 | 值对象 | PlaceKind、GeoLoc、Tag(=String) |
 | 策略 | SpinWheel 权重公式参数化（排除天数、权重函数集中可调） |
+| 门面 | LinkOpener 封装 ACTION_VIEW 与无处理组件兜底，UI 不直接碰 Intent |
 
 ## 状态与导航
 
@@ -80,7 +85,7 @@ com.leo.eats/
 
 ## 测试策略
 
-- JVM 单测：JsonFileStore 读写与迁移、Repository 不变量（级联删除/悬空清洗/派生统计）、BuildCandidates 过滤、SpinWheel 权重。
+- JVM 单测：JsonFileStore 读写与迁移、Repository 不变量（级联删除/悬空清洗/派生统计）、BuildCandidates 过滤、SpinWheel 权重、LinkSource.detect 来源识别。
 - UI 以模拟器截图验证（对照 02 线框）；Compose UI 测试留待后续迭代。
 
 ## 构建配置

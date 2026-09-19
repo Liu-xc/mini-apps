@@ -2,7 +2,7 @@
 
 - **状态**：待确认（提案）
 - **提案日期**：2026-09-20
-- **范围**：首个可用版本，覆盖全部核心故事（US-01 ~ US-07）
+- **范围**：首个可用版本，覆盖全部核心故事（US-01 ~ US-08）
 
 ## 背景与动机
 
@@ -12,7 +12,7 @@
 
 ## 用户故事
 
-US-01 ~ US-07 全部（见 [../01-user-stories.md](../01-user-stories.md)）；NFR-01/02/04 本迭代达标，NFR-03 深色模式做基础适配。
+US-01 ~ US-08 全部（见 [../01-user-stories.md](../01-user-stories.md)）；NFR-01/02/04 本迭代达标，NFR-03 深色模式做基础适配。
 
 ## 实施步骤
 
@@ -20,9 +20,9 @@ US-01 ~ US-07 全部（见 [../01-user-stories.md](../01-user-stories.md)）；N
 2. Gradle 脚手架（构建配置对齐 wardrobe 基线），`./gradlew assembleDebug` 通过
 3. 主题与通用组件（DesignTokens / RatingStars / TagChipInput / PhotoStrip / EmptyState）
 4. 数据层：实体 + Repository + JSON 原子存储 + 图片压缩（+ JVM 单测）
-5. 列表页 W3 + 表单 W4（Photo Picker、标签、评分）
+5. 列表页 W3 + 表单 W4（Photo Picker、标签、评分、链接粘贴与来源识别）
 6. 地图页 W2（osmdroid 集成、类型 marker、底部摘要卡、未上地图入口）+ W4 位置长按选点
-7. 详情页 W5 + 记一笔弹层 W6（Visit 时间线、派生统计）
+7. 详情页 W5 + 记一笔弹层 W6（Visit 时间线、派生统计、链接跳转；W1 结果卡链接直达）
 8. 决策页 W1：WheelCanvas 转盘动画 + BuildCandidates 过滤 + SpinWheel 权重 + 「就吃这个」落账
 9. 动效打磨（转盘 / 结果卡 / 摘要卡 / 列表入场 / 空态）
 10. 模拟器验证（截图对照线框）+ 演示数据脚本 `eats/tools/`
@@ -32,7 +32,7 @@ US-01 ~ US-07 全部（见 [../01-user-stories.md](../01-user-stories.md)）；N
 
 见 01-user-stories.md 各 US 的 Given/When/Then；整体出口条件：
 - `./gradlew assembleDebug` 与 `./gradlew test` 通过
-- 模拟器逐页截图与 W1–W6 线框语义一致，US-01/03/04/05/06/07 交互实测通过
+- 模拟器逐页截图与 W1–W6 线框语义一致，US-01/03/04/05/06/07/08 交互实测通过
 - specs 与代码一致
 
 ## 验证记录

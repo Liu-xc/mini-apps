@@ -2,7 +2,7 @@
 
 package com.leo.wardrobe.ui.outfit
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,13 +21,14 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,23 +42,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Outfit
+import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
-import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * W6 导出面板（US-07/08/09）：合成图预览 + 可编辑文案 + 复制/分享 + 收藏 + 录入成品图。
+ * W6 导出面板（it-002 改版）：单张长图 + 五维度 Prompt 选择器 + 人物描述。
+ * 主按钮「复制长图」= 仅一张图（Prompt 画在底部 + EXIF）。
  */
 @Composable
 fun ExportSheet(
@@ -67,24 +68,43 @@ fun ExportSheet(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val toast by vm.toast.collectAsState()
+    val savedNote by vm.personNote.collectAsState()
 
-    // 合成图 + 文案（打开即生成；标签取各单品标签并集前 3 个）
+    var selections by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var personNote by remember { mutableStateOf("") }
+    var promptEdit by remember { mutableStateOf<String?>(null) } // 用户手改覆盖，维度变化时重置
     var composedFile by remember { mutableStateOf<File?>(null) }
-    var prompt by remember { mutableStateOf("") }
-    var styleTags by remember(items) {
-        mutableStateOf(items.flatMap { it.tags }.distinct().take(3))
-    }
+    var composing by remember { mutableStateOf(true) }
     var copied by remember { mutableStateOf(false) }
-    var confettiTrigger by remember { mutableIntStateOf(0) }
     var collected by remember { mutableStateOf(false) }
+    var confettiTrigger by remember { mutableIntStateOf(0) }
+    var composeJob by remember { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(items, styleTags) {
-        composedFile = withContext(Dispatchers.IO) {
-            vm.imageComposer.composeToExportFile(items)
+    LaunchedEffect(savedNote) { if (personNote.isBlank() && savedNote.isNotBlank()) personNote = savedNote }
+
+    /** 长图通道文案：不含单品清单（照片标签已承载） */
+    val imagePrompt = promptEdit ?: vm.promptBuilder(items, selections, personNote, includeItems = false)
+
+    fun regenerate() {
+        composeJob?.cancel()
+        composing = true
+        composeJob = scope.launch {
+            delay(200) // 去抖：快速点选维度时避免重复拼长图
+            composedFile = vm.imageComposer.composeToExportFile(items, imagePrompt)
+            composing = false
         }
-        prompt = withContext(Dispatchers.Default) {
-            vm.promptBuilder(items, styleTags)
+    }
+
+    LaunchedEffect(items) { regenerate() }
+    LaunchedEffect(selections, personNote) {
+        promptEdit = null
+        regenerate()
+    }
+    // 人物描述持久化（去抖）
+    LaunchedEffect(personNote) {
+        if (personNote != savedNote) {
+            delay(600)
+            vm.setPersonNote(personNote)
         }
     }
 
@@ -99,94 +119,129 @@ fun ExportSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    "导出生图素材",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = editorialColors().ink,
-                )
+                Text("导出生图素材", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
 
-                // 合成图预览
-                val painter = rememberAsyncImagePainter(composedFile)
-                if (composedFile != null) {
-                    Image(
-                        painter = painter,
-                        contentDescription = "穿搭合成图",
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp)),
-                    )
-                } else {
-                    Text(
-                        "正在拼合 ${items.size} 件单品…",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = editorialColors().inkFaint,
-                    )
+                // 长图预览（纵向滚动）
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    if (composedFile != null) {
+                        AsyncImage(
+                            model = composedFile,
+                            contentDescription = "穿搭长图",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        Text(
+                            if (composing) "正在按穿搭顺序拼长图…" else "暂无可拼合的单品照片",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = editorialColors().inkFaint,
+                            modifier = Modifier.padding(20.dp),
+                        )
+                    }
                 }
 
-                // 可编辑文案
+                // 五维度 Prompt 选择器（单选、可再点取消）
+                PromptPresets.dimensions.forEach { dim ->
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            dim.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = editorialColors().inkFaint,
+                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            dim.options.forEach { opt ->
+                                FilterChip(
+                                    selected = selections[dim.key] == opt,
+                                    onClick = {
+                                        selections = if (selections[dim.key] == opt) {
+                                            selections - dim.key
+                                        } else {
+                                            selections + (dim.key to opt)
+                                        }
+                                    },
+                                    label = { Text(opt) },
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
-                    value = prompt,
-                    onValueChange = { prompt = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    label = { Text("文案（自动生成，可编辑）") },
+                    value = personNote,
+                    onValueChange = { personNote = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("人物描述（如身高体型/发型，记住上次）") },
+                    placeholder = { Text("如：175cm 偏瘦、短黑发男生") },
+                    singleLine = true,
                     textStyle = MaterialTheme.typography.bodySmall,
                 )
 
-                // 风格标签（进文案）
-                TagInput(tags = styleTags, onChange = { styleTags = it })
+                OutlinedTextField(
+                    value = imagePrompt,
+                    onValueChange = { promptEdit = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    label = { Text("文案（随选择实时生成，可编辑）") },
+                    textStyle = MaterialTheme.typography.bodySmall,
+                )
 
-                // 主操作：复制图片+文本 / 分享
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(
                         onClick = {
                             val file = composedFile
                             scope.launch {
-                                val ok = file != null &&
-                                    vm.share.copyImageAndText(file, prompt)
-                                if (!ok) vm.share.copyText(prompt)
-                                copied = true
-                                confettiTrigger++
-                                vm.toast("已复制，去生图 Agent 里粘贴吧")
+                                val ok = file != null && vm.share.copyImage(file)
+                                if (ok) {
+                                    copied = true
+                                    confettiTrigger++
+                                    vm.toast("长图已复制，去生图 Agent 里粘贴")
+                                } else {
+                                    vm.toast("复制失败，试试「分享」")
+                                }
                             }
                         },
                         enabled = composedFile != null,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Icon(
-                            if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy,
-                            contentDescription = null,
-                        )
-                        Text(
-                            if (copied) "已复制 ✓" else "复制图片+文本",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        Icon(if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, contentDescription = null)
+                        Text(if (copied) "已复制 ✓" else "复制长图")
                     }
-                    OutlinedButton(onClick = {
-                        composedFile?.let { vm.share.shareImage(it) }
-                    }) {
+                    OutlinedButton(onClick = { composedFile?.let { vm.share.shareImage(it) } }) {
                         Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
                         Text("分享")
                     }
                 }
-                OutlinedButton(onClick = { vm.share.copyText(prompt) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("只复制文本")
-                }
+                OutlinedButton(
+                    onClick = {
+                        // 文本通道附带单品清单
+                        vm.share.copyText(vm.promptBuilder(items, selections, personNote, includeItems = true))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("只复制文本（含单品清单）") }
 
-                // 收藏 + 录入成品图
-                androidx.compose.material3.HorizontalDivider(color = editorialColors().hairline)
+                HorizontalDivider(color = editorialColors().hairline)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = {
+                            val tags = selections.values.toList()
                             if (existingOutfit != null) {
-                                vm.updateOutfitTags(existingOutfit.id, styleTags)
+                                vm.updateOutfitTags(existingOutfit.id, tags)
                             } else {
-                                vm.createOutfit(items.map { it.id }, styleTags)
+                                vm.createOutfit(items.map { it.id }, tags)
                             }
                             collected = true
                         },
@@ -203,15 +258,7 @@ fun ExportSheet(
                         Text("＋ 录入成品图")
                     }
                 }
-                if (toast != null) {
-                    Text(
-                        toast!!,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = editorialColors().accent,
-                    )
-                }
             }
-            // 复制成功彩屑（specs/05 动效#4）
             ConfettiBurst(
                 trigger = confettiTrigger,
                 modifier = Modifier

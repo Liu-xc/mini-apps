@@ -16,6 +16,7 @@
 │ rating?              │        │ photos[]         │
 │ tags[]               │        │ createdAt        │
 │ photos[]             │        └──────────────────┘
+│ links[]              │
 │ notes?               │
 │ createdAt/updatedAt  │
 └──────────────────────┘
@@ -38,6 +39,7 @@
 | rating | Int? | 主观综合评分 1–5，可空 |
 | tags | List\<String\> | 标签：忌口（辣/香菜）、风味、场景；去重 ≤10 |
 | photos | List\<String\> | 门面/菜品照片文件名 |
+| links | List\<PlaceLink\> | 外部链接（美团/点评分享链接等），url 去重 |
 | notes | String? | 总体笔记（排队严重、错峰去…） |
 | createdAt / updatedAt | Long (epoch millis) | |
 
@@ -55,6 +57,9 @@
 
 ### GeoLoc（值对象）
 `lat: Double` + `lng: Double`。
+
+### PlaceLink（值对象）
+`url: String` + `label: String?`（如「双人套餐」「店铺主页」）。来源徽标（美团/大众点评/其他）由 `LinkSource.detect(url)` 在展示时派生，不落盘（ADR-009）。
 
 ### PlaceKind（枚举）
 `堂食 RESTAURANT` / `外卖 TAKEOUT` / `自做 HOME`。三类统一为一个实体（转盘/列表/统计一视同仁），kind 仅影响图标、地图 marker 颜色与「是否有位置」的默认行为（ADR-007）。
@@ -82,6 +87,7 @@
   "places": [{"id":"pl1","name":"巷子深火锅","kind":"RESTAURANT","cuisine":"火锅",
               "location":{"lat":31.22,"lng":121.44},"address":"某某路12号",
               "rating":4,"tags":["辣","重口味"],"photos":["uuid1.webp"],
+              "links":[{"url":"https://s.dianping.com/abcd","label":"双人套餐"}],
               "notes":"排队严重，错峰去","createdAt":0,"updatedAt":0}],
   "visits": [{"id":"v1","placeId":"pl1","at":1758300000000,"rating":5,"cost":128.0,
               "text":"毛肚绝了","photos":["uuid2.webp"],"createdAt":1758300000000}]
@@ -95,3 +101,4 @@
 3. 删除 Visit：其 photos 物理删除，Place 保留。
 4. photos 引用的文件缺失时加载阶段清洗悬空引用（不崩溃）。
 5. location 为空的 Place 不进入地图数据集。
+6. links 的 url 不可为空且保存时去重；label 可空。
