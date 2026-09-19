@@ -1,0 +1,211 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
+package com.leo.wardrobe.ui.outfit
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import com.leo.wardrobe.domain.model.Person
+import com.leo.wardrobe.ui.AppViewModel
+import com.leo.wardrobe.ui.theme.editorialColors
+
+private val EMOJI_CHOICES = listOf("👨", "👩", "🧒", "👶", "🙂", "🧑", "👵", "👴")
+
+/**
+ * W2 角色切换（US-12）：列表 + 新建 + 管理（改名/emoji/删除需确认）。
+ */
+@Composable
+fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
+    val data by vm.data.collectAsState()
+    val current by vm.currentPerson.collectAsState()
+    var manageMode by remember { mutableStateOf(false) }
+    var editTarget by remember { mutableStateOf<Person?>(null) }
+    var deleteTarget by remember { mutableStateOf<Person?>(null) }
+    var showCreate by remember { mutableStateOf(false) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.padding(bottom = 24.dp)) {
+            Text(
+                "切换衣橱",
+                style = MaterialTheme.typography.titleLarge,
+                color = editorialColors().ink,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+            )
+            LazyColumn {
+                items(data.persons.size, key = { data.persons[it].id }) { index ->
+                    val p = data.persons[index]
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (manageMode) {
+                                    editTarget = p
+                                } else {
+                                    vm.switchPerson(p.id)
+                                    onDismiss()
+                                }
+                            }
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                    ) {
+                        Text(p.emoji, style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            p.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = editorialColors().ink,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 14.dp),
+                        )
+                        if (manageMode) {
+                            IconButton(onClick = { editTarget = p }) {
+                                Icon(Icons.Outlined.Edit, "编辑", tint = editorialColors().inkFaint)
+                            }
+                            IconButton(onClick = { deleteTarget = p }) {
+                                Icon(Icons.Outlined.Delete, "删除", tint = MaterialTheme.colorScheme.error)
+                            }
+                        } else if (p.id == current?.id) {
+                            Box(
+                                Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(editorialColors().accent),
+                            )
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                TextButton(onClick = { showCreate = true }) { Text("＋ 新建角色") }
+                TextButton(onClick = { manageMode = !manageMode }) {
+                    Text(if (manageMode) "完成" else "管理")
+                }
+            }
+        }
+    }
+
+    if (showCreate) {
+        PersonEditDialog(
+            title = "新建角色",
+            initialName = "",
+            initialEmoji = "🙂",
+            onDismiss = { showCreate = false },
+            onConfirm = { name, emoji ->
+                vm.addPerson(name, emoji)
+                showCreate = false
+            },
+        )
+    }
+    editTarget?.let { target ->
+        PersonEditDialog(
+            title = "编辑角色",
+            initialName = target.name,
+            initialEmoji = target.emoji,
+            onDismiss = { editTarget = null },
+            onConfirm = { name, emoji ->
+                vm.updatePerson(target.id, name, emoji)
+                editTarget = null
+            },
+        )
+    }
+    deleteTarget?.let { target ->
+        val itemCount = data.items.count { it.personId == target.id }
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text("删除 ${target.emoji} ${target.name}？") },
+            text = { Text("将连带删除该角色的 $itemCount 件衣物、全部穿搭与评论，不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deletePerson(target.id)
+                    deleteTarget = null
+                    onDismiss()
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("取消") } },
+        )
+    }
+}
+
+@Composable
+private fun PersonEditDialog(
+    title: String,
+    initialName: String,
+    initialEmoji: String,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, emoji: String) -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var emoji by remember { mutableStateOf(initialEmoji) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("名字") },
+                    singleLine = true,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EMOJI_CHOICES.forEach { e ->
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable { emoji = e }
+                                .background(
+                                    if (e == emoji) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) { Text(e) }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(name, emoji) }, enabled = name.isNotBlank()) { Text("确定") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    )
+}
