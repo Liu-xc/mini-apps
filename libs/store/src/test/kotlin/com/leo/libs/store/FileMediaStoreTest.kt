@@ -36,8 +36,9 @@ class FileMediaStoreTest {
     fun deleteAndMissingRead() = runTest {
         val name = store.put(byteArrayOf(1))
         store.delete(name)
-        assertNull(store.read(name))
-        assertNull(store.file(name))
+        assertNull(store.read(name))       // 内容已删
+        assertTrue(store.list().isEmpty()) // 文件确已移除
+        store.delete(name)                 // 幂等
     }
 
     @Test

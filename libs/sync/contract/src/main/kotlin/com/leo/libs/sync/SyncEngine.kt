@@ -9,7 +9,13 @@ sealed interface SyncState {
     data object Disconnected : SyncState
     data object Idle : SyncState
     data class Working(val phase: Phase, val progress: Int, val total: Int) : SyncState
-    data class Done(val at: Long, val pulled: Int, val pushed: Int, val rejected: Int) : SyncState
+    data class Done(
+        val at: Long,
+        val pulled: Int,
+        val pushed: Int,
+        val deleted: Int = 0,
+        val rejected: Int = 0,
+    ) : SyncState
     data class Failed(val error: SyncError, val retryable: Boolean) : SyncState
 
     enum class Phase { CONNECT, PUSH, PULL }
@@ -46,12 +52,16 @@ data class PushSummary(
  * 轻同步引擎（后端无关，契约层核心）：
  * 云端为正本、本地为缓存；push = 待推队列上行；pull = 全量拉取 + 对账；
  * 冲突 = 记录级 LWW；删除 = 物理删除 + 对账传播。实时推送不在 v1 范围。
+ *
+ * 失败语义：单条记录失败计入 PushSummary.failed / PullSummary.rejected，不中断批次；
+ * 传输级失败（网络/鉴权）抛出并落入 state=Failed。
  */
 class SyncEngine(
     private val source: SyncSource,
     private val adapters: List<CollectionAdapter>,
     private val queue: PendingOpQueue,
     private val policy: SyncPolicy = SyncPolicy(),
+    private val now: () -> Long = { System.currentTimeMillis() },
 ) {
 
     private val _state = MutableStateFlow<SyncState>(SyncState.Disconnected)
@@ -60,17 +70,18 @@ class SyncEngine(
     var connected: Boolean = false
         private set
 
-    suspend fun connect(config: SyncConfig): Result<Unit> = runCatchingState {
+    suspend fun connect(config: SyncConfig): Result<Unit> = runCatchingCompat {
         _state.value = SyncState.Working(SyncState.Phase.CONNECT, 0, adapters.size)
         source.connect(config, adapters.map { it.collection })
         connected = true
         _state.value = SyncState.Idle
     }
+
     /**
-     * 上行：待推队列 → 附件上传（换真实 ref）→ 分批 push →
+     * 上行：待推队列 → 附件上传（换真实 ref，单条失败跳过不中断）→ 分批 push →
      * 成功确认（ack + onPushed），失败保留队列。
      */
-    suspend fun push(): PushSummary {
+    suspend fun push(): PushSummary = guard {
         checkConnected()
         var pushed = 0
         val failed = mutableMapOf<String, SyncError>()
@@ -80,10 +91,18 @@ class SyncEngine(
             val upserts = ops.filterIsInstance<SyncOp.Upsert>()
             val removes = ops.filterIsInstance<SyncOp.Remove>()
 
-            // 附件占位 → 真实 ref
-            val resolved = upserts.map { op -> resolveAttachments(adapter, op.entity) }
+            _state.value = SyncState.Working(SyncState.Phase.PUSH, 0, ops.size)
 
-            _state.value = SyncState.Working(SyncState.Phase.PUSH, 0, resolved.size + removes.size)
+            // 附件占位 → 真实 ref；单条失败记入 failed，不中断其余
+            val resolved = mutableListOf<SyncEntity>()
+            for (op in upserts) {
+                val outcome = runCatching { resolveAttachments(adapter, op.entity) }
+                outcome.fold(
+                    onSuccess = { resolved += it },
+                    onFailure = { failed[op.entityId] = (it as? SyncException)?.error ?: SyncError.Network(it.message ?: "附件上传失败") },
+                )
+            }
+
             val appliedIds = mutableListOf<String>()
             val appliedEntities = mutableListOf<SyncEntity>()
             resolved.chunked(policy.pushBatchSize).forEach { batch ->
@@ -92,7 +111,7 @@ class SyncEngine(
                 failed += result.failed
                 appliedIds += result.applied
                 appliedEntities += batch.filter { it.id in result.applied }
-                _state.value = SyncState.Working(SyncState.Phase.PUSH, appliedIds.size, resolved.size + removes.size)
+                _state.value = SyncState.Working(SyncState.Phase.PUSH, appliedIds.size, ops.size)
             }
             if (removes.isNotEmpty()) {
                 val result = source.push(adapter.collection, emptyList(), removes.map { it.entityId })
@@ -103,7 +122,7 @@ class SyncEngine(
             queue.acknowledge(ops.filter { it.entityId in appliedIds })
             if (appliedEntities.isNotEmpty()) adapter.onPushed(appliedEntities)
         }
-        return PushSummary(pushed = pushed, failed = failed)
+        PushSummary(pushed = pushed, failed = failed)
     }
 
     /**
@@ -112,7 +131,7 @@ class SyncEngine(
      * deletes = 本地存在、云端消失、且不在待推队列的（含他人删除传播）。
      * 待推实体与云端同 id 冲突时按 [ConflictPolicy] 裁决：本地赢→保留待推；云端赢→弃队列取云端。
      */
-    suspend fun pull(): PullSummary {
+    suspend fun pull(): PullSummary = guard {
         checkConnected()
         var pulled = 0
         var deleted = 0
@@ -157,7 +176,37 @@ class SyncEngine(
             pulled += upserts.size
             deleted += deletes.size
         }
-        return PullSummary(pulled = pulled, deleted = deleted, rejected = rejected)
+        PullSummary(pulled = pulled, deleted = deleted, rejected = rejected)
+    }
+
+    /** connect 专用包装：成功 Idle，失败 Failed 并吞异常为 Result */
+    private suspend fun runCatchingCompat(block: suspend () -> Unit): Result<Unit> = try {
+        block()
+        Result.success(Unit)
+    } catch (e: SyncException) {
+        _state.value = SyncState.Failed(e.error, retryable = e.error.isRetryable())
+        Result.failure(e)
+    } catch (e: Exception) {
+        _state.value = SyncState.Failed(SyncError.Network(e.message ?: "网络错误", e), retryable = true)
+        Result.failure(e)
+    }
+
+    /** push/pull 正常结束落 Done、异常落 Failed 再抛出 */
+    private suspend fun <T> guard(block: suspend () -> T): T = try {
+        val result = block()
+        _state.value = when (result) {
+            is PushSummary -> SyncState.Done(at = now(), pulled = 0, pushed = result.pushed)
+            is PullSummary -> SyncState.Done(at = now(), pulled = result.pulled, pushed = 0, deleted = result.deleted, rejected = result.rejected.size)
+            else -> SyncState.Done(at = now(), pulled = 0, pushed = 0)
+        }
+        result
+    } catch (e: SyncException) {
+        _state.value = SyncState.Failed(e.error, retryable = e.error.isRetryable())
+        throw e
+    } catch (e: Exception) {
+        val err = SyncError.Network(e.message ?: "网络错误", e)
+        _state.value = SyncState.Failed(err, retryable = true)
+        throw e
     }
 
     private suspend fun resolveAttachments(
@@ -180,18 +229,6 @@ class SyncEngine(
 
     private fun checkConnected() {
         check(connected) { "尚未 connect；请先 connect(config)" }
-    }
-
-    private suspend fun runCatchingState(block: suspend () -> Unit): Result<Unit> = try {
-        block()
-        Result.success(Unit)
-    } catch (e: SyncException) {
-        _state.value = SyncState.Failed(e.error, retryable = e.error.isRetryable())
-        Result.failure(e)
-    } catch (e: Exception) {
-        val err = SyncError.Network(e.message ?: "网络错误", e)
-        _state.value = SyncState.Failed(err, retryable = true)
-        Result.failure(e)
     }
 
     private fun SyncError.isRetryable(): Boolean =

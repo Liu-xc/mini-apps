@@ -78,7 +78,7 @@ class SyncEngineTest {
         SyncEntity(id, fields, at)
 
     private fun engine(
-        source: FakeSource,
+        source: SyncSource,
         adapter: FakeAdapter,
         queue: PendingOpQueue = FilePendingOpQueue(tmp.newFile()),
     ) = SyncEngine(source, listOf(adapter), queue).also { eng ->
@@ -239,5 +239,77 @@ class SyncEngineTest {
             thrown = true
         }
         assertTrue(thrown)
+    }
+
+    // ---- 状态机（review 补充） ----
+
+    @Test
+    fun pushEndsInDoneState() = runTest {
+        val source = FakeSource()
+        val adapter = FakeAdapter(SyncCollection("Items"))
+        val queue = FilePendingOpQueue(tmp.newFile())
+        val engine = engine(source, adapter, queue)
+        queue.enqueue(SyncOp.Upsert("Items", "i1", entity("i1", 1)))
+
+        engine.push()
+        val done = engine.state.value as SyncState.Done
+        assertEquals(1, done.pushed)
+        assertEquals(0, done.pulled)
+    }
+
+    @Test
+    fun pullEndsInDoneStateWithCounts() = runTest {
+        val source = FakeSource()
+        val adapter = FakeAdapter(SyncCollection("Items")).apply { local["gone"] = 1 }
+        source.cloud += entity("new", 1)
+        val engine = engine(source, adapter)
+
+        engine.pull()
+        val done = engine.state.value as SyncState.Done
+        assertEquals(1, done.pulled)
+        assertEquals(1, done.deleted)
+    }
+
+    @Test
+    fun pullTransportFailureSetsFailedStateAndThrows() = runTest {
+        val failing = object : SyncSource by FakeSource() {
+            override suspend fun pull(collection: SyncCollection, since: PullCursor?): PullResult =
+                throw SyncException(SyncError.Network("断网"))
+        }
+        val engine = SyncEngine(failing, listOf(FakeAdapter(SyncCollection("Items"))), FilePendingOpQueue(tmp.newFile()))
+        kotlinx.coroutines.runBlocking { engine.connect(SyncConfig("fake", emptyMap())).getOrThrow() }
+
+        var thrown = false
+        try {
+            engine.pull()
+        } catch (e: SyncException) {
+            thrown = true
+        }
+        assertTrue(thrown)
+        val state = engine.state.value as SyncState.Failed
+        assertTrue(state.error is SyncError.Network)
+        assertTrue(state.retryable)
+    }
+
+    @Test
+    fun attachmentUploadFailureIsolatesOp() = runTest {
+        val source = object : SyncSource by FakeSource() {
+            override suspend fun putAttachment(name: String, bytes: ByteArray): SyncValue.Attachment =
+                throw SyncException(SyncError.Network("上传失败"))
+        }
+        val adapter = FakeAdapter(SyncCollection("Items")).apply { attachmentBytes = byteArrayOf(1) }
+        val queue = FilePendingOpQueue(tmp.newFile())
+        val engine = engine(source, adapter, queue)
+
+        queue.enqueue(
+            SyncOp.Upsert("Items", "withImg", entity("withImg", 1, mapOf("image" to SyncValue.Attachment("local:x.webp")))),
+        )
+        queue.enqueue(SyncOp.Upsert("Items", "plain", entity("plain", 1)))
+
+        val summary = engine.push()
+        // 带附件的失败并留队列；无附件的正常推走（ack 移除）
+        assertEquals(1, summary.pushed)
+        assertTrue(summary.failed.containsKey("withImg"))
+        assertEquals(listOf("withImg"), queue.all().map { it.entityId })
     }
 }
