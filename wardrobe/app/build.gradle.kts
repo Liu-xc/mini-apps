@@ -57,6 +57,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // 本地存储 SDK（composite build 依赖替换，libs/store）
+    implementation("com.leo.libs:store:0.1.0")
+
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.airbnb.android:lottie-compose:6.7.1")
 

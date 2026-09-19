@@ -1,6 +1,7 @@
 package com.leo.wardrobe.data.repo
 
-import com.leo.wardrobe.data.json.JsonFileStore
+import com.leo.libs.store.SnapshotStore
+import com.leo.libs.store.SsotRepository
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Note
 import com.leo.wardrobe.domain.model.NoteParent
@@ -11,35 +12,18 @@ import com.leo.wardrobe.domain.model.WardrobeData
 import com.leo.wardrobe.domain.model.newId
 import com.leo.wardrobe.domain.repository.ImageStore
 import com.leo.wardrobe.domain.repository.WardrobeRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * SSOT 实现（ADR-008）：内存快照 + 写操作「改快照→原子落盘→广播」，
- * Mutex 串行化保证一致；不变量见 specs/03-data-model.md。
+ * 持久化与广播机制由 store SDK 的 [SsotRepository] 承担；不变量见 specs/03-data-model.md。
  */
 class WardrobeRepositoryImpl(
-    private val store: JsonFileStore,
+    store: SnapshotStore<WardrobeData>,
     private val images: ImageStore,
-) : WardrobeRepository {
+) : SsotRepository<WardrobeData>(store, onLoad = { it.cleaned() }), WardrobeRepository {
 
     /** 测试可注入的时钟 */
     var now: () -> Long = { System.currentTimeMillis() }
-
-    private val mutex = Mutex()
-    private val _data = MutableStateFlow(store.load().cleaned())
-    override val data: StateFlow<WardrobeData> = _data.asStateFlow()
-
-    private suspend fun mutate(block: (WardrobeData) -> WardrobeData) {
-        mutex.withLock {
-            val next = block(_data.value)
-            store.save(next)
-            _data.value = next
-        }
-    }
 
     private fun <T> List<T>.replaceBy(id: String, selector: (T) -> String, map: (T) -> T): List<T> =
         mapNotNull { if (selector(it) == id) map(it) else it }
@@ -59,10 +43,12 @@ class WardrobeRepositoryImpl(
         return p
     }
 
-    override suspend fun updatePerson(id: String, name: String, emoji: String) = mutate {
-        it.copy(persons = it.persons.replaceBy(id, { p -> p.id }) { p ->
-            p.copy(name = name.trim().ifEmpty { p.name }, emoji = emoji.ifEmpty { p.emoji })
-        })
+    override suspend fun updatePerson(id: String, name: String, emoji: String) {
+        mutate {
+            it.copy(persons = it.persons.replaceBy(id, { p -> p.id }) { p ->
+                p.copy(name = name.trim().ifEmpty { p.name }, emoji = emoji.ifEmpty { p.emoji })
+            })
+        }
     }
 
     override suspend fun deletePerson(id: String) {
@@ -92,11 +78,13 @@ class WardrobeRepositoryImpl(
 
     // ---- Item ----
 
-    override suspend fun upsertItem(item: Item) = mutate { d ->
-        val exists = d.items.any { it.id == item.id }
-        val fixed = if (exists) item.copy(updatedAt = now()) else item.copy(createdAt = now(), updatedAt = now())
-        d.copy(items = d.items.replaceBy(item.id, { i -> i.id }) { fixed }
-            .let { if (!exists) it + fixed else it })
+    override suspend fun upsertItem(item: Item) {
+        mutate { d ->
+            val exists = d.items.any { it.id == item.id }
+            val fixed = if (exists) item.copy(updatedAt = now()) else item.copy(createdAt = now(), updatedAt = now())
+            d.copy(items = d.items.replaceBy(item.id, { i -> i.id }) { fixed }
+                .let { if (!exists) it + fixed else it })
+        }
     }
 
     override suspend fun deleteItem(id: String) {
@@ -126,11 +114,12 @@ class WardrobeRepositoryImpl(
         return o
     }
 
-    override suspend fun updateOutfit(outfit: Outfit) = mutate {
-        it.copy(outfits = it.outfits.replaceBy(outfit.id, { o -> o.id }) { outfit.copy(updatedAt = now()) }
-            .let { list -> if (list.none { o -> o.id == outfit.id }) list + outfit else list })
+    override suspend fun updateOutfit(outfit: Outfit) {
+        mutate {
+            it.copy(outfits = it.outfits.replaceBy(outfit.id, { o -> o.id }) { outfit.copy(updatedAt = now()) }
+                .let { list -> if (list.none { o -> o.id == outfit.id }) list + outfit else list })
+        }
     }
-
     override suspend fun deleteOutfit(id: String) {
         val files = data.value.outfits.firstOrNull { it.id == id }?.effectImages?.map { it.file } ?: emptyList()
         mutate { d ->
@@ -142,10 +131,12 @@ class WardrobeRepositoryImpl(
         files.forEach { images.delete(it) }
     }
 
-    override suspend fun addEffectImage(outfitId: String, imageFile: String) = mutate {
-        it.copy(outfits = it.outfits.replaceBy(outfitId, { o -> o.id }) { o ->
-            o.copy(effectImages = o.effectImages + OutfitImage(imageFile, now()), updatedAt = now())
-        })
+    override suspend fun addEffectImage(outfitId: String, imageFile: String) {
+        mutate {
+            it.copy(outfits = it.outfits.replaceBy(outfitId, { o -> o.id }) { o ->
+                o.copy(effectImages = o.effectImages + OutfitImage(imageFile, now()), updatedAt = now())
+            })
+        }
     }
 
     override suspend fun removeEffectImage(outfitId: String, imageFile: String) {
@@ -165,8 +156,8 @@ class WardrobeRepositoryImpl(
         return n
     }
 
-    override suspend fun deleteNote(id: String) = mutate {
-        it.copy(notes = it.notes.filterNot { n -> n.id == id })
+    override suspend fun deleteNote(id: String) {
+        mutate { it.copy(notes = it.notes.filterNot { n -> n.id == id }) }
     }
 }
 

@@ -8,23 +8,26 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
-import com.leo.wardrobe.domain.model.newId
+import com.leo.libs.store.FileMediaStore
+import com.leo.libs.store.MediaStore
 import com.leo.wardrobe.domain.repository.ImageStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
- * 图片文件存储：所有照片（单品/成品图）统一存为 images 目录下的 WebP，
- * 导入时 EXIF 摆正 + 最长边压至 1440 + 质量 82（specs/03-data-model.md）。
+ * 图片文件存储：解码/EXIF 摆正/缩放/压缩在本类（Android 能力），
+ * 文件管理（uuid 命名、删除）由 store SDK 的 [MediaStore] 承担。
+ * 照片统一存为 images 目录下的 WebP（specs/03-data-model.md）。
  */
 class ImageFileStore(
     context: Context,
+    private val media: MediaStore = FileMediaStore(context.filesDir, "images"),
     private val resolver: ContentResolver = context.contentResolver,
 ) : ImageStore {
 
     private val filesRoot = context.filesDir
-    private val dir = File(filesRoot, "images").apply { mkdirs() }
 
     /** 合成图等导出临时文件目录（FileProvider export 路径） */
     fun exportDir(): File = File(filesRoot, "export").apply { mkdirs() }
@@ -35,28 +38,25 @@ class ImageFileStore(
                 android.util.Log.e(TAG, "decode failed: open/decode/bounds 阶段返回空 uri=$uri")
                 return@runCatching null
             }
-            val name = "${newId()}.webp"
-            val out = File(dir, name)
-            out.outputStream().use { fos ->
-                val ok = compressWebp(bitmap, fos)
-                if (!ok) android.util.Log.e(TAG, "webp compress returned false")
-                bitmap.recycle()
-                if (ok) name else null
+            val buffer = ByteArrayOutputStream()
+            val ok = compressWebp(bitmap, buffer)
+            bitmap.recycle()
+            if (!ok) {
+                android.util.Log.e(TAG, "webp compress returned false")
+                return@runCatching null
             }
+            media.put(buffer.toByteArray())
         }.onFailure { android.util.Log.e(TAG, "importFromUri 异常 uri=$uri", it) }
             .getOrNull()
     }
 
-    override fun file(file: String): File = File(dir, file)
+    override fun file(file: String): File? = media.file(file)
 
-    override suspend fun delete(file: String) = withContext(Dispatchers.IO) {
-        File(dir, file).delete()
-        Unit
-    }
+    override suspend fun delete(file: String) = media.delete(file)
 
     /** 读取存储位图（UI/合成图用；失败返回 null） */
     suspend fun decode(file: String): Bitmap? = withContext(Dispatchers.IO) {
-        runCatching { BitmapFactory.decodeFile(File(dir, file).absolutePath) }.getOrNull()
+        runCatching { BitmapFactory.decodeFile(media.file(file)?.absolutePath) }.getOrNull()
     }
 
     private fun compressWebp(bitmap: Bitmap, out: java.io.OutputStream): Boolean =

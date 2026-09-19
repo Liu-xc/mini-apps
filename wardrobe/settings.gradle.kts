@@ -21,3 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "wardrobe"
 include(":app")
+
+// 公共本地存储 SDK（composite build，见 libs/store/specs/00-architecture.md）
+includeBuild("../libs/store")

@@ -1,6 +1,6 @@
 package com.leo.wardrobe.data.repo
 
-import com.leo.wardrobe.data.json.JsonFileStore
+import com.leo.libs.store.SnapshotStore
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Note
 import com.leo.wardrobe.domain.model.NoteParent
@@ -23,7 +23,14 @@ class WardrobeRepositoryImplTest {
 
     private val images = FakeImageStore()
 
-    private fun repo() = WardrobeRepositoryImpl(JsonFileStore(tmp.root), images)
+    private fun newStore() = SnapshotStore(
+        dir = tmp.root,
+        fileName = "wardrobe.json",
+        serializer = WardrobeData.serializer(),
+        default = { WardrobeData() },
+    )
+
+    private fun repo() = WardrobeRepositoryImpl(newStore(), images)
 
     @Test
     fun defaultPersonCreatedOnce() = runTest {
@@ -127,7 +134,7 @@ class WardrobeRepositoryImplTest {
     @Test
     fun danglingRefsCleanedOnLoad() = runTest {
         // 直接写入含悬空引用的数据
-        JsonFileStore(tmp.root).save(
+        newStore().commit(
             WardrobeData(
                 persons = listOf(Person("p1", "我")),
                 items = listOf(Item("i1", "ghost_person", WardrobeCategory.TOP, "T恤", imageFile = "a.webp")),
