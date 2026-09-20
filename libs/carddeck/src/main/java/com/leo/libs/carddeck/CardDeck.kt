@@ -30,6 +30,9 @@ class CardDeckController<T> internal constructor(
     /** 当前顶部卡片 */
     val current: T? get() = itemsProvider().getOrNull(state.currentCardIndex)
 
+    /** 当前顶部卡片下标（可观察，用于 ‹ n/m › 卡序胶囊） */
+    val currentIndex: Int get() = state.currentCardIndex
+
     val size: Int get() = itemsProvider().size
 
     fun restart() = state.setCurrentIndex(0)
