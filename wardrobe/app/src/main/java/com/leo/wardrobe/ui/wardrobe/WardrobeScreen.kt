@@ -1,37 +1,38 @@
 package com.leo.wardrobe.ui.wardrobe
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
@@ -59,6 +61,7 @@ import com.leo.wardrobe.ui.theme.editorialColors
 /**
  * W3 衣橱页（US-01/02/03/13）：品类分组 + 标签筛选 + 点编辑 + 滑动删除（确认）+ FAB。
  */
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun WardrobeScreen(
     vm: AppViewModel,
@@ -69,6 +72,7 @@ fun WardrobeScreen(
     var filterTag by remember { mutableStateOf<String?>(null) }
     var categoryTab by remember { mutableStateOf<WardrobeCategory?>(null) }
     var pendingDelete by remember { mutableStateOf<Item?>(null) }
+    var filterSheetOpen by remember { mutableStateOf(false) }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
@@ -100,7 +104,7 @@ fun WardrobeScreen(
                 )
             }
 
-            // it-009 品类 Tab 行：3D 图标 + 单选筛选，直达品类免长滚
+            // it-009 品类 Tab 行：3D 图标 + 单选筛选；it-011 C6 标签收进「筛选」角标
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -131,14 +135,12 @@ fun WardrobeScreen(
                         },
                     )
                 }
-            }
-
-            if (tags.isNotEmpty()) {
-                FilterChipsRow(
-                    options = tags,
-                    selected = filterTag,
-                    onSelect = { filterTag = it },
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
+                FilterChip(
+                    selected = filterTag != null,
+                    onClick = { filterSheetOpen = true },
+                    label = {
+                        Text(if (filterTag != null) "筛选·$filterTag" else "筛选")
+                    },
                 )
             }
 
@@ -155,27 +157,28 @@ fun WardrobeScreen(
                     modifier = Modifier.padding(top = 24.dp),
                 )
             } else {
-                LazyColumn(
-                    Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                // it-011 C6：两列卡片网格——首屏 4–6 件直达浏览；去行内品类小标，
+                // 「全部」下保留品类小节标题；滑动删除改长按删除（网格里滑动会让位滚动）
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     val categories = if (categoryTab != null) listOf(categoryTab!!) else WardrobeCategory.entries.toList()
                     categories.forEach { category ->
                         val catItems = filtered.filter { it.category == category }
                         if (catItems.isEmpty()) return@forEach
                         if (categoryTab == null) {
-                            item(key = "header-${category.name}") {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(top = 14.dp, bottom = 6.dp),
-                                ) {
-                                    com.leo.wardrobe.ui.components.CategoryLabel(category, count = catItems.size)
-                                }
+                            item(key = "header-${category.name}", span = { GridItemSpan(2) }) {
+                                com.leo.wardrobe.ui.components.CategoryLabel(category, count = catItems.size)
                             }
                         }
                         catItems.forEach { item ->
-                            item(key = item.id) { ItemRow(vm, item, onEdit = { onEditItem(item.id) }, onSwipeDelete = { pendingDelete = item }) }
+                            item(key = item.id) {
+                                ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item })
+                            }
                         }
                     }
                 }
@@ -191,6 +194,39 @@ fun WardrobeScreen(
             contentColor = MaterialTheme.colorScheme.onPrimary,
         ) {
             Icon(Icons.Rounded.Add, contentDescription = "添加衣物")
+        }
+    }
+
+    // it-011 C6：标签筛选弹层
+    if (filterSheetOpen) {
+        ModalBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
+            Column(
+                Modifier
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("筛选", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
+                Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilterChip(
+                        selected = filterTag == null,
+                        onClick = { filterTag = null },
+                        label = { Text("全部") },
+                    )
+                    tags.forEach { tag ->
+                        FilterChip(
+                            selected = filterTag == tag,
+                            onClick = { filterTag = if (filterTag == tag) null else tag },
+                            label = { Text("#$tag") },
+                        )
+                    }
+                }
+                Button(
+                    onClick = { filterSheetOpen = false },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("完成") }
+            }
         }
     }
 
@@ -210,81 +246,55 @@ fun WardrobeScreen(
     }
 }
 
+/** 网格衣物卡（it-011 C6）：衬纸照片 + 名称/标签；点=编辑，长按=删除确认 */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ItemRow(
+private fun ItemCard(
     vm: AppViewModel,
     item: Item,
     onEdit: () -> Unit,
-    onSwipeDelete: () -> Unit,
+    onDelete: () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onSwipeDelete()
-                false // 弹确认框，不真正滑走（specs/05 动效#5）
-            } else true
-        },
-    )
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Row(
-                Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.errorContainer)
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Outlined.Delete,
-                    contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-        },
+    Column(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .combinedClickable(onClick = onEdit, onLongClick = onDelete)
+            .padding(8.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        PhotoCard(
+            file = vm.imageFileOf(item.imageFile),
+            contentDescription = item.name,
+            corner = 10.dp,
+            mat = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .clickable { onEdit() }
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-        ) {
-            PhotoCard(
-                file = vm.imageFileOf(item.imageFile),
-                contentDescription = item.name,
-                corner = 10.dp,
-                modifier = Modifier.size(width = 52.dp, height = 64.dp),
-            )
-            Column(Modifier.padding(start = 14.dp)) {
+                .aspectRatio(0.8f),
+        )
+        Text(
+            item.name,
+            style = MaterialTheme.typography.titleSmall,
+            color = editorialColors().ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp, start = 2.dp),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, start = 2.dp)) {
+            if (item.color.isNotBlank()) {
                 Text(
-                    item.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = editorialColors().ink,
-                )
-                if (item.color.isNotBlank()) {
-                    Text(
-                        item.color,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = editorialColors().inkFaint,
-                    )
-                }
-                if (item.tags.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    TagRow(item.tags)
-                }
-            }
-            Spacer(Modifier.weight(1f))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    item.category.label,
+                    item.color,
                     style = MaterialTheme.typography.labelSmall,
                     color = editorialColors().inkFaint,
+                    maxLines = 1,
+                )
+            }
+            if (item.tags.isNotEmpty()) {
+                Text(
+                    (if (item.color.isNotBlank()) " · " else "") + item.tags.take(2).joinToString(" ") { "#$it" },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = editorialColors().inkFaint,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

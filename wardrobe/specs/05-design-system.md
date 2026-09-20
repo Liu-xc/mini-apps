@@ -64,3 +64,12 @@
 ## 组件清单（ui/components/）
 
 `PhotoCard`（4:5 照片卡，支撑轮播形变）、`SlotPager`（品类槽位）、`TagRow`/`TagChipInput`（标签展示与录入）、`CommentTimeline`（评论时间线+输入）、`EmptyState`（Lottie+文案+行动按钮）、`EditorialHeader`（角色名+衬线排版）、`FilterChipsRow`（标签筛选条）。
+
+## 照片容器「衬纸」（it-011 C5）
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `photoMat` 浅色 | `surfaceVariant @ 55%` | 单品照片统一浅底圆角容器（W1 格位/W3 网格/W5 大图/W7 单品行），ContentScale.Fit 完整呈现轮廓 |
+| `photoMat` 深色 | 同上（暗色 surfaceVariant） | 深色模式同构 |
+
+成品图（用户导入/生图产出）保持全幅 Crop 不套衬纸；后续接抠图能力时把衬底换透明即可。

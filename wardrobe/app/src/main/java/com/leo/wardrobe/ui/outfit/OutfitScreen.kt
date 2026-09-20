@@ -76,6 +76,19 @@ fun OutfitScreen(
         WardrobeCategory.entries.associateWith { c -> allItems.filter { it.category == c } }
     }
 
+    // it-011 O6：首次进入做格位滑动 coach（仅一次，Prefs 落标记）
+    val coachShown by vm.coachSlotsShown.collectAsState()
+    var coachPhase by remember { mutableStateOf(false) }
+    LaunchedEffect(coachShown, allItems) {
+        if (!coachShown && allItems.isNotEmpty()) {
+            delay(700) // 等首帧与 pager 就位
+            coachPhase = true
+            vm.markCoachSlotsShown()
+            delay(1100)
+            coachPhase = false
+        }
+    }
+
     val pagerStates = remember { mutableStateMapOf<WardrobeCategory, PagerState>() }
     WardrobeCategory.entries.forEach { category ->
         val items = catItems[category].orEmpty()
@@ -178,7 +191,7 @@ fun OutfitScreen(
             ) {
                 // 头：帽子（小卡居中）
                 OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                    Modifier.fillMaxWidth(0.34f), aspect = 1f)
+                    Modifier.fillMaxWidth(0.34f), aspect = 1f, coach = coachPhase)
                 Spacer(Modifier.height(8.dp))
                 // 上身行：外套 | 上装 | 连衣裙 全宽三等分（it-008：不再被挂件挤占）
                 Row(
@@ -186,11 +199,11 @@ fun OutfitScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f), aspect = 0.78f)
+                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
                     OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f), aspect = 0.78f)
+                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
                     OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f), aspect = 0.78f)
+                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
                 }
                 Spacer(Modifier.height(8.dp))
                 // 腿行：包(左挂) | 下装（窄长，真人腿型） | 配饰(右挂)——挂件利用腿两侧留白
@@ -200,32 +213,31 @@ fun OutfitScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(0.5f), aspect = 0.85f)
+                        Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
                     OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1.12f), aspect = 0.6f)
+                        Modifier.weight(1.12f), aspect = 0.6f, coach = coachPhase)
                     OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(0.5f), aspect = 0.85f)
+                        Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
                 }
                 Spacer(Modifier.height(8.dp))
                 // 脚：鞋（小扁居中）
                 OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                    Modifier.fillMaxWidth(0.58f), aspect = 2.6f)
+                    Modifier.fillMaxWidth(0.58f), aspect = 2.6f, coach = coachPhase)
             }
         }
 
-        // 底部常驻：复制长图（W6 入口）+ ☆ 保存这套（it-004 去重检测）
+        // 底部常驻：复制长图（主）+ ☆ 保存这套（次）（it-011 O6 按钮主次）
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // it-006 R2：主操作改 tonal 轻样式，减轻对主体内容的压迫（原全宽实心）
-            androidx.compose.material3.FilledTonalButton(
+            Button(
                 onClick = { exportItems = currentItemsFromMemory },
                 enabled = allItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),
-            ) { Text("📋 复制长图") }
+            ) { Text("📋 复制长图", style = MaterialTheme.typography.titleSmall) }
             OutlinedButton(
                 onClick = {
                     val outfit = savedOutfit
@@ -265,7 +277,7 @@ fun OutfitScreen(
 @Composable
 private fun PlaceholderPager(): PagerState = rememberPagerState(pageCount = { 0 })
 
-/** 人体布局的着装位卡片（it-005） */
+/** 人体布局的着装位卡片（it-005；it-011 O6 透传 coach） */
 @Composable
 private fun OutfitSlot(
     category: WardrobeCategory,
@@ -276,6 +288,7 @@ private fun OutfitSlot(
     onAddItem: () -> Unit,
     modifier: Modifier = Modifier,
     aspect: Float = 0.8f,
+    coach: Boolean = false,
 ) {
     SlotCell(
         category = category,
@@ -286,6 +299,7 @@ private fun OutfitSlot(
         onAddEmpty = onAddItem,
         modifier = modifier,
         aspect = aspect,
+        coach = coach,
     )
 }
 

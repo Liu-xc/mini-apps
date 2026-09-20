@@ -91,6 +91,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setPersonNote(note: String) {
         viewModelScope.launch { prefs.setPersonNote(note) }
     }
+    /** 导出面板五维选择记忆（it-011 O8） */
+    val exportSelections: StateFlow<Map<String, String>> = prefs.exportSelections
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    fun setExportSelections(selections: Map<String, String>) {
+        viewModelScope.launch { prefs.saveExportSelections(selections) }
+    }
+
+    /** W1 格位滑动 coach 首演标记（it-011 O6） */
+    val coachSlotsShown: StateFlow<Boolean> = prefs.coachSlotsShown
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun markCoachSlotsShown() {
+        viewModelScope.launch { prefs.markCoachSlotsShown() }
+    }
 
     // ---- Person ----
     fun addPerson(name: String, emoji: String) = viewModelScope.launch {

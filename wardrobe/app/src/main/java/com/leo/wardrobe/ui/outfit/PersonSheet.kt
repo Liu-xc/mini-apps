@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -66,10 +67,17 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
             LazyColumn {
                 items(data.persons.size, key = { data.persons[it].id }) { index ->
                     val p = data.persons[index]
+                    val isCurrent = p.id == current?.id
+                    // it-011 O9：当前角色浅底 + 「✓ 使用中」，替代 6px 绿点
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (isCurrent && !manageMode) MaterialTheme.colorScheme.primaryContainer
+                                else androidx.compose.ui.graphics.Color.Transparent,
+                            )
                             .clickable {
                                 if (manageMode) {
                                     editTarget = p
@@ -78,7 +86,7 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                                     onDismiss()
                                 }
                             }
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
                         Text(p.emoji, style = MaterialTheme.typography.headlineSmall)
                         Text(
@@ -96,25 +104,26 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                             IconButton(onClick = { deleteTarget = p }) {
                                 Icon(Icons.Outlined.Delete, "删除", tint = MaterialTheme.colorScheme.error)
                             }
-                        } else if (p.id == current?.id) {
-                            Box(
-                                Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(editorialColors().accent),
+                        } else if (isCurrent) {
+                            Text(
+                                "✓ 使用中",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
                 }
             }
             HorizontalDivider(Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+            // it-011 O9：新建=实心主按钮，管理=文字入口
             Row(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                TextButton(onClick = { showCreate = true }) { Text("＋ 新建角色") }
+                Button(onClick = { showCreate = true }, modifier = Modifier.weight(1f)) { Text("＋ 新建角色") }
                 TextButton(onClick = { manageMode = !manageMode }) {
                     Text(if (manageMode) "完成" else "管理")
                 }

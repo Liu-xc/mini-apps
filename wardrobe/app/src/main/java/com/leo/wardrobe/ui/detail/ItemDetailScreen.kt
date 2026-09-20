@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -99,9 +100,12 @@ fun ItemDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
         ) {
+            // it-011 C5：统一浅底衬纸容器——固定比例/圆角/淡底，无论原图背景如何
             PhotoCard(
                 file = vm.imageFileOf(item.imageFile),
                 contentDescription = item.name,
+                corner = 20.dp,
+                mat = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(0.8f)
@@ -131,9 +135,24 @@ fun ItemDetailScreen(
                     color = editorialColors().ink,
                     modifier = Modifier.padding(top = 22.dp, bottom = 8.dp),
                 )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // it-011 R6-P1：放大为可点卡片，「点开看整套」预期明确
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 8.dp),
+                ) {
                     items(related.size) { index ->
-                        OutfitThumb(vm, related[index]) { onOpenOutfit(related[index].id) }
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(150.dp),
+                        ) {
+                            OutfitThumb(vm, related[index], showDate = false, onClick = { onOpenOutfit(related[index].id) })
+                            Text(
+                                "点开看整套 ›",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = editorialColors().inkFaint,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
                     }
                 }
             }

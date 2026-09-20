@@ -95,7 +95,8 @@ fun RecordsScreen(
                 enabled = deck != null && !drawing && filtered.isNotEmpty(),
             ) {
                 Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                Text("随机一套")
+                // it-011 R3-P1：此页是随机「翻看」已有记录，与 W1 随机生成搭配区分
+                Text("随机翻一套")
             }
         }
 
@@ -118,7 +119,7 @@ fun RecordsScreen(
                 hint = "换一个标签，或清除筛选",
             )
             else -> {
-                // ---- 卡组：快速浏览 + 随机抽（it-007 / it-010 修层级与卡面结构） ----
+                // ---- 卡组：快速浏览 + 随机翻（it-007/it-010；it-011 增 ‹n/m› 卡序） ----
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -140,6 +141,21 @@ fun RecordsScreen(
                     }
                     deck = controller
                     drawing = controller.isDrawing
+                    // it-011 C1：卡序常驻，可滑动可视
+                    val idx = (deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex)
+                    androidx.compose.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 3.dp,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    ) {
+                        Text(
+                            "‹ ${idx + 1}/${filtered.size} ›",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = editorialColors().ink,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                        )
+                    }
                 }
 
                 // ---- 全量网格（保留总览能力） ----
@@ -178,14 +194,12 @@ fun RecordsScreen(
 }
 
 /**
- * 卡组穿搭卡（it-010）：成品图优先全幅；否则按真人比例迷你拼贴
- * （帽头/上身行/腿+两侧挂件/鞋），不再 2×2 罗列。
+ * 卡组穿搭卡（it-010 成品图优先；it-011 O7 人体叙事拼贴 + 缺失空槽）。
  */
 @Composable
 private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit) {
     val data by vm.data.collectAsState()
     val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
-    val byCat = remember(items) { items.groupBy { it.category } }
     val effect = outfit.effectImages.firstOrNull()
 
     androidx.compose.material3.Surface(
@@ -211,7 +225,12 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
-                    MiniBodyCollage(vm, byCat)
+                    // 人体叙事拼贴：淡色人形轮廓底 + 缺失品类虚线空槽（it-011 O7）
+                    com.leo.wardrobe.ui.components.BodyCollage(
+                        items = items,
+                        imageFileOf = vm::imageFileOf,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                 }
             }
             if (outfit.tags.isNotEmpty()) {
@@ -223,91 +242,3 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
     }
 }
 
-/**
- * 迷你真人比例拼贴（it-010 修正）：与 W1 选衣页同构的分段占比布局——
- * 卡内高度按 头/上身/腿/脚 weight 切分（缺失部位自动归一），照片填满各自槽位，
- * 任何卡片尺寸都不再溢出堆叠。
- */
-@Composable
-private fun MiniBodyCollage(vm: AppViewModel, byCat: Map<com.leo.wardrobe.domain.model.WardrobeCategory, List<com.leo.wardrobe.domain.model.Item>>) {
-    val hat = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.HAT]?.firstOrNull()
-    val torso = listOf(
-        com.leo.wardrobe.domain.model.WardrobeCategory.OUTERWEAR,
-        com.leo.wardrobe.domain.model.WardrobeCategory.TOP,
-        com.leo.wardrobe.domain.model.WardrobeCategory.DRESS,
-    ).mapNotNull { c -> byCat[c]?.firstOrNull() }
-    val bottom = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BOTTOM]?.firstOrNull()
-    val bag = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BAG]?.firstOrNull()
-    val acc = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.ACCESSORY]?.firstOrNull()
-    val shoes = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.SHOES]?.firstOrNull()
-
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        // 头：帽子（小，居中）
-        if (hat != null) {
-            Box(Modifier.weight(0.13f).fillMaxWidth()) {
-                CollagePhoto(vm, hat, Modifier.fillMaxHeight().fillMaxWidth(0.42f).align(Alignment.Center))
-            }
-        }
-        // 上身行：外套 | 上装 | 连衣裙（存在的品类均分、填满行高）
-        if (torso.isNotEmpty()) {
-            Row(
-                Modifier.weight(0.33f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                torso.forEach { item ->
-                    CollagePhoto(vm, item, Modifier.weight(1f).fillMaxHeight())
-                }
-            }
-        }
-        // 腿行：包(矮挂) | 下装（窄长主体） | 配饰(矮挂)
-        if (bottom != null || bag != null || acc != null) {
-            Row(
-                Modifier.weight(0.42f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                bag?.let { CollagePhoto(vm, it, Modifier.weight(0.26f).fillMaxHeight(0.62f)) }
-                bottom?.let {
-                    val w = if (bag == null && acc == null) 1f else 0.48f
-                    CollagePhoto(vm, it, Modifier.weight(w).fillMaxHeight())
-                }
-                acc?.let { CollagePhoto(vm, it, Modifier.weight(0.26f).fillMaxHeight(0.62f)) }
-            }
-        }
-        // 脚：鞋（扁，居中）
-        if (shoes != null) {
-            Box(Modifier.weight(0.12f).fillMaxWidth()) {
-                CollagePhoto(vm, shoes, Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(Alignment.Center))
-            }
-        }
-    }
-}
-
-/**
- * 拼贴槽位（it-010 修正）：ContentScale.Fit 完整展示衣物并按比例缩放，
- * 淡色底槽位承载，不再裁切断衣物轮廓。
- */
-@Composable
-private fun CollagePhoto(vm: AppViewModel, item: com.leo.wardrobe.domain.model.Item, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Surface(
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            coil.compose.AsyncImage(
-                model = vm.imageFileOf(item.imageFile),
-                contentDescription = item.name,
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(3.dp),
-            )
-        }
-    }
-}

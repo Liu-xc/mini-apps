@@ -1,6 +1,7 @@
 package com.leo.wardrobe.data.prefs
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -13,11 +14,14 @@ private val Context.store by preferencesDataStore("wardrobe_prefs")
 
 /**
  * 轻偏好：当前角色 + 各槽位组合记忆（US-06），按 personId 隔离。
+ * it-011：导出维度选择记忆 + 格位滑动 coach 首演标记。
  */
 class PrefsStore(private val context: Context) {
 
     private val keyPerson = stringPreferencesKey("current_person")
     private val keyPersonNote = stringPreferencesKey("person_note")
+    private val keyExportSelections = stringSetPreferencesKey("export_selections")
+    private val keyCoachSlots = booleanPreferencesKey("coach_slots_shown")
 
     private fun slotKey(personId: String) = stringSetPreferencesKey("slots_$personId")
 
@@ -51,5 +55,28 @@ class PrefsStore(private val context: Context) {
             if (itemId != null) current += "${category.name}=$itemId"
             prefs[key] = current
         }
+    }
+
+    /** 导出面板五维选择（it-011 O8：记住上次），存储格式 "key=value" */
+    val exportSelections: Flow<Map<String, String>> = context.store.data.map { prefs ->
+        prefs[keyExportSelections].orEmpty()
+            .mapNotNull { entry -> entry.split('=', limit = 2).takeIf { it.size == 2 } }
+            .associate { it[0] to it[1] }
+    }
+
+    suspend fun saveExportSelections(selections: Map<String, String>) {
+        context.store.edit { prefs ->
+            prefs[keyExportSelections] = selections.entries
+                .filter { it.value.isNotBlank() }
+                .map { (k, v) -> "$k=$v" }
+                .toSet()
+        }
+    }
+
+    /** W1 格位滑动 coach 动画（it-011 O6）：仅首次进入演示一次 */
+    val coachSlotsShown: Flow<Boolean> = context.store.data.map { it[keyCoachSlots] ?: false }
+
+    suspend fun markCoachSlotsShown() {
+        context.store.edit { it[keyCoachSlots] = true }
     }
 }

@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -34,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -119,7 +122,8 @@ fun OutfitDetailScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // 成品图横滑（多张）
+            // 主视觉（it-011 O7）：成品图横滑优先；无成品图时人体叙事拼贴兜底，
+            // 「录入成品图」合并为拼贴右下角标，不再整行重复两个入口
             if (outfit.effectImages.isNotEmpty()) {
                 val pagerState = rememberPagerState(pageCount = { outfit.effectImages.size })
                 Box {
@@ -172,8 +176,41 @@ fun OutfitDetailScreen(
                     }
                 }
             } else {
-                OutlinedButton(onClick = { pickEffect() }, modifier = Modifier.fillMaxWidth()) {
-                    Text("＋ 录入成品图（生图 Agent 生成后）")
+                Box {
+                    com.leo.wardrobe.ui.components.BodyCollage(
+                        items = items,
+                        imageFileOf = vm::imageFileOf,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.8f),
+                    )
+                    Surface(
+                        onClick = { pickEffect() },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        color = editorialColors().accent,
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(10.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Add,
+                                contentDescription = null,
+                                tint = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.size(15.dp),
+                            )
+                            Text(
+                                "录入成品图",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = androidx.compose.ui.graphics.Color.White,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -183,24 +220,37 @@ fun OutfitDetailScreen(
 
             Text("这套包含", style = MaterialTheme.typography.titleMedium, color = editorialColors().ink)
             items.forEach { item ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenItem(item.id) }
-                        .padding(vertical = 6.dp),
+                // it-011 O7：单品行可点直达衣物详情（spec US-10），chevron + 按压反馈
+                Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    onClick = { onOpenItem(item.id) },
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    PhotoCard(
-                        file = vm.imageFileOf(item.imageFile),
-                        contentDescription = item.name,
-                        corner = 10.dp,
-                        modifier = Modifier.size(width = 44.dp, height = 54.dp),
-                    )
-                    Column(Modifier.padding(start = 12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        PhotoCard(
+                            file = vm.imageFileOf(item.imageFile),
+                            contentDescription = item.name,
+                            corner = 10.dp,
+                            mat = true,
+                            modifier = Modifier.size(width = 44.dp, height = 54.dp),
+                        )
                         Text(
                             "${item.category.label} · ${item.name}",
                             style = MaterialTheme.typography.titleSmall,
                             color = editorialColors().ink,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp),
+                        )
+                        Icon(
+                            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = editorialColors().inkFaint,
                         )
                     }
                 }
@@ -209,9 +259,6 @@ fun OutfitDetailScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = { showExport = true }, modifier = Modifier.weight(1f)) {
                     Text("📋 复制素材")
-                }
-                OutlinedButton(onClick = { pickEffect() }, modifier = Modifier.weight(1f)) {
-                    Text("＋ 录入成品图")
                 }
             }
 

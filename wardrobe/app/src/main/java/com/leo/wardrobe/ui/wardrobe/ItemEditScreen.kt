@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +30,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -89,34 +93,71 @@ fun ItemEditScreen(
     }
 
     val hasPhoto = importedFile != null || existing != null
+    val saveReady = hasPhoto && name.isNotBlank()
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text(if (existing == null) "添加衣物" else "编辑衣物") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.Close, contentDescription = "关闭")
-                }
-            },
-            actions = {
-                Button(
-                    onClick = {
-                        if (!hasPhoto) {
-                            photoMissing = true
+    // it-011 O3：吸底保存两态（与 eats it-004 同模式）；顶栏只留关闭
+    fun doSave() {
+        if (!hasPhoto) {
+            photoMissing = true
+        } else {
+            vm.saveItem(existing, importedFile, name, category, color, desc, tags) { ok ->
+                if (ok) onBack()
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(if (existing == null) "添加衣物" else "编辑衣物") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Rounded.Close, contentDescription = "关闭")
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            Surface(shadowElevation = 8.dp) {
+                Column(Modifier.imePadding().navigationBarsPadding()) {
+                    if (!saveReady) {
+                        Text(
+                            when {
+                                !hasPhoto && name.isBlank() -> "选照片、填名称后可保存"
+                                !hasPhoto -> "还差一张照片"
+                                else -> "填名称后可保存"
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 22.dp, vertical = 2.dp),
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                    ) {
+                        if (saveReady) {
+                            Button(onClick = { doSave() }, modifier = Modifier.fillMaxWidth()) {
+                                Text(if (existing == null) "保存" else "更新", style = MaterialTheme.typography.titleMedium)
+                            }
                         } else {
-                            vm.saveItem(existing, importedFile, name, category, color, desc, tags) { ok ->
-                                if (ok) onBack()
+                            OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
+                                Text(if (existing == null) "保存" else "更新")
                             }
                         }
-                    },
-                    enabled = name.isNotBlank() && hasPhoto,
-                    modifier = Modifier.padding(end = 8.dp),
-                ) { Text("保存") }
-            },
-        )
-
+                    }
+                }
+            }
+        },
+    ) { padding ->
         Column(
             Modifier
+                .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
@@ -177,7 +218,7 @@ fun ItemEditScreen(
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("名称") },
+                label = { Text("名称 *") },
                 placeholder = { Text("如：白色牛津纺衬衫") },
             )
 
