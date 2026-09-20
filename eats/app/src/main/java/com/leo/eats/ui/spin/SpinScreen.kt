@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -174,13 +175,22 @@ fun SpinScreen(
         } else {
             Spacer(Modifier.height(10.dp))
 
-            // ---- 卡组（浏览 + 抽取的主角） ----
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            // ---- 卡组（浏览 + 抽取的主角；it-010：容器裁剪防卡片越界遮挡） ----
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .clipToBounds(),
+                contentAlignment = Alignment.Center,
+            ) {
                 val controller = CardDeck(
                     items = candidates,
                     modifier = Modifier
                         .fillMaxWidth(0.92f)
                         .height(472.dp),
+                    properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
+                        stackedCardsOffset = 14.dp,
+                        padding = 6.dp,
+                    ),
                     onSwipe = { _, _ -> winner = null },
                 ) { s ->
                     PlaceCard(
@@ -307,7 +317,7 @@ private fun PlaceCard(
         shape = MaterialTheme.shapes.extraLarge,
         color = menuColors().surface,
         tonalElevation = 1.dp,
-        shadowElevation = 4.dp,
+        shadowElevation = 2.dp,
         modifier = Modifier
             .fillMaxSize()
             .clip(MaterialTheme.shapes.extraLarge),

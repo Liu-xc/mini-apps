@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import com.spartapps.swipeablecards.state.SwipeableCardsState
 import com.spartapps.swipeablecards.state.rememberSwipeableCardsState
 import com.spartapps.swipeablecards.ui.SwipeableCardDirection
+import com.spartapps.swipeablecards.ui.SwipeableCardsProperties
 import com.spartapps.swipeablecards.ui.lazy.LazySwipeableCards
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -75,11 +76,13 @@ class CardDeckController<T> internal constructor(
  * 通用侧滑卡组（浏览 + 随机抽取）：
  * 卡片可左右滑走（浏览下一张），返回的 controller 支持 next()/drawRandom()。
  * 卡组不自带尺寸——用 modifier 决定大小（如 fillMaxWidth(0.9f).height(460.dp)）。
+ * properties 透传底层库配置（堆叠偏移/阈值/旋转等）。
  */
 @Composable
 fun <T> CardDeck(
     items: List<T>,
     modifier: Modifier = Modifier,
+    properties: SwipeableCardsProperties = SwipeableCardsProperties(),
     onSwipe: ((item: T, toRight: Boolean) -> Unit)? = null,
     cardContent: @Composable (T) -> Unit,
 ): CardDeckController<T> {
@@ -88,6 +91,7 @@ fun <T> CardDeck(
     LazySwipeableCards(
         modifier = modifier,
         state = state,
+        properties = properties,
         onSwipe = { item, direction ->
             onSwipe?.invoke(item, direction == SwipeableCardDirection.Right)
         },

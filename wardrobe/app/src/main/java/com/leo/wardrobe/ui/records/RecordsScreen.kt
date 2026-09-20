@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,8 +32,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Outfit
+import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.outfitsOf
 import com.leo.wardrobe.domain.model.tagsUsedIn
@@ -114,18 +117,23 @@ fun RecordsScreen(
                 hint = "换一个标签，或清除筛选",
             )
             else -> {
-                // ---- 卡组：快速浏览 + 随机抽（it-007） ----
+                // ---- 卡组：快速浏览 + 随机抽（it-007 / it-010 修层级与卡面结构） ----
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                        .clipToBounds(),
                     contentAlignment = Alignment.Center,
                 ) {
                     val controller = CardDeck(
                         items = filtered,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(360.dp),
+                            .height(380.dp),
+                        properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
+                            stackedCardsOffset = 14.dp,
+                            padding = 6.dp,
+                        ),
                     ) { outfit ->
                         OutfitDeckCard(vm, outfit) { onOpenOutfit(outfit.id) }
                     }
@@ -168,20 +176,42 @@ fun RecordsScreen(
     }
 }
 
-/** 卡组里的穿搭卡：大图 + 标签，点击进详情 */
+/**
+ * 卡组穿搭卡（it-010）：成品图优先全幅；否则按真人比例迷你拼贴
+ * （帽头/上身行/腿+两侧挂件/鞋），不再 2×2 罗列。
+ */
 @Composable
 private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit) {
+    val data by vm.data.collectAsState()
+    val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
+    val byCat = remember(items) { items.groupBy { it.category } }
+    val effect = outfit.effectImages.firstOrNull()
+
     androidx.compose.material3.Surface(
         shape = MaterialTheme.shapes.large,
         color = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp,
-        shadowElevation = 4.dp,
+        shadowElevation = 2.dp,
         modifier = Modifier.fillMaxSize(),
         onClick = onOpen,
     ) {
         Column {
-            Box(Modifier.fillMaxWidth().weight(1f)) {
-                OutfitThumb(vm, outfit, modifier = Modifier.fillMaxSize()) { onOpen() }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                if (effect != null) {
+                    // 用户导入的成品穿搭图：全幅展示
+                    com.leo.wardrobe.ui.components.PhotoCard(
+                        file = vm.imageFileOf(effect.file),
+                        contentDescription = "穿搭成品图",
+                        corner = 0.dp,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    MiniBodyCollage(vm, byCat)
+                }
             }
             if (outfit.tags.isNotEmpty()) {
                 Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -190,4 +220,71 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
             }
         }
     }
+}
+
+/**
+ * 迷你真人比例拼贴（it-008 比例的卡内版）：
+ * 帽（头）/ 外套·上装·连衣裙（上身行）/ 包·下装·配饰（腿行）/ 鞋（脚）。
+ */
+@Composable
+private fun MiniBodyCollage(vm: AppViewModel, byCat: Map<com.leo.wardrobe.domain.model.WardrobeCategory, List<com.leo.wardrobe.domain.model.Item>>) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // 头：帽子
+        byCat[com.leo.wardrobe.domain.model.WardrobeCategory.HAT]?.firstOrNull()?.let {
+            CollagePhoto(vm, it, Modifier.fillMaxWidth(0.34f).aspectRatio(1f))
+        }
+        // 上身行：外套 | 上装 | 连衣裙（存在的品类均分）
+        val torso = listOf(
+            com.leo.wardrobe.domain.model.WardrobeCategory.OUTERWEAR,
+            com.leo.wardrobe.domain.model.WardrobeCategory.TOP,
+            com.leo.wardrobe.domain.model.WardrobeCategory.DRESS,
+        ).mapNotNull { c -> byCat[c]?.firstOrNull()?.let { c to it } }
+        if (torso.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                torso.forEach { (_, item) ->
+                    CollagePhoto(vm, item, Modifier.weight(1f).aspectRatio(0.78f))
+                }
+            }
+        }
+        // 腿行：包 | 下装（窄长） | 配饰
+        val bottom = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BOTTOM]?.firstOrNull()
+        val bag = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BAG]?.firstOrNull()
+        val acc = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.ACCESSORY]?.firstOrNull()
+        if (bottom != null) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                bag?.let { CollagePhoto(vm, it, Modifier.weight(0.5f).aspectRatio(0.85f)) }
+                CollagePhoto(vm, bottom, Modifier.weight(if (bag == null && acc == null) 1.6f else 1.1f).aspectRatio(0.6f))
+                acc?.let { CollagePhoto(vm, it, Modifier.weight(0.5f).aspectRatio(0.85f)) }
+            }
+        } else if (bag != null || acc != null) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                bag?.let { CollagePhoto(vm, it, Modifier.weight(1f).aspectRatio(0.85f)) }
+                acc?.let { CollagePhoto(vm, it, Modifier.weight(1f).aspectRatio(0.85f)) }
+            }
+        }
+        // 脚：鞋
+        byCat[com.leo.wardrobe.domain.model.WardrobeCategory.SHOES]?.firstOrNull()?.let {
+            CollagePhoto(vm, it, Modifier.fillMaxWidth(0.58f).aspectRatio(2.6f))
+        }
+    }
+}
+
+@Composable
+private fun CollagePhoto(vm: AppViewModel, item: com.leo.wardrobe.domain.model.Item, modifier: Modifier = Modifier) {
+    com.leo.wardrobe.ui.components.PhotoCard(
+        file = vm.imageFileOf(item.imageFile),
+        contentDescription = item.name,
+        corner = 8.dp,
+        modifier = modifier,
+    )
 }
