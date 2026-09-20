@@ -637,7 +637,10 @@ private fun WishEditSheet(
             )
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
+            // it-023：sheet 内 snackbar 会被遮挡——名称为空时置灰保存（校验可见化）
+            val canSave = name.isNotBlank()
             Button(
+                enabled = canSave,
                 onClick = {
                     vm.saveWishItem(
                         existing = existing,
@@ -822,7 +825,10 @@ private fun PurchaseSheet(
             )
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
+            // it-023：sheet 内 snackbar 会被遮挡——无实物照时置灰提交（校验可见化）
+            val canPurchase = photoFile != null
             Button(
+                enabled = canPurchase,
                 onClick = {
                     vm.purchaseWishItem(
                         wishItemId = wish.id,
@@ -835,7 +841,7 @@ private fun PurchaseSheet(
                     ) { ok -> if (ok) onDone() }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-            ) { Text("✓ 收进衣橱") }
+            ) { Text(if (canPurchase) "✓ 收进衣橱" else "先拍一张实物照") }
         }
     }
 }
