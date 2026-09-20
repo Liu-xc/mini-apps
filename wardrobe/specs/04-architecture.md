@@ -30,7 +30,8 @@ com.leo.wardrobe/
 │  └─ usecase/    ComposeOutfitImage BuildOutfitPrompt PickRandomOutfit ImportItemPhoto(接口层)
 ├─ data/
 │  ├─ repo/WardrobeRepositoryImpl.kt   # 继承 store SDK 的 SsotRepository（SSOT+原子落盘+广播；writeHook 预留同步登记）
-│  └─ image/ImageFileStore.kt          # 解码/EXIF 摆正/WebP 压缩（Android 能力）；文件管理走 store SDK FileMediaStore
+│  ├─ image/ImageFileStore.kt          # 解码/EXIF 摆正/WebP 压缩（Android 能力）；文件管理走 store SDK FileMediaStore
+│  └─ mock/                            # it-015 演示模式：MockWardrobeData（种子）/ MockWardrobeRepository（内存）/ DemoMode（开关）
 ├─ export/
 │  ├─ OutfitImageComposer.kt      # Bitmap 拼合成图（2列网格+品类标签）
 │  ├─ PromptBuilder.kt            # 文案模板（策略：可替换模板）

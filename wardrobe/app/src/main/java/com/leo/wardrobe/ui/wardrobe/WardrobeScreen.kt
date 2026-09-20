@@ -25,10 +25,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -47,9 +49,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.leo.wardrobe.BuildConfig
+import com.leo.wardrobe.data.mock.DemoMode
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.itemsOf
@@ -77,6 +82,9 @@ fun WardrobeScreen(
     var categoryTab by remember { mutableStateOf<WardrobeCategory?>(null) }
     var pendingDelete by remember { mutableStateOf<Item?>(null) }
     var filterSheetOpen by remember { mutableStateOf(false) }
+    // it-015：演示模式入口（仅 DEBUG 构建显示）
+    val context = LocalContext.current
+    var demoAskOpen by remember { mutableStateOf(false) }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
@@ -101,11 +109,27 @@ fun WardrobeScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     color = editorialColors().ink,
                 )
-                Text(
-                    "共 ${filtered.size} 件",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = editorialColors().inkFaint,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "共 ${filtered.size} 件",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = editorialColors().inkFaint,
+                    )
+                    // it-015：演示模式入口（仅 DEBUG 可见），与计数并列不挤占标题
+                    if (BuildConfig.DEBUG) {
+                        FilledTonalIconButton(
+                            onClick = { demoAskOpen = true },
+                            modifier = Modifier.padding(start = 8.dp).size(32.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Science,
+                                contentDescription = "演示数据",
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                }
             }
 
             // it-012 O4'：品类图标 Tab（横滑）+「筛选」固定行尾不再被挤出屏外
@@ -234,6 +258,21 @@ fun WardrobeScreen(
                 ) { Text("完成") }
             }
         }
+    }
+
+    // it-015：演示模式确认——重启进程切换到 Mock 数据源，真实数据零接触
+    if (demoAskOpen) {
+        AlertDialog(
+            onDismissRequest = { demoAskOpen = false },
+            title = { Text("进入演示模式？") },
+            text = { Text("切换到内置演示数据（不落盘），用于测试体验与走查；你的真实衣橱不会受到任何影响。应用将自动重启。") },
+            confirmButton = {
+                TextButton(onClick = { demoAskOpen = false; DemoMode.setAndRestart(context, true) }) { Text("进入演示") }
+            },
+            dismissButton = {
+                TextButton(onClick = { demoAskOpen = false }) { Text("取消") }
+            },
+        )
     }
 
     pendingDelete?.let { target ->
