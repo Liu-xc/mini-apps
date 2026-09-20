@@ -26,14 +26,14 @@ private class ConfettiParticle(
 )
 
 /**
- * 落账成功的彩屑迸开（it-002 R1）：
- * trigger 自增触发一轮 900ms 动画（番茄红/琥珀/松绿/暖米四色，重力下落）。
+ * 落账成功的彩屑迸开（it-002 R1 / R6 清新色盘）：
+ * trigger 自增触发一轮 900ms 动画（嫩绿/湖蓝/草绿/淡金四色，重力下落）。
  */
 @Composable
 fun ConfettiBurst(trigger: Int, modifier: Modifier = Modifier) {
     if (trigger == 0) return
     val progress = remember(trigger) { Animatable(0f) }
-    val palette = listOf(Color(0xFFC8502E), Color(0xFFD99A2B), Color(0xFF6B8F4E), Color(0xFFFBF7EF), Color(0xFF211D19))
+    val palette = listOf(Color(0xFF3FA265), Color(0xFF4E9BD8), Color(0xFF8CBE4F), Color(0xFFE8C25D), Color(0xFFF6FBF4))
     val particles = remember(trigger) {
         List(26) {
             ConfettiParticle(

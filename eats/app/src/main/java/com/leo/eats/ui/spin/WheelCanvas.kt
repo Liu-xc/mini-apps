@@ -135,7 +135,8 @@ fun WheelCanvas(
                 close()
             }
             withTransform({ rotate(settle, pointerPivot) }) {
-                drawPath(pointer, color = colors.accent)
+                // R6：指针用墨色——绿主调下与绿色扇区保持对比
+                drawPath(pointer, color = colors.ink)
             }
         }
         center()

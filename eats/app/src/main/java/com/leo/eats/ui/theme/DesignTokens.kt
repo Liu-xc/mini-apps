@@ -7,33 +7,33 @@ import androidx.compose.ui.graphics.Color
 import com.leo.eats.domain.model.PlaceKind
 
 /**
- * 餐牌手帐风调色板，token 定义见 specs/05-design-system.md。
- * M3 colorScheme 承载标准槽位，手帐风专有色经 LocalMenuColors 下发。
+ * 清新草绿调色板（R6 主题重塑），token 定义见 specs/05-design-system.md。
+ * 绿为主调 + 青/湖蓝/草绿三枚类型语义色；评分星保留金色惯例（组件内固定）。
  */
 object EatsPalette {
-    // 浅色（暖米纸感）
-    val Paper = Color(0xFFFBF7EF)
+    // 浅色（淡绿纸感）
+    val Paper = Color(0xFFF2F7EF)
     val SurfaceLight = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF211D19)
-    val InkFaint = Color(0xFF8C8478)
-    val Accent = Color(0xFFC8502E)
-    val Hairline = Color(0xFFEAE2D4)
+    val Ink = Color(0xFF1E2822)
+    val InkFaint = Color(0xFF84907F)
+    val Accent = Color(0xFF3FA265)
+    val Hairline = Color(0xFFE2ECDF)
 
-    // 深色（墨纸；R5：surface 提亮半档拉开与背景层次）
-    val PaperDark = Color(0xFF161412)
-    val SurfaceDark = Color(0xFF26221E)
-    val InkDark = Color(0xFFF2EDE4)
-    val InkFaintDark = Color(0xFF9C9488)
-    val AccentDark = Color(0xFFE07B54)
-    val HairlineDark = Color(0xFF2D2925)
+    // 深色（墨绿纸）
+    val PaperDark = Color(0xFF101711)
+    val SurfaceDark = Color(0xFF1B241C)
+    val InkDark = Color(0xFFE9F2E7)
+    val InkFaintDark = Color(0xFF93A493)
+    val AccentDark = Color(0xFF7BCD93)
+    val HairlineDark = Color(0xFF263229)
 
-    // 类型语义色（marker / 图标 / 转盘扇区共用）
-    val Restaurant = Color(0xFFC8502E)
-    val Takeout = Color(0xFFD99A2B)
-    val HomeCook = Color(0xFF6B8F4E)
-    val RestaurantDark = Color(0xFFE07B54)
-    val TakeoutDark = Color(0xFFE5B054)
-    val HomeCookDark = Color(0xFF8FB073)
+    // 类型语义色（marker / 图标 / 转盘扇区共用）：青绿 / 湖蓝 / 草绿
+    val Restaurant = Color(0xFF2E9C8A)
+    val Takeout = Color(0xFF4E9BD8)
+    val HomeCook = Color(0xFF8CBE4F)
+    val RestaurantDark = Color(0xFF5CC0AC)
+    val TakeoutDark = Color(0xFF7EB9E8)
+    val HomeCookDark = Color(0xFFB2D878)
 }
 
 @Immutable

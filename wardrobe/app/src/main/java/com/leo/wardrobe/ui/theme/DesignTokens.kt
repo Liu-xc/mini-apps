@@ -11,20 +11,20 @@ import androidx.compose.ui.graphics.Color
  */
 object WardrobePalette {
     // 浅色（米白纸感）
-    val Paper = Color(0xFFFAF7F2)
+    val Paper = Color(0xFFF5F9F3)
     val SurfaceLight = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF1A1A1A)
-    val InkFaint = Color(0xFF8A857D)
-    val Accent = Color(0xFFB5432A)
-    val Hairline = Color(0xFFE8E2D9)
+    val Ink = Color(0xFF1D2620)
+    val InkFaint = Color(0xFF808D82)
+    val Accent = Color(0xFF429E68)
+    val Hairline = Color(0xFFE3EBE0)
 
     // 深色（墨纸）
-    val PaperDark = Color(0xFF141312)
-    val SurfaceDark = Color(0xFF1F1D1B)
-    val InkDark = Color(0xFFF2EFE9)
-    val InkFaintDark = Color(0xFF9C968C)
-    val AccentDark = Color(0xFFD96A50)
-    val HairlineDark = Color(0xFF2C2926)
+    val PaperDark = Color(0xFF10150F)
+    val SurfaceDark = Color(0xFF1B231B)
+    val InkDark = Color(0xFFEAF2E8)
+    val InkFaintDark = Color(0xFF94A294)
+    val AccentDark = Color(0xFF74C790)
+    val HairlineDark = Color(0xFF273127)
 }
 
 @Immutable

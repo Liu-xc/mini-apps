@@ -32,7 +32,7 @@ private class ConfettiParticle(
 fun ConfettiBurst(trigger: Int, modifier: Modifier = Modifier) {
     if (trigger == 0) return
     val progress = remember(trigger) { Animatable(0f) }
-    val palette = listOf(Color(0xFFB5432A), Color(0xFF1A1A1A), Color(0xFFE8E2D9), Color(0xFFD96A50))
+    val palette = listOf(Color(0xFF429E68), Color(0xFF4E9BD8), Color(0xFF8CBE4F), Color(0xFF74C790))
     val particles = remember(trigger) {
         List(26) {
             ConfettiParticle(

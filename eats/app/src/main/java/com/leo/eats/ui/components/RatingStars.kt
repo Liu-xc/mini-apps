@@ -22,15 +22,18 @@ import com.leo.eats.ui.theme.menuColors
 /**
  * 评分星（US-01/W6）：展示模式只读；传入 onChange 即输入模式——
  * 点第 n 颗设 n 分，再点同一颗清除（可空）。
- * it-002 R2：rating 为 null 时显示弱化「未评分」文字，不再堆 5 颗灰星。
+ * it-002 R2：rating 为 null 时显示弱化「未评分」文字。
+ * R6：星色固定为金色惯例（不随主题绿走），评分语义不与主色混淆。
  */
+private val GoldStar = androidx.compose.ui.graphics.Color(0xFFE0A93E)
+
 @Composable
 fun RatingStars(
     rating: Int?,
     onChange: ((Int?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     size: Dp = 18.dp,
-    starColor: androidx.compose.ui.graphics.Color = menuColors().accent,
+    starColor: androidx.compose.ui.graphics.Color = GoldStar,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         if (rating == null && onChange == null) {
