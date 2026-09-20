@@ -17,7 +17,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.leo.eats.R
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
+import com.leo.eats.domain.model.labelIn
+import com.leo.eats.ui.theme.categoryColor
 import com.leo.eats.ui.theme.kindColor
 
 val PlaceKind.label: String
@@ -35,7 +38,17 @@ val PlaceKind.iconRes: Int
         PlaceKind.HOME -> R.drawable.kind_home
     }
 
-/** 类型小圆点（列表行辅助标识） */
+/** 分类小圆点（it-008：分类语义色 吃红/喝琥珀/玩紫） */
+@Composable
+fun CategoryDot(category: PlaceCategory, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .size(10.dp)
+            .background(categoryColor(category), CircleShape),
+    )
+}
+
+/** 类型小圆点（列表行辅助标识，it-008 后仅旧样式兜底用） */
 @Composable
 fun KindDot(kind: PlaceKind, modifier: Modifier = Modifier) {
     androidx.compose.foundation.layout.Box(
@@ -45,13 +58,22 @@ fun KindDot(kind: PlaceKind, modifier: Modifier = Modifier) {
     )
 }
 
-/** 类型 chip：3D 图标 + 文案 */
+/**
+ * 类型 chip：3D 图标 + 「分类·类型」文案（it-008：文案按分类适配，底色用分类语义色）。
+ * compact 模式只显示图标，底色仍是分类色。
+ */
 @Composable
-fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = false) {
+fun KindChip(
+    kind: PlaceKind,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    category: PlaceCategory = PlaceCategory.EAT,
+) {
+    val tint = categoryColor(category)
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
-        color = kindColor(kind).copy(alpha = 0.14f),
+        color = tint.copy(alpha = 0.14f),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -59,15 +81,15 @@ fun KindChip(kind: PlaceKind, modifier: Modifier = Modifier, compact: Boolean = 
         ) {
             Image(
                 painter = painterResource(kind.iconRes),
-                contentDescription = kind.label,
+                contentDescription = kind.labelIn(category),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.size(if (compact) 14.dp else 17.dp),
             )
             if (!compact) {
                 Text(
-                    kind.label,
+                    "${category.shortLabel}·${kind.labelIn(category)}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = kindColor(kind),
+                    color = tint,
                     modifier = Modifier.padding(start = 4.dp),
                 )
             }

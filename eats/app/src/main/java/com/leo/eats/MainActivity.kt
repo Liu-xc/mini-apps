@@ -1,6 +1,7 @@
 package com.leo.eats
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -47,10 +48,14 @@ import com.leo.eats.ui.list.ListScreen
 import com.leo.eats.ui.list.PlaceEditScreen
 import com.leo.eats.ui.mapview.MapScreen
 import com.leo.eats.ui.spin.SpinScreen
+import com.leo.eats.ui.recap.RecapScreen
 import com.leo.eats.ui.theme.EatsTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        pendingOpenPlaceId.value = intent?.getStringExtra(EXTRA_OPEN_PLACE_ID) ?: pendingOpenPlaceId.value
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
@@ -58,6 +63,17 @@ class MainActivity : ComponentActivity() {
                 EatsRoot()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pendingOpenPlaceId.value = intent.getStringExtra(EXTRA_OPEN_PLACE_ID)
+    }
+
+    companion object {
+        /** 「好久没去」通知深链（it-007）：点击进 W5 详情 */
+        const val EXTRA_OPEN_PLACE_ID = "openPlaceId"
+        val pendingOpenPlaceId = MutableStateFlow<String?>(null)
     }
 }
 
@@ -67,10 +83,11 @@ private object Routes {
     fun placeEdit(id: String?) = if (id == null) "placeEdit" else "placeEdit?placeId=$id"
     const val PLACE_DETAIL = "placeDetail/{placeId}"
     fun placeDetail(id: String) = "placeDetail/$id"
+    const val RECAP = "recap"
 }
 
 private enum class Tab(val label: String) {
-    SPIN("吃什么"), MAP("地图"), LIST("列表"),
+    SPIN("干啥"), MAP("地图"), LIST("列表"),
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -84,12 +101,23 @@ private fun EatsRoot() {
     // 地图页「N 条未上地图」→ 列表页「未定位」过滤意图
     var noLocationFocus by rememberSaveable { mutableStateOf(false) }
 
+    // it-007：启动对齐提醒任务；通知深链 → W5 详情
+    LaunchedEffect(Unit) { vm.syncReminderSchedule() }
+    val pendingOpen by MainActivity.pendingOpenPlaceId.collectAsState()
+    LaunchedEffect(pendingOpen) {
+        val id = pendingOpen ?: return@LaunchedEffect
+        nav.navigate(Routes.placeDetail(id))
+        MainActivity.pendingOpenPlaceId.value = null
+    }
+
     val toast by vm.toast.collectAsState()
     LaunchedEffect(toast) {
-        if (toast != null) {
-            snackbar.showSnackbar(toast!!)
-            vm.toast(null)
+        val t = toast ?: return@LaunchedEffect
+        val result = snackbar.showSnackbar(t.message, t.actionLabel)
+        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+            t.onAction?.invoke()
         }
+        vm.toast(null)
     }
 
     val backStack by nav.currentBackStackEntryAsState()
@@ -163,6 +191,14 @@ private fun EatsRoot() {
                             )
                         }
                     }
+                    composable(Routes.RECAP) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            RecapScreen(
+                                vm = vm,
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                    }
                     composable(Routes.PLACE_DETAIL) { entry ->
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             val id = entry.arguments?.getString("placeId").orEmpty()
@@ -197,6 +233,7 @@ private fun HomeTabs(
 ) {
     val openDetail: (String) -> Unit = { nav.navigate(Routes.placeDetail(it)) }
     val editPlace: (String?) -> Unit = { nav.navigate(Routes.placeEdit(it)) }
+    val openRecap: () -> Unit = { nav.navigate(Routes.RECAP) }
 
     Crossfade(targetState = tab, animationSpec = tween(220), label = "tabs") { current ->
         when (current) {
@@ -217,6 +254,7 @@ private fun HomeTabs(
                 vm = vm,
                 onOpenDetail = openDetail,
                 onEditPlace = editPlace,
+                onOpenRecap = openRecap,
                 focusNoLocation = noLocationFocus,
                 onFocusConsumed = { setNoLocationFocus(false) },
             )

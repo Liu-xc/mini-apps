@@ -40,8 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.leo.eats.domain.model.PlaceKind
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceWithStats
+import com.leo.eats.domain.model.labelIn
 import com.leo.eats.domain.model.statsOfAll
 import com.leo.eats.map.MapController
 import com.leo.eats.map.PlaceMarkerFactory
@@ -51,7 +52,7 @@ import com.leo.eats.ui.components.label
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.RelativeTimeText
 import com.leo.eats.ui.theme.EatsMotion
-import com.leo.eats.ui.theme.kindColor
+import com.leo.eats.ui.theme.categoryColor
 import com.leo.eats.ui.theme.menuColors
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -75,13 +76,13 @@ fun MapScreen(
     var map by remember { mutableStateOf<org.osmdroid.views.MapView?>(null) }
     var cameraInitialized by remember { mutableStateOf(false) }
 
-    // 类型语义色在组合期取一次（marker 回调里不再调 @Composable）
+    // 分类语义色在组合期取一次（marker 回调里不再调 @Composable）——it-008 起按分类着色
     val menu = menuColors()
-    val kindArgb = PlaceKind.entries.associateWith { kind ->
-        when (kind) {
-            PlaceKind.RESTAURANT -> menu.restaurant
-            PlaceKind.TAKEOUT -> menu.takeout
-            PlaceKind.HOME -> menu.homeCook
+    val categoryArgb = PlaceCategory.entries.associateWith { c ->
+        when (c) {
+            PlaceCategory.EAT -> menu.eat
+            PlaceCategory.DRINK -> menu.drink
+            PlaceCategory.PLAY -> menu.play
         }.toArgb()
     }
 
@@ -92,7 +93,7 @@ fun MapScreen(
         PlaceMarkerFactory.sync(
             map = m,
             places = located,
-            argbOf = { kind -> kindArgb.getValue(kind) },
+            argbOf = { c -> categoryArgb.getValue(c) },
             selectedId = selectedId,
             onClick = { s -> selected = s },
         )
@@ -162,15 +163,15 @@ fun MapScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
-                    PlaceKind.entries.forEach { k ->
+                    PlaceCategory.entries.forEach { c ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 Modifier
                                     .size(9.dp)
-                                    .background(kindColor(k), androidx.compose.foundation.shape.CircleShape),
+                                    .background(categoryColor(c), androidx.compose.foundation.shape.CircleShape),
                             )
                             Text(
-                                " ${k.label}",
+                                " ${c.shortLabel}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = menuColors().ink,
                             )
@@ -278,7 +279,7 @@ private fun PlaceSummaryCard(s: PlaceWithStats, onClick: () -> Unit, modifier: M
                 )
                 Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    KindChip(s.place.kind, compact = true)
+                    KindChip(s.place.kind, compact = true, category = s.place.category)
                     Spacer(Modifier.width(8.dp))
                     RatingStars(rating = s.place.rating, size = 14.dp)
                 }

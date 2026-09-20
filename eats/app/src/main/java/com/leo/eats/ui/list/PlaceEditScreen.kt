@@ -29,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,8 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.leo.eats.domain.model.GeoLoc
 import com.leo.eats.domain.model.Place
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceLink
+import com.leo.eats.domain.model.kindOptions
+import com.leo.eats.domain.model.labelIn
 import com.leo.eats.domain.model.placeById
 import com.leo.eats.ui.AppViewModel
 import com.leo.eats.ui.components.LinkChips
@@ -76,10 +80,13 @@ fun PlaceEditScreen(
     // 表单状态（进入时一次性初始化，编辑保存成功后返回）
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var kind by remember { mutableStateOf(existing?.kind ?: PlaceKind.RESTAURANT) }
+    var category by remember { mutableStateOf(existing?.category ?: PlaceCategory.EAT) }
     var cuisine by remember { mutableStateOf(existing?.cuisine.orEmpty()) }
     var location by remember { mutableStateOf(existing?.location) }
     var address by remember { mutableStateOf(existing?.address.orEmpty()) }
     var rating by remember { mutableStateOf(existing?.rating) }
+    // 种草开关（it-008）：新建按用户选择；编辑时显示既有愿望状态，取消勾选即取消种草
+    var wishlisted by remember { mutableStateOf(existing?.isWish ?: false) }
     val tags = remember { mutableStateListOf<String>().apply { addAll(existing?.tags.orEmpty()) } }
     val photos = remember { mutableStateListOf<String>().apply { addAll(existing?.photos.orEmpty()) } }
     val newUris = remember { mutableStateListOf<String>() }
@@ -99,10 +106,13 @@ fun PlaceEditScreen(
         if (name.isBlank()) { vm.toast("名称必填"); return }
         if (saving) return
         saving = true
+        // 类型合法性（ADR-012）：切分类后 kind 若不在该分类选项内，回退为第一个合法值
+        val safeKind = if (kind in category.kindOptions) kind else category.kindOptions.first()
         vm.savePlace(
             existing = existing,
             name = name,
-            kind = kind,
+            kind = safeKind,
+            category = category,
             cuisine = cuisine,
             location = location,
             address = address,
@@ -112,6 +122,7 @@ fun PlaceEditScreen(
             newPhotoUris = newUris.toList(),
             links = links.toList(),
             notes = notes,
+            wishlisted = wishlisted,
         ) { ok -> if (ok) onBack() else saving = false }
     }
 
@@ -123,7 +134,7 @@ fun PlaceEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (existing == null) "添加食堂" else "编辑食堂") },
+                title = { Text(if (existing == null) "添加去处" else "编辑去处") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
@@ -188,36 +199,55 @@ fun PlaceEditScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            FormLabel("名称 *")
+            FormLabel("分类")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PlaceCategory.entries.forEach { c ->
+                    FilterChip(
+                        selected = category == c,
+                        onClick = {
+                            category = c
+                            // 切分类后 kind 不合法（如玩类的外卖）时回退为第一个合法值
+                            if (kind !in c.kindOptions) kind = c.kindOptions.first()
+                        },
+                        label = { Text(c.shortLabel) },
+                    )
+                }
+            }
+
+            FormLabel("名称")
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("如：巷子深火锅 / 番茄炒蛋") },
+                placeholder = { Text("如：巷子深火锅 / 敦煌大展 / 番茄炒蛋") },
                 singleLine = true,
             )
 
             FormLabel("类型")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PlaceKind.entries.forEach { k ->
+                category.kindOptions.forEach { k ->
                     FilterChip(
                         selected = kind == k,
                         onClick = { kind = k },
-                        label = { Text(k.label) },
+                        label = { Text(k.labelIn(category)) },
                     )
                 }
             }
 
-            FormLabel("菜系 / 风味")
+            FormLabel(if (category == PlaceCategory.PLAY) "说明" else "菜系 / 风味")
             OutlinedTextField(
                 value = cuisine,
                 onValueChange = { cuisine = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("火锅、日料、家常菜…（可选）") },
+                placeholder = {
+                    Text(
+                        if (category == PlaceCategory.PLAY) "展览 / 桌游 / 登山…（可选）" else "火锅、日料、家常菜…（可选）",
+                    )
+                },
                 singleLine = true,
             )
 
-            FormLabel(if (kind == PlaceKind.HOME) "位置（自做可跳过）" else "位置")
+            FormLabel(if (kind == PlaceKind.HOME) "位置（在家可跳过）" else "位置")
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -263,6 +293,34 @@ fun PlaceEditScreen(
                 placeholder = { Text("地址文本（可选，手填）") },
                 singleLine = true,
             )
+
+            // it-008：种草开关——想去/想吃还没去的，进愿望池（只抽愿望/列表愿望筛选可见）
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = if (wishlisted) menuColors().accent.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                ) {
+                    Text("🌟", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "先种草（还没去过）",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = menuColors().ink,
+                        )
+                        Text(
+                            "收进愿望清单，可在「只抽愿望」里抽它",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = menuColors().inkFaint,
+                        )
+                    }
+                    Switch(checked = wishlisted, onCheckedChange = { wishlisted = it })
+                }
+            }
 
             FormLabel("综合评分")
             RatingStars(rating = rating, onChange = { rating = it }, size = 26.dp)

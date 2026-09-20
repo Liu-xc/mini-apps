@@ -28,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Science
@@ -70,8 +71,10 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.leo.eats.BuildConfig
 import com.leo.eats.data.mock.DemoMode
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceWithStats
+import com.leo.eats.domain.model.labelIn
 import com.leo.eats.domain.model.statsOfAll
 import com.leo.eats.ui.AppViewModel
 import com.leo.eats.ui.components.EmptyState
@@ -88,12 +91,27 @@ import com.leo.eats.ui.theme.menuColors
 import com.leo.eats.ui.visit.LogVisitSheet
 import java.io.File
 
-/** 列表排序（US-05） */
+/** 列表排序（US-05；it-008 增「种草时间」） */
 enum class ListSort(val label: String) {
-    LAST("最近一次吃"),
+    LAST("最近一次"),
+    WISH("种草时间"),
     RATING("评分"),
     COUNT("累计次数"),
     NAME("名称"),
+}
+
+/** 安排小节的日期标签（it-008）：今天 / 明天 / 周几 M/dd */
+private fun planDateLabel(planAt: Long?): String {
+    if (planAt == null) return "已安排"
+    val zone = java.time.ZoneId.systemDefault()
+    val date = java.time.Instant.ofEpochMilli(planAt).atZone(zone).toLocalDate()
+    val today = java.time.LocalDate.now(zone)
+    val dayText = when (date.toEpochDay() - today.toEpochDay()) {
+        0L -> "今天"
+        1L -> "明天"
+        else -> "周${"日一二三四五六"[date.dayOfWeek.value % 7]} ${date.monthValue}/${date.dayOfMonth}"
+    }
+    return dayText
 }
 
 /** 类型筛选项：全部 / 三类型 / 未定位（W2「未上地图」入口落点） */
@@ -121,12 +139,15 @@ fun ListScreen(
     vm: AppViewModel,
     onOpenDetail: (String) -> Unit,
     onEditPlace: (String?) -> Unit,
+    onOpenRecap: () -> Unit = {},
     focusNoLocation: Boolean = false,
     onFocusConsumed: () -> Unit = {},
 ) {
     val data by vm.data.collectAsState()
     var query by remember { mutableStateOf("") }
     var kindFilter by remember { mutableStateOf<KindFilter>(KindFilter.All) }
+    var categoryFilter by remember { mutableStateOf<PlaceCategory?>(null) }
+    var wishOnly by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf<String?>(null) }
     var sort by remember { mutableStateOf(ListSort.LAST) }
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -146,13 +167,26 @@ fun ListScreen(
 
     val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
     val activeFilterCount =
-        (if (kindFilter != KindFilter.All) 1 else 0) + (if (tagFilter != null) 1 else 0)
+        (if (kindFilter != KindFilter.All) 1 else 0) +
+            (if (categoryFilter != null) 1 else 0) +
+            (if (tagFilter != null) 1 else 0)
     var filterSheetOpen by remember { mutableStateOf(false) }
 
-    val rows = remember(data, query, kindFilter, tagFilter, sort) {
+    // it-008 阶段C：未来的安排置顶小节（不受筛选影响，全局提醒）
+    val upcomingPlans = remember(data) {
+        val zone = java.time.ZoneId.systemDefault()
+        val todayStart = java.time.LocalDate.now().atStartOfDay(zone).toInstant().toEpochMilli()
+        data.places
+            .filter { it.isWish && (it.planAt ?: Long.MIN_VALUE) >= todayStart }
+            .sortedBy { it.planAt }
+    }
+
+    val rows = remember(data, query, kindFilter, categoryFilter, wishOnly, tagFilter, sort) {
         val filtered = data.statsOfAll().filter { s ->
             val p = s.place
             (query.isBlank() || p.name.contains(query.trim(), true) || p.notes.contains(query.trim(), true) || p.cuisine.contains(query.trim(), true)) &&
+                (categoryFilter == null || p.category == categoryFilter) &&
+                (!wishOnly || p.isWish) &&
                 when (val f = kindFilter) {
                     is KindFilter.All -> true
                     is KindFilter.NoLocation -> !p.located
@@ -162,6 +196,7 @@ fun ListScreen(
         }
         when (sort) {
             ListSort.LAST -> filtered.sortedByDescending { it.lastVisitAt ?: Long.MIN_VALUE }
+            ListSort.WISH -> filtered.sortedByDescending { it.place.wishlistedAt ?: Long.MIN_VALUE }
             ListSort.RATING -> filtered.sortedWith(compareByDescending<PlaceWithStats> { it.place.rating ?: 0 }.thenBy { it.place.name })
             ListSort.COUNT -> filtered.sortedWith(compareByDescending<PlaceWithStats> { it.visitCount }.thenBy { it.place.name })
             ListSort.NAME -> filtered.sortedBy { it.place.name }
@@ -175,7 +210,7 @@ fun ListScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                text = { Text("添加食堂") },
+                text = { Text("添加去处") },
             )
         },
     ) { padding ->
@@ -191,6 +226,11 @@ fun ListScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     color = menuColors().ink,
                 )
+                Spacer(Modifier.weight(1f))
+                // it-007：统计回顾入口（W7）
+                FilledTonalIconButton(onClick = onOpenRecap) {
+                    Icon(Icons.Rounded.BarChart, contentDescription = "统计回顾")
+                }
             }
 
             // it-004 O5：单行工具条——搜索 / 排序 / 筛选（角标计数），首屏直达卡片列表
@@ -233,6 +273,16 @@ fun ListScreen(
                         Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
                     }
                 }
+                // it-008：只看愿望 toggle
+                FilledTonalIconButton(
+                    onClick = { wishOnly = !wishOnly },
+                    colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = if (wishOnly) menuColors().accent else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (wishOnly) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                ) {
+                    Text("🌟", style = MaterialTheme.typography.labelLarge)
+                }
                 if (BuildConfig.DEBUG) {
                     FilledTonalIconButton(onClick = { demoAskOpen = true }) {
                         Icon(Icons.Rounded.Science, contentDescription = "演示数据")
@@ -257,6 +307,54 @@ fun ListScreen(
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    // it-008 阶段C：最近的安排（未来计划置顶，点行进详情）
+                    if (upcomingPlans.isNotEmpty()) {
+                        item(key = "plans-header") {
+                            Column(Modifier.padding(top = 6.dp)) {
+                                Text(
+                                    "📅 最近的安排",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = menuColors().accent,
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                upcomingPlans.take(3).forEach { p ->
+                                    Surface(
+                                        shape = MaterialTheme.shapes.medium,
+                                        color = menuColors().accent.copy(alpha = 0.10f),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 2.dp)
+                                            .clickable { onOpenDetail(p.id) },
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        ) {
+                                            Text(
+                                                planDateLabel(p.planAt),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = menuColors().accent,
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                p.name,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = menuColors().ink,
+                                                maxLines = 1,
+                                                modifier = Modifier.weight(1f),
+                                            )
+                                            Text(
+                                                "${p.category.shortLabel}·${p.kind.labelIn(p.category)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = menuColors().inkFaint,
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(6.dp))
+                            }
+                        }
+                    }
                     itemsIndexed(rows, key = { _, s -> s.place.id }) { index, s ->
                         StaggeredEntrance(index = index) {
                             SwipeToDeleteRow(
@@ -306,6 +404,27 @@ fun ListScreen(
             ) {
                 Text("筛选", style = MaterialTheme.typography.titleLarge, color = menuColors().ink)
                 Spacer(Modifier.height(2.dp))
+                Text("分类", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilterChip(
+                        selected = categoryFilter == null,
+                        onClick = { categoryFilter = null },
+                        label = { Text("全部") },
+                    )
+                    PlaceCategory.entries.forEach { c ->
+                        FilterChip(
+                            selected = categoryFilter == c,
+                            onClick = { categoryFilter = if (categoryFilter == c) null else c },
+                            label = { Text(c.shortLabel) },
+                        )
+                    }
+                    FilterChip(
+                        selected = wishOnly,
+                        onClick = { wishOnly = !wishOnly },
+                        label = { Text("🌟 愿望") },
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
                 Text("类型", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     kindFilterOptions.forEach { (filter, label) ->
@@ -475,15 +594,26 @@ private fun PlaceRow(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    s.place.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = menuColors().ink,
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        s.place.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = menuColors().ink,
+                        maxLines = 1,
+                    )
+                    if (s.place.isWish) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("🌟", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    KindChip(s.place.kind, compact = true)
+                    KindChip(s.place.kind, compact = true, category = s.place.category)
+                    Text(
+                        "${s.place.category.shortLabel}·${s.place.kind.labelIn(s.place.category)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = menuColors().inkFaint,
+                    )
                     if (s.place.cuisine.isNotBlank()) {
                         Text(
                             s.place.cuisine,
@@ -504,7 +634,7 @@ private fun PlaceRow(
                 Text(
                     buildString {
                         append(relativeTimeText(s.lastVisitAt))
-                        append(if (s.visitCount == 0) " · 还没吃过" else " · ${s.visitCount} 次")
+                        append(if (s.visitCount == 0) " · 还没去过" else " · ${s.visitCount} 次")
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = if (s.lastVisitAt == null) menuColors().accent else menuColors().inkFaint,

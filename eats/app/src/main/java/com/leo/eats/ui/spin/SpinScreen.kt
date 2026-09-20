@@ -56,8 +56,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceWithStats
+import com.leo.eats.domain.model.kindOptions
+import com.leo.eats.domain.model.labelIn
+import com.leo.eats.domain.usecase.BuildCandidates
 import com.leo.eats.ui.AppViewModel
 import com.leo.eats.ui.components.ConfettiBurst
 import com.leo.eats.ui.components.EmptyState
@@ -76,6 +80,27 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private val RECENT_DAY_OPTIONS = listOf(7, 14, 30)
+
+/** 标题随分类动态（it-008 US-11）：全部→今天干啥 / 单选分类→吃啥/喝啥/玩啥 */
+private fun spinTitle(categories: Set<PlaceCategory>): String = when (categories) {
+    setOf(PlaceCategory.EAT) -> "今天吃啥"
+    setOf(PlaceCategory.DRINK) -> "今天喝啥"
+    setOf(PlaceCategory.PLAY) -> "今天玩啥"
+    else -> "今天干啥"
+}
+
+/** 结果块文案按分类（it-008）：吃/喝/玩 → 今天就吃/就喝/就去 */
+private fun resultVerb(category: PlaceCategory): String = when (category) {
+    PlaceCategory.EAT -> "就吃这个"
+    PlaceCategory.DRINK -> "就喝这个"
+    PlaceCategory.PLAY -> "就去这个"
+}
+
+private fun resultBanner(category: PlaceCategory): String = when (category) {
+    PlaceCategory.EAT -> "今天就吃"
+    PlaceCategory.DRINK -> "今天就喝"
+    PlaceCategory.PLAY -> "今天就去"
+}
 
 /**
  * W1 今天吃啥（it-003 卡组；it-004 评审落地）：
@@ -102,6 +127,20 @@ fun SpinScreen(
     val candidates = remember(data, config) { vm.candidatesOf(config) }
     val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
     val activeFilterCount = config.excludedTags.size + if (config.excludeRecentDays != null) 1 else 0
+    // 类型 chips 随当前分类适配文案/选项（ADR-012）：全部分类时显示默认三件套
+    val activeCategory: PlaceCategory? =
+        if (config.categories.size == 1) config.categories.first() else null
+    val visibleKinds = activeCategory?.kindOptions ?: PlaceKind.entries.toList()
+
+    // 今天有安排的愿望（it-008 阶段C）：抽签页顶部提示条
+    val todayPlan = remember(data) {
+        val zone = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now()
+        data.places.firstOrNull { p ->
+            p.planAt != null &&
+                java.time.Instant.ofEpochMilli(p.planAt).atZone(zone).toLocalDate() == today
+        }
+    }
 
     Column(
         Modifier
@@ -109,7 +148,7 @@ fun SpinScreen(
             .padding(horizontal = 20.dp),
     ) {
         Text(
-            "今天吃啥",
+            spinTitle(config.categories),
             style = MaterialTheme.typography.displayMedium,
             color = menuColors().ink,
             modifier = Modifier.padding(top = 16.dp, bottom = 6.dp),
@@ -118,7 +157,7 @@ fun SpinScreen(
         if (data.places.isEmpty()) {
             EmptyState(
                 emoji = "🍜",
-                title = "还没有食堂",
+                title = "还没有去处",
                 hint = "先去列表添加几家，回来抽一张",
                 imageRes = com.leo.eats.R.drawable.eats_empty,
                 actionLabel = "去添加",
@@ -127,13 +166,34 @@ fun SpinScreen(
             return@Column
         }
 
-        // ---- 筛选：类型常驻单行 + 「筛选」收纳忌口/最近排除（it-004） ----
+        // ---- 筛选：分类 + 类型常驻单行 + 「筛选」收纳忌口/最近排除 + 「只抽愿望」（it-008） ----
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
-            PlaceKind.entries.forEach { k ->
+            val allSelected = config.categories.size == PlaceCategory.entries.size
+            FilterChip(
+                selected = allSelected,
+                onClick = { vm.setSpinCategories(PlaceCategory.entries.toSet()) },
+                label = { Text("全部") },
+            )
+            PlaceCategory.entries.forEach { c ->
+                FilterChip(
+                    selected = config.categories == setOf(c),
+                    onClick = {
+                        if (config.categories == setOf(c)) {
+                            vm.setSpinCategories(PlaceCategory.entries.toSet())
+                        } else {
+                            // 切分类时类型重置为该分类全部选项，避免残留旧类型组合出意外空池（UI 评审）
+                            vm.setSpinCategories(setOf(c))
+                            vm.setSpinKinds(c.kindOptions.toSet())
+                        }
+                    },
+                    label = { Text(c.shortLabel) },
+                )
+            }
+            visibleKinds.forEach { k ->
                 val selected = k in config.kinds
                 FilterChip(
                     selected = selected,
@@ -141,7 +201,7 @@ fun SpinScreen(
                         val next = if (selected && config.kinds.size > 1) config.kinds - k else config.kinds + k
                         vm.setSpinKinds(next)
                     },
-                    label = { Text(k.label) },
+                    label = { Text(k.labelIn(activeCategory ?: PlaceCategory.EAT)) },
                 )
             }
             // it-005：筛选改 AssistChip（描边+漏斗前缀），与类型 chips 视觉分离
@@ -157,6 +217,48 @@ fun SpinScreen(
                     Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
                 },
             )
+            // it-008：只抽愿望（愿望=种草还没去；对「排除最近」天然免疫）
+            AssistChip(
+                onClick = { vm.setSpinWishOnly(!config.wishOnly) },
+                label = {
+                    Text(
+                        "只抽愿望",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (config.wishOnly) menuColors().accent else MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                leadingIcon = {
+                    Text("🌟", style = MaterialTheme.typography.labelLarge)
+                },
+            )
+        }
+
+        // ---- 今日安排提示条（it-008 阶段C） ----
+        todayPlan?.let { plan ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = menuColors().accent.copy(alpha = 0.12f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                onClick = { onOpenDetail(plan.id) },
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Text("📅", style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "今天安排：${plan.name}（${plan.category.shortLabel}·${plan.kind.labelIn(plan.category)}）",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = menuColors().ink,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text("→", color = menuColors().accent, style = MaterialTheme.typography.labelLarge)
+                }
+            }
         }
 
         if (candidates.isEmpty()) {
@@ -242,7 +344,7 @@ fun SpinScreen(
                         Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("今天就吃", style = MaterialTheme.typography.labelLarge, color = menuColors().surface.copy(alpha = 0.75f))
+                        Text(resultBanner(w.place.category), style = MaterialTheme.typography.labelLarge, color = menuColors().surface.copy(alpha = 0.75f))
                         Text(
                             w.place.name,
                             style = MaterialTheme.typography.headlineLarge,
@@ -251,9 +353,11 @@ fun SpinScreen(
                         )
                         Text(
                             buildString {
-                                append(w.place.kind.label)
+                                append(w.place.category.shortLabel)
+                                append("·")
+                                append(w.place.kind.labelIn(w.place.category))
                                 if (w.place.cuisine.isNotBlank()) append(" · ${w.place.cuisine}")
-                                append(" · 候选 ${candidates.size} 家")
+                                append(" · 候选 ${candidates.size} 个")
                             },
                             style = MaterialTheme.typography.labelMedium,
                             color = menuColors().surface.copy(alpha = 0.75f),
@@ -264,7 +368,7 @@ fun SpinScreen(
                                 onClick = { logTarget = w },
                                 colors = ButtonDefaults.buttonColors(containerColor = menuColors().accent),
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { Text("✓ 就吃这个", style = MaterialTheme.typography.titleMedium) }
+                            ) { Text("✓ ${resultVerb(w.place.category)}", style = MaterialTheme.typography.titleMedium) }
                             OutlinedButton(
                                 onClick = {
                                     winner = null
@@ -407,6 +511,13 @@ fun SpinScreen(
 /**
  * 食堂信息卡：照片/3D 插画 hero + 名称/类型/菜系 + 评分与上次 + 标签 + 下单链接 + 记一笔。
  */
+/** 种草至今天数（it-008，至少 1 天） */
+private fun relativeDays(from: Long?): String {
+    if (from == null) return "今天"
+    val days = (System.currentTimeMillis() - from) / BuildCandidates.DAY_MILLIS
+    return if (days <= 0) "今天" else "$days 天"
+}
+
 @Composable
 private fun PlaceCard(
     s: PlaceWithStats,
@@ -480,17 +591,27 @@ private fun PlaceCard(
                         maxLines = 1,
                         modifier = Modifier.weight(1f),
                     )
-                    KindChip(s.place.kind)
+                    KindChip(s.place.kind, category = s.place.category)
                 }
                 Spacer(Modifier.height(4.dp))
+                // it-008：愿望卡显示种草时长；常规卡显示上次/次数
                 Text(
-                    buildString {
-                        append(relativeTimeText(s.lastVisitAt))
-                        append(if (s.visitCount == 0) " · 还没吃过" else " · ${s.visitCount} 次")
-                        if (s.place.cuisine.isNotBlank()) append(" · ${s.place.cuisine}")
+                    if (s.place.isWish) {
+                        buildString {
+                            append("🌟 种草 ")
+                            append(relativeDays(s.place.wishlistedAt))
+                            append(" · 还没去过")
+                            if (s.place.cuisine.isNotBlank()) append(" · ${s.place.cuisine}")
+                        }
+                    } else {
+                        buildString {
+                            append(relativeTimeText(s.lastVisitAt))
+                            append(if (s.visitCount == 0) " · 还没去过" else " · ${s.visitCount} 次")
+                            if (s.place.cuisine.isNotBlank()) append(" · ${s.place.cuisine}")
+                        }
                     },
                     style = MaterialTheme.typography.labelMedium,
-                    color = menuColors().inkFaint,
+                    color = if (s.place.isWish) menuColors().accent else menuColors().inkFaint,
                 )
                 if (s.place.tags.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))

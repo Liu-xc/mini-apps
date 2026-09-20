@@ -7,7 +7,7 @@ import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.ui.graphics.toArgb
-import com.leo.eats.domain.model.PlaceKind
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceWithStats
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -15,7 +15,8 @@ import org.osmdroid.views.overlay.Marker
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 地图 marker 工厂：类型 → 颜色圆点（白描边 + 中心白点），按类型缓存位图。
+ * 地图 marker 工厂：分类 → 颜色圆点（白描边 + 中心白点），按色值缓存位图。
+ * it-008：着色维度从 kind 改为 category（吃=红 / 喝=琥珀 / 玩=紫，ADR-012）。
  */
 object PlaceMarkerFactory {
 
@@ -50,7 +51,7 @@ object PlaceMarkerFactory {
     fun sync(
         map: MapView,
         places: List<PlaceWithStats>,
-        argbOf: (PlaceKind) -> Int,
+        argbOf: (PlaceCategory) -> Int,
         selectedId: String? = null,
         onClick: (PlaceWithStats) -> Unit,
     ) {
@@ -60,7 +61,7 @@ object PlaceMarkerFactory {
             val selected = s.place.id == selectedId
             val marker = Marker(map).apply {
                 position = GeoPoint(loc.lat, loc.lng)
-                icon = icon(map.context, argbOf(s.place.kind), selected)
+                icon = icon(map.context, argbOf(s.place.category), selected)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 setOnMarkerClickListener { _, _ -> onClick(s); true }
             }

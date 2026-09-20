@@ -3,6 +3,7 @@ package com.leo.eats.data.mock
 import com.leo.eats.domain.model.EatsData
 import com.leo.eats.domain.model.GeoLoc
 import com.leo.eats.domain.model.Place
+import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceLink
 import com.leo.eats.domain.model.Visit
@@ -100,6 +101,51 @@ object MockEatsData {
                 notes = "减脂期常客",
                 createdAt = ago(100), updatedAt = ago(30),
             ),
+            // ---- it-008：喝 / 玩分类 + 愿望（种草） + 安排 ----
+            Place(
+                "pl12", "瑞幸生椰拿铁", PlaceKind.TAKEOUT, "咖啡",
+                GeoLoc(31.2301, 121.4722), "", 4,
+                listOf("一人食", "便宜"),
+                notes = "九块九周购券别浪费",
+                createdAt = ago(70), updatedAt = ago(2),
+                category = PlaceCategory.DRINK,
+            ),
+            Place(
+                "pl13", "% Arabica 咖啡馆", PlaceKind.RESTAURANT, "咖啡",
+                GeoLoc(31.2338, 121.4712), "某滨路 3 号", null,
+                listOf("约会"),
+                notes = "江景位，周末要排 30 分钟",
+                wishlistedAt = ago(5),
+                createdAt = ago(5), updatedAt = ago(5),
+                category = PlaceCategory.DRINK,
+            ),
+            Place(
+                "pl14", "敦煌大展", PlaceKind.RESTAURANT, "展览",
+                GeoLoc(31.2280, 121.4689), "某博物馆 1F", null,
+                listOf("约会", "亲子"),
+                notes = "周一闭馆，早场人少",
+                wishlistedAt = ago(6),
+                planAt = now + 6 * 86_400_000L,
+                createdAt = ago(6), updatedAt = ago(1),
+                category = PlaceCategory.PLAY,
+            ),
+            Place(
+                "pl15", "桌游森林", PlaceKind.RESTAURANT, "桌游",
+                GeoLoc(31.2265, 121.4748), "某巷 18 号 2F", null,
+                listOf("聚会"),
+                notes = "剧本杀和狼人杀都有，4 人起",
+                wishlistedAt = ago(12),
+                createdAt = ago(12), updatedAt = ago(12),
+                category = PlaceCategory.PLAY,
+            ),
+            Place(
+                "pl16", "居家电影夜", PlaceKind.HOME, "观影",
+                location = null, address = "", rating = 5,
+                tags = listOf("一人食", "夜宵"),
+                notes = "投影 + 沙发，片单在备忘录",
+                createdAt = ago(50), updatedAt = ago(9),
+                category = PlaceCategory.PLAY,
+            ),
         )
 
         val visits = listOf(
@@ -122,6 +168,10 @@ object MockEatsData {
             Visit("v17", "pl9", ago(5), 4, 8.0, "多放糖，正宗家常味", createdAt = ago(5)),
             Visit("v18", "pl10", ago(21), 4, 32.0, "糖色这次炒得刚好", createdAt = ago(21)),
             Visit("v19", "pl11", ago(35), 3, 18.0, "减脂第 N 天", createdAt = ago(35)),
+            // it-008：喝 / 玩的记录
+            Visit("v20", "pl12", ago(1), 5, 9.9, "生椰拿铁yyds", createdAt = ago(1)),
+            Visit("v21", "pl12", ago(15), 4, 9.9, "冰多加了点", createdAt = ago(15)),
+            Visit("v22", "pl16", ago(8), 5, 0.0, "《宇宙探索编辑部》，笑完有点想哭", createdAt = ago(8)),
         )
 
         return EatsData(places = places, visits = visits)

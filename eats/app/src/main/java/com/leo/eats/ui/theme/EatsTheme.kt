@@ -29,6 +29,9 @@ fun EatsTheme(
             restaurant = EatsPalette.RestaurantDark,
             takeout = EatsPalette.TakeoutDark,
             homeCook = EatsPalette.HomeCookDark,
+            eat = EatsPalette.EatDark,
+            drink = EatsPalette.DrinkDark,
+            play = EatsPalette.PlayDark,
         )
     } else {
         MenuColors(
@@ -41,6 +44,9 @@ fun EatsTheme(
             restaurant = EatsPalette.Restaurant,
             takeout = EatsPalette.Takeout,
             homeCook = EatsPalette.HomeCook,
+            eat = EatsPalette.Eat,
+            drink = EatsPalette.Drink,
+            play = EatsPalette.Play,
         )
     }
 

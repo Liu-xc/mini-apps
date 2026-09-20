@@ -14,9 +14,53 @@ object TagPresets {
 
 fun newId(): String = java.util.UUID.randomUUID().toString()
 
-/** 堂食/外卖/自做三类统一为 Place 一个实体（ADR-007） */
+/** 堂食/外卖/自做三类统一为 Place 一个实体（ADR-007）；kind 语义泛化见 ADR-012（显示文案按分类适配） */
 @Serializable
 enum class PlaceKind { RESTAURANT, TAKEOUT, HOME }
+
+/**
+ * 一级分类：吃/喝/玩（it-008，ADR-012）。
+ * kind 从「怎么吃」泛化为「在哪进行」，本枚举承担「做什么」；默认 EAT，
+ * 旧 JSON 缺字段反序列化为 EAT，零迁移（同 wardrobe it-017 先例）。
+ */
+@Serializable
+enum class PlaceCategory {
+    EAT, DRINK, PLAY;
+
+    /** 分类短名（chips / 行内「吃·堂食」组合） */
+    val shortLabel: String
+        get() = when (this) {
+            EAT -> "吃"
+            DRINK -> "喝"
+            PLAY -> "玩"
+        }
+}
+
+/** kind 在某分类下的显示文案：堂食/外卖/自做 → 堂食·外送·自调 → 出门/在家（PLAY 无外送） */
+fun PlaceKind.labelIn(category: PlaceCategory): String = when (category) {
+    PlaceCategory.EAT -> when (this) {
+        PlaceKind.RESTAURANT -> "堂食"
+        PlaceKind.TAKEOUT -> "外卖"
+        PlaceKind.HOME -> "自做"
+    }
+    PlaceCategory.DRINK -> when (this) {
+        PlaceKind.RESTAURANT -> "堂食"
+        PlaceKind.TAKEOUT -> "外送"
+        PlaceKind.HOME -> "自调"
+    }
+    PlaceCategory.PLAY -> when (this) {
+        PlaceKind.RESTAURANT -> "出门"
+        PlaceKind.TAKEOUT -> "外送"
+        PlaceKind.HOME -> "在家"
+    }
+}
+
+/** 某分类下 kind 的合法选项（ADR-012：PLAY+TAKEOUT 为无效组合，录入不提供） */
+val PlaceCategory.kindOptions: List<PlaceKind>
+    get() = when (this) {
+        PlaceCategory.PLAY -> listOf(PlaceKind.RESTAURANT, PlaceKind.HOME)
+        else -> PlaceKind.entries.toList()
+    }
 
 @Serializable
 data class GeoLoc(val lat: Double, val lng: Double)
@@ -68,10 +112,17 @@ data class Place(
     /** 外部链接（美团/点评分享链接等，ADR-009） */
     val links: List<PlaceLink> = emptyList(),
     val notes: String = "",
+    /** 一级分类（it-008），默认吃；置于既有字段之后保证旧位置调用兼容 */
+    val category: PlaceCategory = PlaceCategory.EAT,
+    /** 种草时间（it-008）：非空 = 愿望条目（想去/想吃还没去），记一笔后自动拔草 */
+    val wishlistedAt: Long? = null,
+    /** 计划去的时间（it-008 阶段C，仅愿望条目提供入口），可空 */
+    val planAt: Long? = null,
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
 ) {
     val located: Boolean get() = location != null
+    val isWish: Boolean get() = wishlistedAt != null
 }
 
 @Serializable

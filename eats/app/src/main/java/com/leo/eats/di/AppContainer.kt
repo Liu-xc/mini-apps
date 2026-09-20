@@ -4,6 +4,7 @@ import android.content.Context
 import com.leo.eats.data.image.ImageFileStore
 import com.leo.eats.data.mock.DemoMode
 import com.leo.eats.data.mock.MockEatsRepository
+import com.leo.eats.data.prefs.RecapPrefsStore
 import com.leo.eats.data.prefs.SpinPrefsStore
 import com.leo.eats.data.repo.EatsRepositoryImpl
 import com.leo.eats.domain.model.EatsData
@@ -12,6 +13,7 @@ import com.leo.eats.domain.repository.ImageStore
 import com.leo.eats.domain.usecase.BuildCandidates
 import com.leo.eats.map.MapController
 import com.leo.eats.platform.LinkOpener
+import com.leo.eats.platform.RecapSaver
 import com.leo.libs.store.FileMediaStore
 import com.leo.libs.store.SnapshotStore
 import org.osmdroid.config.Configuration
@@ -31,6 +33,9 @@ class AppContainer(context: Context) {
 
     /** 演示模式（it-006）：开关在组合根构造时读取，切换经 DemoMode 重启进程生效 */
     private val demo = DemoMode.isEnabled(context)
+
+    /** 演示模式下提醒与外发通道全部停用（it-007 阶段B） */
+    val isDemo: Boolean get() = demo
 
     /** eats.json 持久化（store SDK，ADR-010）；演示模式下不读取不写入 */
     val snapshotStore: SnapshotStore<EatsData> = SnapshotStore(
@@ -54,6 +59,8 @@ class AppContainer(context: Context) {
         if (demo) MockEatsRepository() else EatsRepositoryImpl(snapshotStore, imageStore)
 
     val spinPrefs: SpinPrefsStore = SpinPrefsStore(context)
+    val recapPrefs: RecapPrefsStore = RecapPrefsStore(context)
+    val recapSaver: RecapSaver = RecapSaver(context)
     val buildCandidates: BuildCandidates = BuildCandidates()
     val linkOpener: LinkOpener = LinkOpener(context)
     val mapController: MapController = MapController()

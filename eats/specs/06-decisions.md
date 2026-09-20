@@ -63,3 +63,21 @@
 - **决策**：① eats.json 持久化换 `SnapshotStore`、仓库继承 `SsotRepository`、图片文件管理换 `FileMediaStore`，删除 `data/json/`；磁盘格式不变，老数据无缝升级。② 新增 `data/mock/`：确定性种子（相对时间恒新鲜）+ 内存 Mock 仓库（不落盘）；`DemoMode` 开关在组合根构造时读取，切换重启进程生效；入口仅 DEBUG 构建可见，按当前模式弹出「进入/退出演示」确认（修订：去掉常驻横幅，Leo 反馈演示数据自明）。SpinPrefsStore（DataStore 偏好）不迁移——键值偏好不属于快照存储。
 - **理由**：删除重复代码；writeHook 缝为将来接 libs/sync 铺路；演示模式让走查可复现且真实数据零风险。
 - **后果**：eats.json 生命周期交给 SDK（迁移链/恢复语义以 SDK 为准）；演示模式是一次设计上的「策略切换」，release 构建零痕迹。
+
+## ADR-012 统计回顾与长图在 eats 内自实现，不抽 libs（it-007）
+- **背景**：年度食光长图需要「渲染 → 存相册 → 分享」管线；wardrobe it-002/014 已有同思路实现在 App 内。两 App 版式完全不同（年报 vs 人体拼贴），可共享的只有 Composable/Canvas 渲染 + MediaStore 存图约百行薄层。
+- **决策**（2026-09-20）：长图用 android.graphics.Canvas 直绘（1080 宽，与 wardrobe OutfitImageComposer 同管线思路），存相册走 MediaStore Pictures/Eats（API 29+ 免权限，<29 引导分享），分享经 FileProvider（cache/share/）；不抽 libs——待第三个消费方出现再评估。聚合口径为纯 Kotlin（RecapCalculator，JVM 单测），时区显式注入。
+- **理由**：为薄层建 lib + specs + ADR + composite 接线的成本高于重复百行；版式本就分属各 App 的设计资产。
+- **后果**：两 App 各自维护长图代码（接受重复）；05-design-system 的年报版式 token 后续补。
+
+## ADR-013 本地「好久没去」提醒：WorkManager 周期任务（it-007 阶段B）
+- **背景**：lastVisitAt 派生数据需要主动触达才有价值；本仓库无服务端无推送通道。
+- **决策**（2026-09-20）：引入 `androidx.work:work-runtime-ktx:2.10.0`，每日一次 PeriodicWork；候选=去过 ≥3 次、有效评分 ≥4、距上次 ≥N 天，每日至多 1 条、上次提醒过的先让位（last_notified_place_id 存 DataStore `recap_prefs`）；开关默认关、开启时请求 POST_NOTIFICATIONS（API 33+）；BigPictureStyle 带门店照片；点击经 EXTRA 深链进 W5（MainActivity singleTop + onNewIntent）；演示模式不注册任务；App 启动时 sync 对齐任务与开关。与 wardrobe it-018「好久没穿」（wardrobe ADR-019）同构各自实现。
+- **理由**：无账号 App 里「它记得我」的温度感；只推评分 ≥4 的常去老店，把打扰与噪音压到最低。
+- **后果**：APK 增加 WorkManager 依赖；通知权限被拒时静默失效；提醒时点由系统调度不可控；manifest 新增 POST_NOTIFICATIONS / RECEIVE_BOOT_COMPLETED 权限。
+
+## ADR-014 一级分类建模与 kind 语义泛化：枚举零迁移（it-008）
+- **背景**：App 定位从「今天吃啥」扩展为「今天干啥」（Leo 2026-09-20：吃喝玩乐 + 想吃/想玩愿望清单）。Place 需要「做什么」（吃/喝/玩）与「在哪进行」（出门/外送/在家）两个正交维度，而既有 kind（RESTAURANT/TAKEOUT/HOME）承担的恰是后者。
+- **决策**（2026-09-20）：新增 `Place.category: PlaceCategory = EAT|DRINK|PLAY`（默认 EAT，缺字段反序列化默认值，不 bump schemaVersion）；kind 枚举值不动，仅显示文案按分类适配（堂食/外卖/自做 → 堂食/外送/自调 → 出门/在家），PLAY+TAKEOUT 为无效组合（录入 UI 不提供，测试覆盖）；marker/图例着色维度从 kind 改为 category（吃=红/喝=琥珀/玩=紫）；愿望用 `wishlistedAt: Long?` 时间戳标记（拔草即置空），排期用 `planAt: Long?`。统计回顾（it-007）的顿/杯/次口径在统计层按 category 分派，不改 Place 结构。
+- **理由**：改 kind 枚举值需要数据迁移且破坏 ADR-007 的语义延续；category 放在 kind 之后作带默认值字段可保证旧位置调用兼容（构造函数第 12 参之后）。
+- **后果**：kind 与 category 双字段并存，UI 层须用 `labelIn(category)` 取文案；无效组合 PLAY+TAKEOUT 依赖录入约束而非类型系统。

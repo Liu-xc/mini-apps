@@ -84,6 +84,7 @@ fun PlaceDetailScreen(
 
     var showLogVisit by remember { mutableStateOf(false) }
     var deleteVisitTarget by remember { mutableStateOf<Visit?>(null) }
+    var showPlanPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(data, placeId) {
         if (data.places.none { it.id == placeId }) onBack()
@@ -105,7 +106,7 @@ fun PlaceDetailScreen(
                 },
             )
         },
-        // it-004 O4：高频动作吸底常驻，不再被记录列表埋没
+        // it-004 O4：高频动作吸底常驻，不再被记录列表埋没；文案随分类（it-008）
         bottomBar = {
             Surface(shadowElevation = 8.dp) {
                 Button(
@@ -115,7 +116,16 @@ fun PlaceDetailScreen(
                         .padding(horizontal = 20.dp, vertical = 10.dp)
                         .navigationBarsPadding()
                         .height(52.dp),
-                ) { Text("＋ 记一笔今天吃了", style = MaterialTheme.typography.titleMedium) }
+                ) {
+                    Text(
+                        when (place.category) {
+                            com.leo.eats.domain.model.PlaceCategory.EAT -> "＋ 记一笔今天吃了"
+                            com.leo.eats.domain.model.PlaceCategory.DRINK -> "＋ 记一笔今天喝了"
+                            com.leo.eats.domain.model.PlaceCategory.PLAY -> "＋ 记一笔今天去了"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         },
         ) { padding ->
@@ -163,7 +173,7 @@ fun PlaceDetailScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     color = menuColors().ink,
                 )
-                KindChip(place.kind)
+                KindChip(place.kind, category = place.category)
             }
             if (place.cuisine.isNotBlank()) {
                 Text(
@@ -173,6 +183,43 @@ fun PlaceDetailScreen(
                 )
             }
             Spacer(Modifier.height(8.dp))
+
+            // it-008：愿望徽章行（种草时长 + 已安排日期）——常规件不显示
+            if (place.isWish) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = menuColors().accent.copy(alpha = 0.10f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Text(
+                            "🌟 愿望 · 种草 " + wishDaysText(place.wishlistedAt) +
+                                (place.planAt?.let { " · 📅 ${planDateText(it)}" } ?: ""),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = menuColors().accent,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // it-008 阶段C：安排/种草操作（仅愿望条目）
+            if (place.isWish) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { showPlanPicker = true }) {
+                        Text(if (place.planAt != null) "改安排" else "📅 安排到某天")
+                    }
+                    if (place.planAt != null) {
+                        TextButton(onClick = { vm.setPlan(place.id, null) }) { Text("清除安排") }
+                    }
+                    TextButton(onClick = { vm.setWish(place.id, false) }) { Text("取消种草") }
+                }
+                Spacer(Modifier.height(4.dp))
+            }
 
             // 派生统计（ADR-008；it-004 O4：一套口径——综合(用户评)/均分(记录均)/次数/上次）
             val animatedCount by animateIntAsState(stats.visitCount, label = "visitCount")
@@ -261,14 +308,14 @@ fun PlaceDetailScreen(
 
             // Visit 时间线（倒序）
             Text(
-                "吃过记录 (${visits.size})",
+                "去过记录 (${visits.size})",
                 style = MaterialTheme.typography.titleMedium,
                 color = menuColors().ink,
             )
             Spacer(Modifier.height(6.dp))
             if (visits.isEmpty()) {
                 Text(
-                    "还没吃过，记第一笔吧",
+                    "还没去过，记第一笔吧",
                     style = MaterialTheme.typography.bodySmall,
                     color = menuColors().inkFaint,
                 )
@@ -296,6 +343,33 @@ fun PlaceDetailScreen(
         )
     }
 
+    // it-008 阶段C：安排到某天（只选日期，不选时间——「周末去」粒度）
+    if (showPlanPicker) {
+        val zone = java.time.ZoneId.systemDefault()
+        val dateState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = place.planAt ?: System.currentTimeMillis(),
+        )
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showPlanPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dateState.selectedDateMillis?.let { selected ->
+                        // DatePicker 返回 UTC 零点，转本地当日中午避免时区偏日
+                        val local = java.time.Instant.ofEpochMilli(selected).atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+                        val noon = local.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+                        vm.setPlan(place.id, noon)
+                    }
+                    showPlanPicker = false
+                }) { Text("安排") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPlanPicker = false }) { Text("取消") }
+            },
+        ) {
+            androidx.compose.material3.DatePicker(state = dateState, title = { Text("  想哪天去？") })
+        }
+    }
+
     deleteVisitTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { deleteVisitTarget = null },
@@ -316,6 +390,25 @@ fun PlaceDetailScreen(
  * Visit 时间线条目（it-002 R2）：左列日期 + 竖线节点母题，内容卡右置。
  * isLast：最后一条竖线截止（R3）。
  */
+/** 种草至今天数文本（it-008） */
+private fun wishDaysText(from: Long?): String {
+    if (from == null) return "今天"
+    val days = (System.currentTimeMillis() - from) / (24L * 60 * 60 * 1000)
+    return if (days <= 0) "今天" else "$days 天前"
+}
+
+/** 安排日期文本（it-008）：今天/明天/周X M/dd */
+private fun planDateText(planAt: Long): String {
+    val zone = java.time.ZoneId.systemDefault()
+    val date = java.time.Instant.ofEpochMilli(planAt).atZone(zone).toLocalDate()
+    val today = java.time.LocalDate.now(zone)
+    return when (date.toEpochDay() - today.toEpochDay()) {
+        0L -> "今天去"
+        1L -> "明天去"
+        else -> "周${"日一二三四五六"[date.dayOfWeek.value % 7]} ${date.monthValue}/${date.dayOfMonth}去"
+    }
+}
+
 @Composable
 private fun VisitCard(visit: Visit, fileOf: (String) -> File?, isLast: Boolean = false, onDelete: () -> Unit) {
     val date = remember(visit.at) {

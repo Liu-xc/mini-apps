@@ -77,7 +77,7 @@ com.leo.eats/
 
 ## 抽取引擎（W1 卡组，it-003）
 
-1. `BuildCandidates`：kind 集合过滤 → 剔除含排除标签的 → 「排除最近 N 天吃过」按 lastVisitAt 剔除。
+1. `BuildCandidates`：category 集合过滤 → kind 集合过滤 → 「只抽愿望」（wishlistedAt != null）→ 剔除含排除标签的 → 「排除最近 N 天吃过」按 lastVisitAt 剔除（it-008）。
 2. 浏览与抽取：libs/carddeck 卡组侧滑浏览；「随机抽一张」= 随机步数 + 库自带飞出动画按拍播放，落点均匀无权重。
 3. 落定：结果条（就吃这个 → W6 预填 / 再抽）+ 彩屑；原 SpinWheel 权重抽取已随 it-003 移除（ADR-006 作废）。
 
