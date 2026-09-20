@@ -20,7 +20,7 @@ eats 侧同迭代落地同一模式（eats it-006），两应用体验一致。
 - `data/mock/MockWardrobeRepository.kt`：实现 `WardrobeRepository` 全接口，内存 StateFlow，写操作只改内存不落盘；
   图片文件管理指向 `cacheDir/mock-images`（首次进入演示模式时从 assets 解包）。
 - 开关：`DemoMode`（SharedPreferences 布尔位），AppContainer 构造时决定装配真实/Mock 仓库。
-- 切换即重启进程；演示中页面顶部显示「演示数据」横幅，点横幅退出。
+- 切换即重启进程（修订：Leo 反馈演示数据自明，去掉顶部粉色横幅；退出并入同一入口的确认对话框）。
 - 入口：衣橱页顶部工具区加「演示」按钮，**仅 BuildConfig.DEBUG 可见**。
 - `tools/demo-data.sh` 保留，README 注明两者区别。
 

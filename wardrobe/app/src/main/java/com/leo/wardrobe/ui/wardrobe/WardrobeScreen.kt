@@ -82,8 +82,9 @@ fun WardrobeScreen(
     var categoryTab by remember { mutableStateOf<WardrobeCategory?>(null) }
     var pendingDelete by remember { mutableStateOf<Item?>(null) }
     var filterSheetOpen by remember { mutableStateOf(false) }
-    // it-015：演示模式入口（仅 DEBUG 构建显示）
+    // it-015：演示模式入口（仅 DEBUG 构建显示）——同一入口按当前模式进入/退出
     val context = LocalContext.current
+    val demoOn = remember { DemoMode.isEnabled(context) }
     var demoAskOpen by remember { mutableStateOf(false) }
 
     val personId = person?.id
@@ -260,14 +261,21 @@ fun WardrobeScreen(
         }
     }
 
-    // it-015：演示模式确认——重启进程切换到 Mock 数据源，真实数据零接触
+    // it-015：演示模式确认——重启进程切换数据源，真实数据零接触
     if (demoAskOpen) {
         AlertDialog(
             onDismissRequest = { demoAskOpen = false },
-            title = { Text("进入演示模式？") },
-            text = { Text("切换到内置演示数据（不落盘），用于测试体验与走查；你的真实衣橱不会受到任何影响。应用将自动重启。") },
+            title = { Text(if (demoOn) "退出演示模式？" else "进入演示模式？") },
+            text = {
+                Text(
+                    if (demoOn) "返回真实衣橱，应用将自动重启。"
+                    else "切换到内置演示数据（不落盘），用于测试体验与走查；你的真实衣橱不会受到任何影响。应用将自动重启。",
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { demoAskOpen = false; DemoMode.setAndRestart(context, true) }) { Text("进入演示") }
+                TextButton(onClick = { demoAskOpen = false; DemoMode.setAndRestart(context, !demoOn) }) {
+                    Text(if (demoOn) "退出演示" else "进入演示")
+                }
             },
             dismissButton = {
                 TextButton(onClick = { demoAskOpen = false }) { Text("取消") }

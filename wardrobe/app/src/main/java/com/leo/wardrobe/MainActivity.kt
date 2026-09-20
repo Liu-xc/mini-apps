@@ -33,16 +33,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.leo.wardrobe.data.mock.DemoMode
 import com.leo.wardrobe.ui.AppViewModel
-import com.leo.wardrobe.ui.components.DemoBanner
 import com.leo.wardrobe.ui.components.LocalNavAnimatedVisibilityScope
 import com.leo.wardrobe.ui.components.LocalSharedTransitionScope
 import com.leo.wardrobe.ui.detail.ItemDetailScreen
@@ -86,9 +83,6 @@ private fun WardrobeRoot() {
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     var tab by rememberSaveable { mutableStateOf(Tab.OUTFIT) }
-    // it-015：演示模式横幅（切换经重启进程生效，组合期读一次即可）
-    val context = LocalContext.current
-    val demoMode = remember { DemoMode.isEnabled(context) }
 
     val toast by vm.toast.collectAsState()
     LaunchedEffect(toast) {
@@ -103,11 +97,6 @@ private fun WardrobeRoot() {
     val showBottomBar = currentRoute == Routes.HOME
 
     Scaffold(
-        topBar = {
-            if (demoMode) {
-                DemoBanner(onExit = { DemoMode.setAndRestart(context, false) })
-            }
-        },
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             if (showBottomBar) {

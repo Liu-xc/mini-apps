@@ -80,6 +80,6 @@
 
 ## ADR-015 应用内演示模式：内存 Mock 仓库 + 组合根切换（it-015）
 - **背景**：测试体验与 AI 走查需要内容丰富、状态可复现的数据源；既有 `tools/demo-data.sh` 直接覆盖真实 wardrobe.json 与 images/，走查期间的写操作会污染真数据，用后需手动清理。
-- **决策**：新增 `data/mock/`——确定性种子（两角色/17 件衣物/五套组合/三条笔记，照片为 assets/mock 内置 thiings 素材按需解包至 cacheDir，相对时间恒新鲜）+ 内存 Mock 仓库（实现全接口、绝不落盘）；`DemoMode` 偏好开关在组合根构造时读取，演示模式装配 Mock 仓库并把图片目录切至 cacheDir/mock-images；切换重启进程生效；MainActivity 顶部常驻横幅点按退出；入口仅 DEBUG 构建可见。eats 于 it-006 同构落地（eats ADR-010）。
+- **决策**：新增 `data/mock/`——确定性种子（两角色/17 件衣物/五套组合/三条笔记，照片为 assets/mock 内置 thiings 素材按需解包至 cacheDir，相对时间恒新鲜）+ 内存 Mock 仓库（实现全接口、绝不落盘）；`DemoMode` 偏好开关在组合根构造时读取，演示模式装配 Mock 仓库并把图片目录切至 cacheDir/mock-images；切换重启进程生效；入口仅 DEBUG 构建可见，按当前模式弹「进入/退出演示」确认（修订：去掉常驻横幅）。eats 于 it-006 同构落地（eats ADR-010）。
 - **理由**：与 tools 脚本互补——脚本管「真实数据灌入压测」，演示模式管「可复现、零污染、离线」的走查/体验；同接口策略切换零 UI 感知。
 - **后果**：APK 增加约 2.2MB 内置演示照片（可接受）；演示写操作进程结束即弃；release 构建无入口无横幅。
