@@ -1,0 +1,354 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>UX 评审落地 · 实施验证报告</title>
+<style>
+@page { size: 210mm 297mm; margin: 0; }
+html, body { margin: 0; padding: 0; width: 210mm; background: #F7F8FA;
+  font-family: "Hiragino Sans GB","PingFang SC","Heiti SC",sans-serif;
+  color: #1D2129; line-break: strict; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { box-sizing: border-box; }
+.page { width: 210mm; height: 297mm; overflow: hidden; padding: 12mm 14mm 10mm;
+  background: #F7F8FA; break-after: page; display: flex; flex-direction: column; }
+.page:last-child { break-after: auto; }
+img { display: block; }
+.cover { padding: 18mm 16mm 16mm; background: #FFFFFF; }
+.cover .kicker { font-size: 10pt; letter-spacing: 3pt; color: #86909C; font-weight: 600; }
+.cover .hairline { width: 30mm; border-top: 0.7mm solid #00B42A; margin-top: 7mm; }
+.cover h1 { font-size: 38pt; font-weight: 800; letter-spacing: 1pt; margin: 22mm 0 0; }
+.cover .sub { font-size: 14pt; color: #4E5969; margin-top: 6mm; }
+.cover .summary { font-size: 10.5pt; line-height: 1.75; color: #4E5969; margin-top: 14mm; width: 108mm; }
+.cover .phones { display: flex; gap: 6mm; margin-left: auto; margin-top: auto; }
+.cover .phone { width: 34mm; height: 75.6mm; border: 0.5mm solid #C9CDD4; border-radius: 4.5mm;
+  padding: 2.2mm; background: #FFFFFF; }
+.cover .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 2.5mm; }
+.cover .meta { display: flex; gap: 12mm; font-size: 8.5pt; color: #86909C; white-space: nowrap;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 6mm; margin-top: 12mm; }
+.cover .meta b { color: #1D2129; font-weight: 600; }
+.phead { display: flex; align-items: baseline; gap: 4mm; border-bottom: 0.45mm solid #E5E6EB;
+  padding-bottom: 3.5mm; margin-bottom: 4mm; }
+.phead .no { font-size: 13pt; font-weight: 800; color: #00B42A; }
+.phead .t { font-size: 14.5pt; font-weight: 700; }
+.phead .sev { margin-left: auto; font-size: 8.5pt; color: #86909C; }
+.pfoot { display: flex; font-size: 8pt; color: #A9AEB8; border-top: 0.3mm solid #E5E6EB;
+  padding-top: 2.5mm; margin-top: auto; }
+.concl { font-size: 10pt; line-height: 1.65; margin: 0 0 4mm; }
+.fixes { display: flex; flex-direction: column; gap: 2mm; margin-bottom: 4mm; }
+.fixrow { display: flex; align-items: baseline; gap: 2mm; font-size: 8.6pt; line-height: 1.5; }
+.fixrow .fx-p { color: #4E5969; width: 52mm; flex-shrink: 0; }
+.fixrow .fx-arrow { color: #00B42A; font-weight: 700; }
+.fixrow .fx-f { color: #1D2129; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; color: #fff; border-radius: 1.2mm;
+  padding: 0.3mm 1.6mm; flex-shrink: 0; width: 8mm; text-align: center; }
+.tag.p0 { background: #F53F3F; } .tag.p1 { background: #FF7D00; } .tag.p2 { background: #86909C; }
+.shots { display: flex; gap: 6mm; align-items: flex-start; flex: 1; }
+.shotcol { width: 76mm; }
+.shots .shotcol:first-child:nth-last-child(1) { width: 100mm; margin: 0 auto; }
+.shotcol img { width: 76mm; height: 150mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; background: #fff; }
+.shots .shotcol:first-child:nth-last-child(1) img { width: 100mm; height: 175mm; }
+.shotlabel { display: flex; align-items: center; gap: 2mm; margin-top: 2.2mm; font-size: 9pt; font-weight: 700; }
+.shotlabel .dot { width: 2.6mm; height: 2.6mm; border-radius: 50%; }
+.d-new { background: #00B42A; }
+.shotlabel span.cap { font-weight: 400; color: #86909C; font-size: 8pt; margin-left: auto; }
+table.tb { width: 100%; border-collapse: collapse; font-size: 8.6pt; }
+table.tb th { text-align: left; font-size: 8pt; color: #86909C; font-weight: 600;
+  border-bottom: 0.45mm solid #C9CDD4; padding: 1.6mm 2mm; }
+table.tb td { border-bottom: 0.25mm solid #E5E6EB; padding: 2mm; vertical-align: top; line-height: 1.45; }
+table.tb td.cid { font-weight: 700; color: #1D2129; width: 10mm; }
+table.tb td.scope { color: #86909C; width: 30mm; }
+table.tb td.st { color: #00B42A; font-weight: 700; width: 16mm; white-space: nowrap; }
+.statrow { display: flex; gap: 5mm; margin: 5mm 0 6mm; }
+.stat { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 4mm; }
+.stat .v { font-size: 20pt; font-weight: 800; color: #00B42A; }
+.stat .k { font-size: 8.5pt; color: #86909C; margin-top: 1mm; }
+.secnote { font-size: 9pt; color: #4E5969; line-height: 1.6; margin: 0 0 4mm; }
+</style></head><body>
+
+<section class="page cover">
+  <div class="kicker">MINI-APPS · UX IMPLEMENTATION VERIFY</div>
+  <div class="hairline"></div>
+  <h1>UX 评审落地<br/>实施验证报告</h1>
+  <div class="sub">吃啥 × 衣橱 · 15 页优化全部实施 · 逐页截图与断言核验</div>
+  <div class="summary">依据《UX评审报告-吃啥×衣橱-2026-09-20》实施全部优化：13 项 P0 全部修复，
+  共性问题 C1–C6 一次收口。两 App 构建通过后于 Pixel 6 画像模拟器逐页走查，
+  以 uiautomator 断言 + 视觉模型核验双重确认，关键过程态（抽取落定、键盘避让、导出折叠）均有实证截图。</div>
+  <div class="phones"><div class="phone"><img src="assets/eats-02-drawn.png" /></div><div class="phone"><img src="assets/wardrobe-03-records.png" /></div><div class="phone"><img src="assets/wardrobe-08-export.png" /></div></div>
+  <div class="meta"><span>日期 <b>2026-09-20</b></span><span>范围 <b>2 应用 · 15 页面</b></span>
+    <span>迭代 <b>eats it-004 · wardrobe it-011</b></span><span>核验 <b>断言 14 项 · 视觉 9 页</b></span></div>
+</section>
+
+<section class="page">
+  <div class="phead"><span class="no">00</span><span class="t">总览 · P0 修复对照</span><span class="sev">全部 ✓</span></div>
+  <div class="statrow">
+    <div class="stat"><div class="v">13</div><div class="k">P0 全部修复</div></div>
+    <div class="stat"><div class="v">15</div><div class="k">页面优化落地</div></div>
+    <div class="stat"><div class="v">14</div><div class="k">断言实测 PASS</div></div>
+    <div class="stat"><div class="v">2</div><div class="k">App 构建通过</div></div>
+  </div>
+  <p class="secnote">评审报告的跨应用共性问题 C1–C6 与四个单点 P0 全部按下表收口；P1/P2 随页面一并处理（见各页）。</p>
+  <table class="tb">
+    <tr><th>#</th><th>问题</th><th>涉及</th><th>修法</th><th>状态</th></tr>
+    <tr><td class="cid">C1</td><td>滑动/卡组无可发现性线索</td><td class="scope">E1·R1·R3</td>
+        <td>‹n/m› 胶囊三处 + 露边 + 首次 coach</td><td class="st">✓ 修复</td></tr><tr><td class="cid">C2</td><td>保存只在顶栏、必填无标识</td><td class="scope">E7·R7</td>
+        <td>吸底两态 + 必填 *（两 App 同构）</td><td class="st">✓ 修复</td></tr><tr><td class="cid">C3</td><td>键盘避让缺失</td><td class="scope">E6·E7·R7·列表搜索</td>
+        <td>imePadding 全接入；实测键盘弹出时底部导航仍在屏内</td><td class="st">✓ 修复</td></tr><tr><td class="cid">C4</td><td>核心动作不吸底</td><td class="scope">E5·E7·R7·R8</td>
+        <td>记一笔/保存/复制全部吸底或首屏</td><td class="st">✓ 修复</td></tr><tr><td class="cid">C5</td><td>照片原始背景直出</td><td class="scope">R1·R5·R6</td>
+        <td>PhotoCard 衬纸模式（浅底+Fit），成品图保持全幅</td><td class="st">✓ 修复</td></tr><tr><td class="cid">C6</td><td>筛选区占首屏 25%+</td><td class="scope">E4·R5</td>
+        <td>单行工具条/Tab + 筛选弹层（角标计数）</td><td class="st">✓ 修复</td></tr><tr><td class="cid">单点</td><td>抽取落定按钮不可见（E2-P0 两轮复验）</td><td class="scope">E2</td>
+        <td>深色结果块 + 按钮常驻屏内（实测 PASS）</td><td class="st">✓ 修复</td></tr><tr><td class="cid">单点</td><td>地图 marker 无图例且配色挤冷色区</td><td class="scope">E3</td>
+        <td>图例胶囊 + 红/琥珀/绿回归 spec W2</td><td class="st">✓ 修复</td></tr><tr><td class="cid">单点</td><td>穿搭详情无主视觉/入口重复</td><td class="scope">R4</td>
+        <td>BodyCollage 主视觉 + 入口合并角标</td><td class="st">✓ 修复</td></tr><tr><td class="cid">单点</td><td>导出五维淹没主路径</td><td class="scope">R8</td>
+        <td>预览首屏 + 四维折叠 + 记忆</td><td class="st">✓ 修复</td></tr>
+  </table>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">2</span></div>
+</section>
+
+<section class="page">
+  <div class="phead"><span class="no">A</span><span class="t">附录 · uiautomator 断言记录</span><span class="sev">14/14 PASS</span></div>
+  <p class="secnote">走查脚本：逐页导航 → dump 无障碍树 → 按文本定位断言（bounds 均为 1080×2400 画像实测）；
+  过程态截图与断言对应关系见各页。</p>
+  <table class="tb">
+    <tr><th>断言项</th><th>实测</th><th>结果</th></tr>
+    <tr><td>E1 卡序胶囊</td><td>‹ 1/9 › bounds=(540,476) 在屏</td><td class="st">PASS</td></tr><tr><td>E1 筛选收纳</td><td>首页 dump 无忌口行；弹层含忌口标签/排除最近</td><td class="st">PASS</td></tr><tr><td>E2 落定按钮</td><td>就吃这个 y=1958 · 再抽 y=1958 · 结果块文字在树</td><td class="st">PASS</td></tr><tr><td>E4 未定位归位</td><td>「⌖ 未定位」在筛选弹层 bounds=(854,1666)</td><td class="st">PASS</td></tr><tr><td>E5 记一笔吸底</td><td>「记一笔今天吃了」y=2179 屏底</td><td class="st">PASS</td></tr><tr><td>E6 键盘避让</td><td>弹键盘后「落账」y=1507 可见</td><td class="st">PASS</td></tr><tr><td>E7 就绪态随键盘</td><td>填名称后「保存」y=1365（键盘上方）</td><td class="st">PASS</td></tr><tr><td>C3 导航不被顶飞</td><td>搜索弹键盘时「列表」tab 底边 y=2297 ≤ 2400</td><td class="st">PASS</td></tr><tr><td>W1 格位胶囊</td><td>‹ 1/2 › bounds=(641,308)</td><td class="st">PASS</td></tr><tr><td>W2 当前态</td><td>「✓ 使用中」bounds=(963,2040)</td><td class="st">PASS</td></tr><tr><td>W3 卡序</td><td>‹ 1/5 › bounds=(540,482)</td><td class="st">PASS</td></tr><tr><td>W4 单品行可点</td><td>点「上装 · 白T恤」行直达衣物详情</td><td class="st">PASS</td></tr><tr><td>W7 吸底保存</td><td>编辑态「更新」y=2185</td><td class="st">PASS</td></tr><tr><td>W8 折叠维度</td><td>「更多维度」bounds=(508,1780)；展开后氛围/构图在树</td><td class="st">PASS</td></tr>
+  </table>
+  <p class="secnote" style="margin-top:5mm">说明：①「E1 忌口已收进筛选」以首页树中不再出现忌口行为准；
+  ② 视觉模型另对 9 个关键页逐页核验（露边、胶囊、配色、衬纸、折叠等）全部通过；
+  ③ coach 首移动画为一次性（Prefs 标记），录屏件在 /tmp/ux-verify/wardrobe-01-coach.png 附近帧。</p>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">3</span></div>
+</section>
+
+<section class="page">
+  <div class="phead"><span class="no">E1</span><span class="t">吃啥 · 首页（卡组浏览）</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">可发现性三件套全部就位：‹ n/m › 卡序即候选数反馈，筛选收纳进弹层，评分口径统一。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">卡组可滑动性零线索</span><span class="fx-arrow">→</span>
+          <span class="fx-f">堆叠露边 14dp + ‹ 1/9 › 卡序胶囊常驻，实测 bounds 在屏</span></div><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">筛选无候选数反馈</span><span class="fx-arrow">→</span>
+          <span class="fx-f">‹ n/9 › 的 9 即过滤后候选数，类型多选即时反映</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">评分语义不统一</span><span class="fx-arrow">→</span>
+          <span class="fx-f">卡面胶囊改「★ 综合 4」，与详情页一套口径</span></div><div class="fixrow"><span class="tag p2">P2</span>
+          <span class="fx-p">忌口与类型 chips 挤同一行</span><span class="fx-arrow">→</span>
+          <span class="fx-f">忌口标签 + 排除最近吃过的收进「筛选」弹层（角标计数）</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-01-home.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后首页<span class="cap">卡序胶囊 + 收纳后的筛选行</span></div>
+        </div><div class="shotcol">
+          <img src="assets/eats-01b-filter-sheet.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>筛选弹层<span class="cap">忌口/排除收口于此</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">4</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E2</span><span class="t">吃啥 · 首页（抽取落定）</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">原 P0「按钮不在可视区（两轮复验）」闭环：深色结果块覆盖卡组，确认按钮常驻屏内。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">就吃这个/再抽按钮不可见</span><span class="fx-arrow">→</span>
+          <span class="fx-f">深色「今天就吃」结果块 + 双按钮 y=1958 全部在可视区（uiautomator 断言）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">落定无仪式感</span><span class="fx-arrow">→</span>
+          <span class="fx-f">ink 底 + accent 描边结果块 + 彩屑；卡组收拢变暗让位不新增滚动</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-02-drawn.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>抽取落定<span class="cap">深色强调块 + 按钮常驻</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">5</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E3</span><span class="t">吃啥 · 地图</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">「看得懂地图也看得懂数据」：图例自解释 + 回位常驻，类型色回归 spec W2 基线。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">marker 无图例、三色挤冷色区</span><span class="fx-arrow">→</span>
+          <span class="fx-f">吸顶图例胶囊 ●堂食红 ●外卖琥珀 ●自做绿（#D25446/#DA9A2B/#4C9E5F，拉开色相）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">无回位按钮、摘要卡信息少</span><span class="fx-arrow">→</span>
+          <span class="fx-f">右上 ⌖ 回位框住全部点；摘要卡补菜系/标签行</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-03-map.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后地图<span class="cap">图例 + 回位 + 三色 marker</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">6</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E4</span><span class="t">吃啥 · 列表</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">筛选从首屏 25% 收进单行工具条，「未定位」从类型 chips 归位为状态项进弹层。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">筛选区占首屏 ~25%</span><span class="fx-arrow">→</span>
+          <span class="fx-f">标题+单行工具条（搜索｜排序｜筛选角标）即达卡片列表</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">「未定位」混在类型 chips</span><span class="fx-arrow">→</span>
+          <span class="fx-f">移入筛选弹层并加 ⌖ 前缀标明是状态</span></div><div class="fixrow"><span class="tag p2">P2</span>
+          <span class="fx-p">排序滚动后不可达</span><span class="fx-arrow">→</span>
+          <span class="fx-f">排序入工具条常驻</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-04-list.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后列表<span class="cap">单行工具条</span></div>
+        </div><div class="shotcol">
+          <img src="assets/eats-04b-filter-sheet.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>筛选弹层<span class="cap">类型+未定位+标签</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">7</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E5</span><span class="t">吃啥 · 食堂详情</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">最高频动作吸底常驻；三处评分语义收敛为一套口径。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">记一笔不吸底被记录埋没</span><span class="fx-arrow">→</span>
+          <span class="fx-f">Scaffold bottomBar 吸底（y=2179 实测），4 条记录也不用滚</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">评分语义混乱</span><span class="fx-arrow">→</span>
+          <span class="fx-f">统计行统一：综合 ★ · 均分 x.x · n 次 · 上次</span></div><div class="fixrow"><span class="tag p2">P2</span>
+          <span class="fx-p">链接旁冗余「打开链接」按钮</span><span class="fx-arrow">→</span>
+          <span class="fx-f">chip 本身可点，辅助图标移除</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-05-detail.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后详情<span class="cap">吸底记一笔 + 统计一行</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">8</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E6</span><span class="t">吃啥 · 记一笔弹层</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">落账按钮永不被键盘遮挡（原实测必被盖住）。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">弹键盘后落账被盖住</span><span class="fx-arrow">→</span>
+          <span class="fx-f">弹层内容 imePadding：键盘弹出时「落账」y=1507 可见可点（实测）</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-06b-log-keyboard.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>键盘避让实测<span class="cap">落账随键盘上移</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">9</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">E7</span><span class="t">吃啥 · 添加食堂表单</span>
+    <span class="sev">吃啥 · it-004 · 全部修复 ✓</span></div>
+  <p class="concl">保存从「顶栏孤点」改为吸底两态，与衣橱表单同一模式（O3 一次改两 App）。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">保存只在顶栏、灰色禁用无提示</span><span class="fx-arrow">→</span>
+          <span class="fx-f">吸底栏：未就绪=描边禁用+「填名称后可保存」，就绪=实心；随键盘上移（y=1365 实测）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">必填无标识、键盘遮挡</span><span class="fx-arrow">→</span>
+          <span class="fx-f">「名称 *」标识保留；imePadding 接入</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/eats-07-form.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>未就绪态<span class="cap">原因文案 + 禁用按钮</span></div>
+        </div><div class="shotcol">
+          <img src="assets/eats-07b-form-ready-keyboard.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>就绪态<span class="cap">实心保存随键盘上移</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">10</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">R1</span><span class="t">衣橱 · 搭配页（首页）</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">格内滑动换衣从「实测可用、肉眼不可见」到三重线索：胶囊、coach、衬纸统一。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">格内滑动零 affordance</span><span class="fx-arrow">→</span>
+          <span class="fx-f">序号改 ‹ 1/2 ›（chevron 明示可翻）+ 首次 150ms 微移 coach（仅一轮）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">照片背景五花八门</span><span class="fx-arrow">→</span>
+          <span class="fx-f">格位照片统一浅底衬纸（PhotoCard mat），Fit 完整呈现轮廓</span></div><div class="fixrow"><span class="tag p2">P2</span>
+          <span class="fx-p">复制长图/保存这套主次不分</span><span class="fx-arrow">→</span>
+          <span class="fx-f">复制长图=实心主按钮，保存这套=描边次按钮</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-01b-outfit.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后搭配页<span class="cap">‹n/n› + 衬纸 + 按钮主次</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">11</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R2</span><span class="t">衣橱 · 角色切换弹层</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">当前角色从 6px 绿点到一眼可辨。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">当前态只有绿点</span><span class="fx-arrow">→</span>
+          <span class="fx-f">当前行浅蓝底 + 「✓ 使用中」文字（bounds 实测）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">新建/管理主次不清</span><span class="fx-arrow">→</span>
+          <span class="fx-f">新建=实心主按钮，管理=文字入口</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-02-roles.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后角色弹层<span class="cap">✓ 使用中</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">12</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R3</span><span class="t">衣橱 · 穿搭记录卡组</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">卡面从「物品陈列」到「人体叙事」：拼贴读得出身体顺序，缺什么一眼可见。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">拼贴无人体叙事</span><span class="fx-arrow">→</span>
+          <span class="fx-f">BodyCollage 组件：淡色人形轮廓底，头/上身/腿/脚落位=穿在身上</span></div><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">缺失品类不可见、卡组无线索</span><span class="fx-arrow">→</span>
+          <span class="fx-f">核心槽缺失显示虚线空槽「未配鞋/帽/下装/上装」+ ‹ 1/5 › 卡序常驻</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">「随机一套」语义模糊</span><span class="fx-arrow">→</span>
+          <span class="fx-f">改名「随机翻一套」（与 W1 随机生成搭配区分）</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-03-records.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后记录页<span class="cap">人形拼贴 + 未配鞋空槽 + ‹1/5›</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">13</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R4</span><span class="t">衣橱 · 穿搭详情</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">无成品图不再是纯文字清单；「这套包含」从死列表变入口。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">无成品图无主视觉、录入入口重复两次</span><span class="fx-arrow">→</span>
+          <span class="fx-f">BodyCollage 作默认主视觉，「＋录入成品图」合并为右下角标</span></div><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">单品行不可点</span><span class="fx-arrow">→</span>
+          <span class="fx-f">加 › chevron + 按压态，实测白T恤行直达衣物详情</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-04-record-detail.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后详情<span class="cap">拼贴主视觉 + 角标 + chevron</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">14</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R5</span><span class="t">衣橱 · 衣橱列表</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">浏览回归核心任务：首屏从 2–3 件到 4–6 件。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">双行筛选占首屏 25–30%</span><span class="fx-arrow">→</span>
+          <span class="fx-f">品类 Tab 单行保留，标签收进「筛选」chip → 底部弹层（角标）</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">行内品类小标双重冗余、缩略图不统一</span><span class="fx-arrow">→</span>
+          <span class="fx-f">两列网格卡（衬纸照片+名称），去行内小标，保留品类小节标题</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-05-wardrobe.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后衣橱<span class="cap">两列网格 + 筛选 chip</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">15</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R6</span><span class="t">衣橱 · 衣物详情</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">全 App 照片质感问题的集中暴露点收口：大图衬纸化，相关穿搭放大可点。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">大图原始背景直出</span><span class="fx-arrow">→</span>
+          <span class="fx-f">统一浅底衬纸容器（固定比例/圆角/淡底），Fit 完整呈现</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">相关穿搭缩略小、点击预期弱</span><span class="fx-arrow">→</span>
+          <span class="fx-f">放大为 150dp 卡片 + 「点开看整套 ›」</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-06-item-detail.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后详情<span class="cap">衬纸大图 + 相关穿搭卡</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">16</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R7</span><span class="t">衣橱 · 添加衣物表单</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">与 eats 表单共用同一改版模式（O3），两 App 一次到位。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">保存仅顶栏一处</span><span class="fx-arrow">→</span>
+          <span class="fx-f">吸底两态：缺照片/名称时显示「选照片、填名称后可保存」，齐备变实心</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">照片必填无标识、键盘遮挡</span><span class="fx-arrow">→</span>
+          <span class="fx-f">「必填 *」标识 + imePadding；编辑态实测「更新」吸底 y=2185</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-07-editform.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>编辑表单<span class="cap">吸底更新按钮</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">17</span></div>
+</section><section class="page">
+  <div class="phead"><span class="no">R8</span><span class="t">衣橱 · 导出面板（核心工作流）</span>
+    <span class="sev">衣橱 · it-011 · 全部修复 ✓</span></div>
+  <p class="concl">高频路径「打开→复制→走」从滚 2 屏到首屏即达；弹层默认全展开。</p>
+  <div class="fixes"><div class="fixrow"><span class="tag p0">P0</span>
+          <span class="fx-p">五维全铺开、主按钮沉底</span><span class="fx-arrow">→</span>
+          <span class="fx-f">打开即见长图预览 + 复制/分享/只复制文本上移；仅「场景」常驻，其余四维折叠</span></div><div class="fixrow"><span class="tag p1">P1</span>
+          <span class="fx-p">Prompt 低对比双层嵌套、复制无反馈</span><span class="fx-arrow">→</span>
+          <span class="fx-f">高对比等宽文案区；复制文本 toast「已复制」；维度选择记住上次（exportSelections）</span></div></div>
+  <div class="shots"><div class="shotcol">
+          <img src="assets/wardrobe-08-export.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>优化后导出<span class="cap">预览首屏 + 场景常驻 + 折叠</span></div>
+        </div><div class="shotcol">
+          <img src="assets/wardrobe-08b-export-expanded.png" />
+          <div class="shotlabel"><span class="dot d-new"></span>展开四维<span class="cap">氛围/季节/光线/构图</span></div>
+        </div></div>
+  <div class="pfoot"><span>UX 评审落地 · 实施验证报告 · 2026-09-20</span><span style="margin-left:auto">18</span></div>
+</section>
+
+</body></html>
