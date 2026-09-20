@@ -32,13 +32,13 @@ class WardrobeRepositoryImpl(
 
     override suspend fun ensureDefaultPerson(): Person {
         data.value.persons.firstOrNull()?.let { return it }
-        val p = Person(newId(), "我", "🙂", now())
+        val p = Person(newId(), "我", "🙂", createdAt = now())
         mutate { it.copy(persons = it.persons + p) }
         return p
     }
 
     override suspend fun addPerson(name: String, emoji: String): Person {
-        val p = Person(newId(), name.trim().ifEmpty { "未命名" }, emoji.ifEmpty { "🙂" }, now())
+        val p = Person(newId(), name.trim().ifEmpty { "未命名" }, emoji.ifEmpty { "🙂" }, createdAt = now())
         mutate { it.copy(persons = it.persons + p) }
         return p
     }
@@ -51,10 +51,32 @@ class WardrobeRepositoryImpl(
         }
     }
 
+    override suspend fun setPersonRefPhoto(id: String, photoFile: String) {
+        val old = data.value.persons.firstOrNull { it.id == id }?.refImageFile
+        mutate {
+            it.copy(persons = it.persons.replaceBy(id, { p -> p.id }) { p ->
+                p.copy(refImageFile = photoFile)
+            })
+        }
+        // it-017：换照删旧文件，不残留（快照更新成功后再删）
+        if (old != null && old != photoFile) images.delete(old)
+    }
+
+    override suspend fun removePersonRefPhoto(id: String) {
+        val old = data.value.persons.firstOrNull { it.id == id }?.refImageFile ?: return
+        mutate {
+            it.copy(persons = it.persons.replaceBy(id, { p -> p.id }) { p ->
+                p.copy(refImageFile = null)
+            })
+        }
+        images.delete(old)
+    }
+
     override suspend fun deletePerson(id: String) {
         // 先收集要删的图片文件，快照更新成功后物理删除
         val snapshot = data.value
         val imageFiles = buildList {
+            snapshot.persons.firstOrNull { it.id == id }?.refImageFile?.let { add(it) }
             addAll(snapshot.items.filter { it.personId == id }.map { it.imageFile })
             snapshot.outfits.filter { it.personId == id }.forEach { o ->
                 addAll(o.effectImages.map { it.file })

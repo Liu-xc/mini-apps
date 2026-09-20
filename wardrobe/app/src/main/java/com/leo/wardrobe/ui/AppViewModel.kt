@@ -129,6 +129,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         repo.updatePerson(id, name, emoji)
     }
 
+    /** it-017：形象参考照（photoFile 为已导入文件名；换照/移除的旧文件清理在 Repository） */
+    fun setPersonRefPhoto(id: String, photoFile: String) = viewModelScope.launch {
+        try {
+            repo.setPersonRefPhoto(id, photoFile)
+            toast("形象参考照已设置")
+        } catch (t: Throwable) {
+            android.util.Log.e("Wardrobe", "setPersonRefPhoto failed", t)
+            toast("设置失败：${t.message ?: t.javaClass.simpleName}")
+        }
+    }
+
+    fun removePersonRefPhoto(id: String) = viewModelScope.launch {
+        repo.removePersonRefPhoto(id)
+        toast("形象参考照已移除")
+    }
+
     fun deletePerson(id: String) = viewModelScope.launch {
         repo.deletePerson(id)
         val fallback = repo.data.value.persons.firstOrNull()

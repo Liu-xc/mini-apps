@@ -10,9 +10,10 @@
 │ id          │        │ id                │        │ id           │
 │ name        │        │ personId          │        │ parentId     │
 │ emoji       │        │ category          │        │ parentType   │──▶ ITEM|OUTFIT
-│ createdAt   │        │ name/color/desc   │        │ text         │
-└──────┬──────┘        │ imageFile         │        │ createdAt    │
-       │ 1             │ tags: [String]    │        └──────────────┘
+│ refImageFile│─┐     │ name/color/desc   │        │ text         │
+│ createdAt   │ │      │ imageFile         │        │ createdAt    │
+└──────┬──────┘ │      │ tags: [String]    │        └──────────────┘
+       │ 1      └─▶ images/ 下形象参考照文件（可选，it-017，删除角色时级联删除）
        │ 1             └─────────┬─────────┘
        ▼                       N │
 ┌─────────────┐ 1    N ┌────────┴──────────┐
@@ -38,6 +39,7 @@
 | id | String (UUID) | 主键 |
 | name | String | 显示名，如 "Leo" |
 | emoji | String | 头像 emoji，如 "👨"，默认 "🙂" |
+| refImageFile | String? | 形象参考照文件名（相对 images/，可选；全身照/头像均可，导出长图顶部附给生图 Agent，it-017） |
 | createdAt | Long (epoch millis) | |
 
 ### Item（单品）
@@ -81,8 +83,8 @@
 
 ## 存储格式
 
-- 元数据：单文件 `files/wardrobe.json`，kotlinx.serialization 序列化全部 Person/Item/Outfit/Note；写入为原子操作（写 tmp → rename）。文件头带 `schemaVersion`，升级时运行迁移函数。
-- 图片：`files/images/*.webp`（单品照与成品图同目录，文件名 = UUID.webp）。导入时最长边压至 1440px、质量 82。
+- 元数据：单文件 `files/wardrobe.json`，kotlinx.serialization 序列化全部 Person/Item/Outfit/Note；写入为原子操作（写 tmp → rename）。文件头带 `schemaVersion`，升级时运行迁移函数。it-017 的 `Person.refImageFile` 为可空默认字段，旧 JSON 缺字段反序列化为 null，属向后兼容变更、未 bump schemaVersion。
+- 图片：`files/images/*.webp`（单品照、成品图与形象参考照同目录，文件名 = UUID.webp）。导入时最长边压至 1440px、质量 82。
 - 每次成功写入 JSON 后记录 `wardrobe.json.bak`（上一版本），启动时 JSON 损坏则尝试 bak。
 - 导出备份：zip（wardrobe.json + images/），从设置页导出/导入（it-001 提供导出，导入随后续迭代）。
 
@@ -91,7 +93,7 @@
 ```json
 {
   "schemaVersion": 1,
-  "persons": [{"id":"p1","name":"Leo","emoji":"👨","createdAt":0}],
+  "persons": [{"id":"p1","name":"Leo","emoji":"👨","refImageFile":null,"createdAt":0}],
   "items": [{"id":"i1","personId":"p1","category":"上装","name":"白色牛津纺衬衫",
              "color":"白色","desc":"宽松棉质、纽扣领","imageFile":"uuid1.webp",
              "tags":["通勤","简约"],"createdAt":0,"updatedAt":0}],
@@ -106,5 +108,5 @@
 1. Item/Outfit 的 personId 必须指向存在的 Person；查询永远按当前角色过滤。
 2. 删除 Item 时：其 imageFile 物理删除；所在 Outfit 的 itemIds 移除该 id（Outfit 保留）。
 3. 删除 Outfit 时：其 effectImages 物理删除；Notes 级联删除。
-4. 删除 Person 时：级联删除其全部 Item/Outfit/Note 及图片文件。
+4. 删除 Person 时：级联删除其全部 Item/Outfit/Note 及图片文件，含形象参考照 refImageFile（it-017）；更换参考照时旧文件删除。
 5. Outfit.itemIds 中的 id 必须有效（加载时清洗悬空引用）。

@@ -316,6 +316,7 @@ fun OutfitDetailScreen(
             vm = vm,
             items = items,
             existingOutfit = outfit,
+            refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
         )
     }

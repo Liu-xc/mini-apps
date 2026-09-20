@@ -19,6 +19,8 @@ data class Person(
     val id: String,
     val name: String,
     val emoji: String = "🙂",
+    /** it-017 形象参考照（可选，全身照/头像均可）：导出长图顶部附给生图 Agent */
+    val refImageFile: String? = null,
     val createdAt: Long = 0L,
 )
 

@@ -21,6 +21,13 @@ interface WardrobeRepository {
 
     suspend fun addPerson(name: String, emoji: String): Person
     suspend fun updatePerson(id: String, name: String, emoji: String)
+
+    /** it-017：设置/更换形象参考照（photoFile 为已导入的文件名；换照时旧文件物理删除） */
+    suspend fun setPersonRefPhoto(id: String, photoFile: String)
+
+    /** it-017：移除形象参考照（文件物理删除；未设置时为 no-op） */
+    suspend fun removePersonRefPhoto(id: String)
+
     suspend fun deletePerson(id: String)
 
     /** 新增或更新（id 已存在则更新，updatedAt 刷新） */

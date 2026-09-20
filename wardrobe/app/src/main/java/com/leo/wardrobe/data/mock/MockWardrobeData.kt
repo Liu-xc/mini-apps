@@ -32,8 +32,8 @@ object MockWardrobeData {
         )
 
         val persons = listOf(
-            Person(P1, "我", "👨", ago(60)),
-            Person(P2, "小满", "👧", ago(58)),
+            Person(P1, "我", "👨", createdAt = ago(60)),
+            Person(P2, "小满", "👧", createdAt = ago(58)),
         )
 
         val items = listOf(

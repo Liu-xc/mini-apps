@@ -25,13 +25,13 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
 
     override suspend fun ensureDefaultPerson(): Person {
         _data.value.persons.firstOrNull()?.let { return it }
-        val p = Person(newId(), "我", "🙂", System.currentTimeMillis())
+        val p = Person(newId(), "我", "🙂", createdAt = System.currentTimeMillis())
         _data.value = _data.value.copy(persons = _data.value.persons + p)
         return p
     }
 
     override suspend fun addPerson(name: String, emoji: String): Person {
-        val p = Person(newId(), name.trim().ifEmpty { "未命名" }, emoji.ifEmpty { "🙂" }, System.currentTimeMillis())
+        val p = Person(newId(), name.trim().ifEmpty { "未命名" }, emoji.ifEmpty { "🙂" }, createdAt = System.currentTimeMillis())
         _data.value = _data.value.copy(persons = _data.value.persons + p)
         return p
     }
@@ -43,6 +43,22 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
                     name = name.trim().ifEmpty { p.name },
                     emoji = emoji.ifEmpty { p.emoji },
                 ) else p
+            },
+        )
+    }
+
+    override suspend fun setPersonRefPhoto(id: String, photoFile: String) {
+        _data.value = _data.value.copy(
+            persons = _data.value.persons.map { p ->
+                if (p.id == id) p.copy(refImageFile = photoFile) else p
+            },
+        )
+    }
+
+    override suspend fun removePersonRefPhoto(id: String) {
+        _data.value = _data.value.copy(
+            persons = _data.value.persons.map { p ->
+                if (p.id == id) p.copy(refImageFile = null) else p
             },
         )
     }

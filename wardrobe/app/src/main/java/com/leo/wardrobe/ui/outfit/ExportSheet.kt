@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Star
@@ -38,6 +40,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +82,7 @@ fun ExportSheet(
     vm: AppViewModel,
     items: List<Item>,
     existingOutfit: Outfit?,
+    refPhotoFile: String? = null,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -92,6 +96,9 @@ fun ExportSheet(
     var personNote by remember { mutableStateOf("") }
     var customPrompt by remember { mutableStateOf("") }
     var promptEdit by remember { mutableStateOf<String?>(null) } // 用户手改覆盖，维度变化时重置
+    // it-017：参考照开关——默认使用，不持久化（关闭仅本次有效，下次打开面板仍默认开）
+    var attachRef by remember { mutableStateOf(true) }
+    val composedRefPhoto = refPhotoFile?.takeIf { attachRef }
     var composedFile by remember { mutableStateOf<File?>(null) }
     var composing by remember { mutableStateOf(true) }
     var copied by remember { mutableStateOf(false) }
@@ -112,10 +119,14 @@ fun ExportSheet(
         }
     }
 
-    /** it-013：自定义要求追加在生成文案末尾（长图与文本通道都带出） */
+    /** it-013：自定义要求追加在生成文案末尾；it-017：附参考照时先追加形象还原要求 */
     fun promptWithCustom(includeItems: Boolean): String {
-        val base = vm.promptBuilder(items, selections, personNote, includeItems = includeItems)
-        return if (customPrompt.isBlank()) base else "$base\n另外要求：${customPrompt.trim()}"
+        var p = vm.promptBuilder(items, selections, personNote, includeItems = includeItems)
+        if (composedRefPhoto != null) {
+            p += "\n已附本人形象参考照（长图顶部第一张），生成时请保持其五官、发型与身形还原，仅将服装替换为本套穿搭。"
+        }
+        if (customPrompt.isNotBlank()) p += "\n另外要求：${customPrompt.trim()}"
+        return p
     }
 
     /** 长图通道文案：不含单品清单（照片标签已承载） */
@@ -126,13 +137,13 @@ fun ExportSheet(
         composing = true
         composeJob = scope.launch {
             delay(200) // 去抖：快速点选维度时避免重复拼长图
-            composedFile = vm.imageComposer.composeToExportFile(items, imagePrompt)
+            composedFile = vm.imageComposer.composeToExportFile(items, imagePrompt, composedRefPhoto)
             composing = false
         }
     }
 
     LaunchedEffect(items) { regenerate() }
-    LaunchedEffect(selections, personNote, customPrompt) {
+    LaunchedEffect(selections, personNote, customPrompt, attachRef) {
         promptEdit = null
         vm.setExportSelections(selections)
         regenerate()
@@ -198,6 +209,41 @@ fun ExportSheet(
                                 color = editorialColors().inkFaint,
                                 modifier = Modifier.padding(20.dp),
                             )
+                        }
+                    }
+
+                    // it-017：附形象参考照开关——仅该角色已设置照片时出现；默认开，关闭只影响本次
+                    if (refPhotoFile != null) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Face,
+                                    contentDescription = null,
+                                    tint = editorialColors().accent,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "附形象参考照",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = editorialColors().ink,
+                                    )
+                                    Text(
+                                        "生图更像本人 · 关闭仅本次有效",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = editorialColors().inkFaint,
+                                    )
+                                }
+                                Switch(checked = attachRef, onCheckedChange = { attachRef = it })
+                            }
                         }
                     }
 

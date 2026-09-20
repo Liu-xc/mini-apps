@@ -268,6 +268,7 @@ fun OutfitScreen(
             vm = vm,
             items = items,
             existingOutfit = null,
+            refPhotoFile = person?.refImageFile,
             onDismiss = { exportItems = null },
         )
     }

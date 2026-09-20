@@ -159,4 +159,63 @@ class WardrobeRepositoryImplTest {
         val r2 = repo()
         assertEquals(1, r2.data.value.items.size)
     }
+
+    // ---- it-017 形象参考照 ----
+
+    @Test
+    fun setRefPhotoUpdatesPersonAndDeletesOldFile() = runTest {
+        val r = repo()
+        val p = r.ensureDefaultPerson()
+
+        r.setPersonRefPhoto(p.id, "ref1.webp")
+        assertEquals("ref1.webp", r.data.value.persons.first().refImageFile)
+        assertTrue(images.deleted.isEmpty()) // 首次设置无旧文件可删
+
+        r.setPersonRefPhoto(p.id, "ref2.webp")
+        assertEquals("ref2.webp", r.data.value.persons.first().refImageFile)
+        assertEquals(listOf("ref1.webp"), images.deleted) // 换照删旧，新文件不删
+    }
+
+    @Test
+    fun removeRefPhotoClearsAndDeletesFile() = runTest {
+        val r = repo()
+        val p = r.ensureDefaultPerson()
+
+        r.removePersonRefPhoto(p.id) // 未设置时 no-op
+        assertTrue(images.deleted.isEmpty())
+
+        r.setPersonRefPhoto(p.id, "ref.webp")
+        r.removePersonRefPhoto(p.id)
+        assertEquals(null, r.data.value.persons.first().refImageFile)
+        assertEquals(listOf("ref.webp"), images.deleted)
+    }
+
+    @Test
+    fun deletePersonRemovesRefPhotoFile() = runTest {
+        val r = repo()
+        val me = r.ensureDefaultPerson()
+        val wife = r.addPerson("老婆", "👩")
+        r.setPersonRefPhoto(me.id, "me_ref.webp")
+        r.setPersonRefPhoto(wife.id, "wife_ref.webp")
+        images.deleted.clear()
+
+        r.deletePerson(me.id)
+
+        assertTrue("me_ref.webp" in images.deleted)
+        assertTrue("wife_ref.webp" !in images.deleted)
+        assertEquals("wife_ref.webp", r.data.value.persons.first().refImageFile)
+    }
+
+    @Test
+    fun oldJsonWithoutRefPhotoFieldLoadsAsNull() = runTest {
+        // it-017 向后兼容：旧备份 JSON（Person 无 refImageFile 字段）正常加载为未设置
+        val legacyJson =
+            """{"schemaVersion":1,"persons":[{"id":"p1","name":"Leo","emoji":"👨","createdAt":0}]}"""
+        java.io.File(tmp.root, "wardrobe.json").writeText(legacyJson)
+
+        val d = repo().data.value
+
+        assertEquals(1, d.persons.size)
+        assertEquals(null, d.persons.first().refImageFile)
+    }
 }

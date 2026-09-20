@@ -7,17 +7,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +49,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Person
 import com.leo.wardrobe.ui.AppViewModel
+import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
 
 private val EMOJI_CHOICES = listOf("👨", "👩", "🧒", "👶", "🙂", "🧑", "👵", "👴")
@@ -135,11 +145,12 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
 
     if (showCreate) {
         PersonEditDialog(
+            vm = vm,
             title = "新建角色",
             initialName = "",
             initialEmoji = "🙂",
             onDismiss = { showCreate = false },
-            onConfirm = { name, emoji ->
+            onConfirm = { name, emoji, _ ->
                 vm.addPerson(name, emoji)
                 showCreate = false
             },
@@ -147,12 +158,21 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
     }
     editTarget?.let { target ->
         PersonEditDialog(
+            vm = vm,
             title = "编辑角色",
             initialName = target.name,
             initialEmoji = target.emoji,
+            initialRefPhoto = target.refImageFile,
+            showRefPhoto = true,
             onDismiss = { editTarget = null },
-            onConfirm = { name, emoji ->
+            onConfirm = { name, emoji, refPhoto ->
                 vm.updatePerson(target.id, name, emoji)
+                // it-017：参考照 diff 提交——照片生命周期（旧文件清理）在 Repository
+                when {
+                    refPhoto == target.refImageFile -> {}
+                    refPhoto == null -> vm.removePersonRefPhoto(target.id)
+                    else -> vm.setPersonRefPhoto(target.id, refPhoto)
+                }
                 editTarget = null
             },
         )
@@ -177,20 +197,39 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
 
 @Composable
 private fun PersonEditDialog(
+    vm: AppViewModel,
     title: String,
     initialName: String,
     initialEmoji: String,
+    initialRefPhoto: String? = null,
+    showRefPhoto: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, emoji: String) -> Unit,
+    onConfirm: (name: String, emoji: String, refPhoto: String?) -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var emoji by remember { mutableStateOf(initialEmoji) }
+    // it-017：对话框内暂存参考照（选择瞬间导入落盘，it-002+1 教训），确定时 diff 提交
+    var refPhoto by remember { mutableStateOf(initialRefPhoto) }
+    val pickRefPhoto = rememberPhotoPicker { uri ->
+        if (uri != null) vm.importPhoto(uri) { file -> if (file != null) refPhoto = file }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                if (showRefPhoto) {
+                    RefPhotoSection(
+                        current = refPhoto,
+                        onPick = { pickRefPhoto() },
+                        onRemove = { refPhoto = null },
+                        fileOf = { vm.imageFileOf(it) },
+                    )
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -215,8 +254,92 @@ private fun PersonEditDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(name, emoji) }, enabled = name.isNotBlank()) { Text("确定") }
+            Button(onClick = { onConfirm(name, emoji, refPhoto) }, enabled = name.isNotBlank()) { Text("确定") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
+}
+
+/** it-017：形象参考照区（可选）——未设置虚位引导，已设置缩略图 + 更换/移除 */
+@Composable
+private fun RefPhotoSection(
+    current: String?,
+    onPick: () -> Unit,
+    onRemove: () -> Unit,
+    fileOf: (String) -> java.io.File?,
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                "形象参考照（可选）",
+                style = MaterialTheme.typography.labelLarge,
+                color = editorialColors().ink,
+            )
+            Text(
+                "导出时附给生图 Agent 做形象参考，生成更像本人（全身照最佳，头像也可以）",
+                style = MaterialTheme.typography.labelSmall,
+                color = editorialColors().inkFaint,
+            )
+            if (current == null) {
+                Surface(
+                    onClick = onPick,
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp, MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 14.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.PhotoCamera,
+                            contentDescription = null,
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("选择照片", style = MaterialTheme.typography.bodyMedium, color = editorialColors().ink)
+                    }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PhotoCard(
+                        file = fileOf(current),
+                        contentDescription = "形象参考照",
+                        corner = 10.dp,
+                        modifier = Modifier.size(64.dp),
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        // ui-audit P2-1：TextButton 提供按压态与形状，纯文字可点性弱
+                        TextButton(
+                            onClick = onPick,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) { Text("更换", style = MaterialTheme.typography.labelLarge) }
+                        TextButton(
+                            onClick = onRemove,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) { Text("移除", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error) }
+                    }
+                }
+            }
+        }
+    }
 }
