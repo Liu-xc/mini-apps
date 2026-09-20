@@ -166,7 +166,7 @@ fun OutfitScreen(
                 onAction = onAddItem,
             )
         } else {
-            // it-005 人体着装位布局：中轴（帽→上身→下装→鞋）+ 两侧挂件（包/配饰）
+            // it-008 真人比例布局：头小 / 上身行全宽三卡 / 腿窄长（两侧挂件利用留白）/ 脚小扁
             Column(
                 Modifier
                     .weight(1f)
@@ -178,32 +178,38 @@ fun OutfitScreen(
             ) {
                 // 头：帽子（小卡居中）
                 OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                    Modifier.fillMaxWidth(0.38f), aspect = 1f)
+                    Modifier.fillMaxWidth(0.34f), aspect = 1f)
                 Spacer(Modifier.height(8.dp))
-                // 上身行：包(左挂) | 外套 | 上装 | 连衣裙 | 配饰(右挂)
+                // 上身行：外套 | 上装 | 连衣裙 全宽三等分（it-008：不再被挂件挤占）
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(0.78f))
                     OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f))
+                        Modifier.weight(1f), aspect = 0.78f)
                     OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f))
+                        Modifier.weight(1f), aspect = 0.78f)
                     OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(1f))
-                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                        Modifier.weight(0.78f))
+                        Modifier.weight(1f), aspect = 0.78f)
                 }
                 Spacer(Modifier.height(8.dp))
-                // 腿：下装（通栏长卡）
-                OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                    Modifier.fillMaxWidth(), aspect = 1.9f)
+                // 腿行：包(左挂) | 下装（窄长，真人腿型） | 配饰(右挂)——挂件利用腿两侧留白
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(0.5f), aspect = 0.85f)
+                    OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(1.12f), aspect = 0.6f)
+                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                        Modifier.weight(0.5f), aspect = 0.85f)
+                }
                 Spacer(Modifier.height(8.dp))
-                // 脚：鞋（扁平通栏）
+                // 脚：鞋（小扁居中）
                 OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem,
-                    Modifier.fillMaxWidth(0.82f), aspect = 2.1f)
+                    Modifier.fillMaxWidth(0.58f), aspect = 2.6f)
             }
         }
 
