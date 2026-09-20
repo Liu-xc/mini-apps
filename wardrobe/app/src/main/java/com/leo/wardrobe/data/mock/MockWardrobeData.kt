@@ -37,23 +37,23 @@ object MockWardrobeData {
         )
 
         val items = listOf(
-            item("it1", P1, WardrobeCategory.TOP, "白T恤", "白色", "纯棉圆领", "demo_ScKZwuDUTUPRm5ljOa5KSKzyJB3BNB.webp", listOf("通勤", "简约"), createdAgo = 59, updatedAgo = 1),
-            item("it2", P1, WardrobeCategory.TOP, "球衣", "藏青", "足球训练款", "demo_TyCXC2E7A9NTewf9im9kE67V4Mv7Rl.webp", listOf("运动"), createdAgo = 58, updatedAgo = 2),
-            item("it3", P1, WardrobeCategory.TOP, "牛津纺衬衫", "白蓝条纹", "纽扣领", "demo_jNFNutQXA079LwSjmfwJeFsid37vkh.webp", listOf("通勤", "早秋"), createdAgo = 57, updatedAgo = 3),
-            item("it4", P1, WardrobeCategory.OUTERWEAR, "羽绒服", "黑色", "蓬松短款", "demo_GGEzZp2bzlrsQLZ4zt9vfa6dvCCDP0.webp", listOf("冬", "通勤"), createdAgo = 56, updatedAgo = 4),
-            item("it5", P1, WardrobeCategory.OUTERWEAR, "飞行夹克", "军绿", "Bomber", "demo_nrcvXJr22VXWX9PBtXNZ5UrplwAfhj.webp", listOf("休闲", "早秋"), createdAgo = 55, updatedAgo = 5),
-            item("it6", P1, WardrobeCategory.BOTTOM, "直筒牛仔裤", "靛蓝", "微弹", "demo_DULdzV3uEdmGmIzORCmUox0QGw8W1z.webp", listOf("休闲"), createdAgo = 54, updatedAgo = 6),
-            item("it7", P1, WardrobeCategory.BOTTOM, "工装裤", "卡其", "多口袋", "demo_fo8wyXqFVEaRo4JUQTTR1vEzfBT0OK.webp", listOf("休闲", "运动"), createdAgo = 53, updatedAgo = 7),
-            item("it8", P1, WardrobeCategory.DRESS, "连衣裙", "奶油", "无袖红领", "demo_sjnsZFCzT6VnSOqmWOg9YE53KR68pi.webp", listOf("约会"), createdAgo = 52, updatedAgo = 8),
-            item("it9", P1, WardrobeCategory.DRESS, "背带裙", "丹宁", "背带款", "demo_OndHuVEwtwfTcGKfNBaBNFawZVaKLh.webp", listOf("度假"), createdAgo = 51, updatedAgo = 9),
-            item("it10", P1, WardrobeCategory.SHOES, "小白鞋", "白色", "轻便运动", "demo_llBJrXGTGW8fvXFYtSynrQ6nWHbhKo.webp", listOf("通勤", "运动"), createdAgo = 50, updatedAgo = 10),
-            item("it11", P1, WardrobeCategory.SHOES, "高帮帆布鞋", "黑色", "高帮", "demo_rwia1MUv5NLXZz5qQFGKX7nT2gKxwA.webp", listOf("休闲"), createdAgo = 49, updatedAgo = 11),
-            item("it12", P1, WardrobeCategory.BAG, "手提包", "棕色", "通勤大容量", "demo_OAYK6HWr7j9IxNH5mk3vkntjQCJnwc.webp", listOf("通勤", "简约"), createdAgo = 48, updatedAgo = 12),
-            item("it13", P2, WardrobeCategory.BAG, "双肩包", "黑色", "轻量", "demo_3JqmFhoX4wlSJ2F8hEg2ljSfxraUPO.webp", listOf("运动", "通勤"), createdAgo = 47, updatedAgo = 13),
-            item("it14", P2, WardrobeCategory.HAT, "牛仔帽", "棕色", "宽檐", "demo_R2D8r79JBRWYLJGB18GgsUjN2s4Dzb.webp", listOf("度假"), createdAgo = 46, updatedAgo = 14),
+            item("it1", P1, WardrobeCategory.TOP, "棉质T恤", "深绿", "纯色圆领短袖", "demo_ScKZwuDUTUPRm5ljOa5KSKzyJB3BNB.webp", listOf("通勤", "简约"), createdAgo = 59, updatedAgo = 1),
+            item("it2", P1, WardrobeCategory.TOP, "星球衣", "橙红", "白圈红星条纹袖", "demo_TyCXC2E7A9NTewf9im9kE67V4Mv7Rl.webp", listOf("运动"), createdAgo = 58, updatedAgo = 2),
+            item("it3", P1, WardrobeCategory.TOP, "牛津纺衬衫", "浅蓝", "纽扣翻领长袖", "demo_jNFNutQXA079LwSjmfwJeFsid37vkh.webp", listOf("通勤", "早秋"), createdAgo = 57, updatedAgo = 3),
+            item("it4", P1, WardrobeCategory.OUTERWEAR, "羽绒服", "黑色", "立领拉链短款", "demo_GGEzZp2bzlrsQLZ4zt9vfa6dvCCDP0.webp", listOf("冬", "通勤"), createdAgo = 56, updatedAgo = 4),
+            item("it5", P1, WardrobeCategory.OUTERWEAR, "飞行夹克", "棕色", "羊羔毛领飞行员", "demo_nrcvXJr22VXWX9PBtXNZ5UrplwAfhj.webp", listOf("休闲", "早秋"), createdAgo = 55, updatedAgo = 5),
+            item("it6", P1, WardrobeCategory.BOTTOM, "直筒牛仔裤", "浅蓝", "卷边直筒微弹", "demo_DULdzV3uEdmGmIzORCmUox0QGw8W1z.webp", listOf("休闲"), createdAgo = 54, updatedAgo = 6),
+            item("it7", P1, WardrobeCategory.BOTTOM, "工装裤", "军绿", "多口袋直筒", "demo_fo8wyXqFVEaRo4JUQTTR1vEzfBT0OK.webp", listOf("休闲", "运动"), createdAgo = 53, updatedAgo = 7),
+            item("it8", P1, WardrobeCategory.DRESS, "碎花连衣裙", "米白", "泡泡袖系带", "demo_sjnsZFCzT6VnSOqmWOg9YE53KR68pi.webp", listOf("约会"), createdAgo = 52, updatedAgo = 8),
+            item("it9", P1, WardrobeCategory.DRESS, "背带裙", "丹宁蓝", "泡泡袖背带款", "demo_OndHuVEwtwfTcGKfNBaBNFawZVaKLh.webp", listOf("度假"), createdAgo = 51, updatedAgo = 9),
+            item("it10", P1, WardrobeCategory.SHOES, "板鞋", "红白拼色", "藏青底轻便款", "demo_llBJrXGTGW8fvXFYtSynrQ6nWHbhKo.webp", listOf("通勤", "运动"), createdAgo = 50, updatedAgo = 10),
+            item("it11", P1, WardrobeCategory.SHOES, "高帮帆布鞋", "红色", "高帮系带", "demo_rwia1MUv5NLXZz5qQFGKX7nT2gKxwA.webp", listOf("休闲"), createdAgo = 49, updatedAgo = 11),
+            item("it12", P1, WardrobeCategory.BAG, "手提包", "橙棕", "银扣通勤大容量", "demo_OAYK6HWr7j9IxNH5mk3vkntjQCJnwc.webp", listOf("通勤", "简约"), createdAgo = 48, updatedAgo = 12),
+            item("it13", P2, WardrobeCategory.BAG, "双肩包", "蓝色", "棕色饰边轻量", "demo_3JqmFhoX4wlSJ2F8hEg2ljSfxraUPO.webp", listOf("运动", "通勤"), createdAgo = 47, updatedAgo = 13),
+            item("it14", P2, WardrobeCategory.HAT, "宽檐礼帽", "卡其", "深色帽带", "demo_R2D8r79JBRWYLJGB18GgsUjN2s4Dzb.webp", listOf("度假"), createdAgo = 46, updatedAgo = 14),
             item("it15", P2, WardrobeCategory.HAT, "渔夫帽", "米色", "软檐", "demo_xOofjqlFRH8A5h5dmCd1XPd7wNbLi7.webp", listOf("休闲", "度假"), createdAgo = 45, updatedAgo = 15),
             item("it16", P2, WardrobeCategory.ACCESSORY, "太阳镜", "黑框", "UV400", "demo_5SFKX0yeQoj1PbNM2ObWNi902QoUeO.webp", listOf("度假", "简约"), createdAgo = 44, updatedAgo = 16),
-            item("it17", P2, WardrobeCategory.ACCESSORY, "珍珠项链", "白", "短款", "demo_IzpAiEPUhmyIp69cv7LNwmlPKqrltx.webp", listOf("约会"), createdAgo = 43, updatedAgo = 17),
+            item("it17", P2, WardrobeCategory.ACCESSORY, "心形项链", "金色", "粗链吊坠", "demo_IzpAiEPUhmyIp69cv7LNwmlPKqrltx.webp", listOf("约会"), createdAgo = 43, updatedAgo = 17),
         )
 
         fun outfit(id: String, personId: String, itemIds: List<String>, tags: List<String>, createdAgo: Int) =
