@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -223,58 +224,66 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
 }
 
 /**
- * 迷你真人比例拼贴（it-008 比例的卡内版）：
- * 帽（头）/ 外套·上装·连衣裙（上身行）/ 包·下装·配饰（腿行）/ 鞋（脚）。
+ * 迷你真人比例拼贴（it-010 修正）：与 W1 选衣页同构的分段占比布局——
+ * 卡内高度按 头/上身/腿/脚 weight 切分（缺失部位自动归一），照片填满各自槽位，
+ * 任何卡片尺寸都不再溢出堆叠。
  */
 @Composable
 private fun MiniBodyCollage(vm: AppViewModel, byCat: Map<com.leo.wardrobe.domain.model.WardrobeCategory, List<com.leo.wardrobe.domain.model.Item>>) {
+    val hat = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.HAT]?.firstOrNull()
+    val torso = listOf(
+        com.leo.wardrobe.domain.model.WardrobeCategory.OUTERWEAR,
+        com.leo.wardrobe.domain.model.WardrobeCategory.TOP,
+        com.leo.wardrobe.domain.model.WardrobeCategory.DRESS,
+    ).mapNotNull { c -> byCat[c]?.firstOrNull() }
+    val bottom = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BOTTOM]?.firstOrNull()
+    val bag = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BAG]?.firstOrNull()
+    val acc = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.ACCESSORY]?.firstOrNull()
+    val shoes = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.SHOES]?.firstOrNull()
+
     Column(
         Modifier
             .fillMaxSize()
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 头：帽子
-        byCat[com.leo.wardrobe.domain.model.WardrobeCategory.HAT]?.firstOrNull()?.let {
-            CollagePhoto(vm, it, Modifier.fillMaxWidth(0.34f).aspectRatio(1f))
+        // 头：帽子（小，居中）
+        if (hat != null) {
+            Box(Modifier.weight(0.13f).fillMaxWidth()) {
+                CollagePhoto(vm, hat, Modifier.fillMaxHeight().fillMaxWidth(0.42f).align(Alignment.Center))
+            }
         }
-        // 上身行：外套 | 上装 | 连衣裙（存在的品类均分）
-        val torso = listOf(
-            com.leo.wardrobe.domain.model.WardrobeCategory.OUTERWEAR,
-            com.leo.wardrobe.domain.model.WardrobeCategory.TOP,
-            com.leo.wardrobe.domain.model.WardrobeCategory.DRESS,
-        ).mapNotNull { c -> byCat[c]?.firstOrNull()?.let { c to it } }
+        // 上身行：外套 | 上装 | 连衣裙（存在的品类均分、填满行高）
         if (torso.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                torso.forEach { (_, item) ->
-                    CollagePhoto(vm, item, Modifier.weight(1f).aspectRatio(0.78f))
+            Row(
+                Modifier.weight(0.33f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                torso.forEach { item ->
+                    CollagePhoto(vm, item, Modifier.weight(1f).fillMaxHeight())
                 }
             }
         }
-        // 腿行：包 | 下装（窄长） | 配饰
-        val bottom = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BOTTOM]?.firstOrNull()
-        val bag = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.BAG]?.firstOrNull()
-        val acc = byCat[com.leo.wardrobe.domain.model.WardrobeCategory.ACCESSORY]?.firstOrNull()
-        if (bottom != null) {
+        // 腿行：包(矮挂) | 下装（窄长主体） | 配饰(矮挂)
+        if (bottom != null || bag != null || acc != null) {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.weight(0.42f).fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                bag?.let { CollagePhoto(vm, it, Modifier.weight(0.5f).aspectRatio(0.85f)) }
-                CollagePhoto(vm, bottom, Modifier.weight(if (bag == null && acc == null) 1.6f else 1.1f).aspectRatio(0.6f))
-                acc?.let { CollagePhoto(vm, it, Modifier.weight(0.5f).aspectRatio(0.85f)) }
-            }
-        } else if (bag != null || acc != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                bag?.let { CollagePhoto(vm, it, Modifier.weight(1f).aspectRatio(0.85f)) }
-                acc?.let { CollagePhoto(vm, it, Modifier.weight(1f).aspectRatio(0.85f)) }
+                bag?.let { CollagePhoto(vm, it, Modifier.weight(0.26f).fillMaxHeight(0.62f)) }
+                bottom?.let {
+                    val w = if (bag == null && acc == null) 1f else 0.48f
+                    CollagePhoto(vm, it, Modifier.weight(w).fillMaxHeight())
+                }
+                acc?.let { CollagePhoto(vm, it, Modifier.weight(0.26f).fillMaxHeight(0.62f)) }
             }
         }
-        // 脚：鞋
-        byCat[com.leo.wardrobe.domain.model.WardrobeCategory.SHOES]?.firstOrNull()?.let {
-            CollagePhoto(vm, it, Modifier.fillMaxWidth(0.58f).aspectRatio(2.6f))
+        // 脚：鞋（扁，居中）
+        if (shoes != null) {
+            Box(Modifier.weight(0.12f).fillMaxWidth()) {
+                CollagePhoto(vm, shoes, Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(Alignment.Center))
+            }
         }
     }
 }

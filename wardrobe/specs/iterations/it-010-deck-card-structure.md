@@ -13,11 +13,15 @@
 
 - **卡面结构化**：成品图（effectImages）优先全幅展示；无成品图时按 it-008 真人比例做
   **迷你结构拼贴**（帽头/外套·上装·连衣裙上身行/包·下装·配饰腿行/鞋脚）
+  —— 修正（用户复验）：初版按 aspectRatio 推高度在固定卡内溢出堆叠，改为
+  **分段 weight 切分卡内高度**（头 0.13 / 上身 0.33 / 腿 0.42 / 脚 0.12，缺失自动归一），
+  照片填满槽位，与 W1 选衣页同构且任意卡尺寸不溢出
 - **层级修正**：卡组容器 `clipToBounds()`（滑出/堆叠卡不再越界遮挡）；堆叠偏移 30→14dp、
   库内边距 10→6dp（`SwipeableCardsProperties` 经 CardDeck 新增 properties 参数透传）；卡片投影 4→2dp
 - eats 卡组同步应用层级修正
 
 ## 验证记录
 
-- 双应用 `assembleDebug` ✅；模拟器截图 `wardrobe-10-deck-collage.png`（结构拼贴 + 堆叠收界内）、
-  `wardrobe-11-deck-swiping.png`（滑出卡被裁剪、晋升卡规整），视觉模型验收通过
+- 双应用 `assembleDebug` ✅；模拟器截图 `wardrobe-10-deck-collage.png`（初版）、
+  `wardrobe-12-deck-bodyfit.png`（分段占比修正版：人形结构、无重叠、无溢出，视觉模型验收通过）、
+  `wardrobe-11-deck-swiping.png`（滑出卡被裁剪、晋升卡规整）
