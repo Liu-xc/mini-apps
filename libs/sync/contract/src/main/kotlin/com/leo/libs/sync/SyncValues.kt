@@ -40,23 +40,13 @@ sealed interface SyncValue {
 
     /**
      * 附件：[ref] 对后端不透明（多维表格=file_token，对象存储=文件 URL）。
-     * 上行前 app 以本地名占位（约定 `local:` 前缀），引擎在 push 时经
+     * 上行前 app 以本地名占位（`local:` 前缀），引擎在 push 时经
      * [SyncSource.putAttachment] 换取真实 ref 后替换。
      */
     @Serializable
     @SerialName("attachment")
-    data class Attachment(
-        val ref: String,
-        val meta: AttachmentMeta = AttachmentMeta(),
-    ) : SyncValue
+    data class Attachment(val ref: String) : SyncValue
 }
-
-@Serializable
-data class AttachmentMeta(
-    val name: String? = null,
-    val sizeBytes: Long? = null,
-    val mimeType: String? = null,
-)
 
 /** 云端实体：id 为 app 侧稳定主键（UUID 或后端收编的记录 id） */
 @Serializable
@@ -69,7 +59,5 @@ data class SyncEntity(
 @Serializable
 data class SyncCollection(val name: String)
 
-/** 增量拉取游标（v1 全量对账不使用；预留给增量模式） */
-@Serializable
-@JvmInline
-value class PullCursor(val value: String)
+/** 附件占位 ref 的约定前缀（app 写本地文件名，push 时引擎换真实 ref） */
+const val LOCAL_REF_PREFIX = "local:"

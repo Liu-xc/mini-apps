@@ -6,7 +6,7 @@ import java.io.File
 import java.util.UUID
 
 /**
- * 媒体文件存取：编解码（压缩/旋转）归 app 注入，文件管理（uuid 命名、删除、孤儿清理）归 SDK。
+ * 媒体文件存取：编解码（压缩/旋转）归 app 注入，文件管理（uuid 命名、删除）归 SDK。
  * 云同步时代本地媒体是缓存：正本在云端附件，app 侧按 ref 命中本地或下载后写回。
  */
 interface MediaStore {
@@ -18,13 +18,8 @@ interface MediaStore {
 
     suspend fun delete(name: String)
 
-    /** 清理不在 [validNames] 中的孤儿文件，返回删除数量（快照载入后对账用） */
-    suspend fun sweep(validNames: Set<String>): Int
-
-    /** 全部文件名（备份导出用） */
-    suspend fun list(): List<String>
-
-    fun file(name: String): File?
+    /** 文件句柄（不校验存在性；读取内容请用 [read]） */
+    fun file(name: String): File
 }
 
 /** 目录实现：`root/subdir` 下平铺存文件，JVM/Android 通用 */
@@ -52,19 +47,5 @@ class FileMediaStore(
         withContext(Dispatchers.IO) { File(dir, name).delete() }
     }
 
-    override suspend fun sweep(validNames: Set<String>): Int = withContext(Dispatchers.IO) {
-        val files = dir.listFiles()?.filter { it.isFile } ?: return@withContext 0
-        var removed = 0
-        for (f in files) {
-            if (f.name !in validNames && f.delete()) removed++
-        }
-        removed
-    }
-
-    override suspend fun list(): List<String> = withContext(Dispatchers.IO) {
-        dir.listFiles()?.filter { it.isFile }?.map { it.name } ?: emptyList()
-    }
-
-    /** 文件句柄（不校验存在性；读取请用 [read]，文件不存在返回 null） */
     override fun file(name: String): File = File(dir, name)
 }

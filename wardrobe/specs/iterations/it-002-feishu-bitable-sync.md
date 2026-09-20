@@ -276,6 +276,10 @@ it-001 是纯本机存储（JSON + WebP，无账号无服务端），「云端�
 
 **App 接入（US-15a/b/c：设置页、扫二维码、同步织入）未开始**——按用户目标「多维表 SDK 先实现、不接入」执行。
 
+**2026-09-20 · 二轮 review：过度设计精简**
+
+删除零消费方/投机性 API：store 侧 `BackupCodec`、`MediaStore.sweep()/list()`、`loadDetailed()/LoadOutcome`、`decode()`；sync 侧 `PullCursor` 增量游标、`ConflictPolicy/SyncPolicy`（LWW 内联）、`Working` 进度计数、`PendingOpQueue` 接口、`AttachmentMeta`、`RawRejection`、`connect` 的 Result 包装；`CollectionAdapter` 双查询合并为 `localVersions()`。测试 88 → 82 全绿（store 14 / contract 24 / bitable 25 / wardrobe 19），wardrobe 集编译复验通过。
+
 ## 主要参考
 
 - [多维表格概述与使用限制](https://open.feishu.cn/document/server-docs/docs/bitable-v1/bitable-overview?lang=zh-CN)

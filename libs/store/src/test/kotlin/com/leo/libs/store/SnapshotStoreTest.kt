@@ -46,11 +46,7 @@ class SnapshotStoreTest {
         s.commit(TestSnap(items = listOf("v1")))
         s.commit(TestSnap(items = listOf("v2")))
         s.file.writeText("{ broken !!!")
-        val outcome = s.loadDetailed()
-        assertTrue(outcome is SnapshotStore.LoadOutcome.Loaded)
-        outcome as SnapshotStore.LoadOutcome.Loaded
-        assertEquals(SnapshotStore.LoadOutcome.Source.BAK, outcome.source)
-        assertEquals(listOf("v1"), outcome.data.items) // bak 是上一成功版本
+        assertEquals(listOf("v1"), s.load().items) // bak 是上一成功版本
     }
 
     @Test
@@ -60,7 +56,6 @@ class SnapshotStoreTest {
         s.file.writeText("bad")
         s.bakFile.writeText("bad too")
         assertEquals(TestSnap(), s.load())
-        assertTrue(s.loadDetailed() is SnapshotStore.LoadOutcome.DefaultUsed)
     }
 
     @Test
@@ -76,12 +71,11 @@ class SnapshotStoreTest {
             ),
             expected = 3,
         )
-        val outcome = s.loadDetailed() as SnapshotStore.LoadOutcome.Loaded
-        assertEquals(3, outcome.data.schemaVersion)
-        assertEquals(listOf("old", "m1", "m2"), outcome.data.items)
-        assertEquals(1, outcome.migratedFrom)
+        val data = s.load()
+        assertEquals(3, data.schemaVersion)
+        assertEquals(listOf("old", "m1", "m2"), data.items)
         // 迁移结果在下次 load 直接可得（不再重复迁移）
-        assertEquals(outcome.data, s.load())
+        assertEquals(data, s.load())
     }
 
     @Test
@@ -119,13 +113,5 @@ class SnapshotStoreTest {
         assertTrue(s.file.readText().contains("good"))
         assertTrue(s.bakFile.exists())
         assertTrue(s.bakFile.readText().contains("good"))
-    }
-
-    @Test
-    fun decodeUsedByImport() = runTest {
-        val s = store()
-        val bytes = Json { encodeDefaults = true }.encodeToString(TestSnap.serializer(), TestSnap(items = listOf("z"))).toByteArray()
-        assertEquals(listOf("z"), s.decode(bytes)?.items)
-        assertEquals(null, s.decode("{ nope".toByteArray()))
     }
 }

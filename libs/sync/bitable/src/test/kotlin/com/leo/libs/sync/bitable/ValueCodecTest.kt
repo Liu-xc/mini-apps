@@ -73,14 +73,12 @@ class ValueCodecTest {
 
     @Test
     fun attachmentDecodedFromRealShape() {
-        // 真实读取形态：[{file_token, name, size, url}]
+        // 真实读取形态：[{file_token, name, size, url}] → 只取 file_token
         val element = Json.parseToJsonElement(
             """[{"file_token":"ft1","name":"x.webp","size":1024,"url":"https://..."}]""",
         )
         val decoded = ValueCodec.decode(ValueCodec.TYPE_ATTACHMENT, element)
-        val att = decoded as SyncValue.Attachment
-        assertEquals("ft1", att.ref)
-        assertEquals(1024L, att.meta.sizeBytes)
+        assertEquals("ft1", (decoded as SyncValue.Attachment).ref)
     }
 
     @Test

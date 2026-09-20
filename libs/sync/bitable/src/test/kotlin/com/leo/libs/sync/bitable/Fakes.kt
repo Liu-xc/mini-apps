@@ -1,6 +1,5 @@
 package com.leo.libs.sync.bitable
 
-import com.leo.libs.sync.SyncError
 
 /** 可脚本化的假传输：记录全部请求，按 handler 返回 */
 class FakeTransport(private val handler: (HttpRequest) -> HttpResponse) : HttpTransport {
@@ -32,5 +31,3 @@ fun err(status: Int, code: Int, msg: String = "err", vararg headers: Pair<String
         headers = headers.associate { (k, v) -> k to listOf(v) },
         body = """{"code":$code,"msg":"$msg"}""".toByteArray(),
     )
-
-fun SyncError.codeLike(): String = this::class.simpleName ?: "?"

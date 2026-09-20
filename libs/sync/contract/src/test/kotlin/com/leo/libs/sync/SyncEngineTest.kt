@@ -15,9 +15,9 @@ class SyncEngineTest {
 
     // ---- 测试桩 ----
 
-    private class FakeSource : SyncSource {
+    private open class FakeSource : SyncSource {
         override val backendId = "fake"
-        var cloud = mutableListOf<SyncEntity>()
+        val cloud = mutableListOf<SyncEntity>()
         val pushedUpserts = mutableListOf<SyncEntity>()
         val pushedRemoves = mutableListOf<String>()
         val uploaded = mutableListOf<String>()
@@ -25,8 +25,7 @@ class SyncEngineTest {
 
         override suspend fun connect(config: SyncConfig, collections: List<SyncCollection>) = Unit
 
-        override suspend fun pull(collection: SyncCollection, since: PullCursor?) =
-            PullResult(entities = cloud.filter { /* 单桩多集合不区分 */ true })
+        override suspend fun pull(collection: SyncCollection) = PullResult(entities = cloud.toList())
 
         override suspend fun push(collection: SyncCollection, upserts: List<SyncEntity>, removes: List<String>): PushResult {
             pushedUpserts += upserts
@@ -50,8 +49,7 @@ class SyncEngineTest {
         var rejectIds: Set<String> = emptySet()
         var attachmentBytes: ByteArray? = null
 
-        override suspend fun localIds() = local.keys.toSet()
-        override suspend fun localUpdatedAt(id: String) = local[id]
+        override suspend fun localVersions(): Map<String, Long> = local.toMap()
         override suspend fun applyCloud(upserts: List<SyncEntity>, deletes: List<String>): List<Rejected> {
             appliedUpserts += upserts
             appliedDeletes += deletes
@@ -62,9 +60,9 @@ class SyncEngineTest {
 
         override suspend fun attachmentsFor(entity: SyncEntity): List<PendingAttachment> =
             entity.fields.entries
-                .filter { (_, v) -> v is SyncValue.Attachment && v.ref.startsWith("local:") }
+                .filter { (_, v) -> v is SyncValue.Attachment && v.ref.startsWith(LOCAL_REF_PREFIX) }
                 .map { (name, v) ->
-                    PendingAttachment(fieldName = name, fileName = (v as SyncValue.Attachment).ref.removePrefix("local:")) {
+                    PendingAttachment(fieldName = name, fileName = (v as SyncValue.Attachment).ref.removePrefix(LOCAL_REF_PREFIX)) {
                         attachmentBytes ?: byteArrayOf(0)
                     }
                 }
@@ -80,9 +78,9 @@ class SyncEngineTest {
     private fun engine(
         source: SyncSource,
         adapter: FakeAdapter,
-        queue: PendingOpQueue = FilePendingOpQueue(tmp.newFile()),
+        queue: FilePendingOpQueue = FilePendingOpQueue(tmp.newFile()),
     ) = SyncEngine(source, listOf(adapter), queue).also { eng ->
-        kotlinx.coroutines.runBlocking { eng.connect(SyncConfig("fake", emptyMap())).getOrThrow() }
+        kotlinx.coroutines.runBlocking { eng.connect(SyncConfig("fake", emptyMap())) }
     }
 
     // ---- push ----
@@ -122,8 +120,7 @@ class SyncEngineTest {
 
         assertEquals(listOf("uuid.webp"), source.uploaded)
         val pushed = source.pushedUpserts.single()
-        val resolved = pushed.fields["image"] as SyncValue.Attachment
-        assertTrue(resolved.ref.startsWith("tok-"))            // 占位换成了真实 ref
+        assertTrue((pushed.fields["image"] as SyncValue.Attachment).ref.startsWith("tok-")) // 占位换真实 ref
         assertTrue(adapter.pushedEntities.single().fields["image"] is SyncValue.Attachment)
     }
 
@@ -214,16 +211,23 @@ class SyncEngineTest {
         assertEquals(listOf("bad"), summary.rejected.map { it.id })
     }
 
+    // ---- 状态机 ----
+
     @Test
-    fun connectFailureSetsFailedState() = runTest {
+    fun connectFailureSetsFailedStateAndThrows() = runTest {
         val failing = object : SyncSource by FakeSource() {
             override suspend fun connect(config: SyncConfig, collections: List<SyncCollection>) {
                 throw SyncException(SyncError.AuthFailed("secret 失效"))
             }
         }
         val engine = SyncEngine(failing, emptyList(), FilePendingOpQueue(tmp.newFile()))
-        val result = engine.connect(SyncConfig("fake", emptyMap()))
-        assertTrue(result.isFailure)
+        var thrown = false
+        try {
+            engine.connect(SyncConfig("fake", emptyMap()))
+        } catch (e: SyncException) {
+            thrown = true
+        }
+        assertTrue(thrown)
         val state = engine.state.value as SyncState.Failed
         assertTrue(state.error is SyncError.AuthFailed)
         assertTrue(!state.retryable)
@@ -240,8 +244,6 @@ class SyncEngineTest {
         }
         assertTrue(thrown)
     }
-
-    // ---- 状态机（review 补充） ----
 
     @Test
     fun pushEndsInDoneState() = runTest {
@@ -273,11 +275,11 @@ class SyncEngineTest {
     @Test
     fun pullTransportFailureSetsFailedStateAndThrows() = runTest {
         val failing = object : SyncSource by FakeSource() {
-            override suspend fun pull(collection: SyncCollection, since: PullCursor?): PullResult =
+            override suspend fun pull(collection: SyncCollection): PullResult =
                 throw SyncException(SyncError.Network("断网"))
         }
         val engine = SyncEngine(failing, listOf(FakeAdapter(SyncCollection("Items"))), FilePendingOpQueue(tmp.newFile()))
-        kotlinx.coroutines.runBlocking { engine.connect(SyncConfig("fake", emptyMap())).getOrThrow() }
+        kotlinx.coroutines.runBlocking { engine.connect(SyncConfig("fake", emptyMap())) }
 
         var thrown = false
         try {

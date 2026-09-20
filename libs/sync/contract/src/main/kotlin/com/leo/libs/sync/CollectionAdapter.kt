@@ -10,11 +10,8 @@ interface CollectionAdapter {
 
     // ---- pull 侧 ----
 
-    /** 当前本地实体 id 集（删除对账用；应包含本地新建未推的实体） */
-    suspend fun localIds(): Set<String>
-
-    /** 本地版本判据（LWW：与云端 updatedAt 比较）；本地不存在返回 null */
-    suspend fun localUpdatedAt(id: String): Long?
+    /** 本地全部实体：id → 本地版本判据（LWW 与云端 updatedAt 比较；含未推的本地新建） */
+    suspend fun localVersions(): Map<String, Long>
 
     /**
      * 应用云端增量。返回无法映射进本地结构的实体（隔离区），引擎汇总进 PullSummary。

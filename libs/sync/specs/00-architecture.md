@@ -3,7 +3,11 @@
 - **状态**：已实现 v0.1.0（2026-09-20，contract + bitable 49 单测全绿；按计划未接入任何应用）。与 v2 设计稿的偏差见 §「实现状态」
 - **上游依据**：wardrobe [it-002 调研](../../../wardrobe/specs/iterations/it-002-feishu-bitable-sync.md)
 
-## 0. 实现状态（v0.1.0 与设计稿的偏差）
+## 0. 实现状态（v0.1.0；2026-09-20 二轮 review 已精简）
+
+**精简记录（零消费方/投机性 API，按需再加）**：`PullCursor` 增量游标（v1 全量对账用不上，`pull(since)` 参数与 `nextCursor` 一并移除）、`ConflictPolicy` 接口与 `SyncPolicy`（唯一策略 LWW 内联引擎）、`SyncState.Working` 的 progress/total 计数、`PendingOpQueue` 接口（单实现，直接用具体类 `FilePendingOpQueue`）、`AttachmentMeta`（附件只留 ref）、`RawRejection`（与 `Rejected` 合并）、`connect` 的 Result 包装（统一为抛出 + state=Failed）。`CollectionAdapter` 的 `localIds+localUpdatedAt` 合并为一次 `localVersions(): Map<String, Long>`。
+
+**与 v2 设计稿的其他偏差**：
 
 - 模块结构：`contract/` + `bitable/` 两个 Gradle 子模块（未设 backends/ 子目录与 android 模块；OkHttp 依赖在 bitable）。
 - 草案的 `TableMapping<E>` 落地为 **`CollectionAdapter`**：引擎只说 `SyncEntity`（映射全部在 app 侧），附件经 `attachmentsFor()/onPushed()` 钩子两段式处理（取代 AttachmentSlot 泛型）。

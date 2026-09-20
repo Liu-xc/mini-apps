@@ -16,10 +16,9 @@ interface SyncSource {
     suspend fun connect(config: SyncConfig, collections: List<SyncCollection>)
 
     /**
-     * 拉取一个集合。v1 全量语义：返回云端全部实体（引擎负责对账 diff）。
-     * 云端行无法解析为 SyncValue 时进 [PullResult.rejected]，不中断整体。
+     * 拉取一个集合（v1 全量语义：返回云端全部实体，引擎负责对账 diff）。
      */
-    suspend fun pull(collection: SyncCollection, since: PullCursor? = null): PullResult
+    suspend fun pull(collection: SyncCollection): PullResult
 
     /**
      * 推送一批操作：upserts 全量行覆盖（记录级 LWW），removes 物理删除。
@@ -34,13 +33,7 @@ interface SyncSource {
     suspend fun fetchAttachment(ref: String): ByteArray
 }
 
-data class PullResult(
-    val entities: List<SyncEntity>,
-    val nextCursor: PullCursor? = null,
-    val rejected: List<RawRejection> = emptyList(),
-)
-
-data class RawRejection(val recordId: String?, val reason: String)
+data class PullResult(val entities: List<SyncEntity>)
 
 data class PushResult(
     val applied: List<String>,

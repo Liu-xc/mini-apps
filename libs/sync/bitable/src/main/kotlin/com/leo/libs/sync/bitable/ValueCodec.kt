@@ -49,7 +49,7 @@ object ValueCodec {
         is SyncValue.Options -> JsonArray(value.values.map { JsonPrimitive(it) })
         is SyncValue.JsonText -> JsonPrimitive(value.raw)
         is SyncValue.Attachment ->
-            if (value.ref.startsWith(LOCAL_REF_PREFIX)) JsonArray(emptyList())
+            if (value.ref.startsWith(com.leo.libs.sync.LOCAL_REF_PREFIX)) JsonArray(emptyList())
             else JsonArray(listOf(JsonObject(mapOf("file_token" to JsonPrimitive(value.ref)))))
     }
 
@@ -99,14 +99,7 @@ object ValueCodec {
     private fun decodeObject(o: JsonObject): SyncValue {
         val token = o["file_token"]?.jsonPrimitive?.contentOrNull
         return if (token != null) {
-            SyncValue.Attachment(
-                ref = token,
-                meta = com.leo.libs.sync.AttachmentMeta(
-                    name = o["name"]?.jsonPrimitive?.contentOrNull,
-                    sizeBytes = o["size"]?.jsonPrimitive?.longOrNull,
-                    mimeType = o["mimeType"]?.jsonPrimitive?.contentOrNull,
-                ),
-            )
+            SyncValue.Attachment(ref = token)
         } else {
             SyncValue.JsonText(o.toString())
         }
@@ -116,5 +109,4 @@ object ValueCodec {
     fun joinTextSegments(a: JsonArray): String =
         a.mapNotNull { (it as? JsonObject)?.get("text")?.jsonPrimitive?.contentOrNull }.joinToString("")
 
-    const val LOCAL_REF_PREFIX = "local:"
 }

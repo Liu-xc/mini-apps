@@ -1,7 +1,5 @@
 package com.leo.libs.sync.bitable
 
-import com.leo.libs.sync.AttachmentMeta
-import com.leo.libs.sync.PullCursor
 import com.leo.libs.sync.PullResult
 import com.leo.libs.sync.PushResult
 import com.leo.libs.sync.SyncCollection
@@ -79,7 +77,7 @@ class BitableSource(
         }
     }
 
-    override suspend fun pull(collection: SyncCollection, since: PullCursor?): PullResult {
+    override suspend fun pull(collection: SyncCollection): PullResult {
         val tableId = tableIdOf(collection)
         ensureFieldTypesLoaded(tableId)
         val types = fieldTypes.getValue(tableId)
@@ -190,7 +188,7 @@ class BitableSource(
             data["file_token"]?.jsonPrimitive?.contentOrNull
                 ?: throw SyncException(SyncError.Unknown(0, detail = "上传未返回 file_token"))
         }
-        return SyncValue.Attachment(ref = token, meta = AttachmentMeta(name = name, sizeBytes = bytes.size.toLong()))
+        return SyncValue.Attachment(ref = token)
     }
 
     override suspend fun fetchAttachment(ref: String): ByteArray {

@@ -33,17 +33,8 @@ sealed interface SyncOp {
     ) : SyncOp
 }
 
-interface PendingOpQueue {
-    suspend fun enqueue(op: SyncOp)
-    suspend fun all(): List<SyncOp>
-    suspend fun upsertsOf(collection: String): List<SyncOp.Upsert>
-    /** 移除指定操作（成功确认 / 冲突放弃）；按 (collection, entityId) 匹配 */
-    suspend fun acknowledge(ops: List<SyncOp>)
-    suspend fun clear()
-}
-
-/** JSON 文件持久化实现：原子写（tmp→rename），崩溃安全 */
-class FilePendingOpQueue(private val file: File) : PendingOpQueue {
+/** JSON 文件持久化的待推队列：原子写（tmp→rename），崩溃安全 */
+class FilePendingOpQueue(private val file: File) {
 
     private val json = Json { ignoreUnknownKeys = true }
     private val serializer = ListSerializer(SyncOp.serializer())
@@ -60,7 +51,7 @@ class FilePendingOpQueue(private val file: File) : PendingOpQueue {
         file.parentFile?.mkdirs()
         val tmp = File(file.parentFile, "${file.name}.tmp")
         tmp.writeText(json.encodeToString(serializer, ops))
-        if (!tmp.renameTo(file)) java.io.IOException("pending queue 原子替换失败").let { throw it }
+        if (!tmp.renameTo(file)) throw java.io.IOException("pending queue 原子替换失败")
     }
 
     private suspend fun mutate(transform: (List<SyncOp>) -> List<SyncOp>) = locked {
@@ -69,25 +60,26 @@ class FilePendingOpQueue(private val file: File) : PendingOpQueue {
         next
     }
 
-    override suspend fun enqueue(op: SyncOp) {
+    suspend fun enqueue(op: SyncOp) {
         mutate { ops ->
             val rest = ops.filterNot { it.collection == op.collection && it.entityId == op.entityId }
             rest + op
         }
     }
 
-    override suspend fun all(): List<SyncOp> = locked { readDisk() }
+    suspend fun all(): List<SyncOp> = locked { readDisk() }
 
-    override suspend fun upsertsOf(collection: String): List<SyncOp.Upsert> =
+    suspend fun upsertsOf(collection: String): List<SyncOp.Upsert> =
         all().filterIsInstance<SyncOp.Upsert>().filter { it.collection == collection }
 
-    override suspend fun acknowledge(ops: List<SyncOp>) {
+    /** 移除指定操作（成功确认 / 冲突放弃）；按 (collection, entityId) 匹配 */
+    suspend fun acknowledge(ops: List<SyncOp>) {
         if (ops.isEmpty()) return
         val keys = ops.map { it.collection to it.entityId }.toSet()
         mutate { list -> list.filterNot { (it.collection to it.entityId) in keys } }
     }
 
-    override suspend fun clear() {
+    suspend fun clear() {
         mutate { emptyList() }
     }
 }

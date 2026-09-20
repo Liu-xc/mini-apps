@@ -3,12 +3,15 @@
 - **状态**：已实现 v0.1.0（2026-09-20 落地并接入 wardrobe，20 单测全绿）。与 v1 设计稿的偏差见 §「实现状态」
 - **参考实现**：wardrobe it-001 数据层（JsonFileStore / ImageFileStore / SSOT 快照 / zip 导出，15 个 JVM 单测已验证）——本 SDK 是它的通用化抽取，不是全新设计
 
-## 0. 实现状态（v0.1.0 与设计稿的偏差）
+## 0. 实现状态（v0.1.0；2026-09-20 二轮 review 已精简）
+
+**精简记录（零消费方/投机性 API，按需再加）**：BackupCodec（zip 备份编解码）、`MediaStore.sweep()/list()`、`loadDetailed()/LoadOutcome`（恢复来源枚举）、`decode()`（外部字节解码）。保留的核心面：`load()/commit()`、迁移链、`SsotRepository`（writeHook）、`put/read/delete/file`。
+
+**与 v1 设计稿的其他偏差**：
 
 - **单模块落地**（未拆 core/android）：`MediaStore` 接口与 `FileMediaStore` 都在 core；图片编解码归 app 注入（wardrobe 的 ImageFileStore 负责 WebP/EXIF），因此不需要 android 模块。
 - API 定名：`Migration(fromVersion){transform}` 迁移链；`LoadOutcome.Loaded(source, migratedFrom)/DefaultUsed`；组合缝命名 `writeHook`。
 - `MediaStore.file()` 返回文件句柄不校验存在性（读取用 `read()`）；`put(bytes, ext, preferredName)`。
-- `BackupCodec` v1 仅 Replace 整包恢复；zip 条目 `snapshot.json` + `media/<name>`。
 - `load()` 为同步读（rename 原子性保证与并发 commit 安全），`commit()` 为 suspend + Mutex 串行。
 
 ## 1. 定位与目标
@@ -25,7 +28,7 @@ libs/store —— 本地半边：原子快照持久化 + 媒体文件 + 备份  
 |---|---|
 | 零业务概念 | 只认识「快照根类型 + 媒体文件」，不知道衣物/餐厅/剪贴板 |
 | 快照式而非数据库式 | 个人级数据规模（≤ 数千实体）用整文件快照：零 schema 迁移成本、备份直观、调试可读 |
-| 纯 Kotlin 核心 | 快照/迁移/备份逻辑 JVM 可测；图片压缩等平台能力注入 |
+| 纯 Kotlin 核心 | 快照/迁移逻辑 JVM 可测；图片压缩等平台能力注入 |
 | 行为兼容 | wardrobe 现有文件布局与行为不变，替换为 SDK 是纯抽取重构 |
 
 **非目标**：UI 偏好存储（DataStore<Preferences> 归各 app）、SQL/Room 引擎、整盘加密、多进程并发。
