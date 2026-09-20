@@ -26,3 +26,6 @@ captures/
 
 # ZCode 会话产物
 .zcode/
+
+# 应用发布包：仅本地分发，不入仓库
+dist/
