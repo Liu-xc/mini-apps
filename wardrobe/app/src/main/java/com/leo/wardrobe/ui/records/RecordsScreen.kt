@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.records
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,6 +133,8 @@ fun RecordsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(380.dp),
+                        circular = true,
+                        visibleStack = 5,
                         properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
                             stackedCardsOffset = 14.dp,
                             padding = 6.dp,
@@ -141,20 +144,52 @@ fun RecordsScreen(
                     }
                     deck = controller
                     drawing = controller.isDrawing
-                    // it-011 C1：卡序常驻，可滑动可视
-                    val idx = (deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex)
-                    androidx.compose.material3.Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 3.dp,
+                    // it-011 C1：卡序常驻，可滑动可视；it-015 修订二：两侧 ‹ › 双向循环翻张
+                    Row(
                         modifier = Modifier.align(Alignment.TopCenter),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            "‹ ${idx + 1}/${filtered.size} ›",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = editorialColors().ink,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                        )
+                        androidx.compose.material3.Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 3.dp,
+                        ) {
+                            Text(
+                                "‹",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = editorialColors().ink,
+                                modifier = Modifier
+                                    .clickable { controller.previous() }
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                            )
+                        }
+                        androidx.compose.material3.Surface(
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 3.dp,
+                            modifier = Modifier.padding(horizontal = 6.dp),
+                        ) {
+                            Text(
+                                "‹ ${(deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex) + 1}/${filtered.size} ›",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = editorialColors().ink,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                            )
+                        }
+                        androidx.compose.material3.Surface(
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 3.dp,
+                        ) {
+                            Text(
+                                "›",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = editorialColors().ink,
+                                modifier = Modifier
+                                    .clickable { controller.next() }
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                            )
+                        }
                     }
                 }
 

@@ -39,3 +39,9 @@ class CardDeckController<T> {
 
 各应用 `settings.gradle.kts`：`includeBuild("../libs/carddeck")`；
 依赖：`implementation("com.leo.libs:carddeck:0.1.0")`（composite build 坐标替换）。
+
+## 修订（2026-09-21，消费方反馈）：双向循环 + 堆叠上限
+
+- 循环：`circular`（默认 true）——手势滑走末张后 `setCurrentIndex(0)` 自动回首张，修复库原生「滑到末尾卡组清空」（it-003 遗留）；`previous()` 在首张前回绕至末张。
+- 双向：`previous()`/`next()` 程序化双向；手势往回翻依赖库原生 `canSwipeBack = index > 0`（首张的手势回翻不可用，用 ‹ 按钮/程序化补足）。
+- 堆叠上限：`visibleStack` 参数透传库 `visibleCardsInStack`（数据可远多于堆叠数，轮播展示）。
