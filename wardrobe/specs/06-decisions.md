@@ -114,3 +114,9 @@
 - **决策**（2026-09-20）：新增 `WishItem`（照片可选、url/price、purchasedAt/purchasedItemId 回链）与 `WishOutfit`（itemIds+wishItemIds 双段引用、previewImages，不变量=至少一件愿望单品）。W1 槽位以 `wish:` 前缀伪 Item 混入（asSlotItem 适配，下游长图/文案/拼贴统一按 Item 处理、isWishSlot 判定）；含愿望件的组合存心愿穿搭而非 Outfit，导出面板「收藏」对心愿组合置灰。转正（purchaseWishItem）与一键升级（promoteWishOutfit，previewImages→effectImages）在 Repository 单事务内完成联动。存储 wishItems[]/wishOutfits[] 缺字段反序列化空表，不 bump schemaVersion。
 - **理由**：独立实体让 Outfit 下游（打卡 WearLog/回顾统计/收藏去重）零改动零过滤；伪 Item 适配让混入预览复用全部既有渲染管线；可保存的心愿组合满足「反复预览」的核心诉求（Leo 拍板）。
 - **后果**：伪 Item id 需在持久化边界处防御（WishOutfit 引用清洗、createOutfit 的无效 id 过滤已有）；心愿域与正式衣橱的语义边界靠 UI（角标/置灰/「仅预览」文案）与不变量共同维护。
+
+## ADR-021 首个公开 release 版本对齐：0.5.0（versionCode 5）（发布）
+- **背景**：gradle versionName 一直停在 0.1.0，而 CHANGELOG 已按 [0.4.x-itXXX] 记到 it-010；首个对外发布若沿用 0.1.0 会与历史版本序列冲突。
+- **决策**（2026-09-21）：release 版本对齐 CHANGELOG 序列，取 0.5.0（versionCode 5，1+it-011~019 迭代数）；发布渠道为 GitHub Releases（tag `wardrobe-v0.5.0`），APK 用 debug keystore 本地 apksigner 签名（个人分发，无正式 keystore；后续若上应用市场再换正式签名并升 versionCode）。eats 同日首发，序列从 0.1.0 起。
+- **理由**：版本号与既有 CHANGELOG 连续，用户可从版本号定位迭代；发布签名策略如实记录避免误以为有正式签名体系。
+- **后果**：debug 包与 release 包签名不同，覆盖安装需先卸载；换正式 keystore 时属破坏性变更需再次记录。
