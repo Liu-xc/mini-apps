@@ -55,6 +55,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toast(msg: String?) { _toast.value = msg?.let { ToastAction(it) } }
 
+    /**
+     * it-009：写路径统一兜底——失败 Log + toast（quiet 时仅 Log），成功提示可选。
+     * 内存快照回滚由 libs/store 的 commit 序列天然承担（commit 抛异常则快照不赋值）。
+     */
+    private fun launchSafely(
+        okToast: String? = null,
+        failToast: String = "操作失败",
+        quiet: Boolean = false,
+        block: suspend () -> Unit,
+    ) = viewModelScope.launch {
+        try {
+            block()
+            okToast?.let(::toast)
+        } catch (t: Throwable) {
+            android.util.Log.e("Eats", "viewModel write failed", t)
+            if (!quiet) toast("$failToast：${t.message ?: t.javaClass.simpleName}")
+        }
+    }
+
     val data: StateFlow<EatsData> = repo.data
 
     /** 转盘过滤配置（跨启动保留，specs/04 状态与导航） */
@@ -105,7 +124,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         onDone: (Boolean) -> Unit,
     ) {
         if (name.isBlank()) { toast("名称必填"); onDone(false); return }
-        viewModelScope.launch {
+        launchSafely(failToast = "保存失败") {
             val imported = newPhotoUris.mapNotNull { container.imageStore.importFromUri(it) }
             val p = Place(
                 id = existing?.id ?: newId(),
@@ -132,21 +151,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deletePlace(id: String) = viewModelScope.launch {
-        repo.deletePlace(id)
-        toast("食堂及其记录已删除")
-    }
+    fun deletePlace(id: String) = launchSafely(okToast = "食堂及其记录已删除") { repo.deletePlace(id) }
 
     /** 种草 / 取消种草（W5 详情操作） */
-    fun setWish(placeId: String, wished: Boolean) = viewModelScope.launch {
-        val place = repo.data.value.places.firstOrNull { it.id == placeId } ?: return@launch
+    fun setWish(placeId: String, wished: Boolean) = launchSafely {
+        val place = repo.data.value.places.firstOrNull { it.id == placeId } ?: return@launchSafely
         repo.upsertPlace(place.copy(wishlistedAt = if (wished) System.currentTimeMillis() else null))
         toast(if (wished) "已种草 🌟" else "已取消种草")
     }
 
     /** 安排到某天 / 清除安排（W5 详情操作，it-008 阶段C） */
-    fun setPlan(placeId: String, planAt: Long?) = viewModelScope.launch {
-        val place = repo.data.value.places.firstOrNull { it.id == placeId } ?: return@launch
+    fun setPlan(placeId: String, planAt: Long?) = launchSafely {
+        val place = repo.data.value.places.firstOrNull { it.id == placeId } ?: return@launchSafely
         repo.upsertPlace(place.copy(planAt = planAt))
         toast(if (planAt != null) "已安排，到时提醒你" else "已清除安排")
     }
@@ -162,7 +178,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         newPhotoUris: List<String>,
         onDone: (Boolean) -> Unit,
     ) {
-        viewModelScope.launch {
+        launchSafely(failToast = "落账失败") {
             val imported = newPhotoUris.mapNotNull { container.imageStore.importFromUri(it) }
             repo.addVisit(
                 Visit(
@@ -182,7 +198,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (place != null && oldWish != null) {
                 repo.upsertPlace(place.copy(wishlistedAt = null))
                 _toast.value = ToastAction("落账 ✓ 已移出愿望清单", "撤销") {
-                    viewModelScope.launch {
+                    launchSafely(quiet = true) {
                         repo.data.value.places.firstOrNull { it.id == placeId }?.let {
                             repo.upsertPlace(it.copy(wishlistedAt = oldWish))
                         }
@@ -195,10 +211,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteVisit(id: String) = viewModelScope.launch {
-        repo.deleteVisit(id)
-        toast("已删除这条记录")
-    }
+    fun deleteVisit(id: String) = launchSafely(okToast = "已删除这条记录") { repo.deleteVisit(id) }
 
     // ---- 统计回顾（it-007） ----
 
@@ -209,7 +222,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val isDemo: Boolean get() = container.isDemo
 
     fun setReminder(enabled: Boolean, days: Int) {
-        viewModelScope.launch {
+        launchSafely {
             container.recapPrefs.set(enabled, days)
             if (!container.isDemo) {
                 ReminderScheduler.sync(getApplication(), enabled)
@@ -217,20 +230,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消） */
+    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消）；失败仅记日志 */
     fun syncReminderSchedule() {
-        viewModelScope.launch {
+        launchSafely(quiet = true) {
             val prefs = container.recapPrefs.snapshot()
             ReminderScheduler.sync(getApplication(), prefs.enabled && !container.isDemo)
         }
     }
 
     fun generateRecap(range: RecapRange, now: Long, onReady: (Bitmap?) -> Unit) {
-        viewModelScope.launch {
+        launchSafely(failToast = "长图生成失败") {
             val stats = repo.data.value.recap(range, now)
             if (!stats.hasData) {
                 onReady(null)
-                return@launch
+                return@launchSafely
             }
             val label = when (val r = range) {
                 is RecapRange.Year -> "${r.year}"

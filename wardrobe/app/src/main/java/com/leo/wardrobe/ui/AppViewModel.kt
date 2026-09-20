@@ -60,6 +60,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toast(msg: String?) { _toast.value = msg }
 
+    /**
+     * it-020：写路径统一兜底——失败 Log + toast（quiet 时仅 Log），成功提示可选。
+     * 内存快照回滚由 libs/store 的 commit 序列天然承担（commit 抛异常则快照不赋值）。
+     */
+    private fun launchSafely(
+        okToast: String? = null,
+        failToast: String = "操作失败",
+        quiet: Boolean = false,
+        block: suspend () -> Unit,
+    ) = viewModelScope.launch {
+        try {
+            block()
+            okToast?.let(::toast)
+        } catch (t: Throwable) {
+            android.util.Log.e("Wardrobe", "viewModel write failed", t)
+            if (!quiet) toast("$failToast：${t.message ?: t.javaClass.simpleName}")
+        }
+    }
+
     val data: StateFlow<WardrobeData> = repo.data
 
     val currentPerson: StateFlow<Person?> =
@@ -74,7 +93,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     init {
-        viewModelScope.launch { repo.ensureDefaultPerson() }
+        launchSafely { repo.ensureDefaultPerson() }
     }
 
     fun switchPerson(id: String) {
@@ -127,37 +146,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ---- Person ----
-    fun addPerson(name: String, emoji: String) = viewModelScope.launch {
+    fun addPerson(name: String, emoji: String) = launchSafely {
         val p = repo.addPerson(name, emoji)
-        switchPerson(p.id)
+        prefs.setCurrentPerson(p.id)
         toast("已创建 ${p.emoji} ${p.name} 的衣橱")
     }
 
-    fun updatePerson(id: String, name: String, emoji: String) = viewModelScope.launch {
-        repo.updatePerson(id, name, emoji)
-    }
+    fun updatePerson(id: String, name: String, emoji: String) = launchSafely { repo.updatePerson(id, name, emoji) }
 
     /** it-017：形象参考照（photoFile 为已导入文件名；换照/移除的旧文件清理在 Repository） */
-    fun setPersonRefPhoto(id: String, photoFile: String) = viewModelScope.launch {
-        try {
-            repo.setPersonRefPhoto(id, photoFile)
-            toast("形象参考照已设置")
-        } catch (t: Throwable) {
-            android.util.Log.e("Wardrobe", "setPersonRefPhoto failed", t)
-            toast("设置失败：${t.message ?: t.javaClass.simpleName}")
-        }
-    }
+    fun setPersonRefPhoto(id: String, photoFile: String) =
+        launchSafely(okToast = "形象参考照已设置", failToast = "设置失败") { repo.setPersonRefPhoto(id, photoFile) }
 
-    fun removePersonRefPhoto(id: String) = viewModelScope.launch {
-        repo.removePersonRefPhoto(id)
-        toast("形象参考照已移除")
-    }
+    fun removePersonRefPhoto(id: String) =
+        launchSafely(okToast = "形象参考照已移除") { repo.removePersonRefPhoto(id) }
 
-    fun deletePerson(id: String) = viewModelScope.launch {
+    fun deletePerson(id: String) = launchSafely(okToast = "角色及其衣物已删除") {
         repo.deletePerson(id)
-        val fallback = repo.data.value.persons.firstOrNull()
-        if (fallback != null) prefs.setCurrentPerson(fallback.id)
-        toast("角色及其衣物已删除")
+        repo.data.value.persons.firstOrNull()?.let { prefs.setCurrentPerson(it.id) }
     }
 
     // ---- Item ----
@@ -184,9 +190,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 删除本会话产生的临时图片文件（换照片/退出/保存后的清理） */
+    /** 删除本会话产生的临时图片文件（换照片/退出/保存后的清理；失败仅记日志） */
     fun deletePhotoFile(name: String) {
-        viewModelScope.launch { container.imageStore.delete(name) }
+        launchSafely(quiet = true) { container.imageStore.delete(name) }
     }
 
     /** photoFile 为已落盘的图片文件名（选择时即导入）；编辑时为 null 表示沿用旧照片 */
@@ -224,10 +230,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteItem(id: String) = viewModelScope.launch {
-        repo.deleteItem(id)
-        toast("已删除")
-    }
+    fun deleteItem(id: String) = launchSafely(okToast = "已删除") { repo.deleteItem(id) }
 
     // ---- Outfit ----
 
@@ -239,8 +242,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 保存当前组合为穿搭（去重）：已存在则复用（有新标签时更新），不重复创建 */
     fun saveOutfitDedup(itemIds: List<String>, tags: List<String> = emptyList(), existing: Outfit? = null) {
-        viewModelScope.launch {
-            val person = currentPerson.value ?: return@launch
+        launchSafely {
+            val person = currentPerson.value ?: return@launchSafely
             val found = existing ?: data.value.outfitWithItems(person.id, itemIds)
             if (found != null) {
                 if (tags.isNotEmpty() && tags.toSet() != found.tags.toSet()) {
@@ -256,59 +259,53 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** ☆收藏：按当前组合创建穿搭（US-08，保留旧入口兼容） */
     fun createOutfit(itemIds: List<String>, tags: List<String>, onDone: (Outfit?) -> Unit = {}) =
-        viewModelScope.launch {
-            val person = currentPerson.value ?: return@launch
+        launchSafely {
+            val person = currentPerson.value ?: return@launchSafely
             val o = repo.createOutfit(person.id, itemIds, tags)
             toast("已收藏这套穿搭")
             onDone(o)
         }
 
-    fun deleteOutfit(id: String) = viewModelScope.launch {
-        repo.deleteOutfit(id)
-        toast("已删除穿搭")
-    }
+    fun deleteOutfit(id: String) = launchSafely(okToast = "已删除穿搭") { repo.deleteOutfit(id) }
 
-    fun updateOutfitTags(id: String, tags: List<String>) = viewModelScope.launch {
+    fun updateOutfitTags(id: String, tags: List<String>) = launchSafely {
         repo.data.value.outfitById(id)?.let { repo.updateOutfit(it.copy(tags = tags.distinct())) }
     }
 
     /** 导入成品图并挂到穿搭（US-09）；outfit 为 null 时先按 items 创建 */
     fun importEffectImage(outfit: Outfit?, itemIds: List<String>, uri: Uri) {
-        viewModelScope.launch {
+        launchSafely {
             val target = outfit ?: run {
-                val person = currentPerson.value ?: return@launch
+                val person = currentPerson.value ?: return@launchSafely
                 repo.createOutfit(person.id, itemIds)
             }
             val file = container.imageStore.importFromUri(uri.toString())
-            if (file == null) { toast("图片导入失败"); return@launch }
+            if (file == null) { toast("图片导入失败"); return@launchSafely }
             repo.addEffectImage(target.id, file)
             toast("成品图已录入")
         }
     }
 
-    fun removeEffectImage(outfitId: String, file: String) = viewModelScope.launch {
-        repo.removeEffectImage(outfitId, file)
-    }
+    fun removeEffectImage(outfitId: String, file: String) = launchSafely { repo.removeEffectImage(outfitId, file) }
 
     // ---- Note ----
-    fun addNote(parentType: NoteParent, parentId: String, text: String) = viewModelScope.launch {
-        if (text.isBlank()) return@launch
+    fun addNote(parentType: NoteParent, parentId: String, text: String) = launchSafely {
+        if (text.isBlank()) return@launchSafely
         repo.addNote(parentType, parentId, text)
     }
 
-    fun deleteNote(id: String) = viewModelScope.launch { repo.deleteNote(id) }
+    fun deleteNote(id: String) = launchSafely { repo.deleteNote(id) }
 
     // ---- 穿搭打卡（it-018 阶段A） ----
 
     /** 打卡：今天穿了这套（同日多套允许，再点即再记一次） */
-    fun checkinOutfit(outfitId: String) = viewModelScope.launch {
-        runCatching { repo.addWearLog(outfitId, System.currentTimeMillis()) }
-            .onSuccess { toast("已打卡，今天也穿得好看") }
-            .onFailure { toast("打卡失败：${it.message ?: it.javaClass.simpleName}") }
-    }
+    fun checkinOutfit(outfitId: String) =
+        launchSafely(okToast = "已打卡，今天也穿得好看", failToast = "打卡失败") {
+            repo.addWearLog(outfitId, System.currentTimeMillis())
+        }
 
     /** 撤销今日对该穿搭的全部打卡 */
-    fun undoTodayWear(outfitId: String) = viewModelScope.launch {
+    fun undoTodayWear(outfitId: String) = launchSafely(okToast = "已撤销今日打卡") {
         val zone = java.time.ZoneId.systemDefault()
         val today = java.time.LocalDate.now()
         repo.deleteWearLogsOf(
@@ -316,7 +313,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             today.atStartOfDay(zone).toInstant().toEpochMilli(),
             today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
         )
-        toast("已撤销今日打卡")
     }
 
     // ---- 统计回顾（it-018） ----
@@ -329,7 +325,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val isDemo: Boolean get() = container.isDemo
 
     fun setReminder(enabled: Boolean, days: Int) {
-        viewModelScope.launch {
+        launchSafely {
             container.recapPrefs.set(enabled, days)
             if (!container.isDemo) {
                 com.leo.wardrobe.platform.ReminderScheduler.sync(getApplication(), enabled)
@@ -337,9 +333,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消） */
+    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消）；失败仅记日志 */
     fun syncReminderSchedule() {
-        viewModelScope.launch {
+        launchSafely(quiet = true) {
             val prefs = container.recapPrefs.snapshot()
             com.leo.wardrobe.platform.ReminderScheduler.sync(
                 getApplication(),
@@ -350,13 +346,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 生成年终衣橱长图（按当前角色），写 export 目录返回文件；空打卡数据返回 null */
     fun generateRecap(range: WardrobeRecapRange, now: Long, onReady: (File?) -> Unit) {
-        viewModelScope.launch {
+        launchSafely(failToast = "长图生成失败") {
             val person = currentPerson.value ?: run {
-                onReady(null); return@launch
+                onReady(null); return@launchSafely
             }
             val stats = data.value.wardrobeRecap(person.id, range, now)
             if (!stats.hasWearData) {
-                onReady(null); return@launch
+                onReady(null); return@launchSafely
             }
             val label = when (val r = range) {
                 is WardrobeRecapRange.Year -> "${r.year}"
@@ -397,10 +393,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         photoFile: String?,
         onDone: (Boolean) -> Unit,
     ) {
-        viewModelScope.launch {
+        launchSafely(failToast = "保存失败") {
             val person = currentPerson.value ?: repo.ensureDefaultPerson()
             val file = photoFile ?: existing?.imageFile
-            if (name.isBlank()) { toast("名称必填"); onDone(false); return@launch }
+            if (name.isBlank()) { toast("名称必填"); onDone(false); return@launchSafely }
             val w = WishItem(
                 id = existing?.id ?: newId(),
                 personId = existing?.personId ?: person.id,
@@ -426,10 +422,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteWishItem(id: String) = viewModelScope.launch {
-        repo.deleteWishItem(id)
-        toast("已删除这条心愿")
-    }
+    fun deleteWishItem(id: String) = launchSafely(okToast = "已删除这条心愿") { repo.deleteWishItem(id) }
 
     /**
      * 已买到 → 转正：创建正式 Item（photoFile 可空时沿用商品图）+ 回填购入记录；
@@ -477,9 +470,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 保存当前混搭组合为心愿穿搭（去重：已存在则提示，不重复创建） */
     fun saveWishOutfit(itemIds: List<String>, wishItemIds: List<String>, tags: List<String> = emptyList()) {
-        viewModelScope.launch {
-            val person = currentPerson.value ?: return@launch
-            if (wishItemIds.isEmpty()) return@launch
+        launchSafely {
+            val person = currentPerson.value ?: return@launchSafely
+            if (wishItemIds.isEmpty()) return@launchSafely
             if (data.value.wishOutfitWithMembers(person.id, itemIds, wishItemIds) != null) {
                 toast("这套已在心愿穿搭中")
             } else {
@@ -489,15 +482,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteWishOutfit(id: String) = viewModelScope.launch {
-        repo.deleteWishOutfit(id)
-        toast("已删除心愿穿搭")
-    }
+    fun deleteWishOutfit(id: String) = launchSafely(okToast = "已删除心愿穿搭") { repo.deleteWishOutfit(id) }
 
-    /** 心愿穿搭详情「→ 去预览」：恢复组合到各槽位并开启混入开关 */
+    /** 心愿穿搭详情「→ 去预览」：恢复组合到各槽位并开启混入开关；失败仅记日志 */
     fun restoreWishOutfitToSlots(wishOutfit: WishOutfit) {
         val person = currentPerson.value ?: return
-        viewModelScope.launch {
+        launchSafely(quiet = true) {
             wishOutfit.itemIds.forEach { id ->
                 data.value.itemById(id)?.let { prefs.saveSlotSelection(person.id, it.category, it.id) }
             }
@@ -510,27 +500,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 导入上身预览图（生图回录，挂到心愿穿搭） */
     fun importPreviewImage(wishOutfitId: String, uri: Uri) {
-        viewModelScope.launch {
+        launchSafely {
             val file = container.imageStore.importFromUri(uri.toString())
-            if (file == null) { toast("图片导入失败"); return@launch }
+            if (file == null) { toast("图片导入失败"); return@launchSafely }
             repo.addPreviewImage(wishOutfitId, file)
             toast("上身预览图已录入")
         }
     }
 
-    fun removePreviewImage(wishOutfitId: String, file: String) = viewModelScope.launch {
-        repo.removePreviewImage(wishOutfitId, file)
-    }
+    fun removePreviewImage(wishOutfitId: String, file: String) = launchSafely { repo.removePreviewImage(wishOutfitId, file) }
 
     /** 一键升级：全部愿望件买齐后转正式穿搭 */
-    fun promoteWishOutfit(id: String) = viewModelScope.launch {
-        try {
-            repo.promoteWishOutfit(id)
-            toast("已升级为正式穿搭 👗")
-        } catch (t: Throwable) {
-            toast("升级失败：${t.message ?: t.javaClass.simpleName}")
-        }
-    }
+    fun promoteWishOutfit(id: String) =
+        launchSafely(okToast = "已升级为正式穿搭 👗", failToast = "升级失败") { repo.promoteWishOutfit(id) }
 
     // ---- 便捷查询 ----
     fun itemsOfPerson(): List<Item> =
