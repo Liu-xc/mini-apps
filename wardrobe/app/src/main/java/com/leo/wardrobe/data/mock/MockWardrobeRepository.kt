@@ -76,6 +76,9 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
                     (n.parentType == NoteParent.OUTFIT && n.parentId in outfitIds)
             },
             wearLogs = _data.value.wearLogs.filterNot { l -> l.personId == id },
+            // it-020：心愿域级联，与 WardrobeRepositoryImpl 对齐（此前演示模式漂移）
+            wishItems = _data.value.wishItems.filterNot { w -> w.personId == id },
+            wishOutfits = _data.value.wishOutfits.filterNot { w -> w.personId == id },
         )
     }
 
@@ -94,6 +97,8 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
             items = _data.value.items.filterNot { it.id == id },
             outfits = _data.value.outfits.map { o -> o.copy(itemIds = o.itemIds - id) },
             notes = _data.value.notes.filterNot { it.parentType == NoteParent.ITEM && it.parentId == id },
+            // it-020：从心愿穿搭的已有件部分移除，与 WardrobeRepositoryImpl 对齐
+            wishOutfits = _data.value.wishOutfits.map { w -> w.copy(itemIds = w.itemIds - id) },
         )
     }
 

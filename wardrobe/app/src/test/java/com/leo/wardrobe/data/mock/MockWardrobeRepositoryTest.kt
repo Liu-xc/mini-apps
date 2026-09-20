@@ -67,4 +67,23 @@ class MockWardrobeRepositoryTest {
         val o = repo.createOutfit("p1", listOf("it1", "it13"), emptyList())
         assertEquals(listOf("it1"), o.itemIds)
     }
+
+    // it-020：与 WardrobeRepositoryImpl 的级联语义锁定一致（此前 Mock 漂移：缺心愿域级联）
+    @Test
+    fun `删除角色级联心愿域`() = runTest {
+        val repo = MockWardrobeRepository()
+        repo.deletePerson("p1")
+        val d = repo.data.value
+        assertTrue(d.wishItems.none { it.personId == "p1" })
+        assertTrue(d.wishOutfits.none { it.personId == "p1" })
+    }
+
+    @Test
+    fun `删除单品从心愿穿搭已有件移除`() = runTest {
+        val repo = MockWardrobeRepository()
+        repo.deleteItem("it8")
+        val d = repo.data.value
+        assertTrue(d.wishOutfits.none { "it8" in it.itemIds })
+        assertTrue(d.wishOutfits.any { it.id == "wo1" })
+    }
 }
