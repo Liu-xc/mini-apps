@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>吃啥 × 衣橱 · 第二轮评审 · UX 评审报告 · 2026-09-20</title>
+<style>
+@page { size: 210mm 297mm; margin: 0; }
+html, body { margin: 0; padding: 0; width: 210mm; background: #F7F8FA;
+  font-family: "Hiragino Sans GB","PingFang SC","Heiti SC",sans-serif;
+  color: #1D2129; line-break: strict; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { box-sizing: border-box; }
+.page { width: 210mm; height: 297mm; overflow: hidden; position: relative;
+  padding: 12mm 14mm 10mm; background: #F7F8FA; break-after: page;
+  display: flex; flex-direction: column; }
+.page:last-child { break-after: auto; }
+img { display: block; }
+.cover { padding: 18mm 16mm 16mm; background: #FFFFFF; }
+.cover .kicker { font-size: 10pt; letter-spacing: 3pt; color: #86909C; font-weight: 600; }
+.cover .hairline { width: 30mm; height: 0; border-top: 0.7mm solid #2F6BFF; margin-top: 7mm; }
+.cover h1 { font-size: 40pt; font-weight: 800; letter-spacing: 1pt; margin: 24mm 0 0; }
+.cover h1.mid { font-size: 34pt; margin-top: 30mm; }
+.cover .sub { font-size: 14pt; color: #4E5969; margin-top: 7mm; }
+.cover .summary { font-size: 10.5pt; line-height: 1.75; color: #4E5969; margin-top: 20mm; width: 104mm; }
+.cover .phones { display: flex; gap: 6mm; margin-left: auto; margin-top: auto; }
+.cover .phone { width: 34mm; height: 75.6mm; border: 0.5mm solid #C9CDD4; border-radius: 4.5mm;
+  padding: 2.2mm; background: #FFFFFF; }
+.cover .phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 2.5mm; }
+.cover .meta { display: flex; gap: 10mm; font-size: 9.5pt; color: #86909C;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 6mm; margin-top: 12mm; }
+.cover .meta b { color: #1D2129; font-weight: 600; }
+.phead { display: flex; align-items: baseline; gap: 4mm; border-bottom: 0.45mm solid #E5E6EB;
+  padding-bottom: 3.5mm; margin-bottom: 4mm; }
+.phead .no { font-size: 13pt; font-weight: 800; color: #2F6BFF; }
+.phead .t { font-size: 14.5pt; font-weight: 700; }
+.phead .sev { margin-left: auto; font-size: 8.5pt; color: #86909C; }
+.pfoot { display: flex; font-size: 8pt; color: #A9AEB8;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 2.5mm; margin-top: auto; }
+.concl { font-size: 10pt; line-height: 1.65; margin: 0 0 4mm; }
+.problems { display: flex; flex-wrap: wrap; gap: 1.6mm 4mm; margin-bottom: 4.5mm; }
+.prob { width: calc(50% - 2mm); font-size: 8.8pt; line-height: 1.5; color: #4E5969; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; color: #fff; border-radius: 1.2mm;
+  padding: 0.3mm 1.6mm; margin-right: 1.6mm; vertical-align: 0.3mm; }
+.tag.p0 { background: #F53F3F; } .tag.p1 { background: #FF7D00; } .tag.p2 { background: #86909C; }
+.shots { display: flex; gap: 6mm; align-items: flex-start; flex: 1; }
+.shotcol { width: 76mm; }
+.shotcol img { width: 76mm; height: 168.9mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; background: #fff; }
+.shotlabel { display: flex; align-items: center; gap: 2mm; margin-top: 2.2mm; font-size: 9pt; font-weight: 700; }
+.shotlabel .dot { width: 2.6mm; height: 2.6mm; border-radius: 50%; }
+.d-now { background: #F53F3F; } .d-new { background: #2F6BFF; }
+.shotlabel span.cap { font-weight: 400; color: #86909C; font-size: 8pt; margin-left: auto; }
+.points { flex: 1; display: flex; flex-direction: column; gap: 2.6mm; }
+.pt { font-size: 8.8pt; line-height: 1.5; color: #4E5969; }
+.pt .n { display: inline-flex; width: 5mm; height: 5mm; border-radius: 50%; background: #2F6BFF;
+  color: #fff; font-size: 8pt; font-weight: 700; align-items: center; justify-content: center;
+  margin-right: 1.8mm; vertical-align: -1mm; }
+table { border-collapse: collapse; width: 100%; }
+th { font-size: 9pt; text-align: left; color: #86909C; font-weight: 600;
+  border-bottom: 0.45mm solid #C9CDD4; padding: 2mm 2.5mm; }
+td { font-size: 9.3pt; line-height: 1.5; padding: 1.9mm 2.5mm; border-bottom: 0.3mm solid #E5E6EB;
+  vertical-align: top; }
+td.c { text-align: center; }
+.h2 { font-size: 13pt; font-weight: 800; margin: 4.5mm 0 2.5mm; }
+.h2:first-child { margin-top: 0; }
+.lead { font-size: 10pt; line-height: 1.75; color: #4E5969; }
+.statrow { display: flex; gap: 5mm; margin: 5mm 0; }
+.stat { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 4mm; }
+.stat .v { font-size: 22pt; font-weight: 800; color: #2F6BFF; }
+.stat .l { font-size: 8.5pt; color: #86909C; margin-top: 1mm; }
+.mrow { display: flex; gap: 4mm; margin: 2mm 0; }
+.mcard { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 3.5mm; }
+.mcard b { font-size: 9.5pt; display: block; margin-bottom: 1.5mm; }
+.mcard p { margin: 0; font-size: 8.6pt; line-height: 1.6; color: #4E5969; }
+.appendix-shot { display: flex; gap: 5mm; }
+.appendix-shot .acol { flex: 1; text-align: center; }
+.appendix-shot img { width: 39.6mm; height: 68mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2mm; margin: 0 auto; }
+.appendix-shot .cap { font-size: 7.5pt; color: #86909C; margin-top: 1.5mm; line-height: 1.45; }
+</style></head>
+<body>
+<section class="page cover">
+  <div class="kicker">UX REVIEW</div>
+  <div class="hairline"></div>
+  <h1>吃啥 × 衣橱 · 第二轮评审</h1>
+  <div class="sub">落地回归 · 次生问题 · 打磨清单</div>
+  <div class="summary">上一轮 13 项 P0 全部落地（it-004/it-011）后的复审：先逐项回归确认无回退，再以同标准（Airbnb/Things/Linear）对落地后的界面重新评审。结论：旧 P0 零复发；本轮新发现 P0×1（it-011 自己引入的长按删除零可发现性）、P1×17、P2×13，集中在三类：新交互的可发现性、改版引入的次生问题（筛选溢出/双拼贴语言/导出记忆竞态 bug）、落地细节的打磨。</div>
+  <div class="phones"><div class="phone"><img src="assets/eats-02-drawn.png" alt=""></div><div class="phone"><img src="assets/wardrobe-03-records.png" alt=""></div><div class="phone"><img src="assets/wardrobe-08-export.png" alt=""></div></div>
+  <div class="meta">
+    <span>日期 <b>2026-09-20</b></span><span>范围 <b>2 应用 · 15 页面（+8 过程态）</b></span>
+    <span style="margin-left:auto">蓝色徽标与改版要点编号对应</span>
+  </div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">00</span><span class="t">总评 · 方法与共性问题</span></div>
+  <p class="lead">上一轮 13 项 P0 全部落地（it-004/it-011）后的复审：先逐项回归确认无回退，再以同标准（Airbnb/Things/Linear）对落地后的界面重新评审。结论：旧 P0 零复发；本轮新发现 P0×1（it-011 自己引入的长按删除零可发现性）、P1×17、P2×13，集中在三类：新交互的可发现性、改版引入的次生问题（筛选溢出/双拼贴语言/导出记忆竞态 bug）、落地细节的打磨。</p>
+  <div class="statrow"><div class="stat"><div class="v">13/13</div><div class="l">上轮 P0 回归通过</div></div><div class="stat"><div class="v">1</div><div class="l">本轮新 P0</div></div><div class="stat"><div class="v">17</div><div class="l">本轮 P1</div></div><div class="stat"><div class="v">9</div><div class="l">新实测项</div></div></div>
+  <div class="h2">评审方法</div>
+  <div class="mrow"><div class="mcard"><b>实机截图走查</b><p>Pixel 6 画像模拟器装最新构建（7a9482f 后），15 页 + 8 过程态（筛选弹层/长按删除/导出展开/键盘态等）</p></div><div class="mcard"><b>视觉模型逐页评审</b><p>14 页逐页对标严格评审 + 7 张改版线框 contact-sheet 自检</p></div><div class="mcard"><b>交互实测验证</b><p>uiautomator 断言 9 项（含 2 项撤销视觉误报：地图瓦片、详情末条遮挡）+ 源码核对导出记忆竞态</p></div></div>
+  <div class="h2">跨应用共性问题（优先修）</div>
+  <table>
+    <tr><th style="width:9mm">#</th><th>问题</th><th style="width:36mm">涉及页面</th>
+        <th style="width:12mm">级别</th><th style="width:52mm">修法（对应线框）</th></tr>
+    <tr><td class='c'><b>N1</b></td><td>长按删除零可发现性（it-011 引入：滑动删除→长按迁移无提示）</td><td class='c'>R5</td><td class='c'><span class='tag p0'>P0</span></td><td>卡片右上 ··· 显式菜单（wf-01③）</td></tr><tr><td class='c'><b>N2</b></td><td>「筛选」chip 溢出屏外（Tab/chip 行无收纳上限；R5 实测，E1 隐患）</td><td class='c'>R5 · E1</td><td class='c'><span class='tag p1'>P1</span></td><td>品类纯图标行 + 筛选固定行尾（wf-01①②）</td></tr><tr><td class='c'><b>N3</b></td><td>同页两套拼贴语言（卡组 BodyCollage vs 网格 2×2）</td><td class='c'>R3</td><td class='c'><span class='tag p1'>P1</span></td><td>网格缩略统一人形拼贴（wf-02①）</td></tr><tr><td class='c'><b>N4</b></td><td>表单保存栏三细节：键盘缝隙 / 按钮宽度 / 红字错误感</td><td class='c'>E7 · R7</td><td class='c'><span class='tag p1'>P1</span></td><td>全宽实心 + 中性提示色 + imePadding 收缝（wf-07②）</td></tr><tr><td class='c'><b>N5</b></td><td>照片必填区视觉重量低（R7 无空预览占位，第一步不显性）</td><td class='c'>R7</td><td class='c'><span class='tag p1'>P1</span></td><td>大虚线预览占位「拍照 · 第一步」（wf-07①）</td></tr><tr><td class='c'><b>N6</b></td><td>衬纸 Fit 的代价：扁槽内照片小、浅色衣物与衬纸对比低</td><td class='c'>R1 · R5 · R6</td><td class='c'><span class='tag p2'>P2</span></td><td>鞋槽改专用宽幅或保留裁切白边</td></tr><tr><td class='c'><b>回归</b></td><td>上轮 13 项 P0 逐项回归：全部在位无回退（落定按钮/‹n/m›/键盘避让/导航不被顶飞/吸底两态/三色图例/回位/BodyCollage/首屏动作/✓使用中/两列网格/衬纸/筛选弹层）</td><td class='c'>全部</td><td class='c'><span class='tag ✓'>✓</span></td><td>无需，回归通过</td></tr>
+  </table>
+  <div class="pfoot"><span>总评</span><span style="margin-left:auto">2</span></div>
+</section>
+<section class="page cover">
+  <div class="kicker">PART 01</div>
+  <div class="hairline"></div>
+  <h1 class="mid">吃啥 · EATS</h1>
+  <div class="sub">3 个页面 · 现状与改版线框对照</div>
+  <div class="phones"><div class="phone"><img src="assets/eats-01-home.png" alt=""></div><div class="phone"><img src="assets/eats-05-detail.png" alt=""></div><div class="phone"><img src="assets/eats-07b-form-ready-keyboard.png" alt=""></div></div>
+  <div class="meta"><span>UX 评审报告 · 2026-09-20</span><span style="margin-left:auto">3</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">E1</span><span class="t">吃啥 · 首页（卡组浏览）</span>
+    <span class="sev">P1×2 P2×2</span></div>
+  <p class="concl">上轮三项 P0 全部落地且回归通过；本轮剩打磨：筛选入口与类型 chip 视觉同质、卡片信息密度高、胶囊贴卡顶。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>「筛选」chip 与类型 chips 同形同规格，混在行尾易被当成第四个类型（行尾位置）</div><div class="prob"><span class="tag p1">P1</span>卡片信息密度高：链接 chip、#标签、两个按钮争抢卡面下半部，主操作「记一笔」不突出（卡内中下部）</div><div class="prob"><span class="tag p2">P2</span>‹ 1/9 › 卡序胶囊压在卡组顶缘上，与后卡露边轻微重叠（卡组顶部居中）</div><div class="prob"><span class="tag p2">P2</span>后卡露边约一张厚度，可滑动暗示还能更强（卡组底部）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/eats-01-home.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-03-eats-home.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>「筛选」改描边 AssistChip + 漏斗前缀，与类型 chip 视觉分离</div><div class="pt"><span class="n">2</span>胶囊上移出卡面，不再压后卡露边</div><div class="pt"><span class="n">3</span>多链接收一行「美团 · 招牌套餐 ›」；卡内只留一个主操作，详情/链接去详情页</div></div>
+  </div>
+  <div class="pfoot"><span>吃啥 · UX 评审报告</span><span style="margin-left:auto">4</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">E2</span><span class="t">吃啥 · 首页（抽取落定）</span>
+    <span class="sev">P1×2 P2×1</span></div>
+  <p class="concl">闭环已修（按钮常驻屏内，实测 y=1958）；但高潮时刻重心偏上，下半屏空、动作行与结果块两处并立。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>结果块停在屏幕中段，与底部导航之间大片留白，视觉重心偏上、CTA 不沉底（结果块下方）</div><div class="prob"><span class="tag p1">P1</span>落定态同屏存在两处动作区：结果块内「就吃这个/再抽」+ 底部原「随机抽/换一张」行语义重复（底部）</div><div class="prob"><span class="tag p2">P2</span>彩屑一闪即逝（~1.2s），高潮氛围停留短（结果块上方，上轮遗留半项）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/eats-02-drawn.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-04-eats-drawn.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>卡组收拢幅度加大（顶部只留一小截），让位给结果块</div><div class="pt"><span class="n">2</span>结果块下移贴底（与导航留 12dp），按钮沉底成为唯一动作区</div><div class="pt"><span class="n">3</span>落定态隐藏底部原动作行，确认/再抽是唯一入口；彩屑环绕延长停留</div></div>
+  </div>
+  <div class="pfoot"><span>吃啥 · UX 评审报告</span><span style="margin-left:auto">5</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">E7</span><span class="t">吃啥 · 表单（吸底保存两态）</span>
+    <span class="sev">P1×3</span></div>
+  <p class="concl">吸底两态已落地（未就绪原因/就绪实心，实测随键盘上移）；剩三处细节打磨，与衣橱 R7 同构（共性 N4）。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>保存栏与键盘间有 8-12dp 缝隙，像悬浮而非贴合（键盘态，底栏下缘）</div><div class="prob"><span class="tag p1">P1</span>就绪后按钮只占行宽 ~60%，主 CTA 重量不足（吸底栏右侧）</div><div class="prob"><span class="tag p1">P1</span>「位置：长按地图选点」入口与普通输入框无差异，可点性弱（表单中部）——it-001 遗留</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/eats-07b-form-ready-keyboard.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-07-form.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>照片必填给大预览占位（本页无照片字段，线框以衣橱表单示意同模式）</div><div class="pt"><span class="n">2</span>就绪态按钮全宽实心；未就绪提示改中性灰（主动点击禁用按钮时才红）</div><div class="pt"><span class="n">3</span>两 App 表单共用同一两态规范（与 R7 一次改完）</div></div>
+  </div>
+  <div class="pfoot"><span>吃啥 · UX 评审报告</span><span style="margin-left:auto">6</span></div>
+</section>
+<section class="page cover">
+  <div class="kicker">PART 02</div>
+  <div class="hairline"></div>
+  <h1 class="mid">衣橱 · WARDROBE</h1>
+  <div class="sub">4 个页面 · 现状与改版线框对照</div>
+  <div class="phones"><div class="phone"><img src="assets/wardrobe-01-outfit.png" alt=""></div><div class="phone"><img src="assets/wardrobe-05-wardrobe.png" alt=""></div><div class="phone"><img src="assets/wardrobe-08-export.png" alt=""></div></div>
+  <div class="meta"><span>UX 评审报告 · 2026-09-20</span><span style="margin-left:auto">7</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">R5</span><span class="t">衣橱 · 衣橱列表（两列网格）</span>
+    <span class="sev">P0×1 P1×3</span></div>
+  <p class="concl">网格化落地、首屏 4-6 卡达成；但 it-011 把滑动删除改长按后零提示（本轮唯一新 P0），「筛选」chip 被品类 Tab 挤出屏外（实测）。</p>
+  <div class="problems"><div class="prob"><span class="tag p0">P0</span>长按删除零可发现性：滑动删除→长按迁移后，界面无任何手势提示，功能在但用户找不到（全页）——上轮 C1 的翻版</div><div class="prob"><span class="tag p1">P1</span>「筛选」chip 溢出屏外：品类 Tab 10 枚 chips 占满，需横滑才能看到筛选入口，角标提醒失效（Tab 行末尾，实测实锤）</div><div class="prob"><span class="tag p1">P1</span>「全部」下品类小节标题打断两列节奏：单件品类也占一整行（「帽子 1」等，网格区）</div><div class="prob"><span class="tag p1">P1</span>颜色与 #标签 以「·」混排在名称下，属性与标签语义不分（卡片底部）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/wardrobe-05-wardrobe.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-01-wardrobe-list.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>品类 Tab 改纯图标单行（9+1 一屏放下），筛选常驻行尾不再溢出</div><div class="pt"><span class="n">2</span>筛选固定行尾可见，角标才有效</div><div class="pt"><span class="n">3</span>卡片右上 ··· 显式菜单 = 编辑/删除，替代零提示长按（P0 修法）</div><div class="pt"><span class="n">4</span>去小节标题（按品类序排）；颜色改色块胶囊，与 #标签 分离</div></div>
+  </div>
+  <div class="pfoot"><span>衣橱 · UX 评审报告</span><span style="margin-left:auto">8</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">R3</span><span class="t">衣橱 · 穿搭记录卡组</span>
+    <span class="sev">P1×1 P2×2</span></div>
+  <p class="concl">BodyCollage 人形拼贴 + 「未配鞋」空槽叙事已成立；但同页下方网格还是旧 2×2 拼贴——一页两种语言（it-011 只改了卡面没改缩略）。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>网格缩略沿用 2×2 罗列拼贴，与卡组的人形拼贴不一致；「未配鞋」的叙事在缩略里消失（下方网格，源码核对 OutfitThumb）</div><div class="prob"><span class="tag p2">P2</span>人形轮廓淡底与卡面白底对比度低，轮廓感弱（拼贴区）</div><div class="prob"><span class="tag p2">P2</span>网格缩略尺寸下拼贴细节难辨，只起计数作用（网格区）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/wardrobe-03-records.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-02-records.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>网格缩略与卡组同一套迷你人形拼贴（含空槽），一页一种语言</div></div>
+  </div>
+  <div class="pfoot"><span>衣橱 · UX 评审报告</span><span style="margin-left:auto">9</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">R4</span><span class="t">衣橱 · 穿搭详情</span>
+    <span class="sev">P1×2 P2×1</span></div>
+  <p class="concl">拼贴主视觉 + 单品行可点（实测直达）已落地；角标按钮与空槽语义打架、导出入口两套名字是新问题。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>「＋录入成品图」角标紧贴「未配鞋」空槽，易读成「点击补配鞋」（拼贴右下）</div><div class="prob"><span class="tag p1">P1</span>「复制素材」与搭配页「复制长图」是同一面板两个名字，术语不统一（操作区）</div><div class="prob"><span class="tag p2">P2</span>衬纸内照片 3dp padding 细缝，照片略「浮」（拼贴内）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/wardrobe-04-record-detail.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-06-record-detail.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>角标移到拼贴右上，远离空槽语义区</div><div class="pt"><span class="n">2</span>「复制素材」更名「复制长图」，与 W1 一套词</div></div>
+  </div>
+  <div class="pfoot"><span>衣橱 · UX 评审报告</span><span style="margin-left:auto">10</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">R8</span><span class="t">衣橱 · 导出面板</span>
+    <span class="sev">P1×3 P2×1</span></div>
+  <p class="concl">首屏即达已达成（预览+复制在顶）；三个次生问题：预览窗口只见头部、展开四维把「只复制文本」推出屏（实测）、维度记忆竞态 bug（实测+源码）。</p>
+  <div class="problems"><div class="prob"><span class="tag p1">P1</span>预览固定 300dp 高，长图只见头部，复制前无法预期全貌（预览区）</div><div class="prob"><span class="tag p1">P1</span>展开四维后「只复制文本」下移出屏，次高频路径被折叠区挤走（实测实锤）</div><div class="prob"><span class="tag p1">P1</span>维度选择记忆竞态：恢复逻辑只认首个非空值，DataStore 未就绪即被丢弃——杀进程重开实测未恢复（ExportSheet 源码核对）</div><div class="prob"><span class="tag p2">P2</span>折叠条「已选 N」计数未高亮、下箭头展开暗示弱（折叠条）</div></div>
+  <div class="shots">
+    <div class="shotcol"><img src="assets/wardrobe-08-export.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="assets/wf-05-export.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points"><div class="pt"><span class="n">1</span>预览高度自适应（≈屏高一半），长图全貌可期</div><div class="pt"><span class="n">2</span>复制/分享/只复制文本三动作钉在预览下，展开维度也不再下移</div><div class="pt"><span class="n">3</span>折叠条选中计数徽标高亮；恢复逻辑改「合并非空才置 init」修竞态</div></div>
+  </div>
+  <div class="pfoot"><span>衣橱 · UX 评审报告</span><span style="margin-left:auto">11</span></div>
+</section>
+
+<section class="page">
+  <div class="phead"><span class="no">＋</span><span class="t">其余页面 · 轻问题清单</span>
+    <span class="sev">P1×7 · P2×12（无结构改动，随迭代顺手修）</span></div>
+  <p class="lead">以下 8 个页面本轮无 P0、无结构级改版（上轮修复全部回归通过），问题以文案/间距/对比度为主，不配线框。</p>
+  <table>
+    <tr><th style="width:26mm">页面</th><th>问题（分级）</th></tr>
+    <tr><td style="width:26mm"><b>E3 地图</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p2">P2</span>首开瓦片加载延迟（4s 内空白，10s 正常）；图例/回位常驻遮挡少量地图内容；marker 仅色相区分（色弱不友好）</div><div class="prob"><span class="tag p2">P2</span>图例可点筛选（当前只读）；摘要卡菜系行已补（上轮 P1 已修）</div></div></td></tr><tr><td style="width:26mm"><b>E4 列表</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>搜索框 placeholder「搜名称 / 菜系」末尾截断（工具条左侧）</div><div class="prob"><span class="tag p2">P2</span>排序/筛选纯图标按钮无边框差异；FAB 与导航间距偏小；「未评分」与星级行右列不齐</div></div></td></tr><tr><td style="width:26mm"><b>E4b 筛选弹层</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>「类型」分组与「标签」分组间距小，扫读易混；「清除筛选/完成」主次视觉接近</div><div class="prob"><span class="tag p2">P2</span>「⌖未定位」前缀符号依赖字体渲染（本机正常，跨机型风险）</div></div></td></tr><tr><td style="width:26mm"><b>E5 详情</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>统计行「综合★·均分·n次·上次」字号小且密，扫读不如星级直观</div><div class="prob"><span class="tag p2">P2</span>hero 与标题区硬切无过渡；「在地图上看 ↗」链接感弱；双底栏（吸底+导航）占屏 12%</div></div></td></tr><tr><td style="width:26mm"><b>E6 记一笔</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>键盘态弹层可视区拥挤（感想/照片被压缩）；落账按钮与键盘零间距</div><div class="prob"><span class="tag p2">P2</span>键盘弹出时弹层顶部可能触顶；照片区在键盘态可折叠</div></div></td></tr><tr><td style="width:26mm"><b>R1 搭配页</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>品类徽标与 ‹n/n› 序号双胶囊同形分居两角，含义不同样式无差异</div><div class="prob"><span class="tag p2">P2</span>鞋槽 aspect 2.6 下 Fit 照片过小；帽卡两侧空白未利用；按钮内 emoji 基线不齐</div></div></td></tr><tr><td style="width:26mm"><b>R2 角色弹层</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>「✓使用中」贴行末，与角色名视线距离远</div><div class="prob"><span class="tag p2">P2</span>选中底色浅（低亮度屏可能不显）；行高略挤</div></div></td></tr><tr><td style="width:26mm"><b>R6 衣物详情</b></td><td><div class="problems" style="margin:0"><div class="prob"><span class="tag p1">P1</span>相关穿搭卡去掉日期后信息量偏薄（改版代价）</div><div class="prob"><span class="tag p2">P2</span>横版衣物在 0.8 比例衬纸内上下留白多；大标题与 label 行风格略跳</div></div></td></tr>
+  </table>
+  <div class="pfoot"><span>轻问题清单</span><span style="margin-left:auto">12</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">→</span><span class="t">落地拆分建议</span></div>
+  <p class="lead">按仓库迭代流程确认后动工；先修共性问题（功能在但用户够不着/猜不到），再修各 App 核心体验。</p>
+  <div class="h2">eats / it-005 · 落地打磨</div><table><tr><th style="width:14mm">线框</th><th>内容</th><th style="width:22mm">对应</th></tr><tr><td class='c'>O1'</td><td>落定重心下沉：结果块贴底 + 隐藏原动作行 + 彩屑延长（E2）</td><td class='c'>E2</td></tr><tr><td class='c'>O2'</td><td>首页筛选 AssistChip 差异化 + 多链接收一行 + 胶囊出卡面（E1）</td><td class='c'>E1</td></tr><tr><td class='c'>O3'</td><td>搜索 placeholder 缩短 + 保存栏三细节 + 位置选点入口样式（E4 · E7）</td><td class='c'>E4 · E7</td></tr></table><div class="h2">wardrobe / it-012 · 可发现性补课与导出收口</div><table><tr><th style="width:14mm">线框</th><th>内容</th><th style="width:22mm">对应</th></tr><tr><td class='c'>O4'</td><td>长按删除改 ··· 菜单 + 品类纯图标 Tab + 筛选固定（R5，P0）</td><td class='c'>R5</td></tr><tr><td class='c'>O5'</td><td>网格拼贴统一 + 去小节标题 + 颜色胶囊（R3 · R5）</td><td class='c'>R3 · R5</td></tr><tr><td class='c'>O6'</td><td>导出三修：预览自适应 / 动作钉住 / 记忆竞态 bug（R8）</td><td class='c'>R8</td></tr><tr><td class='c'>O7'</td><td>角标移位 + 「复制长图」统一命名 + 表单照片占位（R4 · R7）</td><td class='c'>R4 · R7</td></tr></table>
+  <div class="pfoot"><span>落地拆分</span><span style="margin-left:auto">13</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">A</span><span class="t">附录 · 交互实测记录与资产</span></div>
+  <div class="h2">实测验证（uiautomator / 源码核对）</div>
+  <table><tr><th style="width:34mm">项目</th><th>结论</th></tr><tr><td><b>回归 · 上轮 13 项 P0</b></td><td>逐项在位无回退：落定按钮 y=1958、卡序胶囊三处且随翻张更新（‹1/9›→‹2/3›）、键盘避让（落账 1507/保存 1365/导航 2297）、三色图例+回位、BodyCollage 空槽、导出首屏、✓使用中、两列网格、衬纸、筛选弹层</td></tr><tr><td><b>R5 · 筛选 chip 溢出</b></td><td>实锤：品类 Tab 10 chips，横滑后才见「筛选」（截图 wardrobe-05x）</td></tr><tr><td><b>R8 · 只复制文本出屏</b></td><td>实锤：展开四维后 dump 无该按钮节点</td></tr><tr><td><b>R8 · 维度记忆持久</b></td><td>失效：杀进程重开 prompt 无已选维度；源码核对为 init 竞态 bug</td></tr><tr><td><b>撤销 · 地图瓦片空白</b></td><td>视觉首报 P0；重开 10s 复验瓦片正常，降 P2 首开延迟</td></tr><tr><td><b>撤销 · 详情末条被遮</b></td><td>视觉报 P1；实测末条底 1665 &lt; 吸底栏顶 2149，完整可见</td></tr></table>
+  <div class="h2">实证截图</div>
+  <div class="appendix-shot"><div class="acol"><img src="assets/wardrobe-05x-tab-scrolled.png" alt=""><div class="cap">品类 Tab 横滑后才露出筛选 chip（N2 实锤）</div></div><div class="acol"><img src="assets/wardrobe-05c-longpress-delete.png" alt=""><div class="cap">长按弹删除确认：功能在、入口无任何提示（N1，P0）</div></div><div class="acol"><img src="assets/eats-03-map-recheck.png" alt=""><div class="cap">地图瓦片复验正常，撤销视觉误报 P0</div></div></div>
+  <div class="h2">资产清单</div>
+  <p class="lead" style="font-size:9pt">现状截图与改版线框见 assets/ 目录；本报告由 report_template.py 生成，可改数据重出。</p>
+  <div class="pfoot"><span>附录</span><span style="margin-left:auto">14</span></div>
+</section></body></html>
