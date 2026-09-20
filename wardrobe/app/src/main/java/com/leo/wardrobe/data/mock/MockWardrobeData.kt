@@ -71,9 +71,11 @@ object MockWardrobeData {
         )
 
         val outfits = listOf(
-            outfit("o1", P1, listOf("it1", "it4", "it6", "it10", "it12"), listOf("通勤", "早秋"), 30,
+            // it-015 修订（Leo 反馈）：穿搭须符合季节常识——o1 改长袖衬衫配羽绒服（原短袖+羽绒服冲突）；
+            // 上身件数不必凑满：o3 = 夹克+连衣裙两件，o5 仅帽+项链的配饰组合
+            outfit("o1", P1, listOf("it3", "it4", "it6", "it10", "it12"), listOf("通勤", "秋冬"), 30,
                 effectFiles = listOf("demo_ScKZwuDUTUPRm5ljOa5KSKzyJB3BNB.webp", "demo_jNFNutQXA079LwSjmfwJeFsid37vkh.webp")),
-            outfit("o2", P1, listOf("it2", "it7", "it11"), listOf("运动"), 25,
+            outfit("o2", P1, listOf("it2", "it7", "it11"), listOf("运动", "夏"), 25,
                 effectFiles = listOf("demo_TyCXC2E7A9NTewf9im9kE67V4Mv7Rl.webp")),
             outfit("o3", P1, listOf("it5", "it9", "it10"), listOf("休闲", "度假"), 20),
             outfit("o4", P2, listOf("it13", "it14", "it16"), listOf("通勤"), 15,

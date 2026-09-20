@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.outfit
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -76,6 +78,8 @@ fun OutfitScreen(
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
+    // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
+    var addSheetCats by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
@@ -136,10 +140,15 @@ fun OutfitScreen(
 
     /**
      * 基于组合记忆（slotSel，落定值）推导当前组合（it-004）：
-     * 与 pager 注册时机解耦、随记忆变化响应式更新；记忆未覆盖时回退该品类第一件。
+     * it-015 修订（Leo）：组合只含「已加入的品类」——移除即清记忆、加入即写记忆，
+     * 不再对未加入品类回退第一件；上身件数由用户增删决定（夏天可只 1 件短袖）。
      */
-    val currentItemsFromMemory: List<Item> = catItems.entries.mapNotNull { (_, items) ->
-        items.firstOrNull { it.id == slotSel[it.category.name] } ?: items.firstOrNull()
+    val activeCategories: List<WardrobeCategory> = WardrobeCategory.entries.filter {
+        slotSel.containsKey(it.name) && catItems[it].orEmpty().isNotEmpty()
+    }
+    val currentItemsFromMemory: List<Item> = activeCategories.mapNotNull { c ->
+        val items = catItems[c].orEmpty()
+        items.firstOrNull { it.id == slotSel[c.name] } ?: items.firstOrNull()
     }
     val currentIdsFromMemory = currentItemsFromMemory.map { it.id }
     // it-019：当前组合中的愿望单品（剥前缀即真实 WishItem id）
@@ -156,6 +165,10 @@ fun OutfitScreen(
     } else {
         null
     }
+
+    /** 区内可添加的品类：尚未加入组合、且衣橱里有该品类衣物 */
+    fun addableCats(zone: List<WardrobeCategory>): List<WardrobeCategory> =
+        zone.filter { it !in activeCategories && catItems[it].orEmpty().isNotEmpty() }
 
     Column(Modifier.fillMaxSize()) {
         // 顶栏：角色名 + 随机一套
@@ -195,7 +208,7 @@ fun OutfitScreen(
                     scope.launch {
                         pagerStates.entries.toList()
                             .sortedBy { it.key.ordinal }
-                            .filter { it.value.pageCount > 1 }
+                            .filter { it.key in activeCategories && it.value.pageCount > 1 }
                             .forEachIndexed { index, (_, state) ->
                                 launch {
                                     delay(index * 100L)
@@ -220,7 +233,9 @@ fun OutfitScreen(
                 onAction = onAddItem,
             )
         } else {
-            // it-008 真人比例布局：头小 / 上身行全宽三卡 / 腿窄长（两侧挂件利用留白）/ 脚小扁
+            // it-015 修订（Leo）：每区只渲染已加入的品类格，件数由用户增删决定——
+            // 夏天上身可只 1 件短袖，冬天内搭+外套两件，不再固定每行三格；
+            // 区尾「＋」弹层添加品类（写入组合记忆），格底 ✕ 移除（清记忆）
             Column(
                 Modifier
                     .weight(1f)
@@ -230,40 +245,53 @@ fun OutfitScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // 头：帽子（小卡居中）
-                OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                    Modifier.fillMaxWidth(0.34f), aspect = 1f, coach = coachPhase)
-                Spacer(Modifier.height(8.dp))
-                // 上身行：外套 | 上装 | 连衣裙 全宽三等分（it-008：不再被挂件挤占）
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
+                if (activeCategories.isEmpty()) {
+                    // 组合为空：引导添加第一件
+                    Button(onClick = { addSheetCats = addableCats(WardrobeCategory.entries) }) {
+                        Text("＋ 添加单品")
+                    }
+                } else {
+                    // 头区：帽子
+                    ZoneRow(
+                        zone = listOf(WardrobeCategory.HAT), activeCats = activeCategories,
+                        catItems = catItems, pagerStates = pagerStates, vm = vm,
+                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                        coach = coachPhase,
+                        weightOf = { 1f }, aspectOf = { 1f },
+                        onAdd = { zone -> addSheetCats = addableCats(zone) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    // 上身区：外套 | 上装 | 连衣裙
+                    ZoneRow(
+                        zone = listOf(WardrobeCategory.OUTERWEAR, WardrobeCategory.TOP, WardrobeCategory.DRESS),
+                        activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
+                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                        coach = coachPhase,
+                        weightOf = { 1f }, aspectOf = { 0.78f },
+                        onAdd = { zone -> addSheetCats = addableCats(zone) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    // 腿行：包(左挂) | 下装（窄长） | 配饰(右挂)
+                    ZoneRow(
+                        zone = listOf(WardrobeCategory.BAG, WardrobeCategory.BOTTOM, WardrobeCategory.ACCESSORY),
+                        activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
+                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                        coach = coachPhase,
+                        weightOf = { if (it == WardrobeCategory.BOTTOM) 1.12f else 0.5f },
+                        aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.6f else 0.85f },
+                        onAdd = { zone -> addSheetCats = addableCats(zone) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    // 脚区：鞋
+                    ZoneRow(
+                        zone = listOf(WardrobeCategory.SHOES), activeCats = activeCategories,
+                        catItems = catItems, pagerStates = pagerStates, vm = vm,
+                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                        coach = coachPhase,
+                        weightOf = { 1f }, aspectOf = { 2.6f },
+                        onAdd = { zone -> addSheetCats = addableCats(zone) },
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-                // 腿行：包(左挂) | 下装（窄长，真人腿型） | 配饰(右挂)——挂件利用腿两侧留白
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(1.12f), aspect = 0.6f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                        Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
-                }
-                Spacer(Modifier.height(8.dp))
-                // 脚：鞋（小扁居中）
-                OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
-                    Modifier.fillMaxWidth(0.58f), aspect = 2.6f, coach = coachPhase)
             }
         }
 
@@ -327,6 +355,17 @@ fun OutfitScreen(
     if (showPersonSheet) {
         PersonSheet(vm = vm, onDismiss = { showPersonSheet = false })
     }
+    addSheetCats?.let { cats ->
+        AddSlotSheet(
+            cats = cats,
+            catItems = catItems,
+            onPick = { cat ->
+                catItems[cat]?.firstOrNull()?.let { vm.setSlot(cat, it.id) }
+                addSheetCats = null
+            },
+            onDismiss = { addSheetCats = null },
+        )
+    }
     exportItems?.let { items ->
         ExportSheet(
             vm = vm,
@@ -342,7 +381,90 @@ fun OutfitScreen(
 @Composable
 private fun PlaceholderPager(): PagerState = rememberPagerState(pageCount = { 0 })
 
-/** 人体布局的着装位卡片（it-005；it-011 O6 透传 coach；it-019 愿望卡路由） */
+/** 区行（it-015 修订）：渲染区内已加入的品类格 + 行尾「＋」添加钮（区内可加品类已尽时隐藏） */
+@Composable
+private fun ZoneRow(
+    zone: List<WardrobeCategory>,
+    activeCats: List<WardrobeCategory>,
+    catItems: Map<WardrobeCategory, List<Item>>,
+    pagerStates: Map<WardrobeCategory, PagerState>,
+    vm: AppViewModel,
+    onOpenItem: (String) -> Unit,
+    onAddItem: () -> Unit,
+    onOpenWishlist: () -> Unit,
+    coach: Boolean,
+    weightOf: (WardrobeCategory) -> Float,
+    aspectOf: (WardrobeCategory) -> Float,
+    onAdd: (List<WardrobeCategory>) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        zone.filter { it in activeCats }.forEach { cat ->
+            OutfitSlot(
+                category = cat,
+                catItems = catItems,
+                pagerStates = pagerStates,
+                vm = vm,
+                onOpenItem = onOpenItem,
+                onAddItem = onAddItem,
+                onOpenWishlist = onOpenWishlist,
+                modifier = Modifier.weight(weightOf(cat)),
+                aspect = aspectOf(cat),
+                coach = coach,
+                onRemove = { vm.setSlot(cat, null) },
+            )
+        }
+        if (zone.any { it !in activeCats && !catItems[it].orEmpty().isEmpty() }) {
+            androidx.compose.material3.FilledTonalIconButton(
+                onClick = { onAdd(zone) },
+                modifier = Modifier.size(40.dp),
+            ) {
+                Text("＋", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+/** 「添加单品」弹层（it-015 修订）：列出可加入的品类，点选即加入组合（默认第一件，格内可滑换） */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun AddSlotSheet(
+    cats: List<WardrobeCategory>,
+    catItems: Map<WardrobeCategory, List<Item>>,
+    onPick: (WardrobeCategory) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+        ) {
+            Text("添加单品", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
+            Spacer(Modifier.height(8.dp))
+            cats.forEach { cat ->
+                val n = catItems[cat]?.size ?: 0
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onPick(cat) }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(cat.label, style = MaterialTheme.typography.titleMedium, color = editorialColors().ink)
+                    Spacer(Modifier.weight(1f))
+                    Text("$n 件可选", style = MaterialTheme.typography.labelMedium, color = editorialColors().inkFaint)
+                }
+                androidx.compose.material3.HorizontalDivider(color = editorialColors().hairline)
+            }
+        }
+    }
+}
+
+/** 人体布局的着装位卡片（it-005；it-011 O6 透传 coach；it-019 愿望卡路由；it-015 修订透传移除） */
 @Composable
 private fun OutfitSlot(
     category: WardrobeCategory,
@@ -355,6 +477,7 @@ private fun OutfitSlot(
     modifier: Modifier = Modifier,
     aspect: Float = 0.8f,
     coach: Boolean = false,
+    onRemove: (() -> Unit)? = null,
 ) {
     SlotCell(
         category = category,
@@ -367,6 +490,7 @@ private fun OutfitSlot(
         modifier = modifier,
         aspect = aspect,
         coach = coach,
+        onRemove = onRemove,
     )
 }
 

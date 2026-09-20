@@ -59,6 +59,8 @@ fun SlotCell(
     modifier: Modifier = Modifier,
     aspect: Float = 0.8f,
     coach: Boolean = false,
+    /** it-015 修订：移除该格（非空时显示 ✕）；null = 不提供移除 */
+    onRemove: (() -> Unit)? = null,
 ) {
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
@@ -186,7 +188,7 @@ fun SlotCell(
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
-                        // 当前单品名（卡底遮罩条）
+                        // 当前单品名（卡底遮罩条）；右端 ✕ 移除该格（it-015 修订：增删能力）
                         Box(
                             Modifier
                                 .align(Alignment.BottomCenter)
@@ -202,8 +204,21 @@ fun SlotCell(
                                 color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                modifier = Modifier
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                                    .padding(end = if (onRemove != null) 30.dp else 0.dp),
                             )
+                            if (onRemove != null) {
+                                Text(
+                                    "✕",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                    modifier = Modifier
+                                        .align(Alignment.CenterEnd)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        .clickable { onRemove() },
+                                )
+                            }
                         }
                     }
                 }
