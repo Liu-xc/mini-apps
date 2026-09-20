@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +24,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -131,11 +134,42 @@ fun PlaceEditScreen(
                             Icon(Icons.Rounded.Delete, contentDescription = "删除食堂")
                         }
                     }
-                    TextButton(onClick = { doSave() }, enabled = !saving && name.isNotBlank()) {
-                        Text("保存", style = MaterialTheme.typography.titleSmall)
-                    }
                 },
             )
+        },
+        // it-004 O3：保存吸底两态——未就绪写明原因，就绪变实心；顶栏不再放保存
+        bottomBar = {
+            val ready = name.isNotBlank() && !saving
+            Surface(shadowElevation = 8.dp) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .imePadding()
+                        .navigationBarsPadding(),
+                ) {
+                    if (!ready) {
+                        Text(
+                            if (name.isBlank()) "填名称后可保存" else "保存中…",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = menuColors().inkFaint,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    if (ready) {
+                        Button(onClick = { doSave() }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (existing == null) "保存" else "更新", style = MaterialTheme.typography.titleMedium)
+                        }
+                    } else {
+                        OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (existing == null) "保存" else "更新")
+                        }
+                    }
+                }
+            }
         },
     ) { padding ->
         Column(
@@ -277,13 +311,7 @@ fun PlaceEditScreen(
                 minLines = 2,
             )
 
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = { doSave() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !saving,
-            ) { Text(if (existing == null) "保存" else "更新") }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp)) // 吸底保存栏下方留白（it-004 O3）
         }
     }
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -84,6 +85,7 @@ fun LogVisitSheet(
         Column(
             Modifier
                 .padding(horizontal = 20.dp)
+                .imePadding() // it-004 O4/C3：键盘弹起时落账按钮随之上移，永不被遮挡
                 .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

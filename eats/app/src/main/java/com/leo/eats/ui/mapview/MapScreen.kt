@@ -5,7 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +16,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.GpsFixed
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,6 +47,7 @@ import com.leo.eats.map.MapController
 import com.leo.eats.map.PlaceMarkerFactory
 import com.leo.eats.ui.AppViewModel
 import com.leo.eats.ui.components.KindChip
+import com.leo.eats.ui.components.label
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.RelativeTimeText
 import com.leo.eats.ui.theme.EatsMotion
@@ -138,23 +145,79 @@ fun MapScreen(
             },
         )
 
-        if (unlocatedCount > 0) {
+        // 吸顶：图例胶囊（it-004 O2：颜色含义自解释）+ 未上地图入口
+        Column(
+            Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = menuColors().surface,
                 shadowElevation = 4.dp,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 12.dp)
-                    .clickable { onShowNoLocation() },
             ) {
-                Text(
-                    "⌖ $unlocatedCount 条未上地图（自做等）→",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = menuColors().ink,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    PlaceKind.entries.forEach { k ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier
+                                    .size(9.dp)
+                                    .background(kindColor(k), androidx.compose.foundation.shape.CircleShape),
+                            )
+                            Text(
+                                " ${k.label}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = menuColors().ink,
+                            )
+                        }
+                    }
+                }
             }
+            if (unlocatedCount > 0) {
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = menuColors().surface,
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.clickable { onShowNoLocation() },
+                ) {
+                    Text(
+                        "⌖ $unlocatedCount 条未上地图（自做等）→",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = menuColors().ink,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
+
+        // 右上常驻「回位」：回到框住全部 marker 的初始视野（it-004 O2）
+        Surface(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = menuColors().surface,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 12.dp)
+                .clickable {
+                    val m = map ?: return@clickable
+                    if (located.isNotEmpty()) {
+                        selected = null
+                        fitTo(m, located)
+                    }
+                },
+        ) {
+            Icon(
+                Icons.Rounded.GpsFixed,
+                contentDescription = "回到全部食堂视野",
+                tint = menuColors().ink,
+                modifier = Modifier.padding(10.dp).size(20.dp),
+            )
         }
 
         AnimatedVisibility(
@@ -220,12 +283,29 @@ private fun PlaceSummaryCard(s: PlaceWithStats, onClick: () -> Unit, modifier: M
                     RatingStars(rating = s.place.rating, size = 14.dp)
                 }
                 Spacer(Modifier.height(4.dp))
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     RelativeTimeText(at = s.lastVisitAt)
                     Text(
                         " · 共 ${s.visitCount} 次",
                         style = MaterialTheme.typography.labelSmall,
                         color = menuColors().inkFaint,
+                    )
+                }
+                // it-004 O2：摘要卡信息补足（菜系/标签一行）
+                val meta = buildString {
+                    if (s.place.cuisine.isNotBlank()) append(s.place.cuisine)
+                    if (s.place.tags.isNotEmpty()) {
+                        if (isNotEmpty()) append(" · ")
+                        append(s.place.tags.take(3).joinToString(" ") { "#$it" })
+                    }
+                }
+                if (meta.isNotEmpty()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        meta,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = menuColors().inkFaint,
+                        maxLines = 1,
                     )
                 }
             }

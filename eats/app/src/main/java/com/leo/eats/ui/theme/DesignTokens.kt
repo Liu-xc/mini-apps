@@ -27,13 +27,13 @@ object EatsPalette {
     val AccentDark = Color(0xFF7BCD93)
     val HairlineDark = Color(0xFF263229)
 
-    // 类型语义色（marker / 图标 / 转盘扇区共用）：青绿 / 湖蓝 / 草绿
-    val Restaurant = Color(0xFF2E9C8A)
-    val Takeout = Color(0xFF4E9BD8)
-    val HomeCook = Color(0xFF8CBE4F)
-    val RestaurantDark = Color(0xFF5CC0AC)
-    val TakeoutDark = Color(0xFF7EB9E8)
-    val HomeCookDark = Color(0xFFB2D878)
+    // 类型语义色（marker / 图标 / 卡组共用）：it-004 回归 spec W2 基线 红/琥珀/绿，拉开色相
+    val Restaurant = Color(0xFFD25446)
+    val Takeout = Color(0xFFDA9A2B)
+    val HomeCook = Color(0xFF4C9E5F)
+    val RestaurantDark = Color(0xFFE58377)
+    val TakeoutDark = Color(0xFFE7B566)
+    val HomeCookDark = Color(0xFF86C795)
 }
 
 @Immutable

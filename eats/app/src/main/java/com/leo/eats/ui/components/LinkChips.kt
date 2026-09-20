@@ -75,14 +75,7 @@ fun LinkChips(
                         modifier = Modifier.padding(start = 6.dp),
                         maxLines = 1,
                     )
-                    Icon(
-                        Icons.AutoMirrored.Rounded.OpenInNew,
-                        contentDescription = "打开链接",
-                        tint = menuColors().inkFaint,
-                        modifier = Modifier
-                            .padding(start = 4.dp)
-                            .size(13.dp),
-                    )
+                    // it-004 E5-P2：chip 本身可点，去掉每条旁的「打开链接」辅助按钮
                     if (onRemove != null) {
                         Icon(
                             Icons.Rounded.Close,

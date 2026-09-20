@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -104,6 +105,19 @@ fun PlaceDetailScreen(
                 },
             )
         },
+        // it-004 O4：高频动作吸底常驻，不再被记录列表埋没
+        bottomBar = {
+            Surface(shadowElevation = 8.dp) {
+                Button(
+                    onClick = { showLogVisit = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                        .navigationBarsPadding()
+                        .height(52.dp),
+                ) { Text("＋ 记一笔今天吃了", style = MaterialTheme.typography.titleMedium) }
+            }
+        },
         ) { padding ->
         Column(
             Modifier
@@ -160,27 +174,30 @@ fun PlaceDetailScreen(
             }
             Spacer(Modifier.height(8.dp))
 
-            // 派生统计（ADR-008；次数数字滚动 it-002 R1）
+            // 派生统计（ADR-008；it-004 O4：一套口径——综合(用户评)/均分(记录均)/次数/上次）
             val animatedCount by animateIntAsState(stats.visitCount, label = "visitCount")
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                RatingStars(rating = place.rating, size = 16.dp)
-                Text("·", color = menuColors().inkFaint)
-                Text("上次 ", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
-                RelativeTimeText(at = stats.lastVisitAt, highlight = true)
-                Text("·", color = menuColors().inkFaint)
-                Text(
-                    "共 $animatedCount 次",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = menuColors().inkFaint,
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text("综合", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                RatingStars(rating = place.rating, size = 15.dp)
                 if (stats.avgVisitRating != null) {
-                    Text("·", color = menuColors().inkFaint)
                     Text(
                         "均分 %.1f".format(stats.avgVisitRating),
                         style = MaterialTheme.typography.labelMedium,
                         color = menuColors().accent,
                     )
                 }
+                Text("·", color = menuColors().inkFaint)
+                Text(
+                    "$animatedCount 次",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = menuColors().inkFaint,
+                )
+                Text("·", color = menuColors().inkFaint)
+                Text("上次 ", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                RelativeTimeText(at = stats.lastVisitAt, highlight = true)
             }
             Spacer(Modifier.height(10.dp))
 
@@ -237,14 +254,7 @@ fun PlaceDetailScreen(
                 Spacer(Modifier.height(8.dp))
             }
 
-            // 主操作（US-03）
-            Button(
-                onClick = { showLogVisit = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 8.dp),
-            ) { Text("＋ 记一笔今天吃了") }
-
+            // 主操作已移至吸底栏（it-004 O4）
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(color = menuColors().hairline)
             Spacer(Modifier.height(12.dp))

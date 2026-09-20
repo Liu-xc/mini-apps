@@ -10,12 +10,15 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,16 +29,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -43,6 +51,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -102,7 +111,7 @@ private val kindFilterOptions: List<Pair<KindFilter, String>> = listOf(
  * W3 列表页：搜索 + 类型/标签筛选 + 排序 + FAB。
  * it-002 R1：瀑布入场、滑动删除、行内共享元素、长按快速记一笔。
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun ListScreen(
     vm: AppViewModel,
@@ -128,6 +137,9 @@ fun ListScreen(
     }
 
     val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
+    val activeFilterCount =
+        (if (kindFilter != KindFilter.All) 1 else 0) + (if (tagFilter != null) 1 else 0)
+    var filterSheetOpen by remember { mutableStateOf(false) }
 
     val rows = remember(data, query, kindFilter, tagFilter, sort) {
         val filtered = data.statsOfAll().filter { s ->
@@ -171,66 +183,48 @@ fun ListScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     color = menuColors().ink,
                 )
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = { sortMenuOpen = true }) {
-                    Icon(Icons.Rounded.Sort, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("排序: ${sort.label}", style = MaterialTheme.typography.labelLarge)
-                }
-                DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
-                    ListSort.entries.forEach { s ->
-                        DropdownMenuItem(
-                            text = { Text(s.label) },
-                            onClick = { sort = s; sortMenuOpen = false },
-                        )
-                    }
-                }
             }
 
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                placeholder = { Text("搜索名称 / 菜系 / 笔记", style = MaterialTheme.typography.bodySmall) },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                singleLine = true,
-                shape = MaterialTheme.shapes.large,
-            )
-
+            // it-004 O5：单行工具条——搜索 / 排序 / 筛选（角标计数），首屏直达卡片列表
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp),
+                    .padding(horizontal = 20.dp)
+                    .imePadding(),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    "类型:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = menuColors().inkFaint,
-                    modifier = Modifier.padding(start = 20.dp),
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("搜名称 / 菜系", style = MaterialTheme.typography.bodySmall) },
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.large,
                 )
-                kindFilterOptions.forEach { (filter, label) ->
-                    FilterChip(
-                        selected = kindFilter == filter,
-                        onClick = { kindFilter = filter },
-                        label = { Text(label) },
-                        modifier = Modifier.padding(start = 6.dp),
-                    )
+                Box {
+                    FilledTonalIconButton(onClick = { sortMenuOpen = true }) {
+                        Icon(Icons.Rounded.Sort, contentDescription = "排序")
+                    }
+                    DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
+                        ListSort.entries.forEach { s ->
+                            DropdownMenuItem(
+                                text = { Text(if (sort == s) "✓ ${s.label}" else s.label) },
+                                onClick = { sort = s; sortMenuOpen = false },
+                            )
+                        }
+                    }
                 }
-            }
-
-            if (allTags.isNotEmpty()) {
-                FilterChipsRow(
-                    options = allTags,
-                    selected = tagFilter,
-                    onSelect = { tagFilter = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                )
+                BadgedBox(badge = {
+                    if (activeFilterCount > 0) {
+                        Badge { Text("$activeFilterCount") }
+                    }
+                }) {
+                    FilledTonalIconButton(onClick = { filterSheetOpen = true }) {
+                        Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
+                    }
+                }
             }
 
             if (data.places.isEmpty()) {
@@ -261,6 +255,58 @@ fun ListScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // it-004 O5：筛选弹层——类型（含「未定位」语义归位为状态）/ 标签
+    if (filterSheetOpen) {
+        ModalBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
+            Column(
+                Modifier
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("筛选", style = MaterialTheme.typography.titleLarge, color = menuColors().ink)
+                Text("类型", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    kindFilterOptions.forEach { (filter, label) ->
+                        FilterChip(
+                            selected = kindFilter == filter,
+                            onClick = { kindFilter = filter },
+                            label = { Text(if (filter is KindFilter.NoLocation) "⌖ $label" else label) },
+                        )
+                    }
+                }
+                if (allTags.isNotEmpty()) {
+                    Text("标签", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        FilterChip(
+                            selected = tagFilter == null,
+                            onClick = { tagFilter = null },
+                            label = { Text("全部") },
+                        )
+                        allTags.forEach { tag ->
+                            FilterChip(
+                                selected = tagFilter == tag,
+                                onClick = { tagFilter = if (tagFilter == tag) null else tag },
+                                label = { Text("#$tag") },
+                            )
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TextButton(
+                        onClick = {
+                            kindFilter = KindFilter.All
+                            tagFilter = null
+                        },
+                        enabled = activeFilterCount > 0,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("清除筛选") }
+                    Button(onClick = { filterSheetOpen = false }, modifier = Modifier.weight(1f)) { Text("完成") }
                 }
             }
         }

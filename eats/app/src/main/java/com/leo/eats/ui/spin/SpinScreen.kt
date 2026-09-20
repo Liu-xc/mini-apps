@@ -1,16 +1,20 @@
 package com.leo.eats.ui.spin
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,15 +23,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -55,7 +63,6 @@ import com.leo.eats.ui.components.EmptyState
 import com.leo.eats.ui.components.KindChip
 import com.leo.eats.ui.components.KindPlaceholder
 import com.leo.eats.ui.components.LinkChips
-import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.TagRow
 import com.leo.eats.ui.components.label
 import com.leo.eats.ui.components.relativeTimeText
@@ -70,10 +77,12 @@ import java.io.File
 private val RECENT_DAY_OPTIONS = listOf(7, 14, 30)
 
 /**
- * W1 今天吃啥（it-003：转盘 → 侧滑卡组，libs/carddeck）：
- * 候选食堂做成信息卡（照片/类型/评分/上次/标签/下单链接），左右滑快速浏览，
- * 「随机抽一张」纯随机抽取（无权重），落定彩屑 + 就吃这个直接落账。
+ * W1 今天吃啥（it-003 卡组；it-004 评审落地）：
+ * 类型 chips 常驻 + 忌口/最近排除收进「筛选」弹层（角标计数）；
+ * 卡组带 ‹ n/m › 卡序与候选数常驻反馈；抽中后深色结果块覆盖卡组，
+ * 「就吃这个/再抽」常驻屏内，落账直达。
  */
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SpinScreen(
     vm: AppViewModel,
@@ -87,14 +96,15 @@ fun SpinScreen(
     var logTarget by remember { mutableStateOf<PlaceWithStats?>(null) }
     var confetti by remember { mutableIntStateOf(0) }
     var deck by remember { mutableStateOf<CardDeckController<PlaceWithStats>?>(null) }
+    var showFilter by remember { mutableStateOf(false) }
 
     val candidates = remember(data, config) { vm.candidatesOf(config) }
     val allTags = remember(data) { data.places.flatMap { it.tags }.distinct().sorted() }
+    val activeFilterCount = config.excludedTags.size + if (config.excludeRecentDays != null) 1 else 0
 
     Column(
         Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp),
     ) {
         Text(
@@ -116,13 +126,12 @@ fun SpinScreen(
             return@Column
         }
 
-        // ---- 过滤（沿用 it-002 单行收纳） ----
+        // ---- 筛选：类型常驻单行 + 「筛选」收纳忌口/最近排除（it-004） ----
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
-            Text("类型", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
             PlaceKind.entries.forEach { k ->
                 val selected = k in config.kinds
                 FilterChip(
@@ -134,59 +143,50 @@ fun SpinScreen(
                     label = { Text(k.label) },
                 )
             }
-            Text(
-                "忌口",
-                style = MaterialTheme.typography.labelMedium,
-                color = menuColors().inkFaint,
-                modifier = Modifier.padding(start = 8.dp),
+            FilterChip(
+                selected = activeFilterCount > 0,
+                onClick = { showFilter = true },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Text(
+                            if (activeFilterCount > 0) " 筛选 $activeFilterCount" else " 筛选",
+                            modifier = Modifier.padding(start = 2.dp),
+                        )
+                    }
+                },
             )
-            allTags.forEach { tag ->
-                val selected = tag in config.excludedTags
-                FilterChip(
-                    selected = selected,
-                    onClick = {
-                        val next = if (selected) config.excludedTags - tag else config.excludedTags + tag
-                        vm.setSpinExcludedTags(next)
-                    },
-                    label = { Text("#$tag") },
-                )
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(
-                checked = config.excludeRecentDays != null,
-                onCheckedChange = { on -> vm.setSpinExcludeRecent(on, config.excludeRecentDays ?: 14) },
-            )
-            Spacer(Modifier.width(8.dp))
-            val days = config.excludeRecentDays
-            if (days != null) {
-                TextButton(onClick = {
-                    val next = RECENT_DAY_OPTIONS[(RECENT_DAY_OPTIONS.indexOf(days) + 1) % RECENT_DAY_OPTIONS.size]
-                    vm.setSpinExcludeRecent(true, next)
-                }) { Text("排除最近 $days 天吃过的", style = MaterialTheme.typography.labelMedium) }
-            } else {
-                Text("排除最近吃过的", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
-            }
         }
 
         if (candidates.isEmpty()) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.weight(1f))
             EmptyState(emoji = "🔍", title = "过滤后没有可选项", hint = "放宽类型 / 忌口 / 最近排除试试")
+            Spacer(Modifier.weight(1f))
         } else {
-            Spacer(Modifier.height(10.dp))
-
-            // ---- 卡组（浏览 + 抽取的主角；it-010：容器裁剪防卡片越界遮挡） ----
+            // ---- 主区：卡组（常驻组合，保住翻页状态）←→ 抽中结果块覆盖（it-004 E2） ----
+            val deckRecede by animateFloatAsState(
+                targetValue = if (winner != null) 0.25f else 1f,
+                animationSpec = EatsMotion.smooth(),
+                label = "deckRecede",
+            )
             Box(
                 Modifier
+                    .weight(1f)
                     .fillMaxWidth()
+                    .padding(top = 10.dp)
                     .clipToBounds(),
                 contentAlignment = Alignment.Center,
             ) {
-                val controller = CardDeck(
+                CardDeck(
                     items = candidates,
                     modifier = Modifier
                         .fillMaxWidth(0.92f)
-                        .height(472.dp),
+                        .fillMaxHeight()
+                        .graphicsLayer {
+                            alpha = deckRecede
+                            scaleX = 0.9f + 0.1f * deckRecede
+                            scaleY = 0.9f + 0.1f * deckRecede
+                        },
                     properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
                         stackedCardsOffset = 14.dp,
                         padding = 6.dp,
@@ -200,92 +200,182 @@ fun SpinScreen(
                         onLog = { logTarget = s },
                         onOpenLink = { url -> vm.linkOpener.open(url) { vm.toast("没有可打开该链接的应用") } },
                     )
-                }
-                deck = controller
+                }.also { deck = it }
                 ConfettiBurst(
                     trigger = confetti,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .size(240.dp, 180.dp),
                 )
-            }
 
-            Spacer(Modifier.height(14.dp))
-
-            // ---- 动作：随机抽 / 换一张 ----
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = {
-                        val c = deck ?: return@Button
-                        winner = null
-                        scope.launch {
-                            val w = c.drawRandom()
-                            if (w != null) {
-                                winner = w
-                                confetti++
-                            }
-                        }
-                    },
-                    enabled = deck?.isDrawing != true,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                ) {
-                    Icon(Icons.Rounded.Casino, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (deck?.isDrawing == true) "抽取中…" else "随机抽一张",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { deck?.next(); winner = null },
-                    enabled = deck?.isDrawing != true,
-                    modifier = Modifier.height(52.dp),
-                ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("换一张")
-                }
-            }
-
-            // ---- 抽中结果条 ----
-            val w = winner
-            AnimatedVisibility(
-                visible = w != null,
-                enter = scaleIn(EatsMotion.pop(), initialScale = 0.92f) + fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.padding(top = 12.dp),
-            ) {
-                if (w != null) {
+                // ‹ n/m › 卡序 + 候选数常驻（it-004 E1：筛选即反馈、可滑动可视）
+                if (winner == null) {
+                    val idx = (deck?.currentIndex ?: 0).coerceIn(0, candidates.lastIndex)
                     Surface(
-                        shape = MaterialTheme.shapes.large,
+                        shape = RoundedCornerShape(50),
                         color = menuColors().surface,
-                        border = androidx.compose.foundation.BorderStroke(2.dp, menuColors().accent),
-                        modifier = Modifier.fillMaxWidth(),
+                        shadowElevation = 3.dp,
+                        modifier = Modifier.align(Alignment.TopCenter),
                     ) {
-                        Column(Modifier.padding(14.dp)) {
-                            Text(
-                                "就吃 ${w.place.name}？",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = menuColors().ink,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Button(onClick = { logTarget = w }, modifier = Modifier.weight(1f)) {
-                                    Text("✓ 就吃这个")
-                                }
-                                FilledTonalButton(onClick = {
+                        Text(
+                            "‹ ${idx + 1}/${candidates.size} ›",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = menuColors().ink,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                        )
+                    }
+                }
+            }
+
+            // ---- 抽中结果块：深色强调 + 按钮常驻屏内（it-004 E2 闭环） ----
+            winner?.let { w ->
+                Surface(
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = menuColors().ink,
+                    border = BorderStroke(2.dp, menuColors().accent),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 12.dp),
+                ) {
+                    Column(
+                        Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("今天就吃", style = MaterialTheme.typography.labelLarge, color = menuColors().surface.copy(alpha = 0.75f))
+                        Text(
+                            w.place.name,
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = menuColors().surface,
+                            modifier = Modifier.padding(vertical = 4.dp),
+                        )
+                        Text(
+                            buildString {
+                                append(w.place.kind.label)
+                                if (w.place.cuisine.isNotBlank()) append(" · ${w.place.cuisine}")
+                                append(" · 候选 ${candidates.size} 家")
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = menuColors().surface.copy(alpha = 0.75f),
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = { logTarget = w },
+                                colors = ButtonDefaults.buttonColors(containerColor = menuColors().accent),
+                                modifier = Modifier.weight(1f).height(52.dp),
+                            ) { Text("✓ 就吃这个", style = MaterialTheme.typography.titleMedium) }
+                            OutlinedButton(
+                                onClick = {
                                     winner = null
                                     deck?.let { c -> scope.launch { winner = c.drawRandom(); if (winner != null) confetti++ } }
-                                }, modifier = Modifier.weight(1f)) { Text("再抽") }
-                            }
+                                },
+                                border = BorderStroke(1.dp, menuColors().surface.copy(alpha = 0.45f)),
+                                modifier = Modifier.weight(1f).height(52.dp),
+                            ) { Text("再抽", color = menuColors().surface) }
                         }
                     }
                 }
             }
+
+            // ---- 动作：随机抽 / 换一张（无抽中结果时常驻底部） ----
+            AnimatedVisibility(visible = winner == null, enter = fadeIn(), exit = fadeOut()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                    Button(
+                        onClick = {
+                            val c = deck ?: return@Button
+                            winner = null
+                            scope.launch {
+                                val w = c.drawRandom()
+                                if (w != null) {
+                                    winner = w
+                                    confetti++
+                                }
+                            }
+                        },
+                        enabled = deck?.isDrawing != true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                    ) {
+                        Icon(Icons.Rounded.Casino, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (deck?.isDrawing == true) "抽取中…" else "随机抽一张",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = { deck?.next(); winner = null },
+                        enabled = deck?.isDrawing != true,
+                        modifier = Modifier.height(52.dp),
+                    ) {
+                        Icon(Icons.Rounded.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text("换一张")
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
         }
-        Spacer(Modifier.height(28.dp))
+    }
+
+    // ---- 筛选弹层：忌口标签 + 排除最近吃过的（it-004 从首页收进来） ----
+    if (showFilter) {
+        ModalBottomSheet(onDismissRequest = { showFilter = false }) {
+            Column(
+                Modifier
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("筛选", style = MaterialTheme.typography.titleLarge, color = menuColors().ink)
+                Text("忌口标签（含任一标签的不进卡组）", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
+                if (allTags.isEmpty()) {
+                    Text("还没有标签，添加食堂时可打「忌口 / 风味 / 场景」标签", style = MaterialTheme.typography.bodySmall, color = menuColors().inkFaint)
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        allTags.forEach { tag ->
+                            val selected = tag in config.excludedTags
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    val next = if (selected) config.excludedTags - tag else config.excludedTags + tag
+                                    vm.setSpinExcludedTags(next)
+                                },
+                                label = { Text("#$tag") },
+                            )
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(
+                        checked = config.excludeRecentDays != null,
+                        onCheckedChange = { on -> vm.setSpinExcludeRecent(on, config.excludeRecentDays ?: 14) },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    val days = config.excludeRecentDays
+                    if (days != null) {
+                        TextButton(onClick = {
+                            val next = RECENT_DAY_OPTIONS[(RECENT_DAY_OPTIONS.indexOf(days) + 1) % RECENT_DAY_OPTIONS.size]
+                            vm.setSpinExcludeRecent(true, next)
+                        }) { Text("排除最近 $days 天吃过的", style = MaterialTheme.typography.labelMedium) }
+                    } else {
+                        Text("排除最近吃过的", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TextButton(
+                        onClick = {
+                            vm.setSpinExcludedTags(emptySet())
+                            vm.setSpinExcludeRecent(false, 14)
+                        },
+                        enabled = activeFilterCount > 0,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("清除全部") }
+                    Button(onClick = { showFilter = false }, modifier = Modifier.weight(1f)) { Text("完成") }
+                }
+            }
+        }
     }
 
     logTarget?.let { target ->
@@ -344,7 +434,7 @@ private fun PlaceCard(
                         iconSize = 92.dp,
                     )
                 }
-                // 顶部右上角：评分胶囊
+                // 顶部右上角：综合评分胶囊（it-004：口径标明「综合」）
                 if (s.place.rating != null) {
                     Surface(
                         shape = RoundedCornerShape(50),
@@ -360,7 +450,7 @@ private fun PlaceCard(
                         ) {
                             Text("★", color = androidx.compose.ui.graphics.Color(0xFFE0A93E), style = MaterialTheme.typography.labelLarge)
                             Text(
-                                " ${s.place.rating}",
+                                " 综合 ${s.place.rating}",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = menuColors().ink,
                             )
