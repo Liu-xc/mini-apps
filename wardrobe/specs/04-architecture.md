@@ -18,7 +18,7 @@ di/AppContainer.kt = 组合根，装配一切依赖（手动构造器注入）
 ```
 
 **规则**：依赖只能从上到下；domain 不 import 任何 data/ui/export 类型；UI 永远通过 ViewModel 间接拿数据。
-**现状例外**（it-020 记录，随 it-021 收敛）：WardrobeScreen 直调 `data.mock.DemoMode`（演示入口显隐）；AppViewModel 引用 `data.prefs.RecapReminderPrefs` 类型与 `ImageFileStore` 具体类、并直接实例化 `ui.recap.WardrobeRecapLongImage` 渲染长图。
+**现状例外**（it-023 记录）：WardrobeScreen 直调 `data.mock.DemoMode`（演示入口显隐）。
 
 ## 模块结构
 
@@ -30,11 +30,12 @@ com.leo.wardrobe/
 ├─ domain/
 │  ├─ model/      Person Item Outfit OutfitImage Note WearLog WishItem WishOutfit
 │  │              WardrobeCategory TagPresets WardrobeData（Queries.kt 派生查询）
-│  ├─ repository/ WardrobeRepository(接口) ImageStore(接口)
-│  └─ usecase/    BuildOutfitPrompt PickRandomOutfit WardrobeRecapCalculator
+│  ├─ repository/ WardrobeRepository(门面) + Person/Item/Outfit/WearLog/Wish/Note 子接口(it-021)
+│  │              ImageStore(接口)
+│  └─ usecase/    BuildOutfitPrompt PickRandomOutfit WardrobeRecapCalculator StaleItemSelector(it-021)
 ├─ data/
 │  ├─ repo/WardrobeRepositoryImpl.kt   # 继承 store SDK 的 SsotRepository（SSOT+原子落盘+广播；writeHook 预留同步登记）
-│  ├─ image/ImageFileStore.kt          # 解码/EXIF 摆正/WebP 压缩/抠图桥 cutoutTo；文件管理走 store SDK FileMediaStore
+│  ├─ image/ImageFileStore.kt          # 实现 ImageStore + ImageEditStore 接口(it-021)；文件管理走 store SDK FileMediaStore
 │  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆）RecapPrefsStore（回忆提醒）
 │  └─ mock/                            # it-015 演示模式：MockWardrobeData（种子）/ MockWardrobeRepository（内存，级联语义与 Impl 锁定一致，it-020）/ DemoMode（开关）
 ├─ export/
@@ -51,7 +52,7 @@ com.leo.wardrobe/
    ├─ records/     RecordsScreen(W8) OutfitDetailScreen(W7)
    ├─ wardrobe/    WardrobeScreen(W3) ItemEditScreen(W4)
    ├─ detail/      ItemDetailScreen(W5)
-   ├─ recap/       WardrobeRecapScreen WardrobeRecapLongImage(W9，it-018)
+   ├─ recap/       WardrobeRecapScreen RecapViewModel WardrobeRecapLongImage(W9，it-018/021)
    └─ wishlist/    WishlistScreen(W10，it-019)
 ```
 
@@ -61,7 +62,7 @@ com.leo.wardrobe/
 |---|---|
 | Repository | `domain.repository` 定接口、`data.repo` 实现；UI 不感知持久化 |
 | SSOT 单一数据源 | 基类 `SsotRepository`（libs/store）：内存快照 + `StateFlow`；写操作「改快照→原子落盘→广播」，落盘失败回滚。三 Tab 与角色过滤全部是流上 `map` |
-| MVVM + UDF | **全局单 `AppViewModel`**（SSOT 出口）暴露 `StateFlow`；用户操作走普通函数，表单类带 `onDone(Boolean)` 回调。原设想的「每屏 ViewModel + sealed Event」未采用；拆分计划见 it-021（it-020 起如实记录现状） |
+| MVVM + UDF | **全局 `AppViewModel`**（SSOT 出口）+ 域 ViewModel（it-021：`RecapViewModel` 持回顾/提醒域）；用户操作走普通函数，表单类带 `onDone(Boolean)` 回调。原设想的「每屏 ViewModel + sealed Event」未采用 |
 | 组合根 + 构造器注入 | `AppContainer` 手动装配，替换假仓库即可测 ViewModel |
 | 值对象 | WardrobeCategory、OutfitImage、Tag(=String) |
 | 策略 | BuildOutfitPrompt 的 PromptTemplate 文案模板可整体替换；演示模式的组合根装配切换 |

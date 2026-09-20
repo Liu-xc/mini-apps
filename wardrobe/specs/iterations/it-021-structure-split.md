@@ -1,6 +1,6 @@
 # it-021 · 结构拆分：ViewModel 与 Repository 宽接口分解（仅动结构不动功能）
 
-- **状态**：提案（待 Leo 确认后实施；由 it-020 分出，架构评审 P0-3/P1-3/P1-4/P1-5）
+- **状态**：阶段 1 已实施（2026-09-21，a911ba7）；步骤 2 的 WishlistViewModel 拆分经评估裁剪（理由见下）；余项转为低优先观察
 - **提案日期**：2026-09-21
 
 ## 背景与动机
@@ -53,4 +53,16 @@
 
 ## 验证记录
 
-（待实施后回填）
+### 阶段 1 实施记录（2026-09-21，a911ba7）
+
+- ✅ **步骤 1**：Repository 拆为 Person/Item/Outfit/WearLog/Wish/Note 六个子接口，`WardrobeRepository` 门面继承（`data` 快照在门面）；Impl/Mock/调用点零改动，56 单测绿。
+- ✅ **步骤 2 部分**：`RecapViewModel` 拆出（recapPrefs/setReminder/syncReminderSchedule/generateRecap(personId,…)/saveRecapImage/shareRecapImage），`WardrobeRecapScreen` 双 VM（appVm=角色/数据/toast，recapVm=回顾域）；长图渲染异常补 runCatching 兜底；MainActivity 启动对齐改走 recapVm。
+- ✅ **步骤 3**：`ImageEditStore` 接口（cutoutTo/decode/exportDir）收编，ImageFileStore 实现；OutfitImageComposer/AppViewModel 改依赖接口；domain ImageStore 保持 JVM 纯净（Bitmap 不进 domain）。
+- ✅ **步骤 4 部分**：ReminderScheduler 候选规则 + wearStats 聚合抽 `domain/usecase/StaleItemSelector` 纯函数，+4 单测（含「恰好 N 天入选」边界）。
+- ⚠️ **裁剪：WishlistViewModel 拆分**——评估结论：WishlistScreen 对 VM 的 13 个调用点中 11 个是全局能力（data/currentPerson/toast/importPhoto/imageFileOf/share），心愿域私有状态仅 mixWishes（2 行）；拆分只会把薄委托搬来搬去，收益/风险比不成立。若心愿域继续长出演化逻辑（如智能排期、价格追踪）再拆。
+- ⚠️ **搁置：WishlistScreen 970 行文件拆分**——机械拆文件需理顺 9 个 composable 间的私有 helper 耦合，纯装饰性收益；待下次功能性触碰该文件时顺带拆。
+
+### 模拟器验证
+
+- 阶段 1 装包冒烟：W9 回顾页（新 RecapViewModel 路径）、W10 心愿页零崩溃；导出复制长图（Composer 走 ImageEditStore 接口路径）实测「已复制 ✓」。
+- it-023 三轮走查（同 worktree）全部交互流复验通过。
