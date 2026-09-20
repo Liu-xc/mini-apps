@@ -180,23 +180,23 @@ fun PlaceDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("综合", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                Text("综合", style = MaterialTheme.typography.bodyMedium, color = menuColors().inkFaint)
                 RatingStars(rating = place.rating, size = 15.dp)
                 if (stats.avgVisitRating != null) {
                     Text(
                         "均分 %.1f".format(stats.avgVisitRating),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = menuColors().accent,
                     )
                 }
                 Text("·", color = menuColors().inkFaint)
                 Text(
                     "$animatedCount 次",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = menuColors().inkFaint,
                 )
                 Text("·", color = menuColors().inkFaint)
-                Text("上次 ", style = MaterialTheme.typography.labelMedium, color = menuColors().inkFaint)
+                Text("上次 ", style = MaterialTheme.typography.bodyMedium, color = menuColors().inkFaint)
                 RelativeTimeText(at = stats.lastVisitAt, highlight = true)
             }
             Spacer(Modifier.height(10.dp))

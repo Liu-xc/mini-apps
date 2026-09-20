@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -143,17 +144,17 @@ fun SpinScreen(
                     label = { Text(k.label) },
                 )
             }
-            FilterChip(
-                selected = activeFilterCount > 0,
+            // it-005：筛选改 AssistChip（描边+漏斗前缀），与类型 chips 视觉分离
+            AssistChip(
                 onClick = { showFilter = true },
                 label = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Text(
-                            if (activeFilterCount > 0) " 筛选 $activeFilterCount" else " 筛选",
-                            modifier = Modifier.padding(start = 2.dp),
-                        )
-                    }
+                    Text(
+                        if (activeFilterCount > 0) "筛选 $activeFilterCount" else "筛选",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                },
+                leadingIcon = {
+                    Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
                 },
             )
         }
@@ -163,9 +164,27 @@ fun SpinScreen(
             EmptyState(emoji = "🔍", title = "过滤后没有可选项", hint = "放宽类型 / 忌口 / 最近排除试试")
             Spacer(Modifier.weight(1f))
         } else {
-            // ---- 主区：卡组（常驻组合，保住翻页状态）←→ 抽中结果块覆盖（it-004 E2） ----
+            // ‹ n/m › 卡序 + 候选数常驻（it-005：独立行居中，不再压卡面露边）
+            val idx = (deck?.currentIndex ?: 0).coerceIn(0, candidates.lastIndex)
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = menuColors().surface,
+                shadowElevation = 2.dp,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 10.dp),
+            ) {
+                Text(
+                    "‹ ${idx + 1}/${candidates.size} ›",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = menuColors().ink,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                )
+            }
+
+            // ---- 主区：卡组（常驻组合，保住翻页状态）←→ 抽中结果块覆盖（it-005 收拢加深） ----
             val deckRecede by animateFloatAsState(
-                targetValue = if (winner != null) 0.25f else 1f,
+                targetValue = if (winner != null) 0.15f else 1f,
                 animationSpec = EatsMotion.smooth(),
                 label = "deckRecede",
             )
@@ -173,7 +192,6 @@ fun SpinScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(top = 10.dp)
                     .clipToBounds(),
                 contentAlignment = Alignment.Center,
             ) {
@@ -184,11 +202,11 @@ fun SpinScreen(
                         .fillMaxHeight()
                         .graphicsLayer {
                             alpha = deckRecede
-                            scaleX = 0.9f + 0.1f * deckRecede
-                            scaleY = 0.9f + 0.1f * deckRecede
+                            scaleX = 0.82f + 0.18f * deckRecede
+                            scaleY = 0.82f + 0.18f * deckRecede
                         },
                     properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
-                        stackedCardsOffset = 14.dp,
+                        stackedCardsOffset = 18.dp,
                         padding = 6.dp,
                     ),
                     onSwipe = { _, _ -> winner = null },
@@ -208,23 +226,6 @@ fun SpinScreen(
                         .size(240.dp, 180.dp),
                 )
 
-                // ‹ n/m › 卡序 + 候选数常驻（it-004 E1：筛选即反馈、可滑动可视）
-                if (winner == null) {
-                    val idx = (deck?.currentIndex ?: 0).coerceIn(0, candidates.lastIndex)
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = menuColors().surface,
-                        shadowElevation = 3.dp,
-                        modifier = Modifier.align(Alignment.TopCenter),
-                    ) {
-                        Text(
-                            "‹ ${idx + 1}/${candidates.size} ›",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = menuColors().ink,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                        )
-                    }
-                }
             }
 
             // ---- 抽中结果块：深色强调 + 按钮常驻屏内（it-004 E2 闭环） ----
@@ -235,7 +236,7 @@ fun SpinScreen(
                     border = BorderStroke(2.dp, menuColors().accent),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 12.dp),
+                        .padding(top = 10.dp, bottom = 12.dp),
                 ) {
                     Column(
                         Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
@@ -267,7 +268,16 @@ fun SpinScreen(
                             OutlinedButton(
                                 onClick = {
                                     winner = null
-                                    deck?.let { c -> scope.launch { winner = c.drawRandom(); if (winner != null) confetti++ } }
+                                    deck?.let { c ->
+                                        scope.launch {
+                                            confetti++
+                                            winner = c.drawRandom()
+                                            if (winner != null) {
+                                                kotlinx.coroutines.delay(400)
+                                                confetti++
+                                            }
+                                        }
+                                    }
                                 },
                                 border = BorderStroke(1.dp, menuColors().surface.copy(alpha = 0.45f)),
                                 modifier = Modifier.weight(1f).height(52.dp),
@@ -288,6 +298,8 @@ fun SpinScreen(
                                 val w = c.drawRandom()
                                 if (w != null) {
                                     winner = w
+                                    confetti++
+                                    kotlinx.coroutines.delay(400)
                                     confetti++
                                 }
                             }
@@ -486,7 +498,16 @@ private fun PlaceCard(
                 }
                 if (s.place.links.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    LinkChips(links = s.place.links, onOpen = onOpenLink)
+                    // it-005：卡面只留第一条链接，其余收进详情（+n 计数）
+                    LinkChips(links = s.place.links.take(1), onOpen = onOpenLink)
+                    if (s.place.links.size > 1) {
+                        Text(
+                            "＋${s.place.links.size - 1} 条链接在详情",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = menuColors().inkFaint,
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

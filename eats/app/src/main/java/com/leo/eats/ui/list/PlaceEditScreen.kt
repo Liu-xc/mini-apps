@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -137,35 +138,42 @@ fun PlaceEditScreen(
                 },
             )
         },
-        // it-004 O3：保存吸底两态——未就绪写明原因，就绪变实心；顶栏不再放保存
+        // it-005 重构：保存栏 Column 两态——中性原因 + 全宽按钮；imePadding 最外层贴合键盘
         bottomBar = {
             val ready = name.isNotBlank() && !saving
+            val reason = when {
+                saving -> "保存中…"
+                name.isBlank() -> "填名称后可保存"
+                else -> null
+            }
             Surface(shadowElevation = 8.dp) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                Column(
+                    Modifier
                         .imePadding()
-                        .navigationBarsPadding(),
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (!ready) {
+                    if (reason != null) {
                         Text(
-                            if (name.isBlank()) "填名称后可保存" else "保存中…",
+                            reason,
                             style = MaterialTheme.typography.labelLarge,
                             color = menuColors().inkFaint,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.padding(bottom = 6.dp),
                         )
+                        OutlinedButton(
+                            onClick = { if (name.isBlank()) vm.toast("名称必填：先填名称") },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(if (existing == null) "保存" else "更新") }
                     } else {
-                        Spacer(Modifier.weight(1f))
-                    }
-                    if (ready) {
-                        Button(onClick = { doSave() }, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (existing == null) "保存" else "更新", style = MaterialTheme.typography.titleMedium)
-                        }
-                    } else {
-                        OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                            Text(if (existing == null) "保存" else "更新")
+                        Button(
+                            onClick = { doSave() },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                        ) {
+                            Text(
+                                if (existing == null) "保存" else "更新",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
                         }
                     }
                 }
@@ -212,7 +220,8 @@ fun PlaceEditScreen(
             FormLabel(if (kind == PlaceKind.HOME) "位置（自做可跳过）" else "位置")
             Surface(
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { showPicker = true },
             ) {
@@ -238,6 +247,12 @@ fun PlaceEditScreen(
                     )
                     if (location != null) {
                         TextButton(onClick = { location = null; address = "" }) { Text("清除") }
+                    } else {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = menuColors().inkFaint,
+                        )
                     }
                 }
             }

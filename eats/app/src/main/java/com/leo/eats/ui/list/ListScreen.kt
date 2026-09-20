@@ -198,7 +198,7 @@ fun ListScreen(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("搜名称 / 菜系", style = MaterialTheme.typography.bodySmall) },
+                    placeholder = { Text("搜名称/菜系", style = MaterialTheme.typography.bodySmall) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     singleLine = true,
                     shape = MaterialTheme.shapes.large,
@@ -270,6 +270,7 @@ fun ListScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("筛选", style = MaterialTheme.typography.titleLarge, color = menuColors().ink)
+                Spacer(Modifier.height(2.dp))
                 Text("类型", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     kindFilterOptions.forEach { (filter, label) ->
@@ -281,6 +282,7 @@ fun ListScreen(
                     }
                 }
                 if (allTags.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
                     Text("标签", style = MaterialTheme.typography.labelLarge, color = menuColors().inkFaint)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         FilterChip(

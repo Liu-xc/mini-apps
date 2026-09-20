@@ -86,7 +86,7 @@ fun LogVisitSheet(
             Modifier
                 .padding(horizontal = 20.dp)
                 .imePadding() // it-004 O4/C3：键盘弹起时落账按钮随之上移，永不被遮挡
-                .padding(bottom = 24.dp),
+                .padding(bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text("记一笔 · $placeName", style = MaterialTheme.typography.titleLarge)
