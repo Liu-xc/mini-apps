@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.AlertDialog
@@ -69,7 +68,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.leo.eats.BuildConfig
 import com.leo.eats.data.mock.DemoMode
 import com.leo.eats.domain.model.PlaceCategory
 import com.leo.eats.domain.model.PlaceKind
@@ -153,10 +151,23 @@ fun ListScreen(
     var sortMenuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PlaceWithStats?>(null) }
     var quickLog by remember { mutableStateOf<PlaceWithStats?>(null) }
-    // it-006：演示模式入口（仅 DEBUG 构建显示）——同一入口按当前模式进入/退出
+    // it-006：演示模式入口——同一入口按当前模式进入/退出
     val context = LocalContext.current
     val demoOn = remember { DemoMode.isEnabled(context) }
     var demoAskOpen by remember { mutableStateOf(false) }
+    // it-006 修订：入口改「标题连点 5 次」隐藏开关（3 秒内有效），全构建可用——正式包也可体验演示数据
+    var demoTaps by remember { mutableStateOf(0) }
+    var demoFirstTapAt by remember { mutableStateOf(0L) }
+    fun tapForDemo() {
+        val now = System.currentTimeMillis()
+        if (now - demoFirstTapAt > 3000L) { demoTaps = 0; demoFirstTapAt = now }
+        if (++demoTaps >= DEMO_TAP_COUNT) {
+            demoTaps = 0
+            demoAskOpen = true
+        } else if (demoTaps >= 2) {
+            vm.toast(if (demoOn) "再按 ${DEMO_TAP_COUNT - demoTaps} 次退出演示模式" else "再按 ${DEMO_TAP_COUNT - demoTaps} 次进入演示模式")
+        }
+    }
 
     LaunchedEffect(focusNoLocation) {
         if (focusNoLocation) {
@@ -225,6 +236,8 @@ fun ListScreen(
                     "食堂 · ${data.places.size} 家",
                     style = MaterialTheme.typography.headlineSmall,
                     color = menuColors().ink,
+                    // it-006 修订：演示模式隐藏开关
+                    modifier = Modifier.clickable { tapForDemo() },
                 )
                 Spacer(Modifier.weight(1f))
                 // it-007：统计回顾入口（W7）
@@ -283,13 +296,7 @@ fun ListScreen(
                 ) {
                     Text("🌟", style = MaterialTheme.typography.labelLarge)
                 }
-                if (BuildConfig.DEBUG) {
-                    FilledTonalIconButton(onClick = { demoAskOpen = true }) {
-                        Icon(Icons.Rounded.Science, contentDescription = "演示数据")
-                    }
-                }
             }
-
             if (data.places.isEmpty()) {
                 EmptyState(
                     emoji = "🍜",
@@ -643,3 +650,6 @@ private fun PlaceRow(
         }
     }
 }
+
+/** 演示模式隐藏开关（it-006 修订）：列表页标题连点次数，3 秒窗口 */
+private const val DEMO_TAP_COUNT = 5
