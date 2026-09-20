@@ -34,9 +34,9 @@ com.leo.eats/
 │  ├─ repository/ EatsRepository(接口) ImageStore(接口)
 │  └─ usecase/    BuildCandidates(过滤) ComputeStats(派生统计)  // SpinWheel 权重抽取已随 it-003 移除
 ├─ data/
-│  ├─ json/JsonFileStore.kt       # eats.json 原子写 + bak + schemaVersion 迁移
-│  ├─ repo/EatsRepositoryImpl.kt  # 内存快照 + StateFlow（SSOT）
-│  └─ image/ImageFileStore.kt     # URI→WebP 压缩落盘 / 删除
+│  ├─ repo/EatsRepositoryImpl.kt  # SSOT 基类 SsotRepository 来自 libs/store（ADR-010）；不变量与图片级联在本类
+│  ├─ image/ImageFileStore.kt     # URI→WebP 压缩；文件管理由 SDK FileMediaStore 承担
+│  └─ mock/                       # it-006 演示模式：MockEatsData（种子）/ MockEatsRepository（内存）/ DemoMode（开关）
 ├─ map/
 │  ├─ MapController.kt            # MapView 生命周期 / 瓦片缓存
 │  ├─ ChinaTileSource.kt          # 高德栅格瓦片源（ADR-002 修订，国内可达）
@@ -60,24 +60,26 @@ com.leo.eats/
 | 模式 | 用在哪 |
 |---|---|
 | Repository | domain 定接口、data 实现；UI 不感知持久化 |
-| SSOT 单一数据源 | RepositoryImpl 内存快照 + `StateFlow<EatsData>`；写操作「改快照 → 原子落盘 → 广播」，三 Tab 全部是流上 map |
+| SSOT 单一数据源 | `EatsRepositoryImpl` 继承 libs/store 的 `SsotRepository`：写操作「改快照 → 原子落盘 → 广播」由 SDK 承担（ADR-010），三 Tab 全部是流上 map |
 | MVVM + UDF | 每屏 ViewModel 暴露 `StateFlow<UiState>`，事件走 sealed interface |
 | 组合根 + 构造器注入 | AppContainer 手动装配；替换假仓库即可测 ViewModel |
 | 值对象 | PlaceKind、GeoLoc、Tag(=String) |
-| 策略 | SpinWheel 权重公式参数化（排除天数、权重函数集中可调） |
+| 策略 | DemoMode 组合根装配切换（真实/Mock 仓库同接口互换，it-006） |
 | 门面 | LinkOpener 封装 ACTION_VIEW 与无处理组件兜底，UI 不直接碰 Intent |
 
 ## 状态与导航
 
-- 全局：`AppViewModel` 暴露 `data: StateFlow<EatsData>`；列表排序筛选、地图点集、转盘候选均是流上派生。
+- 全局：`AppViewModel` 暴露 `data: StateFlow<EatsData>`；列表排序筛选、地图点集、抽取候选均是流上派生。
 - 导航：Compose Navigation。路由：`main`（三 Tab） / `placeEdit/{placeId?}` / `placeDetail/{placeId}`；W6 与选点地图为 ModalBottomSheet 而非路由。
-- 转盘过滤配置（类型/忌口/排除天数）存 `DataStore<Preferences>`，跨启动保留。
+- 抽取过滤配置（类型/忌口/排除天数）存 `DataStore<Preferences>`，跨启动保留。
+- 演示模式（it-006）：开关（SharedPreferences）在组合根构造时读取，决定装配真实仓库或内存 Mock 仓库；
+  切换重启进程生效；演示中 MainActivity 顶部常驻横幅，点按退出（DEBUG 构建才有入口）。
 
-## 决策引擎（SpinWheel）
+## 抽取引擎（W1 卡组，it-003）
 
 1. `BuildCandidates`：kind 集合过滤 → 剔除含排除标签的 → 「排除最近 N 天吃过」按 lastVisitAt 剔除。
-2. 权重：`w = 1 + daysSinceLastVisit`（从未吃过按 30 计）；纯函数，JVM 单测覆盖（含分布断言）。
-3. 抽取：按权重随机选一项，并向 WheelCanvas 输出动画时长/圈数参数。
+2. 浏览与抽取：libs/carddeck 卡组侧滑浏览；「随机抽一张」= 随机步数 + 库自带飞出动画按拍播放，落点均匀无权重。
+3. 落定：结果条（就吃这个 → W6 预填 / 再抽）+ 彩屑；原 SpinWheel 权重抽取已随 it-003 移除（ADR-006 作废）。
 
 ## 错误处理
 
@@ -86,10 +88,10 @@ com.leo.eats/
 
 ## 测试策略
 
-- JVM 单测：JsonFileStore 读写与迁移、Repository 不变量（级联删除/悬空清洗/派生统计）、BuildCandidates 过滤、SpinWheel 权重、LinkSource.detect 来源识别。
+- JVM 单测：Repository 不变量（级联删除/悬空清洗/派生统计）与 Mock 仓库种子、BuildCandidates 过滤、LinkSource.detect 来源识别（eats.json 持久化由 libs/store 的 SnapshotStoreTest 覆盖）。
 - UI 以模拟器截图验证（对照 02 线框）；Compose UI 测试留待后续迭代。
 
 ## 构建配置
 
 - compileSdk / targetSdk 35 / minSdk 26；AGP 8.7.x + Kotlin 2.0.x（与 wardrobe 同基线）
-- 依赖：Compose BOM、material3 1.4.0、navigation-compose、coil-compose、kotlinx-serialization-json、**osmdroid-android 6.1.x**、**com.leo.libs:carddeck**（composite build，W1 卡组）、DataStore preferences、JUnit4 + kotlinx-coroutines-test
+- 依赖：Compose BOM、material3 1.4.0、navigation-compose、coil-compose、kotlinx-serialization-json、**osmdroid-android 6.1.x**、**com.leo.libs:carddeck**（composite build，W1 卡组）、**com.leo.libs:store**（composite build，ADR-010）、DataStore preferences、JUnit4 + kotlinx-coroutines-test

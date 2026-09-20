@@ -8,42 +8,38 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
-import com.leo.eats.domain.model.newId
 import com.leo.eats.domain.repository.ImageStore
+import com.leo.libs.store.FileMediaStore
+import com.leo.libs.store.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /**
- * 图片文件存储：门面/菜品/Visit 照片统一存为 images 目录下的 WebP，
- * 导入时 EXIF 摆正 + 最长边压至 1440 + 质量 82（specs/03-data-model.md，与 wardrobe 同参）。
+ * 图片文件存储：解码/EXIF 摆正/缩放/压缩在本类（Android 能力），
+ * 文件管理（uuid 命名、删除）由 store SDK 的 [MediaStore] 承担（与 wardrobe 同构）。
+ * 照片统一存为 images 目录下的 WebP（specs/03-data-model.md，与 wardrobe 同参）。
  */
 class ImageFileStore(
     context: Context,
+    private val media: MediaStore = FileMediaStore(context.filesDir, "images"),
     private val resolver: ContentResolver = context.contentResolver,
 ) : ImageStore {
-
-    private val dir = File(context.filesDir, "images").apply { mkdirs() }
 
     override suspend fun importFromUri(uri: String): String? = withContext(Dispatchers.IO) {
         runCatching {
             val bitmap = decodeScaled(Uri.parse(uri)) ?: return@runCatching null
-            val name = "${newId()}.webp"
-            val out = File(dir, name)
-            out.outputStream().use { fos ->
-                val ok = compressWebp(bitmap, fos)
-                bitmap.recycle()
-                if (ok) name else null
-            }
+            val buffer = ByteArrayOutputStream()
+            val ok = compressWebp(bitmap, buffer)
+            bitmap.recycle()
+            if (ok) media.put(buffer.toByteArray()) else null
         }.getOrNull()
     }
 
-    override fun file(file: String): File = File(dir, file)
+    override fun file(file: String): File = media.file(file)
 
-    override suspend fun delete(file: String) = withContext(Dispatchers.IO) {
-        File(dir, file).delete()
-        Unit
-    }
+    override suspend fun delete(file: String) = media.delete(file)
 
     private fun compressWebp(bitmap: Bitmap, out: java.io.OutputStream): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

@@ -2,6 +2,10 @@
 
 ## 未发布
 
+- it-006 数据层换用 libs/store（SnapshotStore/SsotRepository/FileMediaStore，ADR-010，磁盘格式不变）+
+  应用内演示模式：内存 Mock 数据源（DemoMode 开关/重启生效/横幅退出，入口仅 DEBUG 可见）；
+  顺带修复 01-user-stories.md 被 it-003 提交污染为 2.4MB 重复块的问题（恢复健康版+重放修订）。
+
 - 卡组层级修正（it-010 同批）：容器裁剪防越界、堆叠偏移 30→14dp、卡片投影 4→2dp
 - it-003 转盘 → 侧滑卡组（libs/carddeck SDK，薄封装 compose-swipeable-cards）：信息卡含照片/类型/
   评分/上次/标签/下单链接，侧滑浏览 + 老虎机式纯随机抽取（无权重，ADR-011），移除 WheelCanvas/SpinWheel。

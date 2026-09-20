@@ -30,7 +30,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true // it-006：演示模式入口按 DEBUG 构建显隐
+    }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 
@@ -62,6 +65,8 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.20")
     // 侧滑卡组 + 随机抽取 SDK（composite build，libs/carddeck）
     implementation("com.leo.libs:carddeck:0.1.0")
+    // 本地存储 SDK（composite build 依赖替换，libs/store）
+    implementation("com.leo.libs:store:0.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

@@ -1,12 +1,12 @@
 package com.leo.eats.data.repo
 
 import com.leo.eats.data.FakeImageStore
-import com.leo.eats.data.json.JsonFileStore
 import com.leo.eats.domain.model.EatsData
 import com.leo.eats.domain.model.Place
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceLink
 import com.leo.eats.domain.model.Visit
+import com.leo.libs.store.SnapshotStore
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -22,7 +22,15 @@ class EatsRepositoryImplTest {
 
     private val images = FakeImageStore()
 
-    private fun repo() = EatsRepositoryImpl(JsonFileStore(tmp.root), images).apply {
+    private fun store() = SnapshotStore(
+        dir = tmp.root,
+        fileName = "eats.json",
+        serializer = EatsData.serializer(),
+        default = { EatsData() },
+        versionOf = { it.schemaVersion },
+    )
+
+    private fun repo() = EatsRepositoryImpl(store(), images).apply {
         now = { 1_000L }
     }
 
@@ -89,10 +97,10 @@ class EatsRepositoryImplTest {
     }
 
     @Test
-    fun `载入时清洗悬空 Visit 引用`() {
+    fun `载入时清洗悬空 Visit 引用`() = runTest {
         // 直接构造带悬空引用的存储文件
-        val store = JsonFileStore(tmp.root)
-        store.save(
+        val store = store()
+        store.commit(
             EatsData(
                 places = listOf(place(id = "pl1")),
                 visits = listOf(

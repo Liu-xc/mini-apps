@@ -1,43 +1,25 @@
 package com.leo.eats.data.repo
 
-import com.leo.eats.data.json.JsonFileStore
 import com.leo.eats.domain.model.EatsData
 import com.leo.eats.domain.model.Place
 import com.leo.eats.domain.model.Visit
 import com.leo.eats.domain.model.newId
 import com.leo.eats.domain.repository.EatsRepository
 import com.leo.eats.domain.repository.ImageStore
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import com.leo.libs.store.SnapshotStore
+import com.leo.libs.store.SsotRepository
 
 /**
- * SSOT 实现（与 wardrobe 同模式）：内存快照 + 写操作「改快照→原子落盘→广播」，
- * Mutex 串行化保证一致；不变量见 specs/03-data-model.md。
+ * SSOT 实现（与 wardrobe 同模式）：持久化与广播机制由 store SDK 的 [SsotRepository] 承担
+ * （内存快照 + 写操作「改快照→原子落盘→广播」）；不变量见 specs/03-data-model.md。
  */
 class EatsRepositoryImpl(
-    private val store: JsonFileStore,
+    store: SnapshotStore<EatsData>,
     private val images: ImageStore,
-) : EatsRepository {
+) : SsotRepository<EatsData>(store, onLoad = { it.cleaned() }), EatsRepository {
 
     /** 测试可注入的时钟 */
     var now: () -> Long = { System.currentTimeMillis() }
-
-    private val mutex = Mutex()
-    private val _data = MutableStateFlow(store.load().cleaned())
-    override val data: StateFlow<EatsData> = _data.asStateFlow()
-
-    private suspend fun mutate(block: (EatsData) -> EatsData) {
-        mutex.withLock {
-            val next = block(_data.value)
-            store.save(next)
-            _data.value = next
-        }
-    }
-
-    // ---- Place ----
 
     override suspend fun upsertPlace(place: Place) {
         val old = data.value.places.firstOrNull { it.id == place.id }
@@ -70,11 +52,11 @@ class EatsRepositoryImpl(
         (place.photos + visitPhotos).forEach { images.delete(it) }
     }
 
-    // ---- Visit ----
-
-    override suspend fun addVisit(visit: Visit) = mutate { d ->
-        val fixed = if (visit.id.isBlank()) visit.copy(id = newId(), createdAt = now()) else visit
-        d.copy(visits = d.visits + fixed)
+    override suspend fun addVisit(visit: Visit) {
+        mutate { d ->
+            val fixed = if (visit.id.isBlank()) visit.copy(id = newId(), createdAt = now()) else visit
+            d.copy(visits = d.visits + fixed)
+        }
     }
 
     override suspend fun deleteVisit(id: String) {

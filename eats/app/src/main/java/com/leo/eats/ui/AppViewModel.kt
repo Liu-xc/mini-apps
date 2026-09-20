@@ -36,7 +36,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val linkOpener: LinkOpener get() = container.linkOpener
     val buildCandidates get() = container.buildCandidates
 
-    fun imageFileOf(name: String): File? = container.imageStore.file(name).takeIf { it.exists() }
+    fun imageFileOf(name: String): File? = container.imageStore.file(name)?.takeIf { it.exists() }
 
     /** 一次性消息（snackbar） */
     private val _toast = MutableStateFlow<String?>(null)

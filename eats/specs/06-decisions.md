@@ -57,3 +57,9 @@
 - **决策**：新建 `libs/carddeck` SDK 薄封装 [compose-swipeable-cards](https://github.com/smartword-app/compose-swipeable-cards)（Apache-2.0，JitPack 分发），暴露 `CardDeck` + `CardDeckController(drawRandom 纯随机)`；eats 与 wardrobe 经 includeBuild 复用。
 - **理由**：该库提供左右滑/堆叠/弹簧动画与程序化 `swipe()/moveNext()`（抽取编排必需）；备选 makzimi/SwipingCards 因 minSdk 33 高于基线 26 且无程序化接口被否。抽取动画 = 按拍调用库自带飞出动画，SDK 零自研手势。
 - **后果**：JitPack 仓库进入两应用与 SDK 的解析链（国内实测可达）；三方库维护偏冷，若失效可按同契约替换实现（SDK 层隔离）。
+
+## ADR-010 数据层换用 libs/store（删除自研 JsonFileStore）+ 应用内演示模式（it-006）
+- **背景**：`libs/store`（ADR-012 同款，wardrobe 已接入）与 eats 自研的 JsonFileStore/SSOT 样板语义完全同源（ADR-003 即 wardrobe 同模式），属重复实现；同时测试体验与 AI 走查需要不污染真实数据的丰富数据源（tools/demo-data.sh 直接覆盖真数据，用后要手动清理）。
+- **决策**：① eats.json 持久化换 `SnapshotStore`、仓库继承 `SsotRepository`、图片文件管理换 `FileMediaStore`，删除 `data/json/`；磁盘格式不变，老数据无缝升级。② 新增 `data/mock/`：确定性种子（相对时间恒新鲜）+ 内存 Mock 仓库（不落盘）；`DemoMode` 开关在组合根构造时读取，切换重启进程生效；演示中顶部常驻横幅点按退出；入口仅 DEBUG 构建可见。SpinPrefsStore（DataStore 偏好）不迁移——键值偏好不属于快照存储。
+- **理由**：删除重复代码；writeHook 缝为将来接 libs/sync 铺路；演示模式让走查可复现且真实数据零风险。
+- **后果**：eats.json 生命周期交给 SDK（迁移链/恢复语义以 SDK 为准）；演示模式是一次设计上的「策略切换」，release 构建零痕迹。

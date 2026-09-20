@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.AlertDialog
@@ -64,8 +65,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.leo.eats.BuildConfig
+import com.leo.eats.data.mock.DemoMode
 import com.leo.eats.domain.model.PlaceKind
 import com.leo.eats.domain.model.PlaceWithStats
 import com.leo.eats.domain.model.statsOfAll
@@ -128,6 +132,9 @@ fun ListScreen(
     var sortMenuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PlaceWithStats?>(null) }
     var quickLog by remember { mutableStateOf<PlaceWithStats?>(null) }
+    // it-006：演示模式入口（仅 DEBUG 构建显示）
+    val context = LocalContext.current
+    var demoAskOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(focusNoLocation) {
         if (focusNoLocation) {
@@ -225,6 +232,11 @@ fun ListScreen(
                         Icon(Icons.Rounded.FilterList, contentDescription = "筛选")
                     }
                 }
+                if (BuildConfig.DEBUG) {
+                    FilledTonalIconButton(onClick = { demoAskOpen = true }) {
+                        Icon(Icons.Rounded.Science, contentDescription = "演示数据")
+                    }
+                }
             }
 
             if (data.places.isEmpty()) {
@@ -258,6 +270,21 @@ fun ListScreen(
                 }
             }
         }
+    }
+
+    // it-006：演示模式确认——重启进程切换到 Mock 数据源，真实数据零接触
+    if (demoAskOpen) {
+        AlertDialog(
+            onDismissRequest = { demoAskOpen = false },
+            title = { Text("进入演示模式？") },
+            text = { Text("切换到内置演示数据（不落盘），用于测试体验与走查；你的真实数据不会受到任何影响。应用将自动重启。") },
+            confirmButton = {
+                TextButton(onClick = { demoAskOpen = false; DemoMode.setAndRestart(context, true) }) { Text("进入演示") }
+            },
+            dismissButton = {
+                TextButton(onClick = { demoAskOpen = false }) { Text("取消") }
+            },
+        )
     }
 
     // it-004 O5：筛选弹层——类型（含「未定位」语义归位为状态）/ 标签

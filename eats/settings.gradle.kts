@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 rootProject.name = "eats"
 include(":app")
 includeBuild("../libs/carddeck")
+includeBuild("../libs/store")

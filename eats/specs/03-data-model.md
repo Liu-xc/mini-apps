@@ -76,8 +76,8 @@
 
 ## 存储格式
 
-- 元数据：单文件 `files/eats.json`，kotlinx.serialization 序列化全部 Place/Visit；原子写（tmp → rename）；文件头 `schemaVersion`，升级跑迁移函数；成功写入后留 `eats.json.bak`，启动损坏走 bak（与 wardrobe 同模式，ADR-003）。
-- 图片：`files/images/*.webp`，文件名 = UUID.webp；导入压缩最长边 1440px、质量 82。
+- 元数据：单文件 `files/eats.json`，kotlinx.serialization 序列化全部 Place/Visit；持久化机制由 libs/store 的 `SnapshotStore` 承担（ADR-010）：原子写（tmp → rename）+ `.bak` + 三级恢复 + 逐版本迁移链；文件头 `schemaVersion` 不变，**磁盘格式与 it-005 前完全兼容**（ADR-003 语义原样上收 SDK）。
+- 图片：`files/images/*.webp`，文件名 = UUID.webp（SDK `FileMediaStore` 管理）；导入压缩最长边 1440px、质量 82。演示模式下图片目录切换至 `cacheDir/mock-images`（it-006）。
 
 ### JSON 结构示例
 
