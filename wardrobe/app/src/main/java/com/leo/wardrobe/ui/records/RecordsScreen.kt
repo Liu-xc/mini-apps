@@ -66,8 +66,10 @@ fun RecordsScreen(
     val scope = rememberCoroutineScope()
 
     val personId = person?.id
-    val outfits = if (personId != null) data.outfitsOf(personId) else emptyList()
-    val filtered = if (filterTag == null) outfits else outfits.filter { filterTag!! in it.tags }
+    val outfits = remember(personId, data) { if (personId != null) data.outfitsOf(personId) else emptyList() }
+    val filtered = remember(outfits, filterTag) {
+        if (filterTag == null) outfits else outfits.filter { filterTag!! in it.tags }
+    }
     val tags = remember(personId, data) {
         if (personId != null) data.tagsUsedIn(personId) else emptyList()
     }

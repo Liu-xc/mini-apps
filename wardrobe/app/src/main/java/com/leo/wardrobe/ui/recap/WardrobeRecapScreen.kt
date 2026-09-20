@@ -166,7 +166,7 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 48.dp),
                         ) {
-                            items(stats.topVersatile) { t ->
+                            items(stats.topVersatile, key = { it.item.id }) { t ->
                                 VersatileCard(
                                     rank = stats.topVersatile.indexOf(t) + 1,
                                     name = t.item.name,
