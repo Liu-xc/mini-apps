@@ -64,7 +64,7 @@ com.leo.eats/
 | MVVM + UDF | 每屏 ViewModel 暴露 `StateFlow<UiState>`，事件走 sealed interface |
 | 组合根 + 构造器注入 | AppContainer 手动装配；替换假仓库即可测 ViewModel |
 | 值对象 | PlaceKind、GeoLoc、Tag(=String) |
-| 策略 | DemoMode 组合根装配切换（真实/Mock 仓库同接口互换，it-006） |
+| 策略 | DemoMode 组合根装配切换（真实/Mock 仓库同接口互换、入口双向确认，it-006） |
 | 门面 | LinkOpener 封装 ACTION_VIEW 与无处理组件兜底，UI 不直接碰 Intent |
 
 ## 状态与导航
@@ -73,7 +73,7 @@ com.leo.eats/
 - 导航：Compose Navigation。路由：`main`（三 Tab） / `placeEdit/{placeId?}` / `placeDetail/{placeId}`；W6 与选点地图为 ModalBottomSheet 而非路由。
 - 抽取过滤配置（类型/忌口/排除天数）存 `DataStore<Preferences>`，跨启动保留。
 - 演示模式（it-006）：开关（SharedPreferences）在组合根构造时读取，决定装配真实仓库或内存 Mock 仓库；
-  切换重启进程生效；演示中 MainActivity 顶部常驻横幅，点按退出（DEBUG 构建才有入口）。
+  切换重启进程生效；DEBUG 构建的列表页工具行按钮为唯一入口，按当前模式弹出「进入/退出演示」确认。
 
 ## 抽取引擎（W1 卡组，it-003）
 

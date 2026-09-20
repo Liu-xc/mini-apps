@@ -35,8 +35,9 @@
 - `data/mock/MockEatsRepository.kt`：实现 `EatsRepository`，内存 StateFlow，写操作只改内存不落盘（演示数据不可持久化）。
 - 开关：`DemoMode`（SharedPreferences 布尔位）在 **AppContainer 构造时** 决定装配真实仓库还是 Mock 仓库；
   演示模式下图片目录指向 `cacheDir/mock-images`（真实 images/ 不被触碰）。
-- 切换即重启进程（保存偏好 → 重启 AppContainer 生效）；演示中页面顶部显示「演示数据」横幅，点横幅即退出。
-- 入口：列表页工具行加「演示」图标按钮，**仅 BuildConfig.DEBUG 可见**（release 零痕迹）。
+- 切换即重启进程（保存偏好 → 重启 AppContainer 生效）。
+- 入口：列表页工具行加「演示」图标按钮，**仅 BuildConfig.DEBUG 可见**（release 零痕迹）；
+  按当前模式弹出「进入/退出演示」确认（修订：Leo 反馈演示数据自明，去掉顶部粉色横幅，退出并入同一入口）。
 - `tools/demo-data.sh` 保留（外部灌真数据的另一种用法），README 注明两者区别。
 
 ### 3. specs 污染修复

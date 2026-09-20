@@ -3,7 +3,7 @@
 ## 未发布
 
 - it-006 数据层换用 libs/store（SnapshotStore/SsotRepository/FileMediaStore，ADR-010，磁盘格式不变）+
-  应用内演示模式：内存 Mock 数据源（DemoMode 开关/重启生效/横幅退出，入口仅 DEBUG 可见）；
+  应用内演示模式：内存 Mock 数据源（DemoMode 开关/重启生效，入口仅 DEBUG 可见，进/出同一入口确认；修订：去横幅）；
   顺带修复 01-user-stories.md 被 it-003 提交污染为 2.4MB 重复块的问题（恢复健康版+重放修订）。
 
 - 卡组层级修正（it-010 同批）：容器裁剪防越界、堆叠偏移 30→14dp、卡片投影 4→2dp
