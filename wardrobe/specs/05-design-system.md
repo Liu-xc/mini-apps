@@ -73,3 +73,12 @@
 | `photoMat` 深色 | 同上（暗色 surfaceVariant） | 深色模式同构 |
 
 成品图（用户导入/生图产出）保持全幅 Crop 不套衬纸；后续接抠图能力时把衬底换透明即可。
+
+## 透明底棋盘格 + 去背景状态（it-016 US-15）
+
+| 元素 | 规格 |
+|---|---|
+| 透明棋盘格 | 12dp 方格双色 `#F2F3F5` / `#E1E3E8`，drawBehind 垫于预览图下，圆角与照片容器一致（20dp clip） |
+| 去背景按钮 | OutlinedButton 全宽 44dp，AutoFixHigh 18dp 图标 + 「去背景 · 一键透明底」；推理中禁用态：18dp CircularProgressIndicator + 「正在去背景…」 |
+| 成功横条 | secondaryContainer@55% 圆角 12dp：CheckCircle(primary 18dp) + 「已去背景 · 透明底」+ 尾部 TextButton「还原」 |
+| 弹簧基调 | 棋盘格显隐随预览图 crossfade（220ms，与 PhotoCard 一致），无新增动效 |

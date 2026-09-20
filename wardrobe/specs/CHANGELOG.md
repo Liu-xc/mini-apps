@@ -4,6 +4,9 @@
 
 ## 未发布
 
+### it-016 — 录入去背景（libs/cutout 阶段 A + wardrobe 阶段 B）
+- 新增 libs/cutout 主体抠图 SDK（u2netp+ONNX 纯 JVM，15 单测含真模型自测，报告 reports/2026-09-20-cutout-sdk-test）；wardrobe W4 新增「去背景 · 一键透明底」（仅新照片）：离线推理、棋盘格透明预览、一键还原、保存采用后原图即弃；模型打包 assets 全离线；release 52.8MB（+33.6MB）；ADR-016 / US-15
+
 ### it-017 — 角色形象参考照（可选）
 - Person 新增可选 refImageFile（复用压缩管线，删角色/换照级联清理，旧 JSON 兼容）；
   编辑角色对话框设置（选图/更换/移除），导出时长图顶部拼入人像+标注条、文案追加形象还原句；

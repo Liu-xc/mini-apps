@@ -5,6 +5,7 @@ package com.leo.wardrobe.ui.wardrobe
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -18,13 +19,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,6 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,7 +50,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.WardrobeCategory
@@ -72,6 +84,10 @@ fun ItemEditScreen(
 
     var importedFile by remember { mutableStateOf<String?>(null) } // 选择后立即导入落盘的文件名
     var importing by remember { mutableStateOf(false) }
+    // it-016 US-15 去背景：cutoutFile 非空 ⇔ 已采用抠图版（预览与保存都走它）；
+    // 原图 importedFile 保留作还原锚点，确认采用（保存成功）后即弃（Leo 定，2026-09-20）
+    var cutoutFile by remember { mutableStateOf<String?>(null) }
+    var cutting by remember { mutableStateOf(false) }
     var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
     var category by remember(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
     var color by remember(existing?.id) { mutableStateOf(existing?.color ?: "") }
@@ -85,11 +101,29 @@ fun ItemEditScreen(
             vm.importPhoto(uri) { file ->
                 importing = false
                 if (file != null) {
+                    // 换照片 = 弃用当前抠图版，回到原图态
+                    cutoutFile?.let(vm::deletePhotoFile)
+                    cutoutFile = null
                     importedFile = file
                     photoMissing = false
                 }
             }
         }
+    }
+
+    fun doCutout() {
+        val src = importedFile ?: return
+        if (cutting) return
+        cutting = true
+        vm.cutoutPhoto(src) { out ->
+            cutting = false
+            if (out != null) cutoutFile = out   // 成功即采用；失败 toast 且原图不动（VM 内处理）
+        }
+    }
+
+    fun restoreOriginal() {
+        cutoutFile?.let(vm::deletePhotoFile)
+        cutoutFile = null
     }
 
     val hasPhoto = importedFile != null || existing != null
@@ -100,8 +134,12 @@ fun ItemEditScreen(
         if (!hasPhoto) {
             photoMissing = true
         } else {
-            vm.saveItem(existing, importedFile, name, category, color, desc, tags) { ok ->
-                if (ok) onBack()
+            // 采用抠图版则保存它并删原图（原图即弃）；否则抠图版必为 null
+            vm.saveItem(existing, cutoutFile ?: importedFile, name, category, color, desc, tags) { ok ->
+                if (ok) {
+                    if (cutoutFile != null) importedFile?.let(vm::deletePhotoFile)
+                    onBack()
+                }
             }
         }
     }
@@ -201,15 +239,50 @@ fun ItemEditScreen(
                     }
                 }
             }
-            // 照片预览（已落盘的本地文件）
-            if (importedFile != null) {
-                PhotoCard(
-                    file = vm.imageFileOf(importedFile!!),
-                    contentDescription = "新照片预览",
-                    modifier = Modifier
+            // 照片预览（已落盘的本地文件；采用抠图版时垫棋盘格提示透明底）
+            val cell = 12.dp
+            val cellPx = with(LocalDensity.current) { cell.toPx() }
+            val previewFile = cutoutFile ?: importedFile
+            if (previewFile != null) {
+                Box(
+                    Modifier
                         .fillMaxWidth()
-                        .aspectRatio(0.8f),
-                )
+                        .aspectRatio(0.8f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .then(
+                            if (cutoutFile != null) Modifier.drawBehind {
+                                val light = Color(0xFFF2F3F5)
+                                val dark = Color(0xFFE1E3E8)
+                                var row = 0
+                                var y = 0f
+                                while (y < size.height) {
+                                    var col = row
+                                    var x = 0f
+                                    while (x < size.width) {
+                                        drawRect(
+                                            if (col % 2 == 0) dark else light,
+                                            topLeft = Offset(x, y),
+                                            size = Size(
+                                                minOf(cellPx, size.width - x),
+                                                minOf(cellPx, size.height - y),
+                                            ),
+                                        )
+                                        x += cellPx
+                                        col++
+                                    }
+                                    y += cellPx
+                                    row++
+                                }
+                            } else Modifier
+                        ),
+                ) {
+                    PhotoCard(
+                        file = vm.imageFileOf(previewFile),
+                        contentDescription = "新照片预览",
+                        corner = 0.dp,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             } else if (existing != null) {
                 PhotoCard(
                     file = vm.imageFileOf(existing.imageFile),
@@ -218,6 +291,65 @@ fun ItemEditScreen(
                         .fillMaxWidth()
                         .aspectRatio(0.8f),
                 )
+            }
+            // it-016 US-15：去背景操作行（仅新照片提供；编辑旧衣物不补抠）
+            if (importedFile != null) {
+                if (cutoutFile != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "已去背景 · 透明底",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = editorialColors().ink,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { restoreOriginal() }) { Text("还原") }
+                        }
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { doCutout() },
+                        enabled = !cutting && !importing,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                    ) {
+                        if (cutting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("正在去背景…", style = MaterialTheme.typography.bodyMedium)
+                        } else {
+                            Icon(
+                                Icons.Rounded.AutoFixHigh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = editorialColors().inkFaint,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "去背景 · 一键透明底",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = editorialColors().ink,
+                            )
+                        }
+                    }
+                }
             }
             if (hasPhoto) Surface(
                 onClick = { pickPhoto() },

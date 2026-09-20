@@ -143,6 +143,13 @@ libs/cutout/
 - 报告发现并修复:掩码纯软边输出产生「背景色晕边」→ 新增**边缘锐化窗**(ADR-005:掩码 <0.35 判背景/>0.85 判主体),晕边消除;已知边界如实入档——零纹理印花被挖洞、人穿衣服场景头/臂残缺(产品结论:该形态建议放弃抠图)
 - 待阶段 B 回填:移动端真机耗时、APK 增量实测(预算 +30MB 量级)、冷启动无回归、三类样张目测质量、带 alpha 导出合成图渲染
 
-### 阶段 B · wardrobe 接入
+### 阶段 B · wardrobe 接入(2026-09-20 完成)
 
-(待 wardrobe 并行功能落地后执行)
+- 构建:`assembleDebug` / `assembleRelease` 均 SUCCESS;`release` abiFilters 仅 arm64-v8a + armeabi-v7a 生效
+- **APK 增量实测**:release 52.8MB(unsigned),其中抠图相关 +33.6MB(libonnxruntime.so arm64 17.5MB + v7a 12.3MB + jni 1.7MB + 模型 4.6MB,.so APK 内未压缩存储);debug 全 ABI 103MB(含 x86_64 供模拟器)
+- **模拟器端到端走查**(emulator-5554,AVD wardrobe_test):选图 → 「去背景 · 一键透明底」→ 首次点击含引擎预热 <1s(x86)→ 棋盘格透明预览 → 「还原」回原图 → 再次去背景 → 填名称保存 → 衣橱卡片透明底呈现,与内置 thiings 素材视觉风格一致(17→18 件);走查截图存 /tmp/wardrobe-review
+- 合成图回归:OutfitImageComposer 画布白底(`drawColor(Color.WHITE)`),带 alpha 衣物渲染无黑底风险(代码级确认)
+- 冷启动:引擎构造零副作用,onnxruntime 类与会话在首次去背景才加载(AppContainer 注入 lambda)
+- 已知边界如实呈现:白色印花挖洞(模型边界)、人穿衣服形态(报告 §四)
+- **lint**:release 内置 lintVital 与 Kotlin 2.1.21 Analysis API 不匹配崩溃(lint 工具 bug,非业务代码;`checkReleaseBuilds=false` 绕过,日常 lint 手动跑)
+- specs 同步:01-user-stories(US-15)/ 02-wireframes(W4)/ 05-design-system(棋盘格+状态条)/ 06-decisions(ADR-016)/ CHANGELOG

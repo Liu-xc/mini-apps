@@ -28,3 +28,5 @@ include(":app")
 includeBuild("../libs/store")
 // 侧滑卡组 + 随机抽取 SDK（见 libs/carddeck/specs/00-overview.md）
 includeBuild("../libs/carddeck")
+// 主体抠图 SDK（it-016 阶段 B；见 libs/cutout/specs/00-architecture.md）
+includeBuild("../libs/cutout")

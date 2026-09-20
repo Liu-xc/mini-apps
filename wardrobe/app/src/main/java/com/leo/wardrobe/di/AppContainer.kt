@@ -43,6 +43,11 @@ class AppContainer(context: Context) {
         if (demo) MockWardrobeRepository() else WardrobeRepositoryImpl(snapshotStore, imageStore)
 
     val prefs: PrefsStore = PrefsStore(context)
+    /** 主体抠图引擎（it-016 US-15）：模型打包 assets、bytes 注入（ADR-003）；构造零副作用，
+     *  onnxruntime 类与会话在首次去背景时才加载（ADR-002），不进启动路径 */
+    val cutoutEngine: com.leo.libs.cutout.CutoutEngine = com.leo.libs.cutout.OnnxCutoutEngine(
+        modelBytes = { context.assets.open("u2netp.onnx").use { it.readBytes() } },
+    )
     val buildPrompt: BuildOutfitPrompt = BuildOutfitPrompt()
     val pickRandom: PickRandomOutfit = PickRandomOutfit()
     val imageComposer: OutfitImageComposer = OutfitImageComposer(imageStore)

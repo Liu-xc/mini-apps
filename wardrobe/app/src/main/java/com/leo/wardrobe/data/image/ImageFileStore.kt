@@ -54,6 +54,30 @@ class ImageFileStore(
 
     override suspend fun delete(file: String) = media.delete(file)
 
+    /**
+     * 去背景（it-016 US-15）：读 [srcFile] → RGBA → [engine] 抠图 → 抠图版写为新文件落盘。
+     * 原图文件不动（对比预览的「还原」锚点）；确认采用后由调用方删除未采用的一份。
+     * 失败返回 null，原图不受影响。
+     */
+    suspend fun cutoutTo(srcFile: String, engine: com.leo.libs.cutout.CutoutEngine): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val path = media.file(srcFile)?.absolutePath ?: return@runCatching null
+                val decoded = BitmapFactory.decodeFile(path) ?: return@runCatching null
+                val argb = if (decoded.config == Bitmap.Config.ARGB_8888) decoded
+                else decoded.copy(Bitmap.Config.ARGB_8888, false)
+                val rgba = ByteArray(argb.width * argb.height * 4)
+                argb.copyPixelsToBuffer(java.nio.ByteBuffer.wrap(rgba))
+                engine.cutout(rgba, argb.width, argb.height)
+                val out = argb.copy(Bitmap.Config.ARGB_8888, true)
+                out.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(rgba))
+                val buffer = ByteArrayOutputStream()
+                if (!compressWebp(out, buffer)) return@runCatching null
+                media.put(buffer.toByteArray())
+            }.onFailure { android.util.Log.e(TAG, "cutoutTo failed src=$srcFile", it) }
+                .getOrNull()
+        }
+
     /** 读取存储位图（UI/合成图用；失败返回 null） */
     suspend fun decode(file: String): Bitmap? = withContext(Dispatchers.IO) {
         runCatching { BitmapFactory.decodeFile(media.file(file)?.absolutePath) }.getOrNull()

@@ -167,6 +167,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** 去背景（it-016 US-15）：生成抠图版新文件（原图不动）；失败返回 null 并 toast，原图不受影响 */
+    fun cutoutPhoto(srcFile: String, onDone: (String?) -> Unit) {
+        viewModelScope.launch {
+            val out = container.imageStore.cutoutTo(srcFile, container.cutoutEngine)
+            if (out == null) toast("去背景失败：这张照片先保持原样")
+            onDone(out)
+        }
+    }
+
+    /** 删除本会话产生的临时图片文件（换照片/退出/保存后的清理） */
+    fun deletePhotoFile(name: String) {
+        viewModelScope.launch { container.imageStore.delete(name) }
+    }
+
     /** photoFile 为已落盘的图片文件名（选择时即导入）；编辑时为 null 表示沿用旧照片 */
     fun saveItem(existing: Item?, photoFile: String?, name: String, category: WardrobeCategory,
                  color: String, desc: String, tags: List<String>, onDone: (Boolean) -> Unit) {

@@ -19,7 +19,9 @@ android {
     }
 
     buildTypes {
+        // it-016：release 只保留真机 ABI，onnxruntime .so 体积减半（debug 保留 x86_64 供模拟器评审）
         release {
+            ndk { abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a")) }
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -35,6 +37,13 @@ android {
         buildConfig = true // it-015：演示模式入口按 DEBUG 构建显隐
     }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+
+    lint {
+        // lint 工具与 Kotlin 2.1.21 的 Analysis API 不匹配：release 内置 lintVital 多个
+        // detector 分析即崩（lifecycle NonNullableMutableLiveDataDetector 等，与业务代码无关，
+        // it-016 阶段 B 首次出 release 包时暴露）。个人应用不阻塞发布，日常 lint 手动跑。
+        checkReleaseBuilds = false
+    }
 }
 
 dependencies {
@@ -64,6 +73,10 @@ dependencies {
     implementation("com.leo.libs:store:0.1.0")
     // 侧滑卡组 + 随机抽取 SDK（composite build，libs/carddeck）
     implementation("com.leo.libs:carddeck:0.1.0")
+    // 主体抠图 SDK（it-016，composite build，libs/cutout）+ 移动端 ONNX 运行时
+    // （版本须与 libs/cutout 的 compileOnly 桌面版对齐，见 libs/cutout/specs/06-decisions.md ADR-002）
+    implementation("com.leo.libs:cutout:0.1.0")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.airbnb.android:lottie-compose:6.7.1")
