@@ -22,8 +22,6 @@ import com.leo.wardrobe.domain.model.newId
 import com.leo.wardrobe.domain.model.wishItemById
 import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.domain.model.wishOutfitWithMembers
-import com.leo.wardrobe.domain.usecase.WardrobeRecapRange
-import com.leo.wardrobe.domain.usecase.wardrobeRecap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -184,7 +182,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** 去背景（it-016 US-15）：生成抠图版新文件（原图不动）；失败返回 null 并 toast，原图不受影响 */
     fun cutoutPhoto(srcFile: String, onDone: (String?) -> Unit) {
         viewModelScope.launch {
-            val out = container.imageStore.cutoutTo(srcFile, container.cutoutEngine)
+            val out = container.imageEditStore.cutoutTo(srcFile, container.cutoutEngine)
             if (out == null) toast("去背景失败：这张照片先保持原样")
             onDone(out)
         }
@@ -315,63 +313,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    // ---- 统计回顾（it-018） ----
-
-    /** 「好久没穿」提醒设置（DataStore，跨启动保留） */
-    val recapPrefs: StateFlow<com.leo.wardrobe.data.prefs.RecapReminderPrefs> =
-        container.recapPrefs.flow
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.leo.wardrobe.data.prefs.RecapReminderPrefs())
-
-    val isDemo: Boolean get() = container.isDemo
-
-    fun setReminder(enabled: Boolean, days: Int) {
-        launchSafely {
-            container.recapPrefs.set(enabled, days)
-            if (!container.isDemo) {
-                com.leo.wardrobe.platform.ReminderScheduler.sync(getApplication(), enabled)
-            }
-        }
-    }
-
-    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消）；失败仅记日志 */
-    fun syncReminderSchedule() {
-        launchSafely(quiet = true) {
-            val prefs = container.recapPrefs.snapshot()
-            com.leo.wardrobe.platform.ReminderScheduler.sync(
-                getApplication(),
-                prefs.enabled && !container.isDemo,
-            )
-        }
-    }
-
-    /** 生成年终衣橱长图（按当前角色），写 export 目录返回文件；空打卡数据返回 null */
-    fun generateRecap(range: WardrobeRecapRange, now: Long, onReady: (File?) -> Unit) {
-        launchSafely(failToast = "长图生成失败") {
-            val person = currentPerson.value ?: run {
-                onReady(null); return@launchSafely
-            }
-            val stats = data.value.wardrobeRecap(person.id, range, now)
-            if (!stats.hasWearData) {
-                onReady(null); return@launchSafely
-            }
-            val label = when (val r = range) {
-                is WardrobeRecapRange.Year -> "${r.year}"
-                WardrobeRecapRange.All -> "衣橱总账"
-            }
-            val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CHINA)
-                .format(java.util.Date(now))
-            val renderer = com.leo.wardrobe.ui.recap.WardrobeRecapLongImage(
-                stats, label, dateStr, photoFileOf = { name -> imageFileOf(name) },
-            )
-            onReady(renderer.renderTo(container.imageStore.exportDir()))
-        }
-    }
-
-    /** 存相册（Pictures/Wardrobe，复用导出门面） */
-    fun saveRecapImage(file: File): Boolean = container.share.saveToGallery(file)
-
-    /** 分享（复用导出门面） */
-    fun shareRecapImage(file: File) = container.share.shareImage(file)
+    // ---- 统计回顾（it-018；it-021 回顾域成员已拆至 ui/recap/RecapViewModel） ----
 
     // ---- 心愿域（it-019） ----
 

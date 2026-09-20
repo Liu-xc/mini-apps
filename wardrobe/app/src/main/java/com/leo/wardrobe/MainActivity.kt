@@ -98,12 +98,13 @@ private enum class Tab(val label: String) {
 @Composable
 private fun WardrobeRoot() {
     val vm: AppViewModel = viewModel()
+    val recapVm: com.leo.wardrobe.ui.recap.RecapViewModel = viewModel()
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     var tab by rememberSaveable { mutableStateOf(Tab.OUTFIT) }
 
     // it-018：启动对齐提醒任务；通知深链 → W5 衣物详情
-    LaunchedEffect(Unit) { vm.syncReminderSchedule() }
+    LaunchedEffect(Unit) { recapVm.syncReminderSchedule() }
     val pendingOpen by MainActivity.pendingOpenItemId.collectAsState()
     LaunchedEffect(pendingOpen) {
         val id = pendingOpen ?: return@LaunchedEffect
@@ -198,7 +199,8 @@ private fun WardrobeRoot() {
                     composable(Routes.RECAP) {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             WardrobeRecapScreen(
-                                vm = vm,
+                                appVm = vm,
+                                vm = recapVm,
                                 onBack = { nav.popBackStack() },
                                 onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
                             )

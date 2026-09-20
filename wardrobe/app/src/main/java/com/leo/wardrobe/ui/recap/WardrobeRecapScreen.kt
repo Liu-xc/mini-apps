@@ -79,13 +79,14 @@ import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
 import java.time.LocalDate
 
-/** W9 衣橱回顾页（it-018 阶段B）：结构指标 + 打卡行为 + 年度长图出口 + 衣柜提醒设置。 */
+/** W9 衣橱回顾页（it-018 阶段B）：结构指标 + 打卡行为 + 年度长图出口 + 衣柜提醒设置。
+ *  it-021：回顾域（提醒/长图）走 [RecapViewModel]，角色/数据/提示走全局 [AppViewModel]。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WardrobeRecapScreen(vm: AppViewModel, onBack: () -> Unit, onOpenItem: (String) -> Unit) {
-    val data by vm.data.collectAsState()
+fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> Unit, onOpenItem: (String) -> Unit) {
+    val data by appVm.data.collectAsState()
     val prefs by vm.recapPrefs.collectAsState()
-    val person by vm.currentPerson.collectAsState()
+    val person by appVm.currentPerson.collectAsState()
     val context = LocalContext.current
     val now = remember { System.currentTimeMillis() }
     val thisYear = remember { LocalDate.now().year }
@@ -103,15 +104,15 @@ fun WardrobeRecapScreen(vm: AppViewModel, onBack: () -> Unit, onOpenItem: (Strin
     val ec = editorialColors()
 
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (!granted) vm.toast("未授予通知权限，提醒将无法弹出")
+        if (!granted) appVm.toast("未授予通知权限，提醒将无法弹出")
     }
 
     fun generate() {
         if (rendering) return
         rendering = true
-        vm.generateRecap(range, now) { file ->
+        vm.generateRecap(person?.id, range, now) { file ->
             rendering = false
-            if (file == null) vm.toast("这个档位还没有打卡记录，先去打卡吧") else previewFile = file
+            if (file == null) appVm.toast("这个档位还没有打卡记录，先去打卡吧") else previewFile = file
         }
     }
 
@@ -291,12 +292,12 @@ fun WardrobeRecapScreen(vm: AppViewModel, onBack: () -> Unit, onOpenItem: (Strin
         RecapPreviewDialog(
             file = file,
             onSave = {
-                if (vm.saveRecapImage(file)) vm.toast("已存相册 Pictures/Wardrobe ✓")
-                else vm.toast("当前系统不支持直接存相册，请用分享保存")
+                if (vm.saveRecapImage(file)) appVm.toast("已存相册 Pictures/Wardrobe ✓")
+                else appVm.toast("当前系统不支持直接存相册，请用分享保存")
             },
             onShare = {
                 runCatching { vm.shareRecapImage(file) }
-                    .onFailure { vm.toast("没有可用的分享目标") }
+                    .onFailure { appVm.toast("没有可用的分享目标") }
             },
             onClose = { previewFile = null },
         )
