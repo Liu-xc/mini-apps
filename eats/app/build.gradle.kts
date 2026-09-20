@@ -35,6 +35,13 @@ android {
         buildConfig = true // it-006：演示模式入口按 DEBUG 构建显隐
     }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+
+    lint {
+        // lint 工具与 Kotlin 2.1.21 的 Analysis API 不匹配：release 内置 lintVital 分析即崩
+        // （lifecycle NonNullableMutableLiveDataDetector 等，与业务代码无关；首次出 release 包时
+        // 暴露，与 wardrobe it-016 同因同修）。个人应用不阻塞发布，日常 lint 手动跑。
+        checkReleaseBuilds = false
+    }
 }
 
 dependencies {

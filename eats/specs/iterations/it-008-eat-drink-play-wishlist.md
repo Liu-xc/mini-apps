@@ -189,3 +189,7 @@ it-007 的统计口径是吃专属（「286 顿」、类型占比=堂食/外卖/
 - 全量 `./gradlew testDebugUnitTest` / `assembleDebug` 通过（与 it-007 并行代码同仓全绿）。
 - 模拟器走查（演示模式）：W1 动态标题（今天干啥/玩啥）+ 分类 chips + 玩类候选 1/3 + 愿望卡「🌟 种草 6 天 · 还没去过」；W3「📅 最近的安排 · 周六 9/26 敦煌大展」置顶 + 行内「吃·外卖/喝·外送」分类文案 + 16 家种子；W4 分类 chips + 玩类类型联动（出门/在家/说明）+ 🌟 种草开关；W5 愿望徽章「🌟 愿望 · 种草 6 天前 · 📅 周六 9/26去」+ 安排/取消种草操作。
 - UI 评审优化 3 项：①切分类自动重置类型为该分类全选项（消除残留组合空池，复验通过）②W4 标题/文案「食堂」→「去处」③W3 🌟 toggle 无障碍语义。
+
+### 补充（2026-09-21，出首个 release 包时）
+- `assembleRelease` 首次暴露 `lintVitalRelease` 崩溃（lint 工具与 Kotlin 2.1.21 Analysis API 不匹配，NonNullableMutableLiveDataDetector 等 detector 崩溃，与业务代码无关，wardrobe it-016 同因）。修法：`lint { checkReleaseBuilds = false }`（与 wardrobe 同口径），不阻塞发布，日常 lint 手动跑。
+- release 包 0.1.0（commit 见 git log）已 zipalign+apksigner（debug key）签名并发布至 GitHub Releases。
