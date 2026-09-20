@@ -26,3 +26,7 @@ captures/
 
 # ZCode 会话产物
 .zcode/
+
+# Python 运行产物（.agents/skills 脚本）
+__pycache__/
+*.pyc
