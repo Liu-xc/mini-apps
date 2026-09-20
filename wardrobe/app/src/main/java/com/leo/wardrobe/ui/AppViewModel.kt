@@ -91,9 +91,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setPersonNote(note: String) {
         viewModelScope.launch { prefs.setPersonNote(note) }
     }
-    /** 导出面板五维选择记忆（it-011 O8） */
+    /** 导出面板五维选择记忆（it-011 O8；it-012 增 ready 修恢复竞态） */
     val exportSelections: StateFlow<Map<String, String>> = prefs.exportSelections
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val exportSelectionsReady: StateFlow<Boolean> = prefs.exportSelectionsReady
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun setExportSelections(selections: Map<String, String>) {
         viewModelScope.launch { prefs.saveExportSelections(selections) }

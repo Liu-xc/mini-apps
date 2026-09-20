@@ -184,13 +184,14 @@ fun OutfitDetailScreen(
                             .fillMaxWidth()
                             .aspectRatio(0.8f),
                     )
+                    // it-012：角标移拼贴右上，远离「未配X」空槽语义区
                     Surface(
                         onClick = { pickEffect() },
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                         color = editorialColors().accent,
                         shadowElevation = 3.dp,
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
+                            .align(Alignment.TopEnd)
                             .padding(10.dp),
                     ) {
                         Row(
@@ -258,7 +259,7 @@ fun OutfitDetailScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = { showExport = true }, modifier = Modifier.weight(1f)) {
-                    Text("📋 复制素材")
+                    Text("📋 复制长图")  // it-012：与搭配页同一套词
                 }
             }
 

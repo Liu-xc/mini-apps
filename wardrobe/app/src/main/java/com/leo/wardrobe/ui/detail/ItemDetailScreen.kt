@@ -204,17 +204,14 @@ fun OutfitThumb(
                     .aspectRatio(0.86f),
             )
         } else if (items.isNotEmpty()) {
-            val photos = items.take(4).map { vm.imageFileOf(it.imageFile) }
-            Column {
-                Row(Modifier.fillMaxWidth()) {
-                    ThumbCell(photos.getOrNull(0), Modifier.weight(1f))
-                    ThumbCell(photos.getOrNull(1), Modifier.weight(1f))
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    ThumbCell(photos.getOrNull(2), Modifier.weight(1f))
-                    ThumbCell(photos.getOrNull(3), Modifier.weight(1f))
-                }
-            }
+            // it-012 O5'：与卡组同一套人形拼贴（含空槽），一页一种语言
+            com.leo.wardrobe.ui.components.BodyCollage(
+                items = items,
+                imageFileOf = vm::imageFileOf,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(0.86f),
+            )
         }
         if (showDate) {
             Text(
@@ -225,23 +222,4 @@ fun OutfitThumb(
             )
         }
     }
-}
-
-@Composable
-private fun ThumbCell(file: File?, modifier: Modifier = Modifier) {
-    // 0.86 = 成品图卡 aspectRatio，让拼贴总高与成品图卡对齐
-    if (file == null) {
-        Box(
-            modifier
-                .aspectRatio(0.86f)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        )
-        return
-    }
-    AsyncImage(
-        model = file,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier.aspectRatio(0.86f),
-    )
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -93,10 +94,17 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                             p.name,
                             style = MaterialTheme.typography.titleMedium,
                             color = editorialColors().ink,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 14.dp),
+                            modifier = Modifier.padding(start = 14.dp),
                         )
+                        // it-012：✓使用中紧跟名字（R2：不再悬在行末）
+                        if (isCurrent && !manageMode) {
+                            Text(
+                                " ✓ 使用中",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
                         if (manageMode) {
                             IconButton(onClick = { editTarget = p }) {
                                 Icon(Icons.Outlined.Edit, "编辑", tint = editorialColors().inkFaint)
@@ -104,12 +112,6 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                             IconButton(onClick = { deleteTarget = p }) {
                                 Icon(Icons.Outlined.Delete, "删除", tint = MaterialTheme.colorScheme.error)
                             }
-                        } else if (isCurrent) {
-                            Text(
-                                "✓ 使用中",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
                         }
                     }
                 }

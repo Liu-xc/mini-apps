@@ -117,38 +117,48 @@ fun ItemEditScreen(
                 },
             )
         },
+        // it-012 重构：与 eats it-005 同构——中性灰原因 + 全宽两态；点击未就绪按钮 toast 缺什么
         bottomBar = {
+            val reason = when {
+                !hasPhoto && name.isBlank() -> "选照片、填名称后可保存"
+                !hasPhoto -> "还差一张照片"
+                name.isBlank() -> "填名称后可保存"
+                else -> null
+            }
             Surface(shadowElevation = 8.dp) {
-                Column(Modifier.imePadding().navigationBarsPadding()) {
-                    if (!saveReady) {
+                Column(
+                    Modifier
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (reason != null) {
                         Text(
-                            when {
-                                !hasPhoto && name.isBlank() -> "选照片、填名称后可保存"
-                                !hasPhoto -> "还差一张照片"
-                                else -> "填名称后可保存"
-                            },
+                            reason,
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 22.dp, vertical = 2.dp),
+                            color = editorialColors().inkFaint,
+                            modifier = Modifier.padding(bottom = 6.dp),
                         )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 10.dp),
-                    ) {
-                        if (saveReady) {
-                            Button(onClick = { doSave() }, modifier = Modifier.fillMaxWidth()) {
-                                Text(if (existing == null) "保存" else "更新", style = MaterialTheme.typography.titleMedium)
-                            }
-                        } else {
-                            OutlinedButton(onClick = { }, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                                Text(if (existing == null) "保存" else "更新")
-                            }
+                        OutlinedButton(
+                            onClick = {
+                                when {
+                                    !hasPhoto && name.isBlank() -> vm.toast("先选照片、再填名称")
+                                    !hasPhoto -> vm.toast("还差一张照片")
+                                    else -> vm.toast("名称必填")
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(if (existing == null) "保存" else "更新") }
+                    } else {
+                        Button(
+                            onClick = { doSave() },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                        ) {
+                            Text(
+                                if (existing == null) "保存" else "更新",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
                         }
                     }
                 }
@@ -163,6 +173,34 @@ fun ItemEditScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // it-012 O7'：无照片时给大虚线预览占位——进页面即知第一步
+            if (!hasPhoto) {
+                Surface(
+                    onClick = { pickPhoto() },
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.5.dp,
+                        if (photoMissing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().aspectRatio(1.6f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.PhotoCamera,
+                            contentDescription = null,
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(40.dp),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("拍照 / 选照片 · 第一步（必填 *）", style = MaterialTheme.typography.bodyMedium, color = editorialColors().ink)
+                    }
+                }
+            }
             // 照片预览（已落盘的本地文件）
             if (importedFile != null) {
                 PhotoCard(
@@ -181,7 +219,7 @@ fun ItemEditScreen(
                         .aspectRatio(0.8f),
                 )
             }
-            Surface(
+            if (hasPhoto) Surface(
                 onClick = { pickPhoto() },
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface,

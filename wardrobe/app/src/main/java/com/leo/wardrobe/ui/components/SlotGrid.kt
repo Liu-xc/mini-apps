@@ -116,18 +116,7 @@ fun SlotCell(
                             mat = true,
                             modifier = Modifier.fillMaxSize(),
                         )
-                        // 品类徽标（左上）
-                        Surface(
-                            color = Color(0x73000000),
-                            shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 8.dp),
-                        ) {
-                            Text(
-                                category.label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
+                        // it-012：品类徽标并入卡底名称条，‹ n/n › 独占右上（R2 双胶囊竞争）
                         // 序号胶囊（右上，it-011 O6：‹ n/n › 明示可翻）
                         Surface(
                             color = Color(0x73000000),
@@ -149,7 +138,10 @@ fun SlotCell(
                                 .background(Color(0x8C000000)),
                         ) {
                             Text(
-                                items.getOrNull(pagerState.currentPage)?.name ?: "",
+                                buildString {
+                                    append(category.label)
+                                    items.getOrNull(pagerState.currentPage)?.name?.let { append(" · $it") }
+                                },
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White,
                                 maxLines = 1,

@@ -62,7 +62,7 @@ fun PhotoCard(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(4.dp),
+                    .padding(2.dp), // it-012：扁槽（鞋）内照片占比提升
             )
         }
     }

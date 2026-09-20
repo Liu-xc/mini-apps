@@ -18,19 +18,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -104,43 +108,55 @@ fun WardrobeScreen(
                 )
             }
 
-            // it-009 品类 Tab 行：3D 图标 + 单选筛选；it-011 C6 标签收进「筛选」角标
+            // it-012 O4'：品类图标 Tab（横滑）+「筛选」固定行尾不再被挤出屏外
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
-                    selected = categoryTab == null,
-                    onClick = { categoryTab = null },
-                    label = { Text("全部") },
-                )
-                WardrobeCategory.entries.forEach { c ->
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     FilterChip(
-                        selected = categoryTab == c,
-                        onClick = { categoryTab = if (categoryTab == c) null else c },
-                        label = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        selected = categoryTab == null,
+                        onClick = { categoryTab = null },
+                        label = { Text("全部") },
+                    )
+                    WardrobeCategory.entries.forEach { c ->
+                        val selected = categoryTab == c
+                        Surface(
+                            onClick = { categoryTab = if (categoryTab == c) null else c },
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = if (selected) editorialColors().accent.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (selected) 1.5.dp else 0.dp,
+                                editorialColors().accent,
+                            ),
+                            modifier = Modifier.size(44.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
                                 Image(
                                     painter = painterResource(c.iconRes),
-                                    contentDescription = null,
+                                    contentDescription = c.label,
                                     contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(22.dp),
                                 )
-                                Text(c.label, modifier = Modifier.padding(start = 4.dp))
                             }
-                        },
-                    )
+                        }
+                    }
                 }
+                // 筛选固定：角标常驻可见（R2 P1 修法）
                 FilterChip(
                     selected = filterTag != null,
                     onClick = { filterSheetOpen = true },
-                    label = {
-                        Text(if (filterTag != null) "筛选·$filterTag" else "筛选")
-                    },
+                    label = { Text(if (filterTag != null) "筛选·1" else "筛选") },
                 )
             }
 
@@ -166,20 +182,10 @@ fun WardrobeScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    val categories = if (categoryTab != null) listOf(categoryTab!!) else WardrobeCategory.entries.toList()
-                    categories.forEach { category ->
-                        val catItems = filtered.filter { it.category == category }
-                        if (catItems.isEmpty()) return@forEach
-                        if (categoryTab == null) {
-                            item(key = "header-${category.name}", span = { GridItemSpan(2) }) {
-                                com.leo.wardrobe.ui.components.CategoryLabel(category, count = catItems.size)
-                            }
-                        }
-                        catItems.forEach { item ->
-                            item(key = item.id) {
-                                ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item })
-                            }
-                        }
+                    // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
+                    val sorted = filtered.sortedBy { it.category.ordinal }
+                    items(sorted, key = { it.id }) { item ->
+                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item })
                     }
                 }
             }
@@ -246,7 +252,7 @@ fun WardrobeScreen(
     }
 }
 
-/** 网格衣物卡（it-011 C6）：衬纸照片 + 名称/标签；点=编辑，长按=删除确认 */
+/** 网格衣物卡（it-011 C6；it-012 右上 ··· 显式菜单 = 编辑/删除，长按保留快捷） */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ItemCard(
@@ -255,6 +261,7 @@ private fun ItemCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
@@ -262,15 +269,43 @@ private fun ItemCard(
             .combinedClickable(onClick = onEdit, onLongClick = onDelete)
             .padding(8.dp),
     ) {
-        PhotoCard(
-            file = vm.imageFileOf(item.imageFile),
-            contentDescription = item.name,
-            corner = 10.dp,
-            mat = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(0.8f),
-        )
+        Box {
+            PhotoCard(
+                file = vm.imageFileOf(item.imageFile),
+                contentDescription = item.name,
+                corner = 10.dp,
+                mat = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(0.8f),
+            )
+            // it-012：··· 显式入口（P0：替代零提示长按）
+            Box(Modifier.align(Alignment.TopEnd)) {
+                Surface(
+                    onClick = { menuOpen = true },
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = androidx.compose.ui.graphics.Color(0x66000000),
+                    modifier = Modifier.padding(4.dp).size(28.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.MoreVert,
+                        contentDescription = "编辑或删除",
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.padding(5.dp),
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("编辑") },
+                        onClick = { menuOpen = false; onEdit() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("删除", color = MaterialTheme.colorScheme.error) },
+                        onClick = { menuOpen = false; onDelete() },
+                    )
+                }
+            }
+        }
         Text(
             item.name,
             style = MaterialTheme.typography.titleSmall,
@@ -279,18 +314,21 @@ private fun ItemCard(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp, start = 2.dp),
         )
+        // it-012：颜色改色点胶囊，与 #标签 并列但语义分离
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, start = 2.dp)) {
             if (item.color.isNotBlank()) {
-                Text(
-                    item.color,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = editorialColors().inkFaint,
-                    maxLines = 1,
-                )
+                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)) {
+                    Text(
+                        item.color,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = editorialColors().inkFaint,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                    )
+                }
             }
             if (item.tags.isNotEmpty()) {
                 Text(
-                    (if (item.color.isNotBlank()) " · " else "") + item.tags.take(2).joinToString(" ") { "#$it" },
+                    (if (item.color.isNotBlank()) "  " else "") + item.tags.take(2).joinToString(" ") { "#$it" },
                     style = MaterialTheme.typography.labelSmall,
                     color = editorialColors().inkFaint,
                     maxLines = 1,

@@ -169,7 +169,7 @@ fun BodyCollage(
 
 /** 人形剪影淡底：与纸面同族、比 surfaceVariant 更轻 */
 @Composable
-private fun silhouetteTint(): Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+private fun silhouetteTint(): Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
 
 /** 有衣物照片的槽位：淡衬底 + Fit 完整呈现轮廓（照片=穿在身上） */
 @Composable

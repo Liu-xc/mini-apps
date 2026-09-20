@@ -73,6 +73,9 @@ class PrefsStore(private val context: Context) {
         }
     }
 
+    /** it-012：DataStore 首发射完成标志——修 exportSelections 恢复竞态（首帧空值不再吞掉记忆） */
+    val exportSelectionsReady: Flow<Boolean> = context.store.data.map { true }
+
     /** W1 格位滑动 coach 动画（it-011 O6）：仅首次进入演示一次 */
     val coachSlotsShown: Flow<Boolean> = context.store.data.map { it[keyCoachSlots] ?: false }
 
