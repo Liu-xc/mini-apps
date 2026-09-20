@@ -532,7 +532,7 @@ private fun RecapPreviewDialog(
     onShare: () -> Unit,
     onClose: () -> Unit,
 ) {
-    val bitmap = remember(file) { BitmapFactory.decodeFile(file.path) }
+    // it-023：预览改 Coil 异步按约束降采样（原 BitmapFactory 在组合期主线程全尺寸解码长图，开预览必卡）
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             shape = MaterialTheme.shapes.large,
@@ -540,19 +540,15 @@ private fun RecapPreviewDialog(
             modifier = Modifier.fillMaxWidth(0.94f).fillMaxSize(0.92f),
         ) {
             Column(Modifier.padding(16.dp)) {
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "长图预览",
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                        contentScale = ContentScale.FillWidth,
-                    )
-                } else {
-                    Box(Modifier.weight(1f))
-                }
+                coil.compose.AsyncImage(
+                    model = file,
+                    contentDescription = "长图预览",
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    contentScale = ContentScale.FillWidth,
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = onSave, modifier = Modifier.weight(1f)) { Text("存相册") }
