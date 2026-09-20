@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>libs/cutout 抠图 SDK · 阶段 A 测试报告</title>
+<style>
+  :root {
+    --ink: #1c1e26; --sub: #5a5f6e; --line: #e4e6ee; --bg: #f6f7fa;
+    --green: #177a4c; --green-bg: #e7f5ee; --amber: #9a6b15; --amber-bg: #fbf3e2;
+    --blue: #2b5db8; --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+         color: var(--ink); background: var(--bg); font-size: 14px; line-height: 1.7; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px 64px; }
+
+  .hero { background: linear-gradient(135deg, #1f2740, #34436b); color: #fff;
+          padding: 36px 24px 30px; }
+  .hero-inner { max-width: 960px; margin: 0 auto; padding: 0 0; }
+  .hero h1 { font-size: 24px; font-weight: 700; letter-spacing: .5px; }
+  .hero .meta { margin-top: 10px; color: #b9c2dd; font-size: 13px; }
+  .badge { display: inline-block; margin-top: 14px; background: rgba(72,199,142,.18);
+           border: 1px solid rgba(72,199,142,.55); color: #7fe0b2; border-radius: 999px;
+           padding: 4px 14px; font-size: 13px; font-weight: 600; }
+
+  h2 { font-size: 17px; margin: 40px 0 14px; padding-left: 10px; border-left: 4px solid #34436b; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat { flex: 1 1 140px; background: var(--card); border: 1px solid var(--line);
+          border-radius: 10px; padding: 14px 16px; }
+  .stat .v { font-size: 22px; font-weight: 700; }
+  .stat .k { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+           padding: 18px 20px; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card);
+          border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { background: #eef0f6; font-size: 13px; color: var(--sub); white-space: nowrap; }
+  td { font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .layer { display: inline-block; font-size: 12px; border-radius: 5px; padding: 1px 8px; }
+  .l-pure { background: #e8f0fb; color: var(--blue); }
+  .l-orch { background: #f0eafb; color: #6b46b8; }
+  .l-real { background: var(--green-bg); color: var(--green); }
+
+  .samples { display: flex; flex-direction: column; gap: 22px; }
+  .scene { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .scene h3 { font-size: 15px; margin-bottom: 4px; }
+  .scene .cap { font-size: 12.5px; color: var(--sub); margin-bottom: 12px; }
+  .imgs { display: flex; gap: 14px; flex-wrap: wrap; }
+  .imgs figure { flex: 1 1 260px; max-width: 340px; }
+  .imgs img { width: 100%; border-radius: 8px; border: 1px solid var(--line); display: block; }
+  .imgs figcaption { text-align: center; font-size: 12px; color: var(--sub); margin-top: 6px; }
+  .probe { margin-top: 10px; font-size: 12.5px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 10px; margin-right: 8px;
+          font-size: 12px; font-weight: 600; }
+  .pass { background: var(--green-bg); color: var(--green); }
+  .note { background: var(--amber-bg); color: var(--amber); }
+
+  ul.tight { padding-left: 20px; }
+  ul.tight li { margin: 6px 0; }
+  .foot { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--line);
+          font-size: 12px; color: var(--sub); }
+  code { background: #eef0f6; border-radius: 4px; padding: 1px 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-inner">
+    <h1>libs/cutout 抠图 SDK · 阶段 A 测试报告</h1>
+    <div class="meta">2026-09-20 · wardrobe it-016 阶段 A · commit <code style="background:rgba(255,255,255,.12);color:#dbe3f7">1949fe9</code> · 平台 macOS arm64 · 桌面 JVM（Temurin 17 / Gradle 8.9）</div>
+    <span class="badge">✓ 15/15 用例全部通过 · 0 失败 · 含真实 u2netp.onnx 端到端推理</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <h2>一、结果总览</h2>
+  <div class="cards">
+    <div class="stat"><div class="v">15 / 15</div><div class="k">用例通过（0 失败 0 错误）</div></div>
+    <div class="stat"><div class="v">213 ms</div><div class="k">真模型热推理 / 张（桌面 JVM）</div></div>
+    <div class="stat"><div class="v">1.31 s</div><div class="k">首次调用（含建会话，一次性）</div></div>
+    <div class="stat"><div class="v">4.4 MB</div><div class="k">u2netp.onnx（SHA-256 已锚定）</div></div>
+    <div class="stat"><div class="v">2.9 s</div><div class="k">全套测试 wall time</div></div>
+  </div>
+  <div class="panel">
+    <b>结论。</b>抠图管线（预处理 → ONNX 推理 → 掩码后处理）在桌面 JVM 上用真实模型端到端跑通；
+    白底/杂色背景/挂拍/低对比四类合成场景的主体保留与背景移除全部达标（主体 alpha 254–255，背景角落 alpha 0），
+    生命周期行为（惰性建会话、失败重试、并发串行、空闲释放）符合设计。
+    <b>本阶段无设备依赖，SDK 质量门已闭环</b>；移动端真机指标（耗时 / APK 增量 / 冷启动回归）按计划留待阶段 B 回填。
+  </div>
+
+  <h2>二、分层用例明细</h2>
+  <table>
+    <tr><th>层</th><th>用例</th><th>验证点</th><th class="num">耗时</th></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>bad size throws BadInput</td><td>非法尺寸/长度抛 BadInput，不触模型</td><td class="num">1 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>uniform red pixel normalizes</td><td>1×1 纯色 → 320² 常量场，ImageNet mean/std 逐通道数值精确</td><td class="num">7 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>input at model side resizes identity</td><td>320×320 输入恒等缩放，无插值混色</td><td class="num">5 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>constant mask stays opaque</td><td>常量掩码保守输出全 255（宁可不抠不误透明，ADR-004）</td><td class="num">1 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>all zero mask stays opaque</td><td>全零掩码（无显著主体）同样保守放行</td><td class="num">0 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>horizontal gradient spans range</td><td>渐变掩码单调映射且覆盖 [0,255]</td><td class="num">4 ms</td></tr>
+    <tr><td><span class="layer l-pure">纯函数</span></td><td>rgb channels untouched</td><td>只写 alpha，RGB 原样保留</td><td class="num">0 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>cutout without prepare auto-init</td><td>未预热直接抠图可自动初始化（UI 无需管状态机）</td><td class="num">14 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>bad input throws w/o session</td><td>非法输入不建会话、readiness 不受污染</td><td class="num">2 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>failed init marks Failed and retries</td><td>建会话失败 → Failed 态 → 重试恢复 Ready</td><td class="num">49 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>concurrent cutouts serialize</td><td>3 路并发推理零重叠（maxInflight==1）</td><td class="num">46 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>idle timeout releases session</td><td>空闲超时自动释放（虚拟时间），下次调用重建</td><td class="num">14 ms</td></tr>
+    <tr><td><span class="layer l-orch">编排</span></td><td>release closes idempotently</td><td>手动释放幂等，释放后可重建</td><td class="num">14 ms</td></tr>
+    <tr><td><span class="layer l-real">真模型</span></td><td>synthetic disk end to end</td><td>白底深蓝圆盘 640²：主体 alpha=255 / 背景 alpha=0 / RGB 不动</td><td class="num">229 ms</td></tr>
+    <tr><td><span class="layer l-real">真模型</span></td><td>scene samples ×4（见第三节）</td><td>四类场景质量断言 + 样张产物</td><td class="num">2527 ms</td></tr>
+  </table>
+
+  <h2>三、真实场景样张（原片 → 抠图）</h2>
+  <div class="samples">
+
+    <div class="scene">
+      <h3>① 平铺拍摄 · 杂色渐变床单</h3>
+      <div class="cap">模拟随手拍：渐变背景 + 噪点 + 砖红 T 恤（带描边与中央白色印花）</div>
+      <div class="imgs">
+        <figure><img src="samples/flatLay-original.jpg" alt=""><figcaption>原片</figcaption></figure>
+        <figure><img src="samples/flatLay-cutout.png" alt=""><figcaption>抠图（透明 = 棋盘格）</figcaption></figure>
+      </div>
+      <div class="probe">
+        <span class="pill pass">主体 alpha 255</span><span class="pill pass">背景角落 alpha 0</span>
+        <span class="pill note">发现：中央大面积白色印花内部被误判透明（见第四节 2）</span>
+      </div>
+    </div>
+
+    <div class="scene">
+      <h3>② 挂拍 · 木地板背景</h3>
+      <div class="cap">深蓝 T 恤 + 顶部挂钩，暖色木纹渐变背景</div>
+      <div class="imgs">
+        <figure><img src="samples/hanger-original.jpg" alt=""><figcaption>原片</figcaption></figure>
+        <figure><img src="samples/hanger-cutout.png" alt=""><figcaption>抠图（锐化后边缘无晕边，挂钩保留）</figcaption></figure>
+      </div>
+      <div class="probe"><span class="pill pass">主体 alpha 255</span><span class="pill pass">背景角落 alpha 0</span><span class="pill pass">边缘无背景色晕边（ADR-005）</span></div>
+    </div>
+
+    <div class="scene">
+      <h3>③ 低对比 · 白衬衫浅灰背景</h3>
+      <div class="cap">最难场景：前景/背景亮度差极小（ΔRGB ≈ 20）+ 弱描边</div>
+      <div class="imgs">
+        <figure><img src="samples/lowContrast-original.jpg" alt=""><figcaption>原片</figcaption></figure>
+        <figure><img src="samples/lowContrast-cutout.png" alt=""><figcaption>抠图（边缘残留极淡灰晕，可接受）</figcaption></figure>
+      </div>
+      <div class="probe">
+        <span class="pill pass">主体 alpha 254</span><span class="pill pass">背景角落 alpha 0</span>
+        <span class="pill pass">锐化后边缘干净（原残留 1–2px 灰晕已消除）</span>
+      </div>
+    </div>
+
+    <div class="scene">
+      <h3>④ 人穿衣服 · 预期「连人抠出」</h3>
+      <div class="cap">头部 + 双臂 + 衣服：显著性分割不区分人/物；锐化窗下头部/手臂（弱显著部分）被明显削切</div>
+      <div class="imgs">
+        <figure><img src="samples/onBody-original.jpg" alt=""><figcaption>原片</figcaption></figure>
+        <figure><img src="samples/onBody-cutout.png" alt=""><figcaption>抠图（衣身完整，头部/右臂残缺）</figcaption></figure>
+      </div>
+      <div class="probe">
+        <span class="pill pass">衣身 alpha 255</span><span class="pill pass">背景角落 alpha 0</span>
+        <span class="pill note">头部/手臂残缺（掩码中值被锐化窗压低，见第四节 3）</span>
+      </div>
+    </div>
+
+  </div>
+
+  <h2>四、发现与已知边界</h2>
+  <div class="panel">
+    <ul class="tight">
+      <li><b>背景色晕边已修复（ADR-005 边缘锐化窗）。</b>掩码软边像素的 RGB 仍是背景色，纯软边输出会在主体周围
+      形成「背景色描边」（修复前挂拍场景有一圈明显木色晕边）。在 min-max 拉伸后增加锐化窗
+      （归一化掩码 &lt;0.35 判背景、&gt;0.85 判主体、之间线性过渡），半透明带收窄后晕边基本消除，残留仅 1px 级。
+      对硬边衣物主场景收益明确。</li>
+      <li><b>大面积低频印花可能被误伤，锐化后更明显。</b>场景①中衣身中央的纯白矩形印花（零纹理）掩码值低，
+      会被误判为背景挖出透明洞。真实衣物印花通常带图案纹理，影响面小；兜底是交互上「前后对比 + 一键放弃」。观察项。</li>
+      <li><b>人穿衣服场景建议产品上放弃抠图。</b>u2netp 是显著性分割，不做「只抠衣物」；且锐化窗会削切
+      掩码中等的弱显著部分——场景④中头部/手臂明显残缺。结论：录入 UI 对该形态照片给出「不建议去背景」提示，
+      或后续引入 human parsing 模型（远期演进）。</li>
+      <li><b>桌面数字 ≠ 手机数字。</b>213 ms 为 mac arm64 桌面 JVM 热推理；移动端 ARM CPU 预算 0.3–0.8 s/张，
+      首次调用（建会话）一次性 ~1 s，阶段 B 真机实测回填。</li>
+    </ul>
+  </div>
+
+  <h2>五、覆盖缺口（阶段 B 回填清单）</h2>
+  <div class="panel">
+    <ul class="tight">
+      <li>Android 真机/模拟器端到端：Bitmap RGBA 桥正确性、真机耗时、中低端机型内存峰值</li>
+      <li>APK 增量实测（预算 +30 MB 量级：onnxruntime .so ~25 MB + 模型 4.4 MB）</li>
+      <li>冷启动无回归（启动路径不触碰 onnxruntime 类）</li>
+      <li>带 alpha WebP 在卡片 / 导出合成长图的渲染走查（透明底不出现黑底）</li>
+    </ul>
+  </div>
+
+  <div class="foot">
+    复跑方式：<code>wardrobe/gradlew -p libs/cutout test</code>（纯 JVM，无需模拟器；样张产物输出至 <code>libs/cutout/build/cutout-samples/</code>）。
+    模型 SHA-256 <code>309c8469…f4ddd8</code>（rembg 同款 u2netp）。设计依据：<code>libs/cutout/specs/00-architecture.md</code> · 迭代档案：<code>wardrobe/specs/iterations/it-016-cutout-sdk.md</code>
+  </div>
+</div>
+</body>
+</html>
