@@ -133,8 +133,6 @@ fun RecordsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(380.dp),
-                        circular = true,
-                        visibleStack = 5,
                         properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
                             stackedCardsOffset = 14.dp,
                             padding = 6.dp,

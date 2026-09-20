@@ -97,7 +97,8 @@ class CardDeckController<T> internal constructor(
  *   [CardDeckController.previous]/[CardDeckController.next] 供按钮/程序化翻张。
  * - 循环：[circular]（默认 true）时手势滑走末张后自动回到第一张，可无限轮播——
  *   修复库原生行为「滑到末尾后卡组清空」。
- * - 堆叠上限：[visibleStack] 控制同时堆叠可见的卡片数（数据可以远多于它，轮播展示）。
+ * - 堆叠层数使用库默认值：实测 State 构造的首个 int 并非堆叠数配置（误传会把索引顶到越界、
+ *   卡组渲染空白），底层未暴露安全的堆叠数入口，故本层不做透传。
  * 卡组不自带尺寸——用 modifier 决定大小（如 fillMaxWidth(0.9f).height(460.dp)）。
  * properties 透传底层库配置（堆叠偏移/阈值/旋转等）。
  */
@@ -107,11 +108,10 @@ fun <T> CardDeck(
     modifier: Modifier = Modifier,
     properties: SwipeableCardsProperties = SwipeableCardsProperties(),
     circular: Boolean = true,
-    visibleStack: Int = 3,
     onSwipe: ((item: T, toRight: Boolean) -> Unit)? = null,
     cardContent: @Composable (T) -> Unit,
 ): CardDeckController<T> {
-    val state = rememberSwipeableCardsState(visibleStack.coerceAtLeast(1)) { items.size }
+    val state = rememberSwipeableCardsState(itemCount = { items.size })
     val controller = remember(state, circular) { CardDeckController(state, { items }, circular) }
     LazySwipeableCards(
         modifier = modifier,

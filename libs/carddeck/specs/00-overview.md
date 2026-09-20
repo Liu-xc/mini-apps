@@ -44,4 +44,4 @@ class CardDeckController<T> {
 
 - 循环：`circular`（默认 true）——手势滑走末张后 `setCurrentIndex(0)` 自动回首张，修复库原生「滑到末尾卡组清空」（it-003 遗留）；`previous()` 在首张前回绕至末张。
 - 双向：`previous()`/`next()` 程序化双向；手势往回翻依赖库原生 `canSwipeBack = index > 0`（首张的手势回翻不可用，用 ‹ 按钮/程序化补足）。
-- 堆叠上限：`visibleStack` 参数透传库 `visibleCardsInStack`（数据可远多于堆叠数，轮播展示）。
+- ~~堆叠上限：`visibleStack` 参数透传库 `visibleCardsInStack`~~ **撤回（实验证伪）**：State 构造首个 int 实为初始索引类参数，误传任意值会把索引顶到越界（卡组空白、卡序胶囊 coerce 掩盖显示）；堆叠层数用库默认，等源码确认正确入口后再加。

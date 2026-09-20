@@ -3,6 +3,7 @@ package com.leo.wardrobe.ui.outfit
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,8 +26,10 @@ import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -241,8 +244,7 @@ fun OutfitScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.Center,
+                    .padding(start = 12.dp, end = 12.dp, top = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (activeCategories.isEmpty()) {
@@ -257,7 +259,7 @@ fun OutfitScreen(
                         catItems = catItems, pagerStates = pagerStates, vm = vm,
                         onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                         coach = coachPhase,
-                        weightOf = { 1f }, aspectOf = { 1f },
+                        aspectOf = { 1f },
                         onAdd = { zone -> addSheetCats = addableCats(zone) },
                     )
                     Spacer(Modifier.height(8.dp))
@@ -267,7 +269,7 @@ fun OutfitScreen(
                         activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
                         onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                         coach = coachPhase,
-                        weightOf = { 1f }, aspectOf = { 0.78f },
+                        aspectOf = { 0.78f },
                         onAdd = { zone -> addSheetCats = addableCats(zone) },
                     )
                     Spacer(Modifier.height(8.dp))
@@ -277,7 +279,6 @@ fun OutfitScreen(
                         activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
                         onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                         coach = coachPhase,
-                        weightOf = { if (it == WardrobeCategory.BOTTOM) 1.12f else 0.5f },
                         aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.6f else 0.85f },
                         onAdd = { zone -> addSheetCats = addableCats(zone) },
                     )
@@ -288,7 +289,7 @@ fun OutfitScreen(
                         catItems = catItems, pagerStates = pagerStates, vm = vm,
                         onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                         coach = coachPhase,
-                        weightOf = { 1f }, aspectOf = { 2.6f },
+                        aspectOf = { 2.6f },
                         onAdd = { zone -> addSheetCats = addableCats(zone) },
                     )
                 }
@@ -381,7 +382,9 @@ fun OutfitScreen(
 @Composable
 private fun PlaceholderPager(): PagerState = rememberPagerState(pageCount = { 0 })
 
-/** 区行（it-015 修订）：渲染区内已加入的品类格 + 行尾「＋」添加钮（区内可加品类已尽时隐藏） */
+/** 区行（it-015 修订二）：渲染区内已加入的品类格 + 「＋」添加钮（区内可加品类已尽时隐藏）。
+ *  格宽用固定比例（fillMaxWidth 分数）+ Center 排布——激活件数变化时格子大小恒定、整行居中，
+ *  不再用 weight 均分（件数少时格子会被拉爆，比例失真）。 */
 @Composable
 private fun ZoneRow(
     zone: List<WardrobeCategory>,
@@ -393,36 +396,48 @@ private fun ZoneRow(
     onAddItem: () -> Unit,
     onOpenWishlist: () -> Unit,
     coach: Boolean,
-    weightOf: (WardrobeCategory) -> Float,
     aspectOf: (WardrobeCategory) -> Float,
     onAdd: (List<WardrobeCategory>) -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        zone.filter { it in activeCats }.forEach { cat ->
-            OutfitSlot(
-                category = cat,
-                catItems = catItems,
-                pagerStates = pagerStates,
-                vm = vm,
-                onOpenItem = onOpenItem,
-                onAddItem = onAddItem,
-                onOpenWishlist = onOpenWishlist,
-                modifier = Modifier.weight(weightOf(cat)),
-                aspect = aspectOf(cat),
-                coach = coach,
-                onRemove = { vm.setSlot(cat, null) },
-            )
-        }
-        if (zone.any { it !in activeCats && !catItems[it].orEmpty().isEmpty() }) {
-            androidx.compose.material3.FilledTonalIconButton(
-                onClick = { onAdd(zone) },
-                modifier = Modifier.size(40.dp),
-            ) {
-                Text("＋", style = MaterialTheme.typography.titleMedium)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // 基准格宽 = (行宽 - 区内间距) / 3：上身三件时占满，一件时居中且大小恒定
+        val cell = (maxWidth - 16.dp) / 3f
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            zone.filter { it in activeCats }.forEach { cat ->
+                val w = when (cat) {
+                    WardrobeCategory.HAT -> cell
+                    WardrobeCategory.BOTTOM -> cell * 1.12f
+                    WardrobeCategory.BAG, WardrobeCategory.ACCESSORY -> cell * 0.55f
+                    WardrobeCategory.SHOES -> cell * 1.25f
+                    else -> cell
+                }
+                OutfitSlot(
+                    category = cat,
+                    catItems = catItems,
+                    pagerStates = pagerStates,
+                    vm = vm,
+                    onOpenItem = onOpenItem,
+                    onAddItem = onAddItem,
+                    onOpenWishlist = onOpenWishlist,
+                    modifier = Modifier.width(w),
+                    aspect = aspectOf(cat),
+                    coach = coach,
+                    onRemove = { vm.setSlot(cat, null) },
+                )
+            }
+            if (zone.any { it !in activeCats && !catItems[it].orEmpty().isEmpty() }) {
+                FilledTonalIconButton(
+                    onClick = { onAdd(zone) },
+                    modifier = Modifier
+                        .padding(start = 8.dp, bottom = 6.dp)
+                        .size(40.dp),
+                ) {
+                    Text("＋", style = MaterialTheme.typography.titleMedium)
+                }
             }
         }
     }
@@ -437,7 +452,7 @@ private fun AddSlotSheet(
     onPick: (WardrobeCategory) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier
                 .padding(horizontal = 20.dp)
