@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Star
@@ -93,6 +95,7 @@ fun ExportSheet(
     var composedFile by remember { mutableStateOf<File?>(null) }
     var composing by remember { mutableStateOf(true) }
     var copied by remember { mutableStateOf(false) }
+    var savedToGallery by remember { mutableStateOf(false) }
     var collected by remember { mutableStateOf(false) }
     var confettiTrigger by remember { mutableIntStateOf(0) }
     var composeJob by remember { mutableStateOf<Job?>(null) }
@@ -334,7 +337,8 @@ fun ExportSheet(
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        // it-014：复制｜存相册｜分享 三动作并列
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             Button(
                                 onClick = {
                                     val file = composedFile
@@ -350,14 +354,47 @@ fun ExportSheet(
                                     }
                                 },
                                 enabled = composedFile != null,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1.25f),
                             ) {
                                 Icon(if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, contentDescription = null)
-                                Text(if (copied) "已复制 ✓" else "复制长图")
+                                Text(if (copied) "已复制 ✓" else "复制长图", maxLines = 1)
                             }
-                            OutlinedButton(onClick = { composedFile?.let { vm.share.shareImage(it) } }) {
-                                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null)
-                                Text("分享")
+                            // it-014：snackbar 会被 sheet 遮挡，成功反馈直接落在按钮上
+                            OutlinedButton(
+                                onClick = {
+                                    val file = composedFile ?: return@OutlinedButton
+                                    scope.launch {
+                                        val ok = vm.share.saveToGallery(file)
+                                        if (ok) {
+                                            savedToGallery = true
+                                            vm.toast("已保存到相册 Pictures/Wardrobe")
+                                        } else {
+                                            vm.toast("当前系统不支持直存，可用「分享」保存")
+                                        }
+                                    }
+                                },
+                                enabled = composedFile != null,
+                                modifier = Modifier.weight(0.95f),
+                            ) {
+                                Icon(
+                                    if (savedToGallery) Icons.Rounded.Check else Icons.Rounded.Download,
+                                    contentDescription = "保存长图到相册",
+                                )
+                                Text(if (savedToGallery) "已存相册 ✓" else "存相册", maxLines = 1)
+                            }
+                            LaunchedEffect(savedToGallery) {
+                                if (savedToGallery) {
+                                    delay(2000)
+                                    savedToGallery = false
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = { composedFile?.let { vm.share.shareImage(it) } },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
+                                modifier = Modifier.weight(0.8f),
+                            ) {
+                                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("分享", maxLines = 1, style = MaterialTheme.typography.labelLarge)
                             }
                         }
                         OutlinedButton(

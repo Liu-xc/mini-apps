@@ -2,8 +2,12 @@ package com.leo.wardrobe.export
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -25,6 +29,30 @@ class ShareClipboard(private val context: Context) {
         val uri = FileProvider.getUriForFile(context, "$AUTHORITY", image)
         val clip = ClipData.newUri(context.contentResolver, "outfit", uri)
         clipboard().setPrimaryClip(clip)
+        true
+    }.getOrDefault(false)
+
+    /**
+     * 保存到相册（it-014）：API 29+ 走 MediaStore 两段式（RELATIVE_PATH Pictures/Wardrobe，
+     * 无需存储权限）；旧系统返回 false，由调用方引导走「分享」保存。
+     */
+    fun saveToGallery(image: File): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return@runCatching false
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "wardrobe_outfit_${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Wardrobe")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            ?: return@runCatching false
+        resolver.openOutputStream(uri)?.use { out ->
+            image.inputStream().use { it.copyTo(out) }
+        } ?: return@runCatching false
+        values.clear()
+        values.put(MediaStore.Images.Media.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
         true
     }.getOrDefault(false)
 
