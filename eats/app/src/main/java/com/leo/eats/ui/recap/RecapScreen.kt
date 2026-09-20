@@ -170,7 +170,7 @@ fun RecapScreen(vm: AppViewModel, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 48.dp),
                     ) {
-                        items(stats.topPlaces) { t ->
+                        items(stats.topPlaces, key = { it.place.id }) { t ->
                             TopCard(
                                 rank = stats.topPlaces.indexOf(t) + 1,
                                 name = t.place.name,

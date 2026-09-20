@@ -4,6 +4,20 @@
 
 ## 未发布
 
+### it-023 — UI 三轮走查与交互修复（夜间专项）
+- 修复 ModalBottomSheet 内校验提示被遮挡（转正无实物照/心愿名为空时提交按钮置灰并明示原因）；
+- 长图预览改 Coil 异步降采样（原组合期主线程全尺寸解码 ~14MB，开预览必卡）；
+- 三轮模拟器走查（uiautomator+截图+交互流实测）全程零崩溃；排除 3 项疑点（详见 it-023）。
+
+### it-022 — 性能梳理与优化（夜间专项）
+- 衣橱/记录页过滤链包 remember、4 处 Lazy 行补 key；审计确认落盘/长图渲染/图片导入均已在 IO 线程（详见 it-022）。
+
+### it-021 — 结构拆分（阶段 1）
+- Repository 按聚合域拆 6 子接口（门面继承，调用点零改动）；ImageEditStore 接口收编；RecapViewModel 拆出；「好久没穿」候选规则抽 domain 纯函数 StaleItemSelector（+4 单测）；WishlistViewModel 拆分经评估裁剪（理由入档）。
+
+### it-020 — 架构评审止血：Mock 级联对齐 + 写路径兜底 + 常青 spec 对齐
+- MockWardrobeRepository 补齐 deletePerson / deleteItem 心愿域级联（此前与真实实现漂移，演示模式数据不一致；+2 单测锁定语义一致）；AppViewModel 写路径统一异常兜底 `launchSafely`（此前 33 个 repo 调用点仅 5 条新写路径有捕获，其余 commit 失败会崩进程）；00/04/06 spec 与代码对齐（范围外清单勘误、模块树、路由表、单 AppViewModel 现状、ADR-016/017 排序）；随附仓库级护栏：CI 单测矩阵（六构建）+ 根 version catalog。来源：[架构评审报告 2026-09-20](../../reports/2026-09-20-architecture-review/report.md)。
+
 ### it-019 — 心愿清单：想买单品 + 心愿穿搭（混搭预览与购入转正）
 - 新增 WishItem 想买单品与 WishOutfit 心愿穿搭双实体（W10 心愿页两分段），W1「🌟 混入心愿」把愿望单品混进搭配槽位上身预览、组合「🌟 存为心愿」可反复回看（Leo 拍板可保存），「已买到」一键转正回填购入记录、心愿穿搭自动更新，买齐后「👗 升级为穿搭」移交预览图为成品图；含愿望件组合禁存 Outfit（仅预览），旧 JSON 向后兼容零迁移。（ADR-020）
 

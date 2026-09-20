@@ -1,6 +1,6 @@
 # 00 · cutout 架构设计（主体抠图 SDK）
 
-- **状态**：阶段 A 已实现 v0.1.0（2026-09-20，wardrobe it-016），JVM 真模型自测 14 用例全绿；wardrobe 接入 = it-016 阶段 B（待 wardrobe 并行功能落地后）
+- **状态**：阶段 A 已实现 v0.1.0（2026-09-20，wardrobe it-016），JVM 真模型自测 15 用例全绿（ADR-005 后补场景样张）；wardrobe 接入 = it-016 阶段 B（已完成，随 it-016 阶段 B 提交）
 - **消费方**：wardrobe US-15（录入去背景）；接口 bytes 通用，其他 app 可复用
 
 ## 1. 定位与目标
@@ -71,7 +71,7 @@ sealed interface CutoutReadiness { Idle; Preparing; Ready; Failed(cause) }
 | 编排（假 inferencer） | 未 prepare 自动初始化、非法输入不建会话、Failed→重试恢复、并发串行（maxInflight==1）、空闲超时释放+重建、release 幂等（虚拟时间） |
 | **真模型自测** | 桌面 JVM + u2netp.onnx 端到端：白底深蓝圆盘 640×640 → 主体 alpha=255 / 背景 alpha=0 / RGB 不动 |
 
-**实测（2026-09-20，mac arm64 桌面 JVM）**：14 用例全绿；真模型端到端 1309ms（含首次建会话；纯推理数百 ms 量级）。移动端预算：中端 ARM CPU 0.3~0.8s/张（阶段 B 实测回填 wardrobe it-016）。
+**实测（2026-09-20，mac arm64 桌面 JVM）**：15 用例全绿（ADR-005 场景样张加入后由 14 增至 15）；真模型端到端 1309ms（含首次建会话；纯推理数百 ms 量级）。移动端预算：中端 ARM CPU 0.3~0.8s/张（阶段 B 实测回填 wardrobe it-016）。
 
 ## 7. 消费方接入路径
 

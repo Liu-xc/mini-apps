@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # runner 镜像自带 Android SDK；platform 35 兜底安装（ licenses 预接受）
+      - name: Android SDK platform 35
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" > /dev/null || true
+
+      # 统一用 wardrobe 的 Gradle 8.9 wrapper 跑六个构建（carddeck/cutout 无自带 wrapper）
+      - name: wardrobe 单测
+        run: wardrobe/gradlew -p wardrobe testDebugUnitTest --no-daemon
+
+      - name: eats 单测
+        run: wardrobe/gradlew -p eats testDebugUnitTest --no-daemon
+
+      - name: libs/store 单测
+        run: wardrobe/gradlew -p libs/store test --no-daemon
+
+      - name: libs/sync 单测
+        run: wardrobe/gradlew -p libs/sync test --no-daemon
+
+      - name: libs/cutout 单测（含真模型端到端）
+        run: wardrobe/gradlew -p libs/cutout test --no-daemon
+
+      - name: libs/carddeck 构建（无测试套件）
+        run: wardrobe/gradlew -p libs/carddeck build --no-daemon

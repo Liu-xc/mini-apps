@@ -105,10 +105,12 @@ fun WardrobeScreen(
     }
 
     val personId = person?.id
-    val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
-    val filtered = allItems
-        .filter { filterTag == null || filterTag!! in it.tags }
-        .filter { categoryTab == null || it.category == categoryTab }
+    val allItems = remember(personId, data) { if (personId != null) data.itemsOf(personId) else emptyList() }
+    val filtered = remember(allItems, filterTag, categoryTab) {
+        allItems
+            .filter { filterTag == null || filterTag!! in it.tags }
+            .filter { categoryTab == null || it.category == categoryTab }
+    }
     val tags by remember(allItems, data.outfits) {
         mutableStateOf(if (personId != null) data.tagsUsedIn(personId) else emptyList())
     }

@@ -140,7 +140,7 @@ fun ItemDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 8.dp),
                 ) {
-                    items(related.size) { index ->
+                    items(related.size, key = { related[it].id }) { index ->
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(150.dp),

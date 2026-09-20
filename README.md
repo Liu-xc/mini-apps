@@ -4,8 +4,9 @@
 
 | 应用 | 目录 | 说明 | 状态 |
 |---|---|---|---|
-| 衣橱 | [`wardrobe/`](wardrobe/) | 安卓原生应用：多角色衣橱管理、滑动组合穿搭、导出生图素材给 AI 生图 Agent、成品效果图回录与单品双向关联 | 开发中 (it-015) |
-| 吃啥 | [`eats/`](eats/) | 安卓原生应用：堂食/外卖/自做三类吃饭记录，地图标记 + 最近一次追踪 + 转盘快速决策 + 美团/点评链接直达 | 开发中 (it-006) |
+| 衣橱 | [`wardrobe/`](wardrobe/) | 安卓原生应用：多角色衣橱管理、滑动组合穿搭、录入去背景、导出生图素材给 AI 生图 Agent、成品效果图回录与单品双向关联、穿搭打卡与衣橱回顾、心愿清单 | 开发中 (it-020) |
+| 吃啥 | [`eats/`](eats/) | 安卓原生应用：吃喝玩乐三类记录（堂食/外卖/自做）、地图标记 + 最近一次追踪、卡组快速决策、统计回顾、想吃想玩愿望清单 | 开发中 (it-009) |
+| 剪贴盒 | [`clips/`](clips/) | 双端剪贴板历史（Android Kotlin/Compose + macOS SwiftUI），clips.json 文件格式为跨端契约，双端单测对齐 | 提案中（it-001 specs 已备，未开工） |
 
 ## 公共基础设施（libs/）
 
@@ -15,6 +16,8 @@
 |---|---|---|---|
 | 本地存储 SDK | [`libs/store/`](libs/store/) | 快照原子存储（tmp→rename + .bak + 三级恢复 + 迁移链）、SSOT 仓库基类（writeHook）、媒体文件管理 | 0.1.0 已实现，wardrobe / eats 均已接入 |
 | 轻同步 SDK | [`libs/sync/`](libs/sync/) | 后端中立契约（SyncValue 七值 / 引擎 / 待推队列 / 错误折叠）+ feishu-bitable 适配器（自动建表、UI 行收编、串行写 + 429 退避） | 0.1.0 已实现，暂未接入应用 |
+| 卡组 SDK | [`libs/carddeck/`](libs/carddeck/) | 对 compose-swipeable-cards 的薄封装（CardDeck + CardDeckController.drawRandom 纯随机节奏编排），转盘/穿搭记录翻卡共用 | 0.1.0 已实现，eats / wardrobe 均已接入 |
+| 离线抠图 SDK | [`libs/cutout/`](libs/cutout/) | u2netp + ONNX Runtime 端侧抠图（RGBA bytes 进出、纯 JVM 双 runtime、会话惰性 + 空闲释放） | 0.1.0 已实现，wardrobe 已接入（it-016） |
 
 ## 仓库约定
 

@@ -29,3 +29,8 @@ captures/
 
 # 应用发布包：仅本地分发，不入仓库
 dist/
+
+# Python 运行产物（.agents/skills 脚本）
+__pycache__/
+*.pyc
+

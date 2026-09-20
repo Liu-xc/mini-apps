@@ -2,6 +2,10 @@
 
 ## 未发布
 
+- **it-011**（2026-09-21）：UI 三轮走查记录——干啥/记一笔(拔草撤销闭环复验)/地图/列表/详情/回顾长图全链路实测，零 P1/P2 问题、零崩溃（详见 it-011）。
+- **it-010**（2026-09-21）：性能梳理第一轮——回顾 TOP3/到访照片条补 Lazy key；审计确认落盘/长图/存相册均在 IO 线程、ListScreen 主链已 remember（详见 it-010）。
+- **it-009**（2026-09-21）：架构评审止血——AppViewModel 写路径统一异常兜底 `launchSafely`（失败 toast + Log；内存回滚由 libs/store 的 commit 序列承担；it-009 之前为 0 兜底，commit 失败会崩进程）；04-architecture 对齐实际（模块树/路由表/单 AppViewModel 现状/幽灵文件清除）、06-decisions ADR-010/011 排序、README 与迭代状态结清。来源：[架构评审报告 2026-09-20](../../reports/2026-09-20-architecture-review/report.md)。
+
 ### it-008 — release 构建修复
 - `lintVitalRelease` 崩溃修复（与 wardrobe it-016 同因）：release 关闭内置 lintVital（`checkReleaseBuilds = false`），日常 lint 手动跑。（2026-09-21）
 
@@ -15,7 +19,7 @@
   WorkManager「好久没去」本地提醒（去过 ≥3 次·评分 ≥4·超 N 天没去，每日至多 1 条，默认关，
   BigPicture 大图，点击深链进详情，ADR-013，US-11）；RecapCalculator/MemoryCandidateSelector 纯函数单测。
 
-### it-006（进行中）— 数据层换用 libs/store + 演示模式
+### it-006 — 数据层换用 libs/store + 演示模式（it-009 结清状态标记）
 - it-006 数据层换用 libs/store（SnapshotStore/SsotRepository/FileMediaStore，ADR-010，磁盘格式不变）+
   应用内演示模式：内存 Mock 数据源（DemoMode 开关/重启生效，入口仅 DEBUG 可见，进/出同一入口确认；修订：去横幅）；
   顺带修复 01-user-stories.md 被 it-003 提交污染为 2.4MB 重复块的问题（恢复健康版+重放修订）。

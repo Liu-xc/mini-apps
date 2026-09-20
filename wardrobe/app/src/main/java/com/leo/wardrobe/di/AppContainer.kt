@@ -33,7 +33,8 @@ class AppContainer(context: Context) {
         versionOf = { it.schemaVersion },
     )
 
-    /** 演示模式下图片指向 cacheDir/mock-images（assets 内置素材解包），真实 images/ 不被触碰 */
+    /** 演示模式下图片指向 cacheDir/mock-images（assets 内置素材解包），真实 images/ 不被触碰。
+     *  it-021：domain 依赖走 ImageStore 接口；抠图/解码/导出目录能力走 [com.leo.wardrobe.data.image.ImageEditStore] 接口（同一实例）。 */
     val imageStore: ImageFileStore = ImageFileStore(
         context,
         FileMediaStore(
@@ -41,6 +42,9 @@ class AppContainer(context: Context) {
             if (demo) "mock-images" else "images",
         ),
     )
+
+    /** 图片加工能力（it-021 收编自具体类依赖） */
+    val imageEditStore: com.leo.wardrobe.data.image.ImageEditStore get() = imageStore
 
     val repository: WardrobeRepository =
         if (demo) MockWardrobeRepository() else WardrobeRepositoryImpl(snapshotStore, imageStore)

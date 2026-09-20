@@ -9,7 +9,7 @@ import android.graphics.RectF
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
-import com.leo.wardrobe.data.image.ImageFileStore
+import com.leo.wardrobe.data.image.ImageEditStore
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.isWishSlot
@@ -24,7 +24,7 @@ import java.io.File
  * 腿行=包|下装|配饰 / 鞋行，照片 Fit 不变形、格底标签条标注品类）。
  * 修订动机（Leo 走查反馈）：原全宽竖堆长图近万 px 太长；按真人比例紧凑化后约 1/3。
  */
-class OutfitImageComposer(private val imageStore: ImageFileStore) {
+class OutfitImageComposer(private val imageStore: ImageEditStore) {
 
     /** 生成并写入 export 目录，返回 JPEG 文件（含 EXIF prompt）；refPhotoFile 非空时其照片置顶（it-017） */
     suspend fun composeToExportFile(items: List<Item>, prompt: String, refPhotoFile: String? = null): File? =

@@ -8,6 +8,7 @@ import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import androidx.exifinterface.media.ExifInterface
+import com.leo.libs.cutout.CutoutEngine
 import com.leo.libs.store.FileMediaStore
 import com.leo.libs.store.MediaStore
 import com.leo.wardrobe.domain.repository.ImageStore
@@ -25,12 +26,11 @@ class ImageFileStore(
     context: Context,
     private val media: MediaStore = FileMediaStore(context.filesDir, "images"),
     private val resolver: ContentResolver = context.contentResolver,
-) : ImageStore {
+) : ImageStore, ImageEditStore {
 
     private val filesRoot = context.filesDir
 
-    /** 合成图等导出临时文件目录（FileProvider export 路径） */
-    fun exportDir(): File = File(filesRoot, "export").apply { mkdirs() }
+    override fun exportDir(): File = File(filesRoot, "export").apply { mkdirs() }
 
     override suspend fun importFromUri(uri: String): String? = withContext(Dispatchers.IO) {
         runCatching {
@@ -59,7 +59,7 @@ class ImageFileStore(
      * 原图文件不动（对比预览的「还原」锚点）；确认采用后由调用方删除未采用的一份。
      * 失败返回 null，原图不受影响。
      */
-    suspend fun cutoutTo(srcFile: String, engine: com.leo.libs.cutout.CutoutEngine): String? =
+    override suspend fun cutoutTo(srcFile: String, engine: CutoutEngine): String? =
         withContext(Dispatchers.IO) {
             runCatching {
                 val path = media.file(srcFile)?.absolutePath ?: return@runCatching null
@@ -79,7 +79,7 @@ class ImageFileStore(
         }
 
     /** 读取存储位图（UI/合成图用；失败返回 null） */
-    suspend fun decode(file: String): Bitmap? = withContext(Dispatchers.IO) {
+    override suspend fun decode(file: String): Bitmap? = withContext(Dispatchers.IO) {
         runCatching { BitmapFactory.decodeFile(media.file(file)?.absolutePath) }.getOrNull()
     }
 
