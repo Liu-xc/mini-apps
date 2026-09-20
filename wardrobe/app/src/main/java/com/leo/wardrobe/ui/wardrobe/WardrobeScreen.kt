@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.AlertDialog
@@ -48,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -75,6 +78,8 @@ import com.leo.wardrobe.ui.theme.editorialColors
 fun WardrobeScreen(
     vm: AppViewModel,
     onEditItem: (String?) -> Unit,
+    onOpenRecap: () -> Unit = {},
+    onOpenWishlist: () -> Unit = {},
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
@@ -116,6 +121,29 @@ fun WardrobeScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = editorialColors().inkFaint,
                     )
+                    // it-018：衣橱回顾入口（W9）
+                    FilledTonalIconButton(
+                        onClick = onOpenRecap,
+                        modifier = Modifier.padding(start = 8.dp).size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.BarChart,
+                            contentDescription = "衣橱回顾",
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）
+                    FilledTonalIconButton(
+                        onClick = onOpenWishlist,
+                        modifier = Modifier.padding(start = 8.dp).size(32.dp),
+                    ) {
+                        Text(
+                            "🌟",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.semantics { contentDescription = "心愿" },
+                        )
+                    }
                     // it-015：演示模式入口（仅 DEBUG 可见），与计数并列不挤占标题
                     if (BuildConfig.DEBUG) {
                         FilledTonalIconButton(

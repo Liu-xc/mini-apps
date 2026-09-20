@@ -67,6 +67,12 @@ class ShareClipboard(private val context: Context) {
         context.startActivity(Intent.createChooser(intent, "分享穿搭图"))
     }
 
+    /** 商品链接跳转（it-019）：ACTION_VIEW 打开；无可处理组件返回 false（UI toast 提示） */
+    fun openUrl(url: String): Boolean = runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+        true
+    }.getOrDefault(false)
+
     private fun clipboard(): ClipboardManager =
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 

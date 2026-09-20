@@ -44,7 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
+import com.leo.wardrobe.domain.model.WishOutfit
+import com.leo.wardrobe.domain.model.WISH_SLOT_PREFIX
+import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.model.itemsOf
+import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.SlotCell
@@ -54,7 +58,8 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 /**
- * W1 搭配页（it-003：一屏 3×3 网格；it-004：底部 ☆ 保存这套 + 去重检测）。
+ * W1 搭配页（it-003：一屏 3×3 网格；it-004：底部 ☆ 保存这套 + 去重检测；
+ * it-019：🌟 混入心愿——愿望单品以伪 Item 混进槽位做上身预览，含愿望件时按钮变「🌟 存为心愿」）。
  */
 @Composable
 fun OutfitScreen(
@@ -62,19 +67,30 @@ fun OutfitScreen(
     onOpenItem: (String) -> Unit,
     onAddItem: () -> Unit,
     onOpenOutfit: (String) -> Unit,
+    onOpenWishlist: () -> Unit = {},
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
     val slotSel by vm.slotSelections.collectAsState()
+    val mixWishes by vm.mixWishes.collectAsState()
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
-    val catItems: Map<WardrobeCategory, List<Item>> = remember(allItems) {
-        WardrobeCategory.entries.associateWith { c -> allItems.filter { it.category == c } }
+    // it-019：混入开启时，各品类槽位数据源附加未购愿望单品（伪 Item）
+    val wishSlotItems: List<Item> = if (mixWishes && personId != null) {
+        data.wishItemsOf(personId).filter { !it.purchased }.map { it.asSlotItem() }
+    } else {
+        emptyList()
     }
+    val effectiveItems = allItems + wishSlotItems
+    val catItems: Map<WardrobeCategory, List<Item>> = remember(effectiveItems) {
+        WardrobeCategory.entries.associateWith { c -> effectiveItems.filter { it.category == c } }
+    }
+
+    // 当前组合中的愿望单品（原 WishItem），用于「存为心愿」与已存判定
 
     // it-011 O6：首次进入做格位滑动 coach（仅一次，Prefs 落标记）
     val coachShown by vm.coachSlotsShown.collectAsState()
@@ -126,7 +142,20 @@ fun OutfitScreen(
         items.firstOrNull { it.id == slotSel[it.category.name] } ?: items.firstOrNull()
     }
     val currentIdsFromMemory = currentItemsFromMemory.map { it.id }
-    val savedOutfit = if (personId != null) vm.savedOutfitFor(currentIdsFromMemory) else null
+    // it-019：当前组合中的愿望单品（剥前缀即真实 WishItem id）
+    val currentWishIds = currentItemsFromMemory
+        .filter { it.isWishSlot }
+        .map { it.id.removePrefix(WISH_SLOT_PREFIX) }
+    val hasWishInMix = currentWishIds.isNotEmpty()
+    val savedOutfit = if (personId != null && !hasWishInMix) vm.savedOutfitFor(currentIdsFromMemory) else null
+    val savedWishOutfit: WishOutfit? = if (personId != null && hasWishInMix) {
+        vm.savedWishOutfitFor(
+            currentItemsFromMemory.filter { !it.isWishSlot }.map { it.id },
+            currentWishIds,
+        )
+    } else {
+        null
+    }
 
     Column(Modifier.fillMaxSize()) {
         // 顶栏：角色名 + 随机一套
@@ -150,6 +179,18 @@ fun OutfitScreen(
                 )
             }
             TextButton(
+                onClick = { vm.setMixWishes(!mixWishes) },
+            ) {
+                Text(
+                    "🌟",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (mixWishes) editorialColors().accent else editorialColors().inkFaint,
+                )
+                if (mixWishes) {
+                    Text(" 混入心愿", style = MaterialTheme.typography.labelMedium, color = editorialColors().accent)
+                }
+            }
+            TextButton(
                 onClick = {
                     scope.launch {
                         pagerStates.entries.toList()
@@ -163,7 +204,7 @@ fun OutfitScreen(
                             }
                     }
                 },
-                enabled = allItems.isNotEmpty(),
+                enabled = effectiveItems.isNotEmpty(),
             ) {
                 Icon(Icons.Rounded.Casino, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
@@ -171,7 +212,7 @@ fun OutfitScreen(
             }
         }
 
-        if (allItems.isEmpty()) {
+        if (allItems.isEmpty() && wishSlotItems.isEmpty()) {
             EmptyState(
                 title = "衣橱还空着",
                 hint = "先添加几件衣物，回来滑动组合穿搭",
@@ -190,7 +231,7 @@ fun OutfitScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // 头：帽子（小卡居中）
-                OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                OutfitSlot(WardrobeCategory.HAT, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                     Modifier.fillMaxWidth(0.34f), aspect = 1f, coach = coachPhase)
                 Spacer(Modifier.height(8.dp))
                 // 上身行：外套 | 上装 | 连衣裙 全宽三等分（it-008：不再被挂件挤占）
@@ -198,11 +239,11 @@ fun OutfitScreen(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.OUTERWEAR, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.TOP, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.DRESS, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(1f), aspect = 0.78f, coach = coachPhase)
                 }
                 Spacer(Modifier.height(8.dp))
@@ -212,21 +253,21 @@ fun OutfitScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.BAG, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.BOTTOM, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(1.12f), aspect = 0.6f, coach = coachPhase)
-                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                    OutfitSlot(WardrobeCategory.ACCESSORY, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                         Modifier.weight(0.5f), aspect = 0.85f, coach = coachPhase)
                 }
                 Spacer(Modifier.height(8.dp))
                 // 脚：鞋（小扁居中）
-                OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem,
+                OutfitSlot(WardrobeCategory.SHOES, catItems, pagerStates, vm, onOpenItem, onAddItem, onOpenWishlist,
                     Modifier.fillMaxWidth(0.58f), aspect = 2.6f, coach = coachPhase)
             }
         }
 
-        // 底部常驻：复制长图（主）+ ☆ 保存这套（次）（it-011 O6 按钮主次）
+        // 底部常驻：复制长图（主）+ ☆保存这套 / 🌟存为心愿（次，随组合内容切换，it-019）
         Row(
             Modifier
                 .fillMaxWidth()
@@ -235,27 +276,50 @@ fun OutfitScreen(
         ) {
             Button(
                 onClick = { exportItems = currentItemsFromMemory },
-                enabled = allItems.isNotEmpty(),
+                enabled = effectiveItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),
             ) { Text("📋 复制长图", style = MaterialTheme.typography.titleSmall) }
-            OutlinedButton(
-                onClick = {
-                    val outfit = savedOutfit
-                    if (outfit != null) {
-                        onOpenOutfit(outfit.id)
-                    } else {
-                        vm.saveOutfitDedup(currentIdsFromMemory)
-                    }
-                },
-                enabled = allItems.isNotEmpty(),
-            ) {
-                Icon(
-                    if (savedOutfit != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                    contentDescription = null,
-                    tint = editorialColors().accent,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(if (savedOutfit != null) "已保存" else "保存这套")
+            if (hasWishInMix) {
+                OutlinedButton(
+                    onClick = {
+                        val wish = savedWishOutfit
+                        if (wish != null) {
+                            onOpenWishlist()
+                        } else {
+                            vm.saveWishOutfit(
+                                currentItemsFromMemory.filter { !it.isWishSlot }.map { it.id },
+                                currentWishIds,
+                            )
+                        }
+                    },
+                    enabled = effectiveItems.isNotEmpty(),
+                ) {
+                    Text(
+                        if (savedWishOutfit != null) "🌟 已存心愿" else "🌟 存为心愿",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = editorialColors().accent,
+                    )
+                }
+            } else {
+                OutlinedButton(
+                    onClick = {
+                        val outfit = savedOutfit
+                        if (outfit != null) {
+                            onOpenOutfit(outfit.id)
+                        } else {
+                            vm.saveOutfitDedup(currentIdsFromMemory)
+                        }
+                    },
+                    enabled = effectiveItems.isNotEmpty(),
+                ) {
+                    Icon(
+                        if (savedOutfit != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        contentDescription = null,
+                        tint = editorialColors().accent,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(if (savedOutfit != null) "已保存" else "保存这套")
+                }
             }
         }
     }
@@ -278,7 +342,7 @@ fun OutfitScreen(
 @Composable
 private fun PlaceholderPager(): PagerState = rememberPagerState(pageCount = { 0 })
 
-/** 人体布局的着装位卡片（it-005；it-011 O6 透传 coach） */
+/** 人体布局的着装位卡片（it-005；it-011 O6 透传 coach；it-019 愿望卡路由） */
 @Composable
 private fun OutfitSlot(
     category: WardrobeCategory,
@@ -287,6 +351,7 @@ private fun OutfitSlot(
     vm: AppViewModel,
     onOpenItem: (String) -> Unit,
     onAddItem: () -> Unit,
+    onOpenWishlist: () -> Unit = {},
     modifier: Modifier = Modifier,
     aspect: Float = 0.8f,
     coach: Boolean = false,
@@ -296,7 +361,8 @@ private fun OutfitSlot(
         items = catItems[category].orEmpty(),
         pagerState = pagerStates[category] ?: PlaceholderPager(),
         imageFileOf = vm::imageFileOf,
-        onCardTap = { onOpenItem(it.id) },
+        // it-019：愿望单品卡点击跳心愿页（无详情路由）
+        onCardTap = { item -> if (item.isWishSlot) onOpenWishlist() else onOpenItem(item.id) },
         onAddEmpty = onAddItem,
         modifier = modifier,
         aspect = aspect,

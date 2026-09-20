@@ -1,6 +1,7 @@
 package com.leo.wardrobe.domain.usecase
 
 import com.leo.wardrobe.domain.model.Item
+import com.leo.wardrobe.domain.model.isWishSlot
 
 /** Prompt 维度预设（it-002）：表单式单选，可不选；定义见 specs/03-data-model.md */
 data class PromptDimension(val key: String, val label: String, val options: List<String>)
@@ -49,12 +50,13 @@ object DefaultPromptTemplate : PromptTemplate {
  */
 class BuildOutfitPrompt(private val template: PromptTemplate = DefaultPromptTemplate) {
 
-    /** 单品行：如「上装：白色 宽松棉质牛津衬衫」 */
+    /** 单品行：如「上装：白色 宽松棉质牛津衬衫」；愿望单品追加种草标注（it-019） */
     fun itemLine(item: Item): String = buildString {
         append(item.category.label).append("：")
         if (item.color.isNotBlank()) append(item.color).append(' ')
         append(item.name)
         if (item.desc.isNotBlank()) append("（").append(item.desc).append("）")
+        if (item.isWishSlot) append("（种草未购入单品，生成时一并上身展示）")
     }
 
     /** 维度行：如「场景：城市街头；氛围：通勤简约」（只含已选维度，按预设顺序） */

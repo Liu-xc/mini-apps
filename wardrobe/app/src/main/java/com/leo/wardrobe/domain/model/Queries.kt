@@ -39,3 +39,30 @@ fun WardrobeData.tagsUsedIn(personId: String): List<String> {
     outfitsOf(personId).forEach { it.tags.forEach { t -> counts[t] = (counts[t] ?: 0) + 1 } }
     return counts.entries.sortedByDescending { it.value }.map { it.key }
 }
+
+// ---- 心愿域（it-019） ----
+
+fun WardrobeData.wishItemById(id: String): WishItem? = wishItems.firstOrNull { it.id == id }
+
+fun WardrobeData.wishItemsOf(personId: String): List<WishItem> =
+    wishItems.filter { it.personId == personId }
+
+fun WardrobeData.wishOutfitById(id: String): WishOutfit? = wishOutfits.firstOrNull { it.id == id }
+
+fun WardrobeData.wishOutfitsOf(personId: String): List<WishOutfit> =
+    wishOutfits.filter { it.personId == personId }.sortedByDescending { it.updatedAt }
+
+/** 心愿组合去重：itemIds 与 wishItemIds 集合都相同（各自顺序无关）的既有心愿穿搭 */
+fun WardrobeData.wishOutfitWithMembers(
+    personId: String,
+    itemIds: Collection<String>,
+    wishItemIds: Collection<String>,
+): WishOutfit? {
+    val targetItems = itemIds.toSet()
+    val targetWishes = wishItemIds.toSet()
+    return wishOutfits
+        .filter {
+            it.personId == personId && it.itemIds.toSet() == targetItems && it.wishItemIds.toSet() == targetWishes
+        }
+        .maxByOrNull { it.updatedAt }
+}

@@ -12,6 +12,7 @@ import android.text.TextPaint
 import com.leo.wardrobe.data.image.ImageFileStore
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
+import com.leo.wardrobe.domain.model.isWishSlot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -161,6 +162,7 @@ class OutfitImageComposer(private val imageStore: ImageFileStore) {
     private suspend fun photo(item: Item): Bitmap = imageStore.decode(item.imageFile) ?: FALLBACK
 
     private fun label(item: Item): String = buildString {
+        if (item.isWishSlot) append("🌟想买 · ") // it-019：愿望单品标注
         append(item.category.label)
         append(" · ")
         append(item.name.take(14))

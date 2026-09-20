@@ -29,7 +29,7 @@
 └─────────────┘
 ```
 
-关系汇总：`Person 1—N Item`、`Person 1—N Outfit`、`Item M—N Outfit`（经 `Outfit.itemIds`）、`Item/Outfit 1—N Note`（经 `parentType+parentId`）、`Outfit 1—N OutfitImage`。
+关系汇总：`Person 1—N Item`、`Person 1—N Outfit`、`Item M—N Outfit`（经 `Outfit.itemIds`）、`Item/Outfit 1—N Note`（经 `parentType+parentId`）、`Outfit 1—N OutfitImage`、`Outfit 1—N WearLog`（it-018）。
 
 ## 字段定义
 
@@ -68,6 +68,17 @@
 ### OutfitImage（值对象）
 `file: String`（文件名） + `addedAt: Long`。
 
+### WearLog（穿搭打卡，it-018 阶段A）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | String (UUID) | |
+| personId | String | 所属角色（冗余自 Outfit，写时固化） |
+| outfitId | String | 被打卡的穿搭 |
+| at | Long | 穿着时刻（默认打卡时刻，可改当日） |
+| createdAt | Long | 记录创建时间（与 at 区分：补记） |
+
+同日多条允许（早晚换装）；展示层按日聚合。单品的穿着次数/最后穿着 = 其所在全部穿搭打卡的合并（展示期派生，不落盘）。
+
 ### Note（评论，同一实体挂两种父对象）
 `id: String` + `parentType: ITEM|OUTFIT` + `parentId: String` + `text: String` + `createdAt: Long`。
 
@@ -83,7 +94,7 @@
 
 ## 存储格式
 
-- 元数据：单文件 `files/wardrobe.json`，kotlinx.serialization 序列化全部 Person/Item/Outfit/Note；写入为原子操作（写 tmp → rename）。文件头带 `schemaVersion`，升级时运行迁移函数。it-017 的 `Person.refImageFile` 为可空默认字段，旧 JSON 缺字段反序列化为 null，属向后兼容变更、未 bump schemaVersion。
+- 元数据：单文件 `files/wardrobe.json`，kotlinx.serialization 序列化全部 Person/Item/Outfit/Note/WearLog；写入为原子操作（写 tmp → rename）。文件头带 `schemaVersion`，升级时运行迁移函数。it-017 的 `Person.refImageFile` 与 it-018 的 `wearLogs[]` 均为可空默认字段，旧 JSON 缺字段反序列化为空值/空表，属向后兼容变更、未 bump schemaVersion。
 - 图片：`files/images/*.webp`（单品照、成品图与形象参考照同目录，文件名 = UUID.webp）。导入时最长边压至 1440px、质量 82。
 - 每次成功写入 JSON 后记录 `wardrobe.json.bak`（上一版本），启动时 JSON 损坏则尝试 bak。
 - 导出备份：zip（wardrobe.json + images/），从设置页导出/导入（it-001 提供导出，导入随后续迭代）。
@@ -103,10 +114,35 @@
 }
 ```
 
+### WishItem（想买单品，it-019）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | String (UUID) | 主键 |
+| personId | String | 所属角色 |
+| category | WardrobeCategory | 复用 8 类枚举 |
+| name | String | 必填 |
+| color / desc | String? | 同 Item，可空 |
+| price | Double? | 心理价位/标价，可空 |
+| url | String? | 商品链接（展示域名，ACTION_VIEW 打开） |
+| imageFile | String? | 商品图（可选，截图即可；无图用品类占位） |
+| tags | List\<String\> | 复用风格/季节/场合预设 |
+| purchasedAt | Long? | 购入时间；null = 未购 |
+| purchasedItemId | String? | 转正后指向正式 Item（留档回溯） |
+| createdAt / updatedAt | Long | |
+
+### WishOutfit（心愿穿搭，it-019）
+`id` · `personId` · `itemIds`（已有单品段）· `wishItemIds`（愿望单品段）· `tags` · `previewImages: List<OutfitImage>`（上身预览图，与 OutfitImage 同构）· `createdAt/updatedAt`。不变量：wishItemIds 至少一件。
+
+### 心愿域机制（ADR-020）
+- 混搭预览：WishItem.asSlotItem() 生成 `wish:` 前缀伪 Item 混入 W1 槽位，长图/文案/拼贴按 Item 统一处理，isWishSlot 判定后做愿望标注；伪 id 不落 Outfit（createOutfit 的无效 id 过滤天然防御）。
+- 转正：purchaseWishItem 单事务=创建 Item + 回填 purchasedAt/purchasedItemId + 含该件的心愿穿搭把 wishItemIds 移入 itemIds。
+- 升级：promoteWishOutfit 要求 wishItemIds 全空，创建 Outfit（tags 继承、previewImages→effectImages）并删除心愿条目。
+- 存储：`wardrobe.json` 增 `wishItems[]` / `wishOutfits[]`；缺字段反序列化空表，不 bump schemaVersion。
+
 ## 不变量（Repository 层保证）
 
 1. Item/Outfit 的 personId 必须指向存在的 Person；查询永远按当前角色过滤。
 2. 删除 Item 时：其 imageFile 物理删除；所在 Outfit 的 itemIds 移除该 id（Outfit 保留）。
-3. 删除 Outfit 时：其 effectImages 物理删除；Notes 级联删除。
-4. 删除 Person 时：级联删除其全部 Item/Outfit/Note 及图片文件，含形象参考照 refImageFile（it-017）；更换参考照时旧文件删除。
-5. Outfit.itemIds 中的 id 必须有效（加载时清洗悬空引用）。
+3. 删除 Outfit 时：其 effectImages 物理删除；Notes 级联删除；WearLog 级联删除（it-018）。
+4. 删除 Person 时：级联删除其全部 Item/Outfit/Note/WearLog 及图片文件，含形象参考照 refImageFile（it-017）；更换参考照时旧文件删除。
+5. Outfit.itemIds 中的 id 必须有效（加载时清洗悬空引用）；WearLog 的 outfitId/personId 同样清洗（it-018）。

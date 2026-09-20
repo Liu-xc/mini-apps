@@ -4,9 +4,13 @@ import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Note
 import com.leo.wardrobe.domain.model.NoteParent
 import com.leo.wardrobe.domain.model.Outfit
+import com.leo.wardrobe.domain.model.OutfitImage
 import com.leo.wardrobe.domain.model.Person
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.WardrobeData
+import com.leo.wardrobe.domain.model.WearLog
+import com.leo.wardrobe.domain.model.WishItem
+import com.leo.wardrobe.domain.model.WishOutfit
 
 /**
  * 演示种子数据（it-015）：两个角色（覆盖角色隔离）、17 件衣物（八品类全覆盖，
@@ -56,14 +60,24 @@ object MockWardrobeData {
             item("it17", P2, WardrobeCategory.ACCESSORY, "心形项链", "金色", "粗链吊坠", "demo_IzpAiEPUhmyIp69cv7LNwmlPKqrltx.webp", listOf("约会"), createdAgo = 43, updatedAgo = 17),
         )
 
-        fun outfit(id: String, personId: String, itemIds: List<String>, tags: List<String>, createdAgo: Int) =
-            Outfit(id, personId, itemIds, tags, effectImages = emptyList(), createdAt = ago(createdAgo), updatedAt = ago(createdAgo))
+        fun outfit(
+            id: String, personId: String, itemIds: List<String>, tags: List<String>, createdAgo: Int,
+            effectFiles: List<String> = emptyList(),
+        ) = Outfit(
+            id, personId, itemIds, tags,
+            // it-018：成品图种子让「年度衣橱长图」的图墙分区有数据可演示
+            effectImages = effectFiles.map { OutfitImage(it, ago(createdAgo / 2)) },
+            createdAt = ago(createdAgo), updatedAt = ago(createdAgo),
+        )
 
         val outfits = listOf(
-            outfit("o1", P1, listOf("it1", "it4", "it6", "it10", "it12"), listOf("通勤", "早秋"), 30),
-            outfit("o2", P1, listOf("it2", "it7", "it11"), listOf("运动"), 25),
+            outfit("o1", P1, listOf("it1", "it4", "it6", "it10", "it12"), listOf("通勤", "早秋"), 30,
+                effectFiles = listOf("demo_ScKZwuDUTUPRm5ljOa5KSKzyJB3BNB.webp", "demo_jNFNutQXA079LwSjmfwJeFsid37vkh.webp")),
+            outfit("o2", P1, listOf("it2", "it7", "it11"), listOf("运动"), 25,
+                effectFiles = listOf("demo_TyCXC2E7A9NTewf9im9kE67V4Mv7Rl.webp")),
             outfit("o3", P1, listOf("it5", "it9", "it10"), listOf("休闲", "度假"), 20),
-            outfit("o4", P2, listOf("it13", "it14", "it16"), listOf("通勤"), 15),
+            outfit("o4", P2, listOf("it13", "it14", "it16"), listOf("通勤"), 15,
+                effectFiles = listOf("demo_3JqmFhoX4wlSJ2F8hEg2ljSfxraUPO.webp")),
             outfit("o5", P2, listOf("it15", "it17"), listOf("约会", "度假"), 10),
         )
 
@@ -73,6 +87,46 @@ object MockWardrobeData {
             Note("n3", NoteParent.OUTFIT, "o3", "海边度假穿这套出片", ago(5)),
         )
 
-        return WardrobeData(persons = persons, items = items, outfits = outfits, notes = notes)
+        // it-018 打卡种子：o1/o2 常穿（o1 出勤最高），o4 少量，o5/o3 挂着（o3 出闲置演示）
+        fun wear(id: String, personId: String, outfitId: String, daysAgo: Int) =
+            WearLog(id, personId, outfitId, ago(daysAgo), ago(daysAgo))
+        val wearLogs = listOf(
+            wear("w1", P1, "o1", 1), wear("w2", P1, "o1", 4), wear("w3", P1, "o1", 9),
+            wear("w4", P1, "o1", 16), wear("w5", P1, "o1", 24),
+            wear("w6", P1, "o2", 2), wear("w7", P1, "o2", 6), wear("w8", P1, "o2", 18),
+            wear("w9", P1, "o3", 21),
+            wear("w10", P2, "o4", 3), wear("w11", P2, "o4", 8),
+            wear("w12", P2, "o5", 12),
+        )
+
+        // it-019 心愿种子：3 件想买（含已购 1 件演示转正留档）+ 2 套心愿穿搭（1 套已买齐可升级）
+        fun wish(
+            id: String, personId: String, category: WardrobeCategory, name: String,
+            color: String, desc: String, price: Double?, tags: List<String>,
+            createdAgo: Int, purchased: Boolean = false,
+        ) = WishItem(
+            id = id, personId = personId, category = category, name = name, color = color,
+            desc = desc, price = price, url = "https://item.taobao.com/item.htm?id=$id",
+            imageFile = null, tags = tags,
+            purchasedAt = if (purchased) ago(2) else null,
+            purchasedItemId = if (purchased) "it3" else null,
+            createdAt = ago(createdAgo), updatedAt = ago(createdAgo),
+        )
+        val wishItems = listOf(
+            wish("wi1", P1, WardrobeCategory.OUTERWEAR, "燕麦色双面呢大衣", "燕麦", "落肩廓形中长款", 899.0, listOf("约会", "冬"), 3),
+            wish("wi2", P1, WardrobeCategory.SHOES, "切尔西靴", "黑色", "圆头粗跟短靴", 1200.0, listOf("通勤", "冬"), 1),
+            wish("wi3", P1, WardrobeCategory.BAG, "帆布托特包", "米白", "大容量磁扣", 199.0, listOf("通勤"), 9, purchased = true),
+        )
+        val wishOutfits = listOf(
+            // 约会战袍：已有连衣裙+板鞋，还差大衣（未买齐）
+            WishOutfit("wo1", P1, itemIds = listOf("it8", "it10"), wishItemIds = listOf("wi1"), tags = listOf("约会", "冬"), createdAt = ago(3), updatedAt = ago(3)),
+            // 通勤一套：已买齐（wi3 已购 → itemIds），可一键升级
+            WishOutfit("wo2", P1, itemIds = listOf("it1", "it6", "it12"), wishItemIds = emptyList(), tags = listOf("通勤"), createdAt = ago(8), updatedAt = ago(2)),
+        )
+
+        return WardrobeData(
+            persons = persons, items = items, outfits = outfits, notes = notes,
+            wearLogs = wearLogs, wishItems = wishItems, wishOutfits = wishOutfits,
+        )
     }
 }

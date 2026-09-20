@@ -22,6 +22,9 @@ class AppContainer(context: Context) {
     /** 演示模式（it-015）：开关在组合根构造时读取，切换经 DemoMode 重启进程生效 */
     private val demo = DemoMode.isEnabled(context)
 
+    /** 演示模式下提醒通道停用（it-018 阶段C） */
+    val isDemo: Boolean get() = demo
+
     val snapshotStore: SnapshotStore<WardrobeData> = SnapshotStore(
         dir = context.filesDir,
         fileName = "wardrobe.json",
@@ -43,6 +46,9 @@ class AppContainer(context: Context) {
         if (demo) MockWardrobeRepository() else WardrobeRepositoryImpl(snapshotStore, imageStore)
 
     val prefs: PrefsStore = PrefsStore(context)
+    /** 「好久没穿」提醒设置（it-018 阶段C） */
+    val recapPrefs: com.leo.wardrobe.data.prefs.RecapPrefsStore =
+        com.leo.wardrobe.data.prefs.RecapPrefsStore(context)
     /** 主体抠图引擎（it-016 US-15）：模型打包 assets、bytes 注入（ADR-003）；构造零副作用，
      *  onnxruntime 类与会话在首次去背景时才加载（ADR-002），不进启动路径 */
     val cutoutEngine: com.leo.libs.cutout.CutoutEngine = com.leo.libs.cutout.OnnxCutoutEngine(

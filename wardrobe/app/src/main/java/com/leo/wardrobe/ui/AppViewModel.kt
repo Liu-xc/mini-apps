@@ -11,11 +11,19 @@ import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.Person
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.WardrobeData
+import com.leo.wardrobe.domain.model.WishItem
+import com.leo.wardrobe.domain.model.WishOutfit
+import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.outfitById
 import com.leo.wardrobe.domain.model.outfitWithItems
 import com.leo.wardrobe.domain.model.personById
 import com.leo.wardrobe.domain.model.newId
+import com.leo.wardrobe.domain.model.wishItemById
+import com.leo.wardrobe.domain.model.wishItemsOf
+import com.leo.wardrobe.domain.model.wishOutfitWithMembers
+import com.leo.wardrobe.domain.usecase.WardrobeRecapRange
+import com.leo.wardrobe.domain.usecase.wardrobeRecap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -289,6 +297,240 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteNote(id: String) = viewModelScope.launch { repo.deleteNote(id) }
+
+    // ---- 穿搭打卡（it-018 阶段A） ----
+
+    /** 打卡：今天穿了这套（同日多套允许，再点即再记一次） */
+    fun checkinOutfit(outfitId: String) = viewModelScope.launch {
+        runCatching { repo.addWearLog(outfitId, System.currentTimeMillis()) }
+            .onSuccess { toast("已打卡，今天也穿得好看") }
+            .onFailure { toast("打卡失败：${it.message ?: it.javaClass.simpleName}") }
+    }
+
+    /** 撤销今日对该穿搭的全部打卡 */
+    fun undoTodayWear(outfitId: String) = viewModelScope.launch {
+        val zone = java.time.ZoneId.systemDefault()
+        val today = java.time.LocalDate.now()
+        repo.deleteWearLogsOf(
+            outfitId,
+            today.atStartOfDay(zone).toInstant().toEpochMilli(),
+            today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli(),
+        )
+        toast("已撤销今日打卡")
+    }
+
+    // ---- 统计回顾（it-018） ----
+
+    /** 「好久没穿」提醒设置（DataStore，跨启动保留） */
+    val recapPrefs: StateFlow<com.leo.wardrobe.data.prefs.RecapReminderPrefs> =
+        container.recapPrefs.flow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), com.leo.wardrobe.data.prefs.RecapReminderPrefs())
+
+    val isDemo: Boolean get() = container.isDemo
+
+    fun setReminder(enabled: Boolean, days: Int) {
+        viewModelScope.launch {
+            container.recapPrefs.set(enabled, days)
+            if (!container.isDemo) {
+                com.leo.wardrobe.platform.ReminderScheduler.sync(getApplication(), enabled)
+            }
+        }
+    }
+
+    /** 应用启动时对齐提醒任务与开关（兜底重启/升级；演示模式恒取消） */
+    fun syncReminderSchedule() {
+        viewModelScope.launch {
+            val prefs = container.recapPrefs.snapshot()
+            com.leo.wardrobe.platform.ReminderScheduler.sync(
+                getApplication(),
+                prefs.enabled && !container.isDemo,
+            )
+        }
+    }
+
+    /** 生成年终衣橱长图（按当前角色），写 export 目录返回文件；空打卡数据返回 null */
+    fun generateRecap(range: WardrobeRecapRange, now: Long, onReady: (File?) -> Unit) {
+        viewModelScope.launch {
+            val person = currentPerson.value ?: run {
+                onReady(null); return@launch
+            }
+            val stats = data.value.wardrobeRecap(person.id, range, now)
+            if (!stats.hasWearData) {
+                onReady(null); return@launch
+            }
+            val label = when (val r = range) {
+                is WardrobeRecapRange.Year -> "${r.year}"
+                WardrobeRecapRange.All -> "衣橱总账"
+            }
+            val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CHINA)
+                .format(java.util.Date(now))
+            val renderer = com.leo.wardrobe.ui.recap.WardrobeRecapLongImage(
+                stats, label, dateStr, photoFileOf = { name -> imageFileOf(name) },
+            )
+            onReady(renderer.renderTo(container.imageStore.exportDir()))
+        }
+    }
+
+    /** 存相册（Pictures/Wardrobe，复用导出门面） */
+    fun saveRecapImage(file: File): Boolean = container.share.saveToGallery(file)
+
+    /** 分享（复用导出门面） */
+    fun shareRecapImage(file: File) = container.share.shareImage(file)
+
+    // ---- 心愿域（it-019） ----
+
+    /** W1「混入心愿」开关：默认关，仅会话内记忆（同 it-017 参考照开关先例） */
+    private val _mixWishes = MutableStateFlow(false)
+    val mixWishes: StateFlow<Boolean> = _mixWishes.asStateFlow()
+
+    fun setMixWishes(enabled: Boolean) { _mixWishes.value = enabled }
+
+    fun saveWishItem(
+        existing: WishItem?,
+        name: String,
+        category: WardrobeCategory,
+        color: String,
+        desc: String,
+        price: Double?,
+        url: String,
+        tags: List<String>,
+        photoFile: String?,
+        onDone: (Boolean) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val person = currentPerson.value ?: repo.ensureDefaultPerson()
+            val file = photoFile ?: existing?.imageFile
+            if (name.isBlank()) { toast("名称必填"); onDone(false); return@launch }
+            val w = WishItem(
+                id = existing?.id ?: newId(),
+                personId = existing?.personId ?: person.id,
+                category = category,
+                name = name.trim().ifEmpty { category.label },
+                color = color.trim(),
+                desc = desc.trim(),
+                price = price,
+                url = url.trim(),
+                imageFile = file,
+                tags = tags.distinct().take(10),
+                purchasedAt = existing?.purchasedAt,
+                purchasedItemId = existing?.purchasedItemId,
+                createdAt = existing?.createdAt ?: System.currentTimeMillis(),
+                updatedAt = System.currentTimeMillis(),
+            )
+            repo.upsertWishItem(w)
+            if (existing != null && photoFile != null && existing.imageFile != null && existing.imageFile != file) {
+                container.imageStore.delete(existing.imageFile)
+            }
+            toast(if (existing == null) "已收进想买 🌟" else "已更新「${w.name}」")
+            onDone(true)
+        }
+    }
+
+    fun deleteWishItem(id: String) = viewModelScope.launch {
+        repo.deleteWishItem(id)
+        toast("已删除这条心愿")
+    }
+
+    /**
+     * 已买到 → 转正：创建正式 Item（photoFile 可空时沿用商品图）+ 回填购入记录；
+     * 含该愿望件的心愿穿搭在 Repository 内自动更新（返回更新的套数供提示）。
+     */
+    fun purchaseWishItem(wishItemId: String, photoFile: String?, name: String, category: WardrobeCategory,
+                         color: String, desc: String, tags: List<String>, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val wish = data.value.wishItemById(wishItemId)
+                val file = photoFile ?: wish?.imageFile
+                if (file == null) { toast("先拍一张实物照（或沿用商品图）"); onDone(false); return@launch }
+                val affected = data.value.wishOutfits.count { wishItemId in it.wishItemIds }
+                repo.purchaseWishItem(
+                    wishItemId,
+                    Item(
+                        id = newId(),
+                        personId = wish?.personId ?: currentPerson.value?.id.orEmpty(),
+                        category = category,
+                        name = name.trim().ifEmpty { category.label },
+                        color = color.trim(),
+                        desc = desc.trim(),
+                        imageFile = file,
+                        tags = tags.distinct().take(10),
+                    ),
+                )
+                toast(
+                    if (affected > 0) "已收进衣橱 ✓ $affected 套心愿穿搭已更新"
+                    else "已收进衣橱 ✓",
+                )
+                onDone(true)
+            } catch (t: Throwable) {
+                android.util.Log.e("Wardrobe", "purchaseWishItem failed", t)
+                toast("转正失败：${t.message ?: t.javaClass.simpleName}")
+                onDone(false)
+            }
+        }
+    }
+
+    /** 心愿组合去重查询（对齐 US-08 语义：itemIds/wishItemIds 各自集合判等） */
+    fun savedWishOutfitFor(itemIds: List<String>, wishItemIds: List<String>): WishOutfit? {
+        val person = currentPerson.value ?: return null
+        return data.value.wishOutfitWithMembers(person.id, itemIds, wishItemIds)
+    }
+
+    /** 保存当前混搭组合为心愿穿搭（去重：已存在则提示，不重复创建） */
+    fun saveWishOutfit(itemIds: List<String>, wishItemIds: List<String>, tags: List<String> = emptyList()) {
+        viewModelScope.launch {
+            val person = currentPerson.value ?: return@launch
+            if (wishItemIds.isEmpty()) return@launch
+            if (data.value.wishOutfitWithMembers(person.id, itemIds, wishItemIds) != null) {
+                toast("这套已在心愿穿搭中")
+            } else {
+                repo.createWishOutfit(person.id, itemIds, wishItemIds, tags)
+                toast("已存为心愿穿搭 🌟")
+            }
+        }
+    }
+
+    fun deleteWishOutfit(id: String) = viewModelScope.launch {
+        repo.deleteWishOutfit(id)
+        toast("已删除心愿穿搭")
+    }
+
+    /** 心愿穿搭详情「→ 去预览」：恢复组合到各槽位并开启混入开关 */
+    fun restoreWishOutfitToSlots(wishOutfit: WishOutfit) {
+        val person = currentPerson.value ?: return
+        viewModelScope.launch {
+            wishOutfit.itemIds.forEach { id ->
+                data.value.itemById(id)?.let { prefs.saveSlotSelection(person.id, it.category, it.id) }
+            }
+            wishOutfit.wishItemIds.forEach { id ->
+                data.value.wishItemById(id)?.let { prefs.saveSlotSelection(person.id, it.category, it.id) }
+            }
+            _mixWishes.value = true
+        }
+    }
+
+    /** 导入上身预览图（生图回录，挂到心愿穿搭） */
+    fun importPreviewImage(wishOutfitId: String, uri: Uri) {
+        viewModelScope.launch {
+            val file = container.imageStore.importFromUri(uri.toString())
+            if (file == null) { toast("图片导入失败"); return@launch }
+            repo.addPreviewImage(wishOutfitId, file)
+            toast("上身预览图已录入")
+        }
+    }
+
+    fun removePreviewImage(wishOutfitId: String, file: String) = viewModelScope.launch {
+        repo.removePreviewImage(wishOutfitId, file)
+    }
+
+    /** 一键升级：全部愿望件买齐后转正式穿搭 */
+    fun promoteWishOutfit(id: String) = viewModelScope.launch {
+        try {
+            repo.promoteWishOutfit(id)
+            toast("已升级为正式穿搭 👗")
+        } catch (t: Throwable) {
+            toast("升级失败：${t.message ?: t.javaClass.simpleName}")
+        }
+    }
 
     // ---- 便捷查询 ----
     fun itemsOfPerson(): List<Item> =

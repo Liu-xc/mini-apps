@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Outfit
+import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
@@ -351,6 +352,8 @@ fun ExportSheet(
                     )
 
                     HorizontalDivider(color = editorialColors().hairline)
+                    // it-019：含愿望单品的组合不能收藏为正式 Outfit（心愿组合走「存为心愿」）
+                    val hasWishItem = items.any { it.isWishSlot }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
                             onClick = {
@@ -358,6 +361,7 @@ fun ExportSheet(
                                 vm.saveOutfitDedup(items.map { it.id }, selections.values.toList(), existing = existingOutfit)
                                 collected = true
                             },
+                            enabled = !hasWishItem,
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(
@@ -365,7 +369,7 @@ fun ExportSheet(
                                 contentDescription = null,
                                 tint = editorialColors().accent,
                             )
-                            Text("收藏这套")
+                            Text(if (hasWishItem) "🌟 心愿组合 · 仅预览" else "收藏这套")
                         }
                         Button(onClick = { pickEffectImage() }, modifier = Modifier.weight(1f)) {
                             Text("＋ 录入成品图")

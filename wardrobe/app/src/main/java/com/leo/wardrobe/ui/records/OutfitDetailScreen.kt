@@ -257,6 +257,33 @@ fun OutfitDetailScreen(
                 }
             }
 
+            // it-018 阶段A：打卡主按钮（未打卡=去打卡；已打卡=再记一次（换装）/ 撤销今日）
+            val todayWearCount = remember(data, outfit) {
+                val zone = java.time.ZoneId.systemDefault()
+                val today = java.time.LocalDate.now()
+                val from = today.atStartOfDay(zone).toInstant().toEpochMilli()
+                val to = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                data.wearLogs.count { it.outfitId == outfit.id && it.at >= from && it.at < to }
+            }
+            if (todayWearCount == 0) {
+                Button(
+                    onClick = { vm.checkinOutfit(outfit.id) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Text("今天穿了这套")
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = { vm.checkinOutfit(outfit.id) }, modifier = Modifier.weight(1f)) {
+                        Text("今日已穿 · 再记一次")
+                    }
+                    OutlinedButton(onClick = { vm.undoTodayWear(outfit.id) }, modifier = Modifier.weight(1f)) {
+                        Text("撤销今日")
+                    }
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = { showExport = true }, modifier = Modifier.weight(1f)) {
                     Text("📋 复制长图")  // it-012：与搭配页同一套词

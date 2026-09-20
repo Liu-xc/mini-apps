@@ -80,6 +80,8 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.airbnb.android:lottie-compose:6.7.1")
+    // 本地「好久没穿」提醒（it-018 阶段C，ADR-019）
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

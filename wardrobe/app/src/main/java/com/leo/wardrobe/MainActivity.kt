@@ -1,6 +1,7 @@
 package com.leo.wardrobe
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -46,12 +47,16 @@ import com.leo.wardrobe.ui.detail.ItemDetailScreen
 import com.leo.wardrobe.ui.outfit.OutfitScreen
 import com.leo.wardrobe.ui.records.OutfitDetailScreen
 import com.leo.wardrobe.ui.records.RecordsScreen
+import com.leo.wardrobe.ui.recap.WardrobeRecapScreen
 import com.leo.wardrobe.ui.theme.WardrobeTheme
 import com.leo.wardrobe.ui.wardrobe.ItemEditScreen
 import com.leo.wardrobe.ui.wardrobe.WardrobeScreen
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        pendingOpenItemId.value = intent?.getStringExtra(EXTRA_OPEN_ITEM_ID) ?: pendingOpenItemId.value
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
@@ -59,6 +64,17 @@ class MainActivity : ComponentActivity() {
                 WardrobeRoot()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        pendingOpenItemId.value = intent.getStringExtra(EXTRA_OPEN_ITEM_ID)
+    }
+
+    companion object {
+        /** 「好久没穿」通知深链（it-018）：点击进 W5 衣物详情 */
+        const val EXTRA_OPEN_ITEM_ID = "openItemId"
+        val pendingOpenItemId = MutableStateFlow<String?>(null)
     }
 }
 
@@ -70,6 +86,8 @@ private object Routes {
     fun itemDetail(id: String) = "itemDetail/$id"
     const val OUTFIT_DETAIL = "outfitDetail/{outfitId}"
     fun outfitDetail(id: String) = "outfitDetail/$id"
+    const val RECAP = "recap"
+    const val WISHLIST = "wishlist"
 }
 
 private enum class Tab(val label: String) {
@@ -83,6 +101,15 @@ private fun WardrobeRoot() {
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     var tab by rememberSaveable { mutableStateOf(Tab.OUTFIT) }
+
+    // it-018：启动对齐提醒任务；通知深链 → W5 衣物详情
+    LaunchedEffect(Unit) { vm.syncReminderSchedule() }
+    val pendingOpen by MainActivity.pendingOpenItemId.collectAsState()
+    LaunchedEffect(pendingOpen) {
+        val id = pendingOpen ?: return@LaunchedEffect
+        nav.navigate(Routes.itemDetail(id))
+        MainActivity.pendingOpenItemId.value = null
+    }
 
     val toast by vm.toast.collectAsState()
     LaunchedEffect(toast) {
@@ -168,6 +195,25 @@ private fun WardrobeRoot() {
                             )
                         }
                     }
+                    composable(Routes.RECAP) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            WardrobeRecapScreen(
+                                vm = vm,
+                                onBack = { nav.popBackStack() },
+                                onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
+                            )
+                        }
+                    }
+                    // it-019：W9 心愿页（想买单品 + 心愿穿搭）
+                    composable(Routes.WISHLIST) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            com.leo.wardrobe.ui.wishlist.WishlistScreen(
+                                vm = vm,
+                                onBack = { nav.popBackStack() },
+                                onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
+                            )
+                        }
+                    }
                     composable(Routes.OUTFIT_DETAIL) { entry ->
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             val id = entry.arguments?.getString("outfitId").orEmpty()
@@ -197,9 +243,15 @@ private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
                 onOpenItem = openItem,
                 onAddItem = { editItem(null) },
                 onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
+                onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
             )
             Tab.RECORDS -> RecordsScreen(vm = vm, onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) })
-            Tab.WARDROBE -> WardrobeScreen(vm = vm, onEditItem = editItem)
+            Tab.WARDROBE -> WardrobeScreen(
+                vm = vm,
+                onEditItem = editItem,
+                onOpenRecap = { nav.navigate(Routes.RECAP) },
+                onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
+            )
         }
     }
 }
