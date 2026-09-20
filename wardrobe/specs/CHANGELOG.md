@@ -4,6 +4,9 @@
 
 ## 未发布
 
+### it-020 — 架构评审止血：Mock 级联对齐 + 写路径兜底 + 常青 spec 对齐
+- MockWardrobeRepository 补齐 deletePerson / deleteItem 心愿域级联（此前与真实实现漂移，演示模式数据不一致；+2 单测锁定语义一致）；AppViewModel 写路径统一异常兜底 `launchSafely`（此前 33 个 repo 调用点仅 5 条新写路径有捕获，其余 commit 失败会崩进程）；00/04/06 spec 与代码对齐（范围外清单勘误、模块树、路由表、单 AppViewModel 现状、ADR-016/017 排序）；随附仓库级护栏：CI 单测矩阵（六构建）+ 根 version catalog。来源：[架构评审报告 2026-09-20](../../reports/2026-09-20-architecture-review/report.md)。
+
 ### it-019 — 心愿清单：想买单品 + 心愿穿搭（混搭预览与购入转正）
 - 新增 WishItem 想买单品与 WishOutfit 心愿穿搭双实体（W10 心愿页两分段），W1「🌟 混入心愿」把愿望单品混进搭配槽位上身预览、组合「🌟 存为心愿」可反复回看（Leo 拍板可保存），「已买到」一键转正回填购入记录、心愿穿搭自动更新，买齐后「👗 升级为穿搭」移交预览图为成品图；含愿望件组合禁存 Outfit（仅预览），旧 JSON 向后兼容零迁移。（ADR-020）
 
