@@ -3,6 +3,7 @@ package com.leo.wardrobe.ui.wardrobe
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.leo.wardrobe.BuildConfig
 import com.leo.wardrobe.data.mock.DemoMode
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
@@ -87,10 +86,23 @@ fun WardrobeScreen(
     var categoryTab by remember { mutableStateOf<WardrobeCategory?>(null) }
     var pendingDelete by remember { mutableStateOf<Item?>(null) }
     var filterSheetOpen by remember { mutableStateOf(false) }
-    // it-015：演示模式入口（仅 DEBUG 构建显示）——同一入口按当前模式进入/退出
+    // it-015：演示模式入口——同一入口按当前模式进入/退出
     val context = LocalContext.current
     val demoOn = remember { DemoMode.isEnabled(context) }
     var demoAskOpen by remember { mutableStateOf(false) }
+    // it-015 修订：入口改「标题连点 5 次」隐藏开关（3 秒内有效），全构建可用——正式包也可体验演示数据
+    var demoTaps by remember { mutableStateOf(0) }
+    var demoFirstTapAt by remember { mutableStateOf(0L) }
+    fun tapForDemo() {
+        val now = System.currentTimeMillis()
+        if (now - demoFirstTapAt > 3000L) { demoTaps = 0; demoFirstTapAt = now }
+        if (++demoTaps >= DEMO_TAP_COUNT) {
+            demoTaps = 0
+            demoAskOpen = true
+        } else if (demoTaps >= 2) {
+            vm.toast(if (demoOn) "再按 ${DEMO_TAP_COUNT - demoTaps} 次退出演示模式" else "再按 ${DEMO_TAP_COUNT - demoTaps} 次进入演示模式")
+        }
+    }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
@@ -114,6 +126,7 @@ fun WardrobeScreen(
                     if (categoryTab == null) "衣橱 · ${person?.name ?: ""}" else "${categoryTab!!.label} · ${person?.name ?: ""}",
                     style = MaterialTheme.typography.headlineMedium,
                     color = editorialColors().ink,
+                    modifier = Modifier.clickable { tapForDemo() },
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -143,20 +156,6 @@ fun WardrobeScreen(
                             style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.semantics { contentDescription = "心愿" },
                         )
-                    }
-                    // it-015：演示模式入口（仅 DEBUG 可见），与计数并列不挤占标题
-                    if (BuildConfig.DEBUG) {
-                        FilledTonalIconButton(
-                            onClick = { demoAskOpen = true },
-                            modifier = Modifier.padding(start = 8.dp).size(32.dp),
-                        ) {
-                            Icon(
-                                Icons.Rounded.Science,
-                                contentDescription = "演示数据",
-                                tint = editorialColors().inkFaint,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
                     }
                 }
             }
@@ -413,3 +412,6 @@ private fun ItemCard(
         }
     }
 }
+
+/** 演示模式隐藏开关（it-015 修订）：衣橱页标题连点次数，3 秒窗口 */
+private const val DEMO_TAP_COUNT = 5
