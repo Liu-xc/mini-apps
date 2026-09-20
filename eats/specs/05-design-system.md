@@ -47,7 +47,7 @@
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
-| 1 | 转盘旋转 | Canvas 扇形 + rotate 动画：快速起转 → 减速 → 轻过冲落定（2.5–4s 随机时长/圈数）；指针落定轻弹；中心文字随掠过扇区切换 | W1 |
+| 1 | 卡组抽取（it-003） | libs/carddeck：侧滑飞出/堆叠晋升；「随机抽一张」按拍加速—减速翻张落定 + 彩屑 + 结果条 | W1 |
 | 2 | 结果卡弹入 | spring pop：scale 0.9→1 + fade，accent 描边 | W1 |
 | 3 | 记一笔成功 | 弹层收起 + snackbar「落账 ✓」，详情统计数字变化高亮 | W6→W5 |
 | 4 | 地图摘要卡 | ModalBottomSheet slide-up；marker 点击轻微 bounce | W2 |
@@ -57,9 +57,9 @@
 | 8 | 共享元素（it-002） | 列表缩略图 → 详情 hero 无缝放大 | W3→W5 |
 | 9 | 瀑布入场 + 滑删（it-002） | 列表 24ms 错峰上移淡入；SwipeToDismiss 删除 | W3 |
 | 10 | 落账编排（it-002） | 按钮 ✓ 形变 + 四色彩屑 900ms + 延迟收起 | W6 |
-| 11 | 拍动指针（it-002） | 转盘指针旋转中 -16°↔4° 往复拍动、停止弹簧回正；中心文案上滑扫掠 | W1 |
+| 11 | （已随转盘移除，it-003） | — | — |
 | 12 | 时间线母题（it-002） | 日期左列 + 竖线 + 节点卡，末条竖线截止 | W5 |
 
 ## 组件清单（ui/components/）
 
-`WheelCanvas`（转盘）、`KindChip`（类型 icon+色）、`RatingStars`（展示/输入两用）、`TagChipInput`、`PhotoStrip`（横滑照片条）、`VisitTimeline`（吃过记录时间线）、`EmptyState`、`RelativeTimeText`（相对时间）。
+`CardDeck`（libs/carddeck 卡组）、`KindChip`（类型 icon+色）、`RatingStars`（展示/输入两用）、`TagChipInput`、`PhotoStrip`（横滑照片条）、`VisitTimeline`（吃过记录时间线）、`EmptyState`、`RelativeTimeText`（相对时间）。

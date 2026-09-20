@@ -77,4 +77,4 @@ com.leo.wardrobe/
 
 - compileSdk 35 / targetSdk 35 / minSdk 26；AGP 8.7.x + Gradle 8.9 + Kotlin 2.0.x（compose 插件）
 - composite build：`includeBuild("../libs/store")`，依赖坐标 `com.leo.libs:store`（自动替换为同仓源码，ADR-012）
-- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、JUnit4 + kotlinx-coroutines-test
+- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、**com.leo.libs:carddeck**（穿搭记录卡组，it-007）、JUnit4 + kotlinx-coroutines-test

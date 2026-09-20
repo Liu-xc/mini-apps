@@ -12,15 +12,12 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven("https://maven.aliyun.com/repository/google")
         maven("https://maven.aliyun.com/repository/public")
-        google()
+        maven("https://maven.aliyun.com/repository/google")
         mavenCentral()
-        // carddeck SDK 依赖的三方卡组库经 JitPack 分发（composite build 传递依赖在此解析）
+        // 三方卡组动画库经 JitPack 分发（选型见 specs/00-overview.md）
         maven("https://jitpack.io")
     }
 }
 
-rootProject.name = "eats"
-include(":app")
-includeBuild("../libs/carddeck")
+rootProject.name = "carddeck"

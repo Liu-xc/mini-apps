@@ -59,6 +59,8 @@ dependencies {
 
     // 本地存储 SDK（composite build 依赖替换，libs/store）
     implementation("com.leo.libs:store:0.1.0")
+    // 侧滑卡组 + 随机抽取 SDK（composite build，libs/carddeck）
+    implementation("com.leo.libs:carddeck:0.1.0")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.airbnb.android:lottie-compose:6.7.1")

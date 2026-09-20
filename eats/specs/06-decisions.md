@@ -29,7 +29,7 @@
 - **决策**：MVP 仅做「地图长按放 pin 得经纬度 + 地址文本手填」；自做菜可完全无位置。
 - **后果**：录入略手工（个人自用可接受）；未来加 POI 搜索需引入在线服务并另行 ADR。
 
-## ADR-006 转盘按「距上次吃的天数」加权抽取
+## ADR-006 ~~转盘按「距上次吃的天数」加权抽取~~（it-003 作废：转盘整体移除，抽取改为纯随机）
 - **背景**：纯随机会反复抽到刚吃过的，体验差。
 - **决策**：候选过滤（类型 / 忌口标签 / 最近 N 天开关）后按 `w = 1 + daysSinceLastVisit` 加权抽取（从未吃过按 30 天计）；参数集中在 SpinWheel 策略可调。
 - **理由**：规则透明可解释、纯函数可单测；「越久没吃越容易被翻牌」。
@@ -51,3 +51,9 @@
 - **决策**：Place.links 存 `url + 可选 label`；来源徽标（美团/大众点评/其他）由 `LinkSource.detect(url)`（域名映射常量）在展示时派生，不落盘；跳转统一 ACTION_VIEW，系统 App Links 自动拉起对应 App，无处理组件时 toast 兜底。
 - **理由**：识别规则升级后旧数据直接受益；不引入 WebView 与任何平台 SDK；粘贴→识别→跳转全链路 MVP 零额外依赖。
 - **后果**：域名映射表需随平台域名变化维护；少数自建浏览器的 App 内打开体验一般（可接受）。
+
+## ADR-011 W1 随机交互采用三方卡组库封装（libs/carddeck，不自研手势动画）
+- **背景**：用户要求移除转盘，改为「侧滑浏览 + 随机抽取」的卡片交互；明确不自研手势动画、不做抽取权重。
+- **决策**：新建 `libs/carddeck` SDK 薄封装 [compose-swipeable-cards](https://github.com/smartword-app/compose-swipeable-cards)（Apache-2.0，JitPack 分发），暴露 `CardDeck` + `CardDeckController(drawRandom 纯随机)`；eats 与 wardrobe 经 includeBuild 复用。
+- **理由**：该库提供左右滑/堆叠/弹簧动画与程序化 `swipe()/moveNext()`（抽取编排必需）；备选 makzimi/SwipingCards 因 minSdk 33 高于基线 26 且无程序化接口被否。抽取动画 = 按拍调用库自带飞出动画，SDK 零自研手势。
+- **后果**：JitPack 仓库进入两应用与 SDK 的解析链（国内实测可达）；三方库维护偏冷，若失效可按同契约替换实现（SDK 层隔离）。

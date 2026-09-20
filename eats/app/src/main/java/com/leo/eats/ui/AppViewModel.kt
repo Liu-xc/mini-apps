@@ -35,7 +35,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val linkOpener: LinkOpener get() = container.linkOpener
     val buildCandidates get() = container.buildCandidates
-    val spinWheel get() = container.spinWheel
 
     fun imageFileOf(name: String): File? = container.imageStore.file(name).takeIf { it.exists() }
 

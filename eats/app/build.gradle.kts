@@ -60,6 +60,8 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.7.0")
     // 地图：osmdroid + OSM 瓦片，免 API Key（ADR-002）
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+    // 侧滑卡组 + 随机抽取 SDK（composite build，libs/carddeck）
+    implementation("com.leo.libs:carddeck:0.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

@@ -50,13 +50,25 @@ for idx, (cat, bid, name, color, desc, tags) in enumerate(ITEMS):
         "imageFile": f"demo_{bid}.webp", "tags": tags,
         "createdAt": now - (60 - idx) * day, "updatedAt": now - (idx + 1) * day,
     })
+outfits = [
+    {"id": "o1", "itemIds": ["it1", "it4", "it6", "it10", "it12"], "tags": ["通勤", "早秋"]},
+    {"id": "o2", "itemIds": ["it2", "it7", "it11"], "tags": ["运动"]},
+    {"id": "o3", "itemIds": ["it8", "it10", "it15"], "tags": ["约会", "度假"]},
+    {"id": "o4", "itemIds": ["it3", "it5", "it6", "it10", "it16"], "tags": ["通勤"]},
+    {"id": "o5", "itemIds": ["it1", "it7", "it13", "it14"], "tags": ["休闲", "度假"]},
+]
+for k, o in enumerate(outfits):
+    o["personId"] = "p1"
+    o["effectImages"] = []
+    o["createdAt"] = now - (30 - k * 5) * day
+    o["updatedAt"] = o["createdAt"]
 data = {
     "schemaVersion": 1,
     "persons": [{"id": "p1", "name": "Leo", "emoji": "👨", "createdAt": now - 60 * day}],
-    "items": items, "outfits": [], "notes": [],
+    "items": items, "outfits": outfits, "notes": [],
 }
 json.dump(data, open(f"{tmp}/wardrobe.json", "w"), ensure_ascii=False, indent=1)
-print(f"生成 {len(items)} 件衣物")
+print(f"生成 {len(items)} 件衣物 / {len(outfits)} 套穿搭")
 PY
 
 adb push "$TMP/wardrobe.json" /data/local/tmp/wardrobe-demo.json >/dev/null

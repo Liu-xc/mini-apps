@@ -68,3 +68,7 @@
 - **决策**（2026-09-20）：① 本地存储抽取为 `libs/store`（SnapshotStore 原子快照/SSOT 仓库/媒体管理/zip 备份），wardrobe 数据层自本迭代起接入，文件布局与备份格式不变；② 同步 SDK 采用「中立契约 + 适配器」：`libs/sync/contract`（SyncValue 七值、SyncEngine、待推队列、错误折叠）+ `libs/sync/bitable`（首个适配器），换后端 = 换适配器 + 换配置，后端私有能力（record_id、串行写）不外泄；③ 均经 composite build 接入，AGENTS.md 已补 `libs/` 例外条款。
 - **理由**：it-001 数据层已验证，抽取为测试护栏下的纯重构；契约中立化先于第二消费方出现，eats/clips 可直接复用。
 - **后果**：wardrobe 数据层不再自持持久化机制（职责上移）；libs/sync 已实现但按计划暂不接入 App（US-15a/b/c 留待后续迭代）；未来新增后端仅实现 SyncSource。
+
+## ADR-013 穿搭记录采用 carddeck 卡组（it-007）
+- **决策**：W8 顶部用 `libs/carddeck` 侧滑卡组浏览已保存穿搭 + 「随机一套」纯随机抽取，下方保留全量网格；与 eats it-003 共用同一 SDK（includeBuild 复用）。
+- **后果**：与 eats 共享三方库依赖链（JitPack，见 libs/carddeck/specs）；交互升级由 SDK 层统一演进。

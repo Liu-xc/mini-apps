@@ -7,7 +7,6 @@ import com.leo.eats.data.prefs.SpinPrefsStore
 import com.leo.eats.data.repo.EatsRepositoryImpl
 import com.leo.eats.domain.repository.EatsRepository
 import com.leo.eats.domain.usecase.BuildCandidates
-import com.leo.eats.domain.usecase.SpinWheel
 import com.leo.eats.map.MapController
 import com.leo.eats.platform.LinkOpener
 import org.osmdroid.config.Configuration
@@ -30,7 +29,6 @@ class AppContainer(context: Context) {
     val repository: EatsRepository = EatsRepositoryImpl(jsonStore, imageStore)
     val spinPrefs: SpinPrefsStore = SpinPrefsStore(context)
     val buildCandidates: BuildCandidates = BuildCandidates()
-    val spinWheel: SpinWheel = SpinWheel()
     val linkOpener: LinkOpener = LinkOpener(context)
     val mapController: MapController = MapController()
 }

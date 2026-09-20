@@ -32,7 +32,7 @@ com.leo.eats/
 ├─ domain/
 │  ├─ model/      Place Visit PlaceKind GeoLoc PlaceLink LinkSource TagPresets EatsData PlaceWithStats
 │  ├─ repository/ EatsRepository(接口) ImageStore(接口)
-│  └─ usecase/    BuildCandidates(过滤) SpinWheel(加权抽取) ComputeStats(派生统计)
+│  └─ usecase/    BuildCandidates(过滤) ComputeStats(派生统计)  // SpinWheel 权重抽取已随 it-003 移除
 ├─ data/
 │  ├─ json/JsonFileStore.kt       # eats.json 原子写 + bak + schemaVersion 迁移
 │  ├─ repo/EatsRepositoryImpl.kt  # 内存快照 + StateFlow（SSOT）
@@ -92,4 +92,4 @@ com.leo.eats/
 ## 构建配置
 
 - compileSdk / targetSdk 35 / minSdk 26；AGP 8.7.x + Kotlin 2.0.x（与 wardrobe 同基线）
-- 依赖：Compose BOM、material3 1.4.0、navigation-compose、coil-compose、kotlinx-serialization-json、**osmdroid-android 6.1.x**、DataStore preferences、JUnit4 + kotlinx-coroutines-test
+- 依赖：Compose BOM、material3 1.4.0、navigation-compose、coil-compose、kotlinx-serialization-json、**osmdroid-android 6.1.x**、**com.leo.libs:carddeck**（composite build，W1 卡组）、DataStore preferences、JUnit4 + kotlinx-coroutines-test
