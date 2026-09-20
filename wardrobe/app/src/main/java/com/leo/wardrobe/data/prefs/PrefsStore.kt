@@ -21,6 +21,7 @@ class PrefsStore(private val context: Context) {
     private val keyPerson = stringPreferencesKey("current_person")
     private val keyPersonNote = stringPreferencesKey("person_note")
     private val keyExportSelections = stringSetPreferencesKey("export_selections")
+    private val keyCustomPrompt = stringPreferencesKey("custom_prompt")
     private val keyCoachSlots = booleanPreferencesKey("coach_slots_shown")
 
     private fun slotKey(personId: String) = stringSetPreferencesKey("slots_$personId")
@@ -36,6 +37,13 @@ class PrefsStore(private val context: Context) {
 
     suspend fun setPersonNote(note: String) {
         context.store.edit { it[keyPersonNote] = note }
+    }
+
+    /** 导出的「自定义要求」（it-013）：自由追加的 prompt，记住上次 */
+    val customPrompt: Flow<String> = context.store.data.map { it[keyCustomPrompt] ?: "" }
+
+    suspend fun setCustomPrompt(prompt: String) {
+        context.store.edit { it[keyCustomPrompt] = prompt }
     }
 
     /** 该角色各槽位选中：Map<品类.name, itemId>（存储格式 "TOP=itemId"） */

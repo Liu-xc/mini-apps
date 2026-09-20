@@ -83,10 +83,12 @@ fun ExportSheet(
     val savedNote by vm.personNote.collectAsState()
     val savedSelections by vm.exportSelections.collectAsState()
     val savedSelectionsReady by vm.exportSelectionsReady.collectAsState()
+    val savedCustomPrompt by vm.customPrompt.collectAsState()
 
     var selections by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var selectionsInit by remember { mutableStateOf(false) }
     var personNote by remember { mutableStateOf("") }
+    var customPrompt by remember { mutableStateOf("") }
     var promptEdit by remember { mutableStateOf<String?>(null) } // 用户手改覆盖，维度变化时重置
     var composedFile by remember { mutableStateOf<File?>(null) }
     var composing by remember { mutableStateOf(true) }
@@ -97,6 +99,7 @@ fun ExportSheet(
     var advancedOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(savedNote) { if (personNote.isBlank() && savedNote.isNotBlank()) personNote = savedNote }
+    LaunchedEffect(savedCustomPrompt) { if (customPrompt.isBlank() && savedCustomPrompt.isNotBlank()) customPrompt = savedCustomPrompt }
     // it-012：恢复上次维度选择——等 DataStore 首发射完成（ready）或值非空才 init，
     // 避免首帧空 map 把记忆标记为已初始化而永久丢弃（R2 实测竞态 bug）
     LaunchedEffect(savedSelections, savedSelectionsReady) {
@@ -106,8 +109,14 @@ fun ExportSheet(
         }
     }
 
+    /** it-013：自定义要求追加在生成文案末尾（长图与文本通道都带出） */
+    fun promptWithCustom(includeItems: Boolean): String {
+        val base = vm.promptBuilder(items, selections, personNote, includeItems = includeItems)
+        return if (customPrompt.isBlank()) base else "$base\n另外要求：${customPrompt.trim()}"
+    }
+
     /** 长图通道文案：不含单品清单（照片标签已承载） */
-    val imagePrompt = promptEdit ?: vm.promptBuilder(items, selections, personNote, includeItems = false)
+    val imagePrompt = promptEdit ?: promptWithCustom(includeItems = false)
 
     fun regenerate() {
         composeJob?.cancel()
@@ -120,7 +129,7 @@ fun ExportSheet(
     }
 
     LaunchedEffect(items) { regenerate() }
-    LaunchedEffect(selections, personNote) {
+    LaunchedEffect(selections, personNote, customPrompt) {
         promptEdit = null
         vm.setExportSelections(selections)
         regenerate()
@@ -130,6 +139,13 @@ fun ExportSheet(
         if (personNote != savedNote) {
             delay(600)
             vm.setPersonNote(personNote)
+        }
+    }
+    // 自定义要求持久化（去抖，it-013）
+    LaunchedEffect(customPrompt) {
+        if (customPrompt != savedCustomPrompt) {
+            delay(600)
+            vm.setCustomPrompt(customPrompt)
         }
     }
 
@@ -182,21 +198,8 @@ fun ExportSheet(
                         }
                     }
 
-                    // 场景维度常驻（高频）
-                    DimensionChips(
-                        dim = PromptPresets.SCENE,
-                        selected = selections,
-                        onSelect = { opt ->
-                            selections = if (selections[PromptPresets.SCENE.key] == opt) {
-                                selections - PromptPresets.SCENE.key
-                            } else {
-                                selections + (PromptPresets.SCENE.key to opt)
-                            }
-                        },
-                    )
-
-                    // 其余四维折叠（it-012：计数徽标高亮）
-                    val advancedCount = PromptPresets.dimensions.drop(1).count { selections[it.key] != null }
+                    // it-013：五维全部收进一个可选折叠区（场景不再常驻）——自由写 prompt 是主路径，维度只是可选微调
+                    val selCount = PromptPresets.dimensions.count { selections[it.key] != null }
                     Surface(
                         onClick = { advancedOpen = !advancedOpen },
                         shape = RoundedCornerShape(12.dp),
@@ -209,18 +212,15 @@ fun ExportSheet(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         ) {
                             Text(
-                                if (advancedCount == 0) "更多维度（氛围/季节/光线/构图）" else "更多维度",
+                                "风格与场景维度（全部可选）",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = editorialColors().ink,
                                 modifier = Modifier.weight(1f),
                             )
-                            if (advancedCount > 0) {
-                                Surface(
-                                    shape = RoundedCornerShape(50),
-                                    color = editorialColors().accent,
-                                ) {
+                            if (selCount > 0) {
+                                Surface(shape = RoundedCornerShape(50), color = editorialColors().accent) {
                                     Text(
-                                        "$advancedCount",
+                                        "$selCount",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = Color.White,
                                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
@@ -236,7 +236,7 @@ fun ExportSheet(
                     }
                     AnimatedVisibility(visible = advancedOpen) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            PromptPresets.dimensions.drop(1).forEach { dim ->
+                            PromptPresets.dimensions.forEach { dim ->
                                 DimensionChips(
                                     dim = dim,
                                     selected = selections,
@@ -249,6 +249,12 @@ fun ExportSheet(
                                     },
                                 )
                             }
+                            Text(
+                                "一个都不选也可以——直接在下面写你的要求",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = editorialColors().inkFaint,
+                                modifier = Modifier.padding(start = 2.dp),
+                            )
                         }
                     }
 
@@ -259,6 +265,17 @@ fun ExportSheet(
                         label = { Text("人物描述（记住上次）") },
                         placeholder = { Text("如：175cm 偏瘦、短黑发男生") },
                         singleLine = true,
+                        textStyle = MaterialTheme.typography.bodySmall,
+                    )
+
+                    // it-013：自定义要求（可选，自由撰写，追加到文案末尾，记住上次）
+                    OutlinedTextField(
+                        value = customPrompt,
+                        onValueChange = { customPrompt = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("自定义要求（可选，追加到文案，记住上次）") },
+                        placeholder = { Text("如：胶片质感、黄昏逆光、不要配饰") },
+                        minLines = 2,
                         textStyle = MaterialTheme.typography.bodySmall,
                     )
 
@@ -346,7 +363,7 @@ fun ExportSheet(
                         OutlinedButton(
                             onClick = {
                                 // 文本通道附带单品清单；复制后明确反馈
-                                vm.share.copyText(vm.promptBuilder(items, selections, personNote, includeItems = true))
+                                vm.share.copyText(promptWithCustom(includeItems = true))
                                 vm.toast("文本已复制")
                             },
                             modifier = Modifier.fillMaxWidth(),

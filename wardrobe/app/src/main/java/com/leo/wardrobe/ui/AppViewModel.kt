@@ -91,6 +91,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setPersonNote(note: String) {
         viewModelScope.launch { prefs.setPersonNote(note) }
     }
+
+    /** 导出的自定义要求（it-013，记住上次） */
+    val customPrompt: StateFlow<String> = prefs.customPrompt
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
+
+    fun setCustomPrompt(prompt: String) {
+        viewModelScope.launch { prefs.setCustomPrompt(prompt) }
+    }
     /** 导出面板五维选择记忆（it-011 O8；it-012 增 ready 修恢复竞态） */
     val exportSelections: StateFlow<Map<String, String>> = prefs.exportSelections
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
