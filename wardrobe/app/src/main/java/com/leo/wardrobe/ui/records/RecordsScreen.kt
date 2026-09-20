@@ -288,12 +288,26 @@ private fun MiniBodyCollage(vm: AppViewModel, byCat: Map<com.leo.wardrobe.domain
     }
 }
 
+/**
+ * 拼贴槽位（it-010 修正）：ContentScale.Fit 完整展示衣物并按比例缩放，
+ * 淡色底槽位承载，不再裁切断衣物轮廓。
+ */
 @Composable
 private fun CollagePhoto(vm: AppViewModel, item: com.leo.wardrobe.domain.model.Item, modifier: Modifier = Modifier) {
-    com.leo.wardrobe.ui.components.PhotoCard(
-        file = vm.imageFileOf(item.imageFile),
-        contentDescription = item.name,
-        corner = 8.dp,
+    androidx.compose.material3.Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier,
-    )
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            coil.compose.AsyncImage(
+                model = vm.imageFileOf(item.imageFile),
+                contentDescription = item.name,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(3.dp),
+            )
+        }
+    }
 }
