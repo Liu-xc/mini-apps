@@ -117,3 +117,4 @@
 - Leo 需求：图片支持下载而不仅是复制
 - 动作栏加「存相册」：MediaStore 两段式写 Pictures/Wardrobe（API 29+ 免权限；旧系统 toast 引导走分享）
 - 成功反馈落按钮（「已存相册 ✓」2s）——snackbar 在 sheet 打开时被遮挡不可见
+- 启动图标换「木衣柜」（thiings 素材，署名不变）：原空衣架 → 衣柜柜体挂衣更贴App主题
