@@ -119,11 +119,11 @@ fun ExportSheet(
         }
     }
 
-    /** it-013：自定义要求追加在生成文案末尾；it-017：附参考照时先追加形象还原要求 */
+    /** it-013：自定义要求追加在生成文案末尾；it-017：附参考照时先追加形象还原要求（it-017 修订：prompt 已在长图顶部） */
     fun promptWithCustom(includeItems: Boolean): String {
         var p = vm.promptBuilder(items, selections, personNote, includeItems = includeItems)
         if (composedRefPhoto != null) {
-            p += "\n已附本人形象参考照（长图顶部第一张），生成时请保持其五官、发型与身形还原，仅将服装替换为本套穿搭。"
+            p += "\n图中已附本人形象参考照（标注「本人形象参考」处），生成时请保持其五官、发型与身形还原，仅将服装替换为本套穿搭。"
         }
         if (customPrompt.isNotBlank()) p += "\n另外要求：${customPrompt.trim()}"
         return p

@@ -32,7 +32,7 @@ object DefaultPromptTemplate : PromptTemplate {
         itemLines: List<String>,
         includeItems: Boolean,
     ): String = buildString {
-        append("请根据这张长图中从上到下排列的服装单品，生成一张真人穿搭效果图。")
+        append("请根据这张长图生成一张真人穿搭效果图：长图顶部为生成要求，下方按人体位置摆放服装单品（各格底部标注品类）。")
         if (dimensionLine.isNotBlank()) append('\n').append(dimensionLine).append('。')
         if (personNote.isNotBlank()) append("\n人物描述：").append(personNote)
         if (includeItems && itemLines.isNotEmpty()) {
