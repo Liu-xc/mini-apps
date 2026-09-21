@@ -5,6 +5,7 @@ package com.leo.wardrobe.ui.recap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -135,7 +137,14 @@ private fun DataRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        icon()
+        // it-026 追加轮（R1②）：图标加 40dp 圆底，在米白卡片上加重存在感
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(ec.paper),
+            contentAlignment = Alignment.Center,
+        ) { icon() }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = if (enabled) ec.ink else ec.inkFaint)
@@ -169,7 +178,8 @@ private fun ImportDialogs(
             title = { Text("无法导入此数据包") },
             text = {
                 Column {
-                    importUi.reasons.forEach { r ->
+                    // it-026 追加轮（R5②）：多条原因时加大行距分组
+                    importUi.reasons.forEachIndexed { i, r ->
                         // it-026 O4：✗ 行 error 色
                         Text(
                             buildAnnotatedString {
@@ -178,7 +188,9 @@ private fun ImportDialogs(
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        Spacer(Modifier.height(6.dp))
+                        if (i < importUi.reasons.size - 1) {
+                            Spacer(Modifier.height(if (importUi.reasons.size > 1) 10.dp else 6.dp))
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                     // it-026 O4：✓ 安抚行绿色
@@ -407,18 +419,34 @@ private fun diffAnnotated(label: String, d: CollectionDiff): androidx.compose.ui
 
 @Composable
 private fun DiffLines(state: RecapViewModel.ImportUi.Confirm) {
-    val lines = listOfNotNull(
-        diffAnnotated("单品", state.diff.items),
-        diffAnnotated("穿搭", state.diff.outfits),
-        diffAnnotated("评论", state.diff.notes),
-        diffAnnotated("打卡", state.diff.wearLogs),
-        diffAnnotated("想买", state.diff.wishItems),
-        diffAnnotated("心愿穿搭", state.diff.wishOutfits),
-        diffAnnotated("角色", state.diff.persons),
+    val ec = editorialColors()
+    val pairs = listOf(
+        "单品" to state.diff.items,
+        "穿搭" to state.diff.outfits,
+        "评论" to state.diff.notes,
+        "打卡" to state.diff.wearLogs,
+        "想买" to state.diff.wishItems,
+        "心愿穿搭" to state.diff.wishOutfits,
+        "角色" to state.diff.persons,
     )
-    lines.forEach {
-        Text(it, style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.height(2.dp))
+    // it-026 追加轮（R2②）：仅「保留」（无新增/更新）的集合折叠为一行汇总
+    val changed = pairs.filter { it.second.added > 0 || it.second.updated > 0 }
+    val folded = pairs.count { it.second.added == 0 && it.second.updated == 0 && it.second.kept > 0 }
+    changed.forEach { d ->
+        diffAnnotated(d.first, d.second)?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(2.dp))
+        }
+    }
+    if (folded > 0) {
+        Text(
+            if (changed.isEmpty()) "＝ 包内内容与本地一致（$folded 项无变化）"
+            else "· 其余 $folded 项无变化",
+            style = MaterialTheme.typography.labelSmall,
+            color = ec.inkFaint,
+        )
+    } else if (changed.isEmpty()) {
+        Text("包内内容与本地一致", style = MaterialTheme.typography.labelSmall, color = ec.inkFaint)
     }
 }
 

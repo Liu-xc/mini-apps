@@ -5,6 +5,7 @@ package com.leo.eats.ui.recap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -137,7 +139,14 @@ private fun DataRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        icon()
+        // it-014 追加轮（R1②）：图标加 40dp 圆底，加重存在感
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(mc.paper),
+            contentAlignment = Alignment.Center,
+        ) { icon() }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = if (enabled) mc.ink else mc.inkFaint)
@@ -166,7 +175,8 @@ private fun ImportDialogs(importUi: AppViewModel.ImportUi, vm: AppViewModel, onT
             title = { Text("无法导入此数据包") },
             text = {
                 Column {
-                    importUi.reasons.forEach { r ->
+                    // it-014 追加轮（R5②）：多条原因时加大行距分组
+                    importUi.reasons.forEachIndexed { i, r ->
                         // it-014 O4：✗ 行 error 色
                         Text(
                             buildAnnotatedString {
@@ -175,7 +185,9 @@ private fun ImportDialogs(importUi: AppViewModel.ImportUi, vm: AppViewModel, onT
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        Spacer(Modifier.height(6.dp))
+                        if (i < importUi.reasons.size - 1) {
+                            Spacer(Modifier.height(if (importUi.reasons.size > 1) 10.dp else 6.dp))
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                     // it-014 O4：✓ 安抚行绿色
@@ -242,13 +254,30 @@ private fun ConfirmImportDialog(state: AppViewModel.ImportUi.Confirm, vm: AppVie
                 if (!replace) {
                     Text("合并模式将发生：", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
-                    diffAnnotated("家", state.diff.places)?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(2.dp))
+                    // it-014 追加轮（R2②）：仅「保留」的集合折叠为汇总行
+                    val changedPlaces = state.diff.places.added > 0 || state.diff.places.updated > 0
+                    val changedVisits = state.diff.visits.added > 0 || state.diff.visits.updated > 0
+                    if (changedPlaces) {
+                        diffAnnotated("家", state.diff.places)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(2.dp))
+                        }
                     }
-                    diffAnnotated("笔记录", state.diff.visits)?.let {
-                        Text(it, style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(2.dp))
+                    if (changedVisits) {
+                        diffAnnotated("笔记录", state.diff.visits)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(2.dp))
+                        }
+                    }
+                    val folded = listOf(state.diff.places, state.diff.visits)
+                        .count { it.added == 0 && it.updated == 0 && it.kept > 0 }
+                    if (folded > 0) {
+                        Text(
+                            if (!changedPlaces && !changedVisits) "＝ 包内内容与本地一致（$folded 项无变化）"
+                            else "· 其余 $folded 项无变化",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = mc.inkFaint,
+                        )
                     }
                     if (state.diff.locallyNewer > 0) {
                         Spacer(Modifier.height(6.dp))
