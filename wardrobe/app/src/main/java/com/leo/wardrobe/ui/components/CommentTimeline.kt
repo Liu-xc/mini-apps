@@ -37,6 +37,7 @@ fun CommentTimeline(
     modifier: Modifier = Modifier,
 ) {
     var input by remember { mutableStateOf("") }
+    val haptics = rememberHaptics()  // it-027：发送确认轻震（DESIGN.md §4）
     val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -81,7 +82,11 @@ fun CommentTimeline(
             )
             TextButton(
                 onClick = {
-                    if (input.isNotBlank()) { onSend(input); input = "" }
+                    if (input.isNotBlank()) {
+                        haptics.tick()
+                        onSend(input)
+                        input = ""
+                    }
                 },
                 enabled = input.isNotBlank(),
             ) {

@@ -66,6 +66,7 @@ import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.Job
@@ -388,6 +389,7 @@ fun ExportSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // it-014：复制｜存相册｜分享 三动作并列
+                        val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             Button(
                                 onClick = {
@@ -397,6 +399,7 @@ fun ExportSheet(
                                         if (ok) {
                                             copied = true
                                             confettiTrigger++
+                                            haptics.confirm()
                                             vm.toast("长图已复制，去生图 Agent 里粘贴")
                                         } else {
                                             vm.toast("复制失败，试试「分享」")
@@ -417,6 +420,7 @@ fun ExportSheet(
                                         val ok = vm.share.saveToGallery(file)
                                         if (ok) {
                                             savedToGallery = true
+                                            haptics.confirm()
                                             vm.toast("已保存到相册 Pictures/Wardrobe")
                                         } else {
                                             vm.toast("当前系统不支持直存，可用「分享」保存")
@@ -450,6 +454,7 @@ fun ExportSheet(
                         OutlinedButton(
                             onClick = {
                                 // 文本通道附带单品清单；复制后明确反馈
+                                haptics.tick()
                                 vm.share.copyText(promptWithCustom(includeItems = true))
                                 vm.toast("文本已复制")
                             },

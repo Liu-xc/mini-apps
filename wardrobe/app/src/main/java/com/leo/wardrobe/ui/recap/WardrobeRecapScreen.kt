@@ -75,6 +75,7 @@ import com.leo.wardrobe.domain.usecase.WardrobeRecapRange
 import com.leo.wardrobe.domain.usecase.WardrobeRecapStats
 import com.leo.wardrobe.domain.usecase.wardrobeRecap
 import com.leo.wardrobe.ui.AppViewModel
+import com.leo.wardrobe.ui.components.CountUpText
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
@@ -380,19 +381,25 @@ private fun HeroBand(stats: WardrobeRecapStats) {
     val ec = editorialColors()
     Surface(shape = MaterialTheme.shapes.large, color = ec.surface, tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(vertical = 18.dp)) {
-            HeroCell(Modifier.weight(1f), "${stats.itemCount}", "单品")
+            // it-027：三大数字 count-up（DESIGN.md §5 反例 9），60ms 错峰
+            HeroCell(Modifier.weight(1f), stats.itemCount, "单品", 0)
             Box(Modifier.width(1.dp).height(56.dp).background(ec.hairline))
-            HeroCell(Modifier.weight(1f), "${stats.outfitCount}", "穿搭套")
+            HeroCell(Modifier.weight(1f), stats.outfitCount, "穿搭套", 60)
             Box(Modifier.width(1.dp).height(56.dp).background(ec.hairline))
-            HeroCell(Modifier.weight(1f), "${stats.wearCount}", "打卡次数")
+            HeroCell(Modifier.weight(1f), stats.wearCount, "打卡次数", 120)
         }
     }
 }
 
 @Composable
-private fun HeroCell(modifier: Modifier, value: String, label: String) {
+private fun HeroCell(modifier: Modifier, target: Int, label: String, delayMs: Long) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = editorialColors().ink)
+        CountUpText(
+            target = target,
+            style = MaterialTheme.typography.headlineMedium,
+            color = editorialColors().ink,
+            delayMs = delayMs,
+        )
         Text(label, style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
     }
 }

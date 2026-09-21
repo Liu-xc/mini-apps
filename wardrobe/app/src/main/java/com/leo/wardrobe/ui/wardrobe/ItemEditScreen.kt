@@ -65,6 +65,7 @@ import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.iconRes
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
@@ -111,19 +112,25 @@ fun ItemEditScreen(
         }
     }
 
+    val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
+
     fun doCutout() {
         val src = importedFile ?: return
         if (cutting) return
         cutting = true
         vm.cutoutPhoto(src) { out ->
             cutting = false
-            if (out != null) cutoutFile = out   // 成功即采用；失败 toast 且原图不动（VM 内处理）
+            if (out != null) {
+                cutoutFile = out
+                haptics.confirm()
+            }   // 成功即采用；失败 toast 且原图不动（VM 内处理）
         }
     }
 
     fun restoreOriginal() {
         cutoutFile?.let(vm::deletePhotoFile)
         cutoutFile = null
+        haptics.tick()
     }
 
     val hasPhoto = importedFile != null || existing != null
@@ -137,6 +144,7 @@ fun ItemEditScreen(
             // 采用抠图版则保存它并删原图（原图即弃）；否则抠图版必为 null
             vm.saveItem(existing, cutoutFile ?: importedFile, name, category, color, desc, tags) { ok ->
                 if (ok) {
+                    haptics.confirm()
                     if (cutoutFile != null) importedFile?.let(vm::deletePhotoFile)
                     onBack()
                 }
@@ -180,6 +188,7 @@ fun ItemEditScreen(
                         )
                         OutlinedButton(
                             onClick = {
+                                haptics.error()
                                 when {
                                     !hasPhoto && name.isBlank() -> vm.toast("先选照片、再填名称")
                                     !hasPhoto -> vm.toast("还差一张照片")

@@ -57,6 +57,7 @@ import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.SlotCell
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -297,6 +298,7 @@ fun OutfitScreen(
         }
 
         // 底部常驻：复制长图（主）+ ☆保存这套 / 🌟存为心愿（次，随组合内容切换，it-019）
+        val haptics = rememberHaptics()  // it-027：保存成功触感（DESIGN.md §4）
         Row(
             Modifier
                 .fillMaxWidth()
@@ -319,6 +321,7 @@ fun OutfitScreen(
                                 currentItemsFromMemory.filter { !it.isWishSlot }.map { it.id },
                                 currentWishIds,
                             )
+                            haptics.confirm()
                         }
                     },
                     enabled = effectiveItems.isNotEmpty(),
@@ -336,6 +339,7 @@ fun OutfitScreen(
                         if (outfit != null) {
                             onOpenOutfit(outfit.id)
                         } else {
+                            haptics.confirm()
                             vm.saveOutfitDedup(currentIdsFromMemory)
                         }
                     },

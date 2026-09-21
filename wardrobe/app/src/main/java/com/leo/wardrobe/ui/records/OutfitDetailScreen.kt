@@ -59,6 +59,7 @@ import com.leo.wardrobe.ui.components.CommentTimeline
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.outfit.ExportSheet
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -265,9 +266,13 @@ fun OutfitDetailScreen(
                 val to = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
                 data.wearLogs.count { it.outfitId == outfit.id && it.at >= from && it.at < to }
             }
+            val haptics = rememberHaptics()  // it-027：打卡确认触感（DESIGN.md §4）
             if (todayWearCount == 0) {
                 Button(
-                    onClick = { vm.checkinOutfit(outfit.id) },
+                    onClick = {
+                        haptics.confirm()
+                        vm.checkinOutfit(outfit.id)
+                    },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = MaterialTheme.shapes.large,
                 ) {
@@ -275,10 +280,22 @@ fun OutfitDetailScreen(
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(onClick = { vm.checkinOutfit(outfit.id) }, modifier = Modifier.weight(1f)) {
+                    Button(
+                        onClick = {
+                            haptics.confirm()
+                            vm.checkinOutfit(outfit.id)
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text("今日已穿 · 再记一次")
                     }
-                    OutlinedButton(onClick = { vm.undoTodayWear(outfit.id) }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = {
+                            haptics.tick()
+                            vm.undoTodayWear(outfit.id)
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Text("撤销今日")
                     }
                 }
