@@ -302,6 +302,7 @@ private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
             Tab.WARDROBE -> WardrobeScreen(
                 vm = vm,
                 onEditItem = editItem,
+                onOpenItem = openItem,
                 onOpenRecap = { nav.navigate(Routes.RECAP) },
                 onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
             )
