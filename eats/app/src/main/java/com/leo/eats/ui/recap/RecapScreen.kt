@@ -48,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,6 +111,21 @@ fun RecapScreen(vm: AppViewModel, onBack: () -> Unit) {
 
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) vm.toast("未授予通知权限，提醒将无法弹出")
+    }
+
+    // it-012：数据包导出/导入（D2① / D3④a）
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) vm.exportTo(uri)
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.startImportFromUri(uri)
+    }
+    // it-012：系统直达（微信「用其他应用打开」/ 文件管理器分享，D3④b）
+    val pendingImport by com.leo.eats.MainActivity.pendingImport.collectAsState()
+    LaunchedEffect(pendingImport) {
+        val p = pendingImport ?: return@LaunchedEffect
+        com.leo.eats.MainActivity.pendingImport.value = null
+        vm.startImport(p.file, p.displayName)
     }
 
     fun onToggleReminder(on: Boolean) {
@@ -213,6 +229,28 @@ fun RecapScreen(vm: AppViewModel, onBack: () -> Unit) {
                     demo = vm.isDemo,
                     onToggle = ::onToggleReminder,
                     onDays = { vm.setReminder(prefs.enabled, it) },
+                )
+                Spacer(Modifier.height(24.dp))
+
+                // it-012：「数据」小节（D1），挂在回忆提醒之后
+                DataPackageSection(
+                    vm = vm,
+                    demo = vm.isDemo,
+                    onExport = {
+                        val name = "eats-backup-" +
+                            java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.CHINA)
+                                .format(java.util.Date()) + ".zip"
+                        exportLauncher.launch(name)
+                    },
+                    onImport = {
+                        importLauncher.launch(
+                            arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"),
+                        )
+                    },
+                    onToast = { vm.toast(it) },
+                    onExportDone = { summary, file ->
+                        vm.toastWithAction(summary, "分享") { vm.sharePackage(file) }
+                    },
                 )
                 Spacer(Modifier.height(32.dp))
             }

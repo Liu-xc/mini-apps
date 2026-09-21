@@ -81,3 +81,9 @@
 - **决策**（2026-09-20）：新增 `Place.category: PlaceCategory = EAT|DRINK|PLAY`（默认 EAT，缺字段反序列化默认值，不 bump schemaVersion）；kind 枚举值不动，仅显示文案按分类适配（堂食/外卖/自做 → 堂食/外送/自调 → 出门/在家），PLAY+TAKEOUT 为无效组合（录入 UI 不提供，测试覆盖）；marker/图例着色维度从 kind 改为 category（吃=红/喝=琥珀/玩=紫）；愿望用 `wishlistedAt: Long?` 时间戳标记（拔草即置空），排期用 `planAt: Long?`。统计回顾（it-007）的顿/杯/次口径在统计层按 category 分派，不改 Place 结构。
 - **理由**：改 kind 枚举值需要数据迁移且破坏 ADR-007 的语义延续；category 放在 kind 之后作带默认值字段可保证旧位置调用兼容（构造函数第 12 参之后）。
 - **后果**：kind 与 category 双字段并存，UI 层须用 `labelIn(category)` 取文案；无效组合 PLAY+TAKEOUT 依赖录入约束而非类型系统。
+
+## ADR-015 接入数据包 v1：复用 libs/store 0.2.0 PackageCodec，eats 特有校验前置（it-012）
+- **背景**：与 wardrobe it-024（ADR-022）同源需求——「导出 → AI 加工 → 导回」闭环与完整备份；eats 此前无任何导出能力。
+- **决策**（2026-09-21）：包格式/编解码/合并语义/交互流程完全复用 it-024 的设计（manifest + eats.json + images；合并默认按 id 实体级覆盖、替换二次确认、预检失败零改动、系统直达入口）。eats 特有：预检新增 PLAY+TAKEOUT 无效组合、rating 1–5、links 空 url 三条硬校验（与 skill validator 同规则）；计数文案「家/笔记录」。
+- **理由**：两 app 数据包格式同一套契约，agent skill 才能一册通用；PLAY+TAKEOUT 等坏值若放行会绕过录入约束污染抽签候选与地图。
+- **后果**：`EatsRepository` 新增 `replaceAll`（演示模式仅保接口完整）；octet-stream 分享入口与衣橱同现于选择器（选错由跨 app 拒绝兜底）。

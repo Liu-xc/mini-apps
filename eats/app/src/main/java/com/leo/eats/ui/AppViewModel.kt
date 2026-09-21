@@ -55,6 +55,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toast(msg: String?) { _toast.value = msg?.let { ToastAction(it) } }
 
+    /** it-012：带动作按钮的一次性消息（导出完成 → [分享]） */
+    fun toastWithAction(message: String, actionLabel: String, onAction: () -> Unit) {
+        _toast.value = ToastAction(message, actionLabel, onAction)
+    }
+
     /**
      * it-009：写路径统一兜底——失败 Log + toast（quiet 时仅 Log），成功提示可选。
      * 内存快照回滚由 libs/store 的 commit 序列天然承担（commit 抛异常则快照不赋值）。
@@ -268,4 +273,182 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun focusOnMap(placeId: String) { _pendingMapFocus.value = placeId }
 
     fun consumeMapFocus() { _pendingMapFocus.value = null }
+
+    // ---- 数据包导入导出（it-012）----
+
+    /** 导入流程状态机（D3–D7）；Confirm 为唯一决策点 */
+    sealed interface ImportUi {
+        data object Idle : ImportUi
+        data object Checking : ImportUi
+        data class Confirm(
+            val fileName: String,
+            val generator: String,
+            val exportedAt: Long,
+            val diff: com.leo.eats.domain.model.EatsDiff,
+            val localCounts: Map<String, Int>,
+            val packageCounts: Map<String, Int>,
+        ) : ImportUi
+
+        data class Running(val done: Int, val total: Int) : ImportUi
+        data class Done(val added: Int, val updated: Int) : ImportUi
+        data class Rejected(val reasons: List<String>) : ImportUi
+    }
+
+    /** 导出流程状态机（D2） */
+    sealed interface ExportUi {
+        data object Idle : ExportUi
+        data class Running(val done: Int, val total: Int) : ExportUi
+        data class Done(val summary: String, val shareFile: File) : ExportUi
+        data class Failed(val message: String) : ExportUi
+    }
+
+    private val _importUi = MutableStateFlow<ImportUi>(ImportUi.Idle)
+    val importUi: StateFlow<ImportUi> = _importUi.asStateFlow()
+
+    private val _exportUi = MutableStateFlow<ExportUi>(ExportUi.Idle)
+    val exportUi: StateFlow<ExportUi> = _exportUi.asStateFlow()
+
+    private var pendingOk: com.leo.eats.data.packages.EatsPackages.Precheck.Ok? = null
+    private var importCacheFile: File? = null
+
+    fun exportTo(uri: android.net.Uri) {
+        if (_exportUi.value is ExportUi.Running) return
+        viewModelScope.launch {
+            _exportUi.value = ExportUi.Running(0, 0)
+            try {
+                val app = getApplication<Application>()
+                val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.CHINA)
+                    .format(java.util.Date())
+                val cacheFile = File(File(app.cacheDir, "share").apply { mkdirs() }, "eats-backup-$stamp.zip")
+                val version = runCatching {
+                    app.packageManager.getPackageInfo(app.packageName, 0).versionName
+                }.getOrNull() ?: "?"
+                val stats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    container.packages.export(cacheFile.outputStream(), generator = "eats $version") { d, t ->
+                        _exportUi.value = ExportUi.Running(d, t)
+                    }
+                }
+                app.contentResolver.openOutputStream(uri)?.use { out ->
+                    cacheFile.inputStream().use { input -> input.copyTo(out) }
+                } ?: error("无法写入所选位置")
+                _exportUi.value = ExportUi.Done(
+                    summary = "已导出 · ${stats.counts["places"] ?: 0} 家 · ${stats.counts["visits"] ?: 0} 笔记录 · ${stats.imageCount} 图",
+                    shareFile = cacheFile,
+                )
+            } catch (t: Throwable) {
+                android.util.Log.e("Eats", "export failed", t)
+                _exportUi.value = ExportUi.Failed(t.message ?: "导出失败")
+            }
+        }
+    }
+
+    fun dismissExport() { _exportUi.value = ExportUi.Idle }
+
+    /** SAF 选包入口（④a）：拷入缓存再预检 */
+    fun startImportFromUri(uri: android.net.Uri) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val app = getApplication<Application>()
+            runCatching {
+                val f = File(app.cacheDir, "import-${System.currentTimeMillis()}.zip")
+                app.contentResolver.openInputStream(uri)?.use { input ->
+                    f.outputStream().use { input.copyTo(it) }
+                } ?: error("无法读取所选文件")
+                f to (queryDisplayName(uri) ?: f.name)
+            }.onSuccess { (f, name) ->
+                startImport(f, name)
+            }.onFailure {
+                _importUi.value = ImportUi.Rejected(listOf("无法读取所选文件：${it.message}"))
+            }
+        }
+    }
+
+    /** 系统直达入口（④b）与 SAF 共用 */
+    fun startImport(file: File, displayName: String = file.name) {
+        if (_importUi.value is ImportUi.Checking || _importUi.value is ImportUi.Running) return
+        _importUi.value = ImportUi.Checking
+        viewModelScope.launch {
+            when (val r = container.packages.precheck(file)) {
+                is com.leo.eats.data.packages.EatsPackages.Precheck.Rejected -> {
+                    file.delete()
+                    _importUi.value = ImportUi.Rejected(r.reasons)
+                }
+                is com.leo.eats.data.packages.EatsPackages.Precheck.Ok -> {
+                    pendingOk = r
+                    importCacheFile = file
+                    _importUi.value = ImportUi.Confirm(
+                        fileName = displayName,
+                        generator = r.manifest.generator,
+                        exportedAt = r.manifest.exportedAt,
+                        diff = r.diff,
+                        localCounts = countsOf(repo.data.value),
+                        packageCounts = r.manifest.counts,
+                    )
+                }
+            }
+        }
+    }
+
+    fun applyImport(mode: com.leo.eats.domain.model.ImportMode) {
+        val ok = pendingOk ?: run {
+            _importUi.value = ImportUi.Rejected(listOf("导入会话已失效，请重新选择数据包"))
+            return
+        }
+        viewModelScope.launch {
+            _importUi.value = ImportUi.Running(0, 0)
+            try {
+                val stats = container.packages.apply(ok, mode) { d, t ->
+                    _importUi.value = ImportUi.Running(d, t)
+                }
+                cleanupImport()
+                _importUi.value = ImportUi.Done(stats.added, stats.updated)
+            } catch (t: Throwable) {
+                android.util.Log.e("Eats", "applyImport failed", t)
+                cleanupImport()
+                _importUi.value = ImportUi.Rejected(
+                    listOf("导入失败：${t.message ?: t.javaClass.simpleName}", "本地数据未受影响"),
+                )
+            }
+        }
+    }
+
+    fun dismissImport() {
+        cleanupImport()
+        _importUi.value = ImportUi.Idle
+    }
+
+    fun consumeImportDone() { _importUi.value = ImportUi.Idle }
+
+    private fun cleanupImport() {
+        pendingOk?.let { container.packages.closeIfOk(it) }
+        pendingOk = null
+        importCacheFile?.delete()
+        importCacheFile = null
+    }
+
+    private fun countsOf(d: com.leo.eats.domain.model.EatsData): Map<String, Int> = mapOf(
+        "places" to d.places.size,
+        "visits" to d.visits.size,
+    )
+
+    private fun queryDisplayName(uri: android.net.Uri): String? = runCatching {
+        getApplication<Application>().contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+        }
+    }.getOrNull()
+
+    /** 导出完成后的 [分享] 动作：FileProvider 经 cache/share 授权外发 */
+    fun sharePackage(file: File): Boolean = runCatching {
+        val app = getApplication<Application>()
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(
+                Intent.EXTRA_STREAM,
+                androidx.core.content.FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file),
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        app.startActivity(Intent.createChooser(send, "分享数据包").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    }.getOrDefault(false)
 }

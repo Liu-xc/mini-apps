@@ -98,6 +98,7 @@
 
 - 元数据：单文件 `files/eats.json`，kotlinx.serialization 序列化全部 Place/Visit；持久化机制由 libs/store 的 `SnapshotStore` 承担（ADR-010）：原子写（tmp → rename）+ `.bak` + 三级恢复 + 逐版本迁移链；文件头 `schemaVersion` 不变，**磁盘格式与 it-005 前完全兼容**（ADR-003 语义原样上收 SDK）。
 - 图片：`files/images/*.webp`，文件名 = UUID.webp（SDK `FileMediaStore` 管理）；导入压缩最长边 1440px、质量 82。演示模式下图片目录切换至 `cacheDir/mock-images`（it-006）。
+- 数据包（it-012，与 wardrobe it-024 同一契约）：zip = `manifest.json` + `eats.json`（SSOT 根原样）+ `images/`；导出/导入入口 W7「数据」小节与系统分享/打开方式直达；导入默认合并（按 id 实体级覆盖、本地多出保留），预检含 eats 特有硬校验（PLAY+TAKEOUT / rating 1–5 / 空 url），失败零改动；agent 产包放宽图片命名/格式，导入统一归一 uuid.webp。agent 侧说明与校验器：`.agents/skills/data-package/`（ADR-015）。
 
 ### JSON 结构示例
 

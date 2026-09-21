@@ -47,7 +47,7 @@ class AppContainer(context: Context) {
     )
 
     /** 演示模式下图片指向 cacheDir/mock-images，真实 images/ 不被触碰 */
-    val imageStore: ImageStore = ImageFileStore(
+    val imageStore: com.leo.eats.data.image.ImageFileStore = ImageFileStore(
         context,
         FileMediaStore(
             if (demo) context.cacheDir else context.filesDir,
@@ -57,6 +57,9 @@ class AppContainer(context: Context) {
 
     val repository: EatsRepository =
         if (demo) MockEatsRepository() else EatsRepositoryImpl(snapshotStore, imageStore)
+
+    /** it-012：数据包导出/导入（演示模式下入口置灰，服务层再兜底拒绝） */
+    val packages = com.leo.eats.data.packages.EatsPackages(repository, snapshotStore, imageStore, demo)
 
     val spinPrefs: SpinPrefsStore = SpinPrefsStore(context)
     val recapPrefs: RecapPrefsStore = RecapPrefsStore(context)

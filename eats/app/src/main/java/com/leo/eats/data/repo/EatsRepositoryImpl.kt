@@ -21,6 +21,11 @@ class EatsRepositoryImpl(
     /** 测试可注入的时钟 */
     var now: () -> Long = { System.currentTimeMillis() }
 
+    /** it-012 数据包导入终步：清洗后整体替换（单事务：改快照→落盘→广播） */
+    override suspend fun replaceAll(data: EatsData) {
+        mutate { data.cleaned() }
+    }
+
     override suspend fun upsertPlace(place: Place) {
         val old = data.value.places.firstOrNull { it.id == place.id }
         val fixed = place.copy(

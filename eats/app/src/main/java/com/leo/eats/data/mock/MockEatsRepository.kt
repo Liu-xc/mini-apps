@@ -18,6 +18,9 @@ class MockEatsRepository(seed: EatsData = MockEatsData.create()) : EatsRepositor
     private val _data = MutableStateFlow(seed)
     override val data: StateFlow<EatsData> = _data.asStateFlow()
 
+    /** it-012：演示模式下导入导出入口置灰，此实现仅保接口完整 */
+    override suspend fun replaceAll(data: EatsData) { _data.value = data }
+
     override suspend fun upsertPlace(place: Place) {
         val old = _data.value.places.firstOrNull { it.id == place.id }
         val fixed = place.copy(

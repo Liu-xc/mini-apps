@@ -2,6 +2,7 @@
 
 ## 未发布
 
+- **it-012**（2026-09-21）：结构化数据包——W7 新增「数据」小节（导出 `eats-backup-*.zip` = manifest + eats.json + images，完成带 [分享]；导入合并默认/替换二次确认、预检失败零改动、即时生效）；系统直达导入（微信「用其他应用打开」/ 分享 → 吃啥）；eats 特有校验（PLAY+TAKEOUT / rating 1–5 / 空 url）；复用 wardrobe it-024 的 libs/store 0.2.0 PackageCodec，agent skill 补 eats 分册与示例包（ADR-015）。
 - **it-011**（2026-09-21）：UI 三轮走查记录——干啥/记一笔(拔草撤销闭环复验)/地图/列表/详情/回顾长图全链路实测，零 P1/P2 问题、零崩溃（详见 it-011）。
 - **it-010**（2026-09-21）：性能梳理第一轮——回顾 TOP3/到访照片条补 Lazy key；审计确认落盘/长图/存相册均在 IO 线程、ListScreen 主链已 remember（详见 it-010）。
 - **it-009**（2026-09-21）：架构评审止血——AppViewModel 写路径统一异常兜底 `launchSafely`（失败 toast + Log；内存回滚由 libs/store 的 commit 序列承担；it-009 之前为 0 兜底，commit 失败会崩进程）；04-architecture 对齐实际（模块树/路由表/单 AppViewModel 现状/幽灵文件清除）、06-decisions ADR-010/011 排序、README 与迭代状态结清。来源：[架构评审报告 2026-09-20](../../reports/2026-09-20-architecture-review/report.md)。
