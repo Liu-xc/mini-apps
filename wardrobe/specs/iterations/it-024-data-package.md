@@ -330,6 +330,28 @@ schema 分册除字段表外，重点写**加工守则**（这是 skill 真正�
 - 字段级深合并（实体级覆盖已满足打标回流场景）。
 - iOS/桌面端导入工具。
 
-## 验证记录
+## 验证记录（2026-09-21 实施回填）
 
-（实施后回填：构建/单测/模拟器走查截图/agent 实测记录）
+**实现**：libs/store 0.2.0（PackageCodec + `SnapshotStore.upgrade`，11 新单测）；wardrobe domain `DataPackageMerge.kt`（merge/diff/remap/referenced 纯函数，6 单测）、`WardrobePackages` 服务、`WardrobeRepository.replaceAll`、W9「数据」小节 + D2–D7 全套对话框（`DataPackageSection.kt`）、导出 snackbar [分享]（AppViewModel 新增 ActionToast）、manifest SEND/VIEW intent-filter + MainActivity 直达路由、file_paths 增 cache/share。
+
+**构建与单测**：wardrobe 62 单测 0 失败、eats 53 单测 0 失败、store 24 单测 0 失败；两 app assembleDebug 成功。
+
+**模拟器实测（emulator-5554，真实数据）**：
+
+| 场景 | 结果 |
+|---|---|
+| W9 数据小节渲染（提醒设置之后，演示模式语义在 eats 侧同构） | ✅ 截图 wd-data-section |
+| 合并导入样例包（agent: sample）：预览屏 AI 加工包识别 + 差异三行式 + 单选模式 | ✅ wd-import-confirm |
+| 合并落盘：18→20 单品、5→6 穿搭、各域 +1；shirt.png/pants.png → 归一 webp | ✅ run-as 核对 wardrobe.json + images/ |
+| 导出 → SAVE → 拉回本机 validator PASS（2.29MB / 21 图包） | ✅ 回环闭合（导出包 23 WARN 全为历史短 id，见下） |
+| 跨 app 拒绝（eats 包 → 衣橱） | ✅「这是『吃啥』的数据包」wd-cross-app-reject |
+| 非 zip 拒绝 | ✅ wd-notzip-reject |
+| 替换：摘要切「✕清除/＋导入」→ 二次确认 → 即时生效（标题/品类带刷新） | ✅ wd-replace-summary / wd-replace-confirm |
+| 备份恢复：导出包替换导回，persons/items/outfits/wearLogs 与快照一致 | ✅ |
+| ④b intent-filter 注册（SEND/VIEW application/zip → 系统 ResolverActivity） | ✅（shell 无法代授 Uri 权限弹不出真实分享面板，直达下游与 ④a 共用已实测；真机微信路径留 Leo 日常验证） |
+
+**实测发现并修复**：validator 对应用导出包误报 66 错——真实数据存在早期种子脚本的短 id（it1/p1），原实现判非 UUID 后将 id 排除出引用集导致全部误报悬空。修复：非 UUID 降为 WARN 且仍计入引用集（commit fix(skills)）。旧图像孤儿文件按设计保留（替换模式只删被引用文件），无害。
+
+**注意**：21 图规模的包导入耗时 >5s（转码逐张进行），进度对话框会停留数秒，属预期；更大包可后续优化为并行转码。
+
+**agent 实测（skill 验收第 5 条）**：示例包 validate PASS + 真机导入成功已覆盖；「另一 agent 会话凭文档产出打标包」留作后续独立验证（skill 已具备自检闭环）。

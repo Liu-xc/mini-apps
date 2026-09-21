@@ -67,6 +67,12 @@ skill 骨架与 validator 由 it-024 先行落地；本迭代交付：
 
 同 it-024：云同步、定时备份、加密、字段级深合并、桌面端工具。
 
-## 验证记录
+## 验证记录（2026-09-21 实施回填）
 
-（实施后回填）
+**实现**：eats domain `DataPackageMerge.kt`（merge/diff/remap/validateEatsData 纯函数，4 单测）、`EatsPackages` 服务、`EatsRepository.replaceAll`、W7「数据」小节与对话框（`DataPackageSection.kt`，menuColors 主题）、AppViewModel 导入导出状态机 + `toastWithAction`、manifest SEND/VIEW intent-filter + MainActivity 直达路由；复用 store 0.2.0 codec。
+
+**构建与单测**：eats 53 单测 0 失败；assembleDebug 成功。
+
+**模拟器实测**：W7 数据小节渲染 ✅（eats-data-section）；合并导入 9→11 家、14→16 笔 ✅；PLAY+TAKEOUT 坏包拒绝并给出店名级原因 ✅（eats-playtakeout-reject）；导出 → validator 回环 PASS（19 WARN 均历史短 id）✅。详见 it-024 验证记录（同链路共测部分）。
+
+**遗留**：与 wardrobe 相同——④b 真机分享面板路径、大图包导入耗时（转码逐张）待后续观察。
