@@ -45,9 +45,10 @@ feat|fix|docs|spec|chore(scope): 一句话描述 (#it-XXX)
 ## 上下文恢复（接手任意工作前）
 
 1. 读 `README.md`（仓库总览）→ 目标应用 `README.md`（构建方式）
-2. 读该应用 `specs/00-overview.md` → `01-user-stories.md` → 与任务相关的常青 spec
-3. 读 `specs/iterations/` 里最近一次迭代，了解当前进度与遗留问题
-4. 再读代码
+2. UI/交互相关任务先读根目录 [`DESIGN.md`](DESIGN.md)（跨应用质量基准：硬 token/动效规则/触感基线/反例清单/评审 query）
+3. 读该应用 `specs/00-overview.md` → `01-user-stories.md` → 与任务相关的常青 spec
+4. 读 `specs/iterations/` 里最近一次迭代，了解当前进度与遗留问题
+5. 再读代码
 
 ## 其他
 
