@@ -1,11 +1,11 @@
 # 00 · store 架构设计（本地存储 SDK）
 
-- **状态**：已实现 v0.1.0（2026-09-20 落地并接入 wardrobe 与 eats，单测全绿——用例数以 CI/测试套件为准，不在此钉死数字）。与 v1 设计稿的偏差见 §「实现状态」
+- **状态**：已实现 v0.2.0（2026-09-20 落地 0.1.0 并接入 wardrobe 与 eats；2026-09-21 增 PackageCodec 数据包编解码 + `SnapshotStore.upgrade`，单测全绿——用例数以 CI/测试套件为准，不在此钉死数字）。与 v1 设计稿的偏差见 §「实现状态」
 - **参考实现**：wardrobe it-001 数据层（JsonFileStore / ImageFileStore / SSOT 快照 / zip 导出，15 个 JVM 单测已验证）——本 SDK 是它的通用化抽取，不是全新设计
 
-## 0. 实现状态（v0.1.0；2026-09-20 二轮 review 已精简）
+## 0. 实现状态（v0.2.0）
 
-**精简记录（零消费方/投机性 API，按需再加）**：BackupCodec（zip 备份编解码）、`MediaStore.sweep()/list()`、`loadDetailed()/LoadOutcome`（恢复来源枚举）、`decode()`（外部字节解码）。保留的核心面：`load()/commit()`、迁移链、`SsotRepository`（writeHook）、`put/read/delete/file`。
+**精简记录（零消费方/投机性 API，按需再加）**：`MediaStore.sweep()/list()`、`loadDetailed()/LoadOutcome`（恢复来源枚举）、`decode()`（外部字节解码）保留的精简先例。BackupCodec（zip 备份编解码）曾于 0.1.0 被精简，**0.2.0 已按需回归为 `PackageCodec`**（消费方：wardrobe it-024 / eats it-012 数据包，格式见 §3.4）。
 
 **与 v1 设计稿的其他偏差**：
 
@@ -93,16 +93,31 @@ data class MediaRef(val localName: String, val cloudRef: String? = null, val las
 // LRU 淘汰：App 桥接层定期按 lastUseAt 清理 cloudRef 非空的缓存（正本在云）
 ```
 
-### 3.4 备份编解码
+### 3.4 数据包编解码（0.2.0，it-024/it-012；v1 设计稿 BackupCodec 的按需回归）
 
 ```kotlin
-class BackupCodec<T>(private val store: SnapshotStore<T>, private val media: MediaStore) {
-    suspend fun export(uri): Result<Unit>      // zip = 快照 json + media/ 全量
-    suspend fun import(uri, mode: Replace|Merge): Result<Unit>
+class PackageCodec<T : Any>(
+    appId: String,                 // "wardrobe" / "eats"
+    dataFileName: String,          // "<app>.json"
+    serializer: KSerializer<T>,
+    expectedSchemaVersion: Int,
+) {
+    fun read(file: File): RawPackage<T>          // 结构校验后返回（manifest/数据/图片名清单）
+    suspend fun write(out, data, exportedAt, generator, counts,
+                      imageNames, readImage, onProgress)
+}
+class RawPackage<T> : AutoCloseable {           // 持 ZipFile，图片按名惰性读
+    val manifest: PackageManifest
+    val data: T                                  // 已反序列化
+    val imageNames: Set<String>
+    fun hasImage(name) / fun imageBytes(name)
 }
 ```
 
-zip 格式保持各 app 现有约定（wardrobe zip、clips.json 等）——**SDK 不改变任何 app 的对外备份格式契约**，只是统一实现。
+校验顺序：zip 可解 → manifest 合法 → app 归属（WrongApp）→ packageFormat（UnsupportedFormat）→
+schema 不高于当前（NewerSchema，低版本经 `SnapshotStore.upgrade` 走迁移链）→ 数据反序列化（BadData）。
+按 id 合并、实体级校验**不在 SDK**（零业务概念铁律），归各 app domain 纯函数
+（`mergeWardrobe` / `mergeEats`）。
 
 ## 4. 文件布局约定（与 wardrobe it-001 一致）
 

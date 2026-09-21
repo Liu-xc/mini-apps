@@ -43,6 +43,9 @@ class SnapshotStore<T : Any>(
     /** 载入快照（同步读；rename 原子性保证与并发 commit 不冲突）；主文件与 bak 均不可读时返回 [default] */
     fun load(): T = read(file) ?: read(bakFile) ?: default()
 
+    /** 对外部读入的数据执行与 [load] 相同的逐版本迁移链（it-024 数据包导入预检用）；高于当前版本原样返回 */
+    fun upgrade(data: T): T = migrate(data)
+
     /** 原子提交：tmp→rename；成功后保证 bak 存在（上一成功版本或本版本） */
     suspend fun commit(next: T) {
         mutex.withLock { writeAtomic(next) }
