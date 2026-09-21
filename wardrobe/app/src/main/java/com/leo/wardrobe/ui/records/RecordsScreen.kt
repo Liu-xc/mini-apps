@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import com.leo.wardrobe.ui.components.StaggeredEntrance
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -201,6 +203,12 @@ fun RecordsScreen(
                     modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 4.dp),
                 )
                 // 卡组与网格各自滚动会打架：网格用固定高度嵌在整体滚动里
+                // it-028：首屏瀑布入场（specs/05 #7），仅首进播放（DESIGN.md §3 预算）
+                var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(900)
+                    entranceDone = true
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
@@ -211,13 +219,15 @@ fun RecordsScreen(
                         .height(((filtered.size + 1) / 2 * 300).dp),
                     userScrollEnabled = false,
                 ) {
-                    items(filtered, key = { it.id }) { outfit ->
-                        Column(Modifier.padding(top = 4.dp)) {
-                            OutfitThumb(vm, outfit, modifier = Modifier.fillMaxWidth()) {
-                                onOpenOutfit(outfit.id)
-                            }
-                            if (outfit.tags.isNotEmpty()) {
-                                Row(Modifier.padding(top = 4.dp)) { TagRow(outfit.tags.take(3)) }
+                    itemsIndexed(filtered, key = { _, it -> it.id }) { index, outfit ->
+                        StaggeredEntrance(index = index, animate = !entranceDone) {
+                            Column(Modifier.padding(top = 4.dp)) {
+                                OutfitThumb(vm, outfit, modifier = Modifier.fillMaxWidth()) {
+                                    onOpenOutfit(outfit.id)
+                                }
+                                if (outfit.tags.isNotEmpty()) {
+                                    Row(Modifier.padding(top = 4.dp)) { TagRow(outfit.tags.take(3)) }
+                                }
                             }
                         }
                     }

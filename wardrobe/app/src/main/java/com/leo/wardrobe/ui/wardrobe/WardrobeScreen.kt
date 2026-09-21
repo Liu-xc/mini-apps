@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import com.leo.wardrobe.ui.components.StaggeredEntrance
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -230,6 +232,12 @@ fun WardrobeScreen(
             } else {
                 // it-011 C6：两列卡片网格——首屏 4–6 件直达浏览；去行内品类小标，
                 // 「全部」下保留品类小节标题；滑动删除改长按删除（网格里滑动会让位滚动）
+                // it-028：首屏瀑布入场落地（specs/05 #7），rememberSaveable 保证仅首进播放（DESIGN.md §3 预算）
+                var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(900)
+                    entranceDone = true
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
@@ -239,8 +247,10 @@ fun WardrobeScreen(
                 ) {
                     // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
                     val sorted = filtered.sortedBy { it.category.ordinal }
-                    items(sorted, key = { it.id }) { item ->
-                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
+                    itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
+                        StaggeredEntrance(index = index, animate = !entranceDone) {
+                            ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
+                        }
                     }
                 }
             }

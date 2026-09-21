@@ -442,6 +442,12 @@ fun ExportSheet(
                                     savedToGallery = false
                                 }
                             }
+                            LaunchedEffect(copied) {  // it-028：与存相册同拍，2s 复位避免常驻「已复制 ✓」
+                                if (copied) {
+                                    delay(2000)
+                                    copied = false
+                                }
+                            }
                             OutlinedButton(
                                 onClick = { composedFile?.let { vm.share.shareImage(it) } },
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),

@@ -73,6 +73,7 @@ import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.outfit.ExportSheet
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -638,6 +639,7 @@ private fun WishEditSheet(
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
             // it-023：sheet 内 snackbar 会被遮挡——名称为空时置灰保存（校验可见化）
+            val haptics = rememberHaptics()  // it-028：保存确认触感（DESIGN.md §4）
             val canSave = name.isNotBlank()
             Button(
                 enabled = canSave,
@@ -652,7 +654,7 @@ private fun WishEditSheet(
                         url = url,
                         tags = tags.toList(),
                         photoFile = photoFile,
-                    ) { ok -> if (ok) onDismiss() }
+                    ) { ok -> if (ok) { haptics.confirm(); onDismiss() } }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
             ) { Text(if (existing == null) "🌟 收进想买" else "保存") }
@@ -826,6 +828,7 @@ private fun PurchaseSheet(
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
             // it-023：sheet 内 snackbar 会被遮挡——无实物照时置灰提交（校验可见化）
+            val haptics = rememberHaptics()  // it-028：购入转正确认触感（DESIGN.md §4）
             val canPurchase = photoFile != null
             Button(
                 enabled = canPurchase,
@@ -838,7 +841,7 @@ private fun PurchaseSheet(
                         color = color,
                         desc = desc,
                         tags = tags.toList(),
-                    ) { ok -> if (ok) onDone() }
+                    ) { ok -> if (ok) { haptics.confirm(); onDone() } }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
             ) { Text(if (canPurchase) "✓ 收进衣橱" else "先拍一张实物照") }
@@ -907,8 +910,9 @@ private fun WishOutfitDetailSheet(
                 OutlinedButton(onClick = { previewPicker() }, modifier = Modifier.weight(1f)) {
                     Text("＋ 录入上身预览图")
                 }
+                val haptics = rememberHaptics()  // it-028：升级确认触感（DESIGN.md §4）
                 Button(
-                    onClick = { vm.promoteWishOutfit(wishOutfit.id); onDismiss() },
+                    onClick = { haptics.confirm(); vm.promoteWishOutfit(wishOutfit.id); onDismiss() },
                     enabled = readyToPromote,
                     modifier = Modifier.weight(1f),
                 ) {

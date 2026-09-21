@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Person
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.editorialColors
 
@@ -143,6 +144,7 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
         }
     }
 
+    val haptics = rememberHaptics()  // it-028：角色保存确认触感（DESIGN.md §4）
     if (showCreate) {
         PersonEditDialog(
             vm = vm,
@@ -151,6 +153,7 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
             initialEmoji = "🙂",
             onDismiss = { showCreate = false },
             onConfirm = { name, emoji, _ ->
+                haptics.confirm()
                 vm.addPerson(name, emoji)
                 showCreate = false
             },
@@ -166,6 +169,7 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
             showRefPhoto = true,
             onDismiss = { editTarget = null },
             onConfirm = { name, emoji, refPhoto ->
+                haptics.confirm()
                 vm.updatePerson(target.id, name, emoji)
                 // it-017：参考照 diff 提交——照片生命周期（旧文件清理）在 Repository
                 when {

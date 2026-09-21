@@ -61,7 +61,10 @@ fun CommentTimeline(
                         .weight(1f)
                         .padding(horizontal = 10.dp),
                 )
-                IconButton(onClick = { onDelete(note.id) }, modifier = Modifier.size(28.dp)) {
+                IconButton(
+                    onClick = { onDelete(note.id) },
+                    modifier = Modifier.size(44.dp),  // it-028：命中区 28→44dp（DESIGN.md §2.5）
+                ) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = "删除评论",

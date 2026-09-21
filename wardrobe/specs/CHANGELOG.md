@@ -4,6 +4,12 @@
 
 ## 未发布
 
+### it-028 — 质感 pass R2：触控目标 + 首屏入场落地 + 触感补线（DESIGN.md 对表第二遍）
+- 触控目标：评论删除钮 28→44dp、卡片「···」媒体角标 36dp（新例外档入 DESIGN.md §2.5）；
+- 列表入场落地：新增 `StaggeredEntrance`，衣橱/穿搭记录两网格 24ms 错峰 fade+上移，`rememberSaveable` 仅首进播放（此前 spec 05 #7 声明存在但代码缺失，spec-code 不一致就此结清）；
+- 导出面板「已复制 ✓」2s 复位（与存相册同拍）；
+- 触感补线 ×5：角色编辑/新建保存、心愿「收进想买/保存」、心愿购入转正、心愿穿搭升级 = confirm。
+
 ### it-027 — 质感 pass：触感基线 + 统计数字动效（DESIGN.md 首轮落地）
 - 触感反馈从零到一：新增 `ui/components/Haptics.kt`（confirm/error/tick，API 30+ CONFIRM/REJECT、低版本回退），接线复制长图 ✓、存相册 ✓、☆保存这套、🌟存为心愿、穿搭打卡、去背景成功（confirm）；评论发送、撤销今日打卡、还原原图（tick）；未就绪点保存（error）；
 - W9 三大数字 count-up（`CountUpText`：首进 0→N、今年/累计档位切换旧值过渡，smooth 弹簧 60ms 错峰）；

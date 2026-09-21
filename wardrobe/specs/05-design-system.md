@@ -33,6 +33,7 @@
 ## 形状与间距
 
 - 卡片圆角 20dp；弹层顶角 28dp；chip 圆角 8dp（胶囊感弱化，更"印刷"）
+- 触控目标 ≥44dp（it-028）：评论删除钮 44dp；媒体卡悬浮角标（卡片「···」菜单）命中区 36dp（DESIGN.md §2.5 例外档），视觉尺寸不变
 - 屏幕边距 20dp；槽位之间 hairline 分隔；照片卡宽高比 4:5（衣物的自然比例）
 - 阴影极轻或无，层次靠留白与 hairline
 
@@ -48,7 +49,7 @@
 | 4 | 复制成功 | 按钮内容 AnimatedContent morph 成 ✓，同时 Canvas 自绘彩屑粒子（15-20 粒，砖红/墨黑/米白三色，重力下落 600ms） | W6 |
 | 5 | 滑动删除 | Material3 `SwipeToDismissBox`，背景显现删除图标，删除后 `animateItem` 淡出回落 | W3 |
 | 6 | 切角色 | 数据区 `Crossfade`，角色名 `slideInVertically`+fade | W2 确认后 |
-| 7 | 列表入场 | LazyColumn/LazyGrid item `animateItem()` + 首屏条目 staggered（20ms 间隔）fade+上移 | W3/W8 |
+| 7 | 列表入场（it-028 落地） | `StaggeredEntrance`：24ms 错峰 fade+上移 28f，`rememberSaveable` 标志**仅首进播放**（DESIGN.md §3 预算）；删除/重排走 `animateItem()` | W3/W8 |
 | 8 | 空状态 | Lottie 动画（衣架/晾衣绳插画，取自 LottieFiles 免费资源，json 放 res/raw） | W1/W3/W8 空态 |
 | 9 | 收藏 ☆→★ | scale 心跳 1→1.2→1 + accent 着色 | W6/W7 |
 | 10 | 底部弹层 | ModalBottomSheet（M3 弹簧），导出面板内容 staggered 淡入 | W2/W6 |
@@ -56,7 +57,7 @@
 
 ## 触感反馈（it-027 · DESIGN.md §4 基线）
 
-`ui/components/Haptics.kt`：`confirm()`（API 30+ CONFIRM，低版本回退 LONG_PRESS）/ `error()`（REJECT / VIRTUAL_KEY）/ `tick()`（CLOCK_TICK），无声音。接线：复制长图 ✓、存相册 ✓、☆保存这套、🌟存为心愿、穿搭打卡（含再记一次）、去背景成功 = **confirm**；评论发送、撤销今日打卡、还原原图 = **tick**；未就绪点保存的 toast = **error**。滚动/导航/输入不加触感。
+`ui/components/Haptics.kt`：`confirm()`（API 30+ CONFIRM，低版本回退 LONG_PRESS）/ `error()`（REJECT / VIRTUAL_KEY）/ `tick()`（CLOCK_TICK），无声音。接线：复制长图 ✓、存相册 ✓、☆保存这套、🌟存为心愿、穿搭打卡（含再记一次）、去背景成功、角色编辑/新建保存、心愿「收进想买/保存」、心愿购入转正、心愿穿搭升级 = **confirm**（it-027 + it-028）；评论发送、撤销今日打卡、还原原图 = **tick**；未就绪点保存的 toast = **error**。滚动/导航/输入不加触感。
 
 ## 参考实现（写代码时对照）
 
