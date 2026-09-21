@@ -16,6 +16,7 @@ import com.leo.eats.domain.model.PlaceLink
 import com.leo.eats.domain.model.PlaceWithStats
 import com.leo.eats.domain.model.Visit
 import com.leo.eats.domain.model.newId
+import com.leo.eats.domain.model.referencedImages
 import com.leo.eats.domain.model.statsOfAll
 import com.leo.eats.domain.usecase.RecapRange
 import com.leo.eats.domain.usecase.SpinFilter
@@ -287,6 +288,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val diff: com.leo.eats.domain.model.EatsDiff,
             val localCounts: Map<String, Int>,
             val packageCounts: Map<String, Int>,
+            /** 本地/包内被引用图片数（it-014 O2：替换明细两侧对称补图数） */
+            val localImages: Int,
+            val packageImages: Int,
         ) : ImportUi
 
         data class Running(val done: Int, val total: Int) : ImportUi
@@ -382,6 +386,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         diff = r.diff,
                         localCounts = countsOf(repo.data.value),
                         packageCounts = r.manifest.counts,
+                        localImages = repo.data.value.referencedImages().size,
+                        packageImages = r.data.referencedImages().size,
                     )
                 }
             }
