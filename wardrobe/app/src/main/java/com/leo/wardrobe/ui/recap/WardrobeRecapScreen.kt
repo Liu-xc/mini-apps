@@ -160,7 +160,28 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                     HeroBand(stats)
                     Spacer(Modifier.height(20.dp))
 
-                    if (stats.topVersatile.isNotEmpty()) {
+                    if (!stats.hasWearData) {
+                        // it-025：无打卡数据时不渲染「穿 0 次/利用率 0%」空指标，给打卡引导
+                        Surface(shape = MaterialTheme.shapes.large, color = ec.surface, tonalElevation = 1.dp) {
+                            Column(
+                                Modifier.fillMaxWidth().padding(20.dp),
+                                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                            ) {
+                                Text("👟", style = MaterialTheme.typography.headlineMedium)
+                                Spacer(Modifier.height(8.dp))
+                                Text("还没有穿搭打卡", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "去「穿搭记录」打开一套，点「今天穿了这套」——\n最百搭、利用率与年度长图都会从这里长出来",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ec.inkFaint,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(20.dp))
+                    }
+
+                    if (stats.hasWearData && stats.topVersatile.isNotEmpty()) {
                         SectionTitle("最百搭 TOP3")
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -182,37 +203,39 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                     CategoryBar(stats.categoryCounts)
                     Spacer(Modifier.height(20.dp))
 
-                    Surface(shape = MaterialTheme.shapes.large, color = ec.surface, tonalElevation = 1.dp) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("利用率", style = MaterialTheme.typography.titleSmall, color = ec.ink)
-                                Spacer(Modifier.weight(1f))
-                                Text("${(stats.utilization * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = ec.ink)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(ec.hairline),
-                            ) {
+                    if (stats.hasWearData) {
+                        Surface(shape = MaterialTheme.shapes.large, color = ec.surface, tonalElevation = 1.dp) {
+                            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("利用率", style = MaterialTheme.typography.titleSmall, color = ec.ink)
+                                    Spacer(Modifier.weight(1f))
+                                    Text("${(stats.utilization * 100).toInt()}%", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                                }
+                                Spacer(Modifier.height(8.dp))
                                 Box(
                                     Modifier
-                                        .fillMaxWidth(stats.utilization.toFloat().coerceIn(0.01f, 1f))
+                                        .fillMaxWidth()
                                         .height(8.dp)
-                                        .background(ec.accent),
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(ec.hairline),
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth(stats.utilization.toFloat().coerceIn(0.01f, 1f))
+                                            .height(8.dp)
+                                            .background(ec.accent),
+                                    )
+                                }
+                                Text(
+                                    "穿过 1 次以上的单品占比",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ec.inkFaint,
+                                    modifier = Modifier.padding(top = 6.dp),
                                 )
                             }
-                            Text(
-                                "穿过 1 次以上的单品占比",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ec.inkFaint,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
                         }
+                        Spacer(Modifier.height(12.dp))
                     }
-                    Spacer(Modifier.height(12.dp))
 
                     Surface(
                         shape = MaterialTheme.shapes.large,

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -173,6 +174,20 @@ fun SpinScreen(
             modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
             val allSelected = config.categories.size == PlaceCategory.entries.size
+            // it-013：组合非默认时行首出现「重置筛选」（横向滚动区行尾会被卷出屏，必须放行首保证可见）
+            if (!allSelected || config.kinds != visibleKinds.toSet() || config.wishOnly) {
+                AssistChip(
+                    onClick = {
+                        vm.setSpinCategories(PlaceCategory.entries.toSet())
+                        vm.setSpinKinds(PlaceKind.entries.toSet())
+                        vm.setSpinWishOnly(false)
+                    },
+                    label = { Text("重置筛选", style = MaterialTheme.typography.labelLarge) },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                    },
+                )
+            }
             FilterChip(
                 selected = allSelected,
                 onClick = { vm.setSpinCategories(PlaceCategory.entries.toSet()) },
@@ -328,70 +343,72 @@ fun SpinScreen(
                         .size(240.dp, 180.dp),
                 )
 
-            }
-
-            // ---- 抽中结果块：深色强调 + 按钮常驻屏内（it-004 E2 闭环） ----
-            winner?.let { w ->
-                Surface(
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = menuColors().ink,
-                    border = BorderStroke(2.dp, menuColors().accent),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 12.dp),
-                ) {
-                    Column(
-                        Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                // it-013：抽中结果块移入卡组区作居中 overlay，撑满原区——消除抽中后的大空档
+                winner?.let { w ->
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = menuColors().ink,
+                        border = BorderStroke(2.dp, menuColors().accent),
+                        modifier = Modifier
+                            .fillMaxWidth(0.92f)
+                            .fillMaxHeight()
+                            .padding(vertical = 4.dp),
                     ) {
-                        Text(resultBanner(w.place.category), style = MaterialTheme.typography.labelLarge, color = menuColors().surface.copy(alpha = 0.75f))
-                        Text(
-                            w.place.name,
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = menuColors().surface,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                        Text(
-                            buildString {
-                                append(w.place.category.shortLabel)
-                                append("·")
-                                append(w.place.kind.labelIn(w.place.category))
-                                if (w.place.cuisine.isNotBlank()) append(" · ${w.place.cuisine}")
-                                append(" · 候选 ${candidates.size} 个")
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = menuColors().surface.copy(alpha = 0.75f),
-                        )
-                        Spacer(Modifier.height(14.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = { logTarget = w },
-                                colors = ButtonDefaults.buttonColors(containerColor = menuColors().accent),
-                                modifier = Modifier.weight(1f).height(52.dp),
-                            ) { Text("✓ ${resultVerb(w.place.category)}", style = MaterialTheme.typography.titleMedium) }
-                            OutlinedButton(
-                                onClick = {
-                                    winner = null
-                                    deck?.let { c ->
-                                        scope.launch {
-                                            confetti++
-                                            winner = c.drawRandom()
-                                            if (winner != null) {
-                                                kotlinx.coroutines.delay(400)
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(
+                                Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                            Text(resultBanner(w.place.category), style = MaterialTheme.typography.titleMedium, color = menuColors().surface.copy(alpha = 0.75f))
+                            Text(
+                                w.place.name,
+                                style = MaterialTheme.typography.displaySmall,
+                                color = menuColors().surface,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
+                            Text(
+                                buildString {
+                                    append(w.place.category.shortLabel)
+                                    append("·")
+                                    append(w.place.kind.labelIn(w.place.category))
+                                    if (w.place.cuisine.isNotBlank()) append(" · ${w.place.cuisine}")
+                                    append(" · 候选 ${candidates.size} 个")
+                                },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = menuColors().surface.copy(alpha = 0.75f),
+                            )
+                            Spacer(Modifier.height(28.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(
+                                    onClick = { logTarget = w },
+                                    colors = ButtonDefaults.buttonColors(containerColor = menuColors().accent),
+                                    modifier = Modifier.weight(1f).height(56.dp),
+                                ) { Text("✓ ${resultVerb(w.place.category)}", style = MaterialTheme.typography.titleMedium) }
+                                OutlinedButton(
+                                    onClick = {
+                                        winner = null
+                                        deck?.let { c ->
+                                            scope.launch {
                                                 confetti++
+                                                winner = c.drawRandom()
+                                                if (winner != null) {
+                                                    kotlinx.coroutines.delay(400)
+                                                    confetti++
+                                                }
                                             }
                                         }
-                                    }
-                                },
-                                border = BorderStroke(1.dp, menuColors().surface.copy(alpha = 0.45f)),
-                                modifier = Modifier.weight(1f).height(52.dp),
-                            ) { Text("再抽", color = menuColors().surface) }
+                                    },
+                                    border = BorderStroke(1.dp, menuColors().surface.copy(alpha = 0.45f)),
+                                    modifier = Modifier.weight(1f).height(56.dp),
+                                ) { Text("再抽", color = menuColors().surface) }
+                            }
+                        }
                         }
                     }
                 }
             }
 
-            // ---- 动作：随机抽 / 换一张（无抽中结果时常驻底部） ----
+            // ---- 动作：无抽中结果时常驻「随机抽一张 / 换一张」；抽中态收成单一出口（it-013，与块内「再抽」不打架） ----
             AnimatedVisibility(visible = winner == null, enter = fadeIn(), exit = fadeOut()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 12.dp)) {
                     Button(
@@ -429,6 +446,20 @@ fun SpinScreen(
                         Spacer(Modifier.width(6.dp))
                         Text("换一张")
                     }
+                }
+            }
+            // it-013：抽中态单一出口——回卡组继续浏览/重抽（重抽在结果块内）
+            AnimatedVisibility(visible = winner != null, enter = fadeIn(), exit = fadeOut()) {
+                OutlinedButton(
+                    onClick = { winner = null },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .height(52.dp),
+                ) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("换一张（返回卡组）", style = MaterialTheme.typography.titleMedium)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -536,11 +567,12 @@ private fun PlaceCard(
             .clip(MaterialTheme.shapes.extraLarge),
     ) {
         Column {
-            // hero：照片或 3D 类型插画
+            // hero：照片或 3D 类型插画（it-013：固定高改 weight 弹性，卡面随卡组高度撑满、消除卡底空白）
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(212.dp),
+                    .weight(1f)
+                    .heightIn(min = 180.dp),
             ) {
                 val photo = s.place.photos.firstOrNull()?.let { fileOf(it) }
                 if (photo != null) {

@@ -77,6 +77,7 @@ import com.leo.wardrobe.ui.theme.editorialColors
 fun WardrobeScreen(
     vm: AppViewModel,
     onEditItem: (String?) -> Unit,
+    onOpenItem: (String) -> Unit = {},
     onOpenRecap: () -> Unit = {},
     onOpenWishlist: () -> Unit = {},
 ) {
@@ -239,7 +240,7 @@ fun WardrobeScreen(
                     // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
                     val sorted = filtered.sortedBy { it.category.ordinal }
                     items(sorted, key = { it.id }) { item ->
-                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item })
+                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
                     }
                 }
             }
@@ -336,13 +337,14 @@ private fun ItemCard(
     item: Item,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onOpenDetail: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
-            .combinedClickable(onClick = onEdit, onLongClick = onDelete)
+            .combinedClickable(onClick = onOpenDetail, onLongClick = onDelete)
             .padding(8.dp),
     ) {
         Box {
@@ -382,14 +384,21 @@ private fun ItemCard(
                 }
             }
         }
-        Text(
-            item.name,
-            style = MaterialTheme.typography.titleSmall,
-            color = editorialColors().ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 8.dp, start = 2.dp),
-        )
+        // it-025：名称行尾 › 暗示可点进详情（大图/评论/穿搭反查）
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
+        ) {
+            Text(
+                item.name,
+                style = MaterialTheme.typography.titleSmall,
+                color = editorialColors().ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text("›", style = MaterialTheme.typography.titleSmall, color = editorialColors().inkFaint)
+        }
         // it-012：颜色改色点胶囊，与 #标签 并列但语义分离
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, start = 2.dp)) {
             if (item.color.isNotBlank()) {
