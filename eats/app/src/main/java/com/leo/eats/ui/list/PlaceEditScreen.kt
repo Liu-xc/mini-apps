@@ -58,6 +58,7 @@ import com.leo.eats.ui.components.PhotoStrip
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.TagInput
 import com.leo.eats.ui.components.label
+import com.leo.eats.ui.components.rememberHaptics
 import com.leo.eats.ui.components.rememberPhotoPicker
 import com.leo.eats.ui.mapview.LocationPickerSheet
 import com.leo.eats.ui.theme.menuColors
@@ -98,12 +99,17 @@ fun PlaceEditScreen(
     var linkUrl by remember { mutableStateOf("") }
     var linkLabel by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()  // it-015：保存成功 confirm / 未就绪 error（DESIGN.md §4）
 
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) newUris += uri.toString() }
 
     // it-002 R4：顶栏保存——长表单无需滚到底即可落盘
     fun doSave() {
-        if (name.isBlank()) { vm.toast("名称必填"); return }
+        if (name.isBlank()) {
+            haptics.error()
+            vm.toast("名称必填")
+            return
+        }
         if (saving) return
         saving = true
         // 类型合法性（ADR-012）：切分类后 kind 若不在该分类选项内，回退为第一个合法值
@@ -123,7 +129,14 @@ fun PlaceEditScreen(
             links = links.toList(),
             notes = notes,
             wishlisted = wishlisted,
-        ) { ok -> if (ok) onBack() else saving = false }
+        ) { ok ->
+            if (ok) {
+                haptics.confirm()
+                onBack()
+            } else {
+                saving = false
+            }
+        }
     }
 
     // 数据里已无此条（被删除）时退出

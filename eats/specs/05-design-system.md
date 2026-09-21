@@ -13,7 +13,9 @@
 | `paper` 背景 | `#F2F7EF` 淡绿纸 | `#101711` 墨绿纸 | 全局背景 |
 | `surface` 卡片 | `#FFFFFF` | `#1B241C` | 卡片/弹层 |
 | `ink` 主文字 | `#1E2822` | `#E9F2E7` | 标题/正文 |
-| `inkFaint` 次级 | `#84907F` | `#93A493` | 相对时间/说明 |
+| `inkFaint` 次级 | `#828E7D` | `#93A493` | 相对时间/说明 |
+
+> it-015：inkFaint 浅色由 `#84907F` 微调至 `#828E7D`（对 paper 3.08→3.23:1，补 DESIGN.md §2.2 对比度余量；色相与观感不变）。
 | `accent` 强调 | `#3FA265` 嫩芽绿 | `#7BCD93` | 主按钮/FAB/选中态 |
 | `hairline` 分隔 | `#E2ECDF` | `#263229` | 细分隔线 |
 
@@ -55,10 +57,15 @@
 | 6 | 详情进入 | 列表卡片 → 详情头部共享元素放大 | W3→W5 |
 | 7 | 空态 | 插画 + 文案 + 行动按钮（「先加一家食堂」/「直接转一把」） | W1/W2/W3 |
 | 8 | 共享元素（it-002） | 列表缩略图 → 详情 hero 无缝放大 | W3→W5 |
-| 9 | 瀑布入场 + 滑删（it-002） | 列表 24ms 错峰上移淡入；SwipeToDismiss 删除 | W3 |
+| 9 | 瀑布入场 + 滑删（it-002；it-015 改仅首进播放） | 列表 24ms 错峰上移淡入，返回/二次进入即时显示（DESIGN.md §3 入场预算）；SwipeToDismiss 删除 | W3 |
 | 10 | 落账编排（it-002） | 按钮 ✓ 形变 + 四色彩屑 900ms + 延迟收起 | W6 |
 | 11 | （已随转盘移除，it-003） | — | — |
 | 12 | 时间线母题（it-002） | 日期左列 + 竖线 + 节点卡，末条竖线截止 | W5 |
+| 13 | 统计数字 count-up（it-015） | `CountUpText`/`CountUpFloatText`：首进 0→N 起数、档位切换旧值过渡，`EatsMotion.smooth()`，三格 60ms 错峰；空花费仍显示「—」 | W7 三大数字 |
+
+## 触感反馈（it-015 · DESIGN.md §4 基线）
+
+`ui/components/Haptics.kt`（与 wardrobe 同构）：`confirm()`（API 30+ CONFIRM，低版本回退 LONG_PRESS）/ `error()`（REJECT / VIRTUAL_KEY）/ `tick()`（CLOCK_TICK），无声音。接线：记一笔落账 ✓、随机抽中落定、保存/更新食堂成功 = **confirm**；名称必填等未就绪提示 = **error**。滚动/导航/输入不加触感。
 
 ## 组件清单（ui/components/）
 

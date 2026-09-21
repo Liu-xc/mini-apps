@@ -74,6 +74,8 @@ import com.leo.eats.domain.usecase.RecapRange
 import com.leo.eats.domain.usecase.RecapStats
 import com.leo.eats.domain.usecase.recap
 import com.leo.eats.ui.AppViewModel
+import com.leo.eats.ui.components.CountUpFloatText
+import com.leo.eats.ui.components.CountUpText
 import com.leo.eats.ui.components.KindPlaceholder
 import com.leo.eats.ui.theme.menuColors
 import kotlinx.coroutines.launch
@@ -289,24 +291,55 @@ private fun HeroBand(stats: RecapStats) {
     val mc = menuColors()
     Surface(shape = MaterialTheme.shapes.large, color = mc.surface, tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(vertical = 18.dp)) {
-            HeroCell(Modifier.weight(1f), "${stats.totalVisits}", "档位内顿数")
+            // it-015：三大数字 count-up（DESIGN.md §5 反例 9），60ms 错峰；总花费为空仍显示「—」
+            HeroCell(Modifier.weight(1f), stats.totalVisits, "档位内顿数", 0)
             Box(Modifier.width(1.dp).height(56.dp).background(mc.hairline))
-            HeroCell(Modifier.weight(1f), stats.totalCost?.let { "¥${trim(it)}" } ?: "—", "总花费")
+            if (stats.totalCost != null) {
+                HeroCellCost(Modifier.weight(1f), stats.totalCost, "总花费", 60)
+            } else {
+                HeroCellStatic(Modifier.weight(1f), "—", "总花费")
+            }
             Box(Modifier.width(1.dp).height(56.dp).background(mc.hairline))
-            HeroCell(Modifier.weight(1f), "${stats.placesVisited}", "去过店数")
+            HeroCell(Modifier.weight(1f), stats.placesVisited, "去过店数", 120)
         }
     }
 }
 
 @Composable
-private fun HeroCell(modifier: Modifier, value: String, label: String) {
+private fun HeroCell(modifier: Modifier, target: Int, label: String, delayMs: Long) {
+    val mc = menuColors()
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            value,
-            style = if (value.length > 6) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
-            color = menuColors().ink,
+        CountUpText(
+            target = target,
+            style = MaterialTheme.typography.headlineMedium,
+            color = mc.ink,
+            delayMs = delayMs,
         )
-        Text(label, style = MaterialTheme.typography.labelSmall, color = menuColors().inkFaint)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = mc.inkFaint)
+    }
+}
+
+@Composable
+private fun HeroCellCost(modifier: Modifier, target: Double, label: String, delayMs: Long) {
+    val mc = menuColors()
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        CountUpFloatText(
+            target = target.toFloat(),
+            format = { "¥${trim(it.toDouble())}" },
+            style = if ("¥${trim(target)}".length > 6) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium,
+            color = mc.ink,
+            delayMs = delayMs,
+        )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = mc.inkFaint)
+    }
+}
+
+@Composable
+private fun HeroCellStatic(modifier: Modifier, value: String, label: String) {
+    val mc = menuColors()
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.headlineMedium, color = mc.ink)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = mc.inkFaint)
     }
 }
 

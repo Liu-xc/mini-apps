@@ -151,6 +151,12 @@ fun ListScreen(
     var sortMenuOpen by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<PlaceWithStats?>(null) }
     var quickLog by remember { mutableStateOf<PlaceWithStats?>(null) }
+    // it-015：入场错峰只播首进（DESIGN.md §3 预算：>200ms 入场禁止返回重放）；rememberSaveable 随返回栈恢复
+    var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(900)
+        entranceDone = true
+    }
     // it-006：演示模式入口——同一入口按当前模式进入/退出
     val context = LocalContext.current
     val demoOn = remember { DemoMode.isEnabled(context) }
@@ -363,7 +369,7 @@ fun ListScreen(
                         }
                     }
                     itemsIndexed(rows, key = { _, s -> s.place.id }) { index, s ->
-                        StaggeredEntrance(index = index) {
+                        StaggeredEntrance(index = index, animate = !entranceDone) {
                             SwipeToDeleteRow(
                                 s = s,
                                 fileOf = { vm.imageFileOf(it) },
@@ -503,11 +509,12 @@ fun ListScreen(
     }
 }
 
-/** 首屏瀑布入场：透明度 + 上移，逐项 24ms 错峰（it-002 R1） */
+/** 首屏瀑布入场：透明度 + 上移，逐项 24ms 错峰（it-002 R1）；it-015 起仅首进播放，返回即时显示 */
 @Composable
-private fun StaggeredEntrance(index: Int, content: @Composable () -> Unit) {
-    val progress = remember { Animatable(0f) }
+private fun StaggeredEntrance(index: Int, animate: Boolean = true, content: @Composable () -> Unit) {
+    val progress = remember { Animatable(if (animate) 0f else 1f) }
     LaunchedEffect(Unit) {
+        if (!animate) return@LaunchedEffect
         kotlinx.coroutines.delay((index.coerceAtMost(12)) * 24L)
         progress.animateTo(1f, tween(360))
     }

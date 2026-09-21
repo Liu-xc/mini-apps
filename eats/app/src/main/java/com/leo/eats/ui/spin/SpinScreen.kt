@@ -70,6 +70,7 @@ import com.leo.eats.ui.components.KindChip
 import com.leo.eats.ui.components.KindPlaceholder
 import com.leo.eats.ui.components.LinkChips
 import com.leo.eats.ui.components.TagRow
+import com.leo.eats.ui.components.rememberHaptics
 import com.leo.eats.ui.components.label
 import com.leo.eats.ui.components.relativeTimeText
 import com.leo.eats.ui.theme.EatsMotion
@@ -122,6 +123,7 @@ fun SpinScreen(
     var winner by remember { mutableStateOf<PlaceWithStats?>(null) }
     var logTarget by remember { mutableStateOf<PlaceWithStats?>(null) }
     var confetti by remember { mutableIntStateOf(0) }
+    val haptics = rememberHaptics()  // it-015：抽中落定触感（DESIGN.md §4）
     var deck by remember { mutableStateOf<CardDeckController<PlaceWithStats>?>(null) }
     var showFilter by remember { mutableStateOf(false) }
 
@@ -388,14 +390,15 @@ fun SpinScreen(
                                     onClick = {
                                         winner = null
                                         deck?.let { c ->
-                                            scope.launch {
+                                        scope.launch {
+                                            confetti++
+                                            winner = c.drawRandom()
+                                            if (winner != null) haptics.confirm()
+                                            if (winner != null) {
+                                                kotlinx.coroutines.delay(400)
                                                 confetti++
-                                                winner = c.drawRandom()
-                                                if (winner != null) {
-                                                    kotlinx.coroutines.delay(400)
-                                                    confetti++
-                                                }
                                             }
+                                        }
                                         }
                                     },
                                     border = BorderStroke(1.dp, menuColors().surface.copy(alpha = 0.45f)),
@@ -419,6 +422,7 @@ fun SpinScreen(
                                 val w = c.drawRandom()
                                 if (w != null) {
                                     winner = w
+                                    haptics.confirm()
                                     confetti++
                                     kotlinx.coroutines.delay(400)
                                     confetti++

@@ -17,7 +17,7 @@ object EatsPalette {
     val Paper = Color(0xFFF2F7EF)
     val SurfaceLight = Color(0xFFFFFFFF)
     val Ink = Color(0xFF1E2822)
-    val InkFaint = Color(0xFF84907F)
+    val InkFaint = Color(0xFF828E7D)  // it-015：原 #84907F 对 paper 3.08:1 贴线，微调至 3.23:1（DESIGN.md §2.2）
     val Accent = Color(0xFF3FA265)
     val Hairline = Color(0xFFE2ECDF)
 

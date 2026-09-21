@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.leo.eats.ui.components.ConfettiBurst
+import com.leo.eats.ui.components.rememberHaptics
 import com.leo.eats.ui.components.PhotoStrip
 import com.leo.eats.ui.components.RatingStars
 import com.leo.eats.ui.components.formatVisitTime
@@ -74,6 +75,7 @@ fun LogVisitSheet(
     // 落账成功编排（it-002 R1）：按钮 ✓ 形变 + 彩屑，700ms 后再走父级落账/收起
     var succeeding by remember { mutableStateOf(false) }
     var confettiTrigger by remember { mutableStateOf(0) }
+    val haptics = rememberHaptics()  // it-015：落账确认触感（DESIGN.md §4）
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) uris += uri.toString() }
@@ -156,6 +158,7 @@ fun LogVisitSheet(
                         if (succeeding) return@Button
                         succeeding = true
                         confettiTrigger++
+                        haptics.confirm()
                         scope.launch {
                             kotlinx.coroutines.delay(700)
                             onLog(at, rating, cost.trim().toDoubleOrNull(), text, uris.toList())
