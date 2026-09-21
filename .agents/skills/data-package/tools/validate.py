@@ -41,14 +41,16 @@ class Report:
 
 
 def is_uuid(r, where, value):
-    if not isinstance(value, str):
-        r.fail(f"{where}: id 不是字符串: {value!r}")
+    """id 合法性：非空字符串即可参与合并（历史数据存在旧式短 id，如 it1/p1）；
+    非 UUID 形态仅 WARN（新增实体必须 UUID——那是 agent 的产出标准）。"""
+    if not isinstance(value, str) or not value:
+        r.fail(f"{where}: id 不是非空字符串: {value!r}")
         return False
     try:
         parsed = uuid_mod.UUID(value)
     except ValueError:
-        r.fail(f"{where}: id 不是合法 UUID: {value}")
-        return False
+        r.warn(f"{where}: id 非规范 UUID（历史短 id 可合并；新增实体必须 UUID）: {value}")
+        return True
     if str(parsed) != value:
         r.warn(f"{where}: id 非规范小写十六进制: {value}")
     return True
