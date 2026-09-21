@@ -18,4 +18,7 @@ interface WardrobeRepository :
     NoteRepository {
     /** 全量数据快照；任何写操作后自动广播 */
     val data: StateFlow<WardrobeData>
+
+    /** it-024 数据包导入终步：整体替换快照（已清洗）并单事务落盘——合并/替换模式共用 */
+    suspend fun replaceAll(data: WardrobeData)
 }

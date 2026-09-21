@@ -52,11 +52,13 @@ import com.leo.wardrobe.ui.theme.WardrobeTheme
 import com.leo.wardrobe.ui.wardrobe.ItemEditScreen
 import com.leo.wardrobe.ui.wardrobe.WardrobeScreen
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         pendingOpenItemId.value = intent?.getStringExtra(EXTRA_OPEN_ITEM_ID) ?: pendingOpenItemId.value
+        handleImportIntent(intent)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
@@ -69,12 +71,43 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         pendingOpenItemId.value = intent.getStringExtra(EXTRA_OPEN_ITEM_ID)
+        handleImportIntent(intent)
+    }
+
+    /**
+     * it-024 系统直达导入（D3④b）：zip 分享/打开方式入口。
+     * 外授 Uri 即取即用——立刻整体拷入缓存，不持有临时权限。
+     */
+    private fun handleImportIntent(intent: Intent?) {
+        if (intent == null) return
+        val uri = when (intent.action) {
+            Intent.ACTION_SEND ->
+                androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, android.net.Uri::class.java)
+            Intent.ACTION_VIEW -> intent.data
+            else -> null
+        } ?: return
+        runCatching {
+            val f = File(cacheDir, "import-${System.currentTimeMillis()}.zip")
+            contentResolver.openInputStream(uri)?.use { input ->
+                f.outputStream().use { input.copyTo(it) }
+            } ?: return
+            if (f.length() == 0L) return
+            val display = contentResolver.query(uri, null, null, null, null)?.use { c ->
+                val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+            }
+            pendingImport.value = PendingImport(f, display ?: f.name)
+        }.onFailure { android.util.Log.e("Wardrobe", "handleImportIntent failed", it) }
     }
 
     companion object {
         /** 「好久没穿」通知深链（it-018）：点击进 W5 衣物详情 */
         const val EXTRA_OPEN_ITEM_ID = "openItemId"
         val pendingOpenItemId = MutableStateFlow<String?>(null)
+
+        /** it-024：系统直达导入的待处理包（文件已拷入缓存） */
+        data class PendingImport(val file: java.io.File, val displayName: String)
+        val pendingImport = MutableStateFlow<PendingImport?>(null)
     }
 }
 
@@ -120,9 +153,27 @@ private fun WardrobeRoot() {
         }
     }
 
+    // it-024：带动作的一次性消息（导出完成 → 分享）
+    val actionToast by vm.actionToast.collectAsState()
+    LaunchedEffect(actionToast) {
+        val t = actionToast ?: return@LaunchedEffect
+        val result = snackbar.showSnackbar(t.message, t.actionLabel)
+        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) t.onAction?.invoke()
+        vm.consumeActionToast()
+    }
+
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showBottomBar = currentRoute == Routes.HOME
+
+    // it-024：系统直达导入 → 回顾页承接（D3④b 汇入 ⑤）
+    val pendingImport by MainActivity.pendingImport.collectAsState()
+    LaunchedEffect(pendingImport) {
+        val p = pendingImport ?: return@LaunchedEffect
+        if (currentRoute != Routes.RECAP) nav.navigate(Routes.RECAP)
+        MainActivity.pendingImport.value = null
+        recapVm.startImport(p.file, p.displayName)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },

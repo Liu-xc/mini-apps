@@ -120,3 +120,9 @@
 - **决策**（2026-09-21）：release 版本对齐 CHANGELOG 序列，取 0.5.0（versionCode 5，1+it-011~019 迭代数）；发布渠道为 GitHub Releases（tag `wardrobe-v0.5.0`），APK 用 debug keystore 本地 apksigner 签名（个人分发，无正式 keystore；后续若上应用市场再换正式签名并升 versionCode）。eats 同日首发，序列从 0.1.0 起。
 - **理由**：版本号与既有 CHANGELOG 连续，用户可从版本号定位迭代；发布签名策略如实记录避免误以为有正式签名体系。
 - **后果**：debug 包与 release 包签名不同，覆盖安装需先卸载；换正式 keystore 时属破坏性变更需再次记录。
+
+## ADR-022 数据包 v1：manifest 头 + 应用 SSOT 根 + images，编解码上收 libs/store 0.2.0（it-024/it-012）
+- **背景**：需要「导出 → AI 加工 → 导回」闭环与完整备份；wardrobe it-001 声称的 zip 导出从未落地（全仓无 zip 代码）。store v1 设计稿的 BackupCodec 在 0.1.0 因零消费方被精简。
+- **决策**（2026-09-21）：包格式 v1 = `manifest.json`（packageFormat/app/schemaVersion/exportedAt/generator/counts）+ 应用数据文件原样 + `images/`；编解码（zip 读写/manifest 校验/迁移链升级入口 `SnapshotStore.upgrade`）上收 libs/store 0.2.0 为 `PackageCodec`（零业务概念），按 id 合并语义留在各 app domain 纯函数（`mergeWardrobe`/`mergeEats`）。agent 产包放宽图片命名/格式，app 导入统一转码归一 uuid.webp 并重映射引用；导入必经「预检全过 → 预览确认 → 单事务落盘」，失败零改动；系统直达入口（ACTION_SEND/ACTION_VIEW + zip mime）与应用内 SAF 两条入口汇入同一流程。app 容忍悬空引用（cleaned 清洗），skill 校验器（`.agents/skills/data-package`）更严格——不对称是设计使然。
+- **理由**：codec 无业务概念天然可上收（store「按需再加」约定的兑现）；合并语义依赖实体结构归 app；实体级覆盖（不做字段级深合并）满足「AI 打标 = 实体新版本」语义且实现/心智最简。
+- **后果**：store 0.1.0→0.2.0（纯新增 API 不破坏既有面）；octet-stream 的 SEND 入口让应用出现在任意二进制分享面板（选错由跨 app 拒绝兜底）；重复导入同包幂等但图片全部重写一遍（个人级规模可接受）。

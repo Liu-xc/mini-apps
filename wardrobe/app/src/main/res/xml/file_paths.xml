@@ -4,4 +4,6 @@
     <files-path name="images" path="images/" />
     <!-- 合成图等临时导出文件 -->
     <files-path name="export" path="export/" />
+    <!-- it-024：数据包分享（cache/share/，导出完成的 [分享] 动作） -->
+    <cache-path name="share" path="share/" />
 </paths>

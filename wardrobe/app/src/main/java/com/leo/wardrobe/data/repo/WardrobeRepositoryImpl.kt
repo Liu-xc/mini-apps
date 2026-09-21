@@ -28,6 +28,11 @@ class WardrobeRepositoryImpl(
     /** 测试可注入的时钟 */
     var now: () -> Long = { System.currentTimeMillis() }
 
+    /** it-024 数据包导入终步：清洗后整体替换（单事务：改快照→落盘→广播） */
+    override suspend fun replaceAll(data: WardrobeData) {
+        mutate { data.cleaned() }
+    }
+
     private fun <T> List<T>.replaceBy(id: String, selector: (T) -> String, map: (T) -> T): List<T> =
         mapNotNull { if (selector(it) == id) map(it) else it }
 

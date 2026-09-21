@@ -4,6 +4,12 @@
 
 ## 未发布
 
+### it-024 — 结构化数据包：导出 / 导入 / agent 加工回流
+- W9 新增「数据」小节：导出 `wardrobe-backup-*.zip`（manifest + wardrobe.json + images），完成带 [分享]；导入支持合并（默认，按 id 实体级覆盖、本地多出保留）/ 替换（二次确认），预检失败零改动、导入即时生效；
+- 系统直达导入：微信「用其他应用打开」/ 文件管理器「分享 → 衣橱」免选文件直达校验+预览流程；
+- libs/store 0.2.0 新增 PackageCodec（zip 编解码 + manifest 契约 + SnapshotStore.upgrade），ADR-022；
+- 仓库级 agent skill `.agents/skills/data-package/`：两 app schema 分册 + validate.py 校验器（与 app 预检同规则）+ 示例包。
+
 ### it-023 — UI 三轮走查与交互修复（夜间专项）
 - 修复 ModalBottomSheet 内校验提示被遮挡（转正无实物照/心愿名为空时提交按钮置灰并明示原因）；
 - 长图预览改 Coil 异步降采样（原组合期主线程全尺寸解码 ~14MB，开预览必卡）；

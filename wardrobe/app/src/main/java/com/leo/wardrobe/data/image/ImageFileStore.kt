@@ -83,6 +83,26 @@ class ImageFileStore(
         runCatching { BitmapFactory.decodeFile(media.file(file)?.absolutePath) }.getOrNull()
     }
 
+    /** it-024 数据包导入：包内图片字节 → 解码/缩放/WebP 压缩 → 以新 uuid.webp 落盘；不可解码返回 null */
+    suspend fun putPackageImage(bytes: ByteArray): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val raw = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching null
+            val scaled = scaleDown(raw)
+            val buffer = ByteArrayOutputStream()
+            val ok = compressWebp(scaled, buffer)
+            if (raw !== scaled) raw.recycle()
+            scaled.recycle()
+            if (!ok) null else media.put(buffer.toByteArray())
+        }.getOrNull()
+    }
+
+    /** it-024 预检：包内图片可解码性（魔数+尺寸探针，不解全图） */
+    fun isDecodableImage(bytes: ByteArray): Boolean = runCatching {
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+        opts.outWidth > 0 && opts.outHeight > 0
+    }.getOrDefault(false)
+
     private fun compressWebp(bitmap: Bitmap, out: java.io.OutputStream): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, QUALITY, out)

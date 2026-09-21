@@ -97,7 +97,7 @@
 - 元数据：单文件 `files/wardrobe.json`，kotlinx.serialization 序列化全部 Person/Item/Outfit/Note/WearLog；写入为原子操作（写 tmp → rename）。文件头带 `schemaVersion`，升级时运行迁移函数。it-017 的 `Person.refImageFile` 与 it-018 的 `wearLogs[]` 均为可空默认字段，旧 JSON 缺字段反序列化为空值/空表，属向后兼容变更、未 bump schemaVersion。
 - 图片：`files/images/*.webp`（单品照、成品图与形象参考照同目录，文件名 = UUID.webp）。导入时最长边压至 1440px、质量 82。
 - 每次成功写入 JSON 后记录 `wardrobe.json.bak`（上一版本），启动时 JSON 损坏则尝试 bak。
-- 导出备份：zip（wardrobe.json + images/），从设置页导出/导入（it-001 提供导出，导入随后续迭代）。
+- 导出备份（it-024 落地）：数据包 zip = `manifest.json`（packageFormat/app/schemaVersion/exportedAt/generator/counts）+ `wardrobe.json`（SSOT 根原样）+ `images/`。入口 W9「数据」小节与系统分享/打开方式直达；导入默认合并（按 id 实体级覆盖、本地多出保留、永不删数据），替换需二次确认；预检全过才动本地数据、失败零改动；agent 产包放宽图片命名/格式，导入统一归一为 uuid.webp 并重映射引用。agent 侧数据结构说明与校验器：`.agents/skills/data-package/`。（it-001 曾声称「已提供导出」，实为纸面承诺，it-024 一并修正。）
 
 ### JSON 结构示例
 
@@ -105,7 +105,7 @@
 {
   "schemaVersion": 1,
   "persons": [{"id":"p1","name":"Leo","emoji":"👨","refImageFile":null,"createdAt":0}],
-  "items": [{"id":"i1","personId":"p1","category":"上装","name":"白色牛津纺衬衫",
+  "items": [{"id":"i1","personId":"p1","category":"TOP","name":"白色牛津纺衬衫",
              "color":"白色","desc":"宽松棉质、纽扣领","imageFile":"uuid1.webp",
              "tags":["通勤","简约"],"createdAt":0,"updatedAt":0}],
   "outfits": [{"id":"o1","personId":"p1","itemIds":["i1","i2"],"tags":["通勤","早秋"],

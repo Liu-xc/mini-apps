@@ -58,6 +58,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toast(msg: String?) { _toast.value = msg }
 
+    /** it-024：带动作按钮的一次性消息（导出完成 → [分享]） */
+    data class ActionToast(val message: String, val actionLabel: String, val onAction: (() -> Unit)?)
+
+    private val _actionToast = MutableStateFlow<ActionToast?>(null)
+    val actionToast: StateFlow<ActionToast?> = _actionToast.asStateFlow()
+
+    fun toastAction(message: String, actionLabel: String, onAction: (() -> Unit)? = null) {
+        _actionToast.value = ActionToast(message, actionLabel, onAction)
+    }
+
+    fun consumeActionToast() { _actionToast.value = null }
+
     /**
      * it-020：写路径统一兜底——失败 Log + toast（quiet 时仅 Log），成功提示可选。
      * 内存快照回滚由 libs/store 的 commit 序列天然承担（commit 抛异常则快照不赋值）。

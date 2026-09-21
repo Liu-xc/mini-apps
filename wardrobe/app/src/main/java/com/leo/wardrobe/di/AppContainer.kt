@@ -49,6 +49,9 @@ class AppContainer(context: Context) {
     val repository: WardrobeRepository =
         if (demo) MockWardrobeRepository() else WardrobeRepositoryImpl(snapshotStore, imageStore)
 
+    /** it-024：数据包导出/导入（演示模式下入口置灰，服务层再兜底拒绝） */
+    val packages = com.leo.wardrobe.data.packages.WardrobePackages(repository, snapshotStore, imageStore, demo)
+
     val prefs: PrefsStore = PrefsStore(context)
     /** 「好久没穿」提醒设置（it-018 阶段C） */
     val recapPrefs: com.leo.wardrobe.data.prefs.RecapPrefsStore =

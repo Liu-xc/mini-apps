@@ -51,6 +51,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -105,6 +106,21 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
 
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) appVm.toast("未授予通知权限，提醒将无法弹出")
+    }
+
+    // it-024：数据包导出/导入（D2① / D3④a）
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) vm.exportTo(uri)
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.startImportFromUri(uri)
+    }
+    // it-024：系统直达（微信「用其他应用打开」/ 文件管理器分享，D3④b）
+    val pendingImport by com.leo.wardrobe.MainActivity.pendingImport.collectAsState()
+    LaunchedEffect(pendingImport) {
+        val p = pendingImport ?: return@LaunchedEffect
+        com.leo.wardrobe.MainActivity.pendingImport.value = null
+        vm.startImport(p.file, p.displayName)
     }
 
     fun generate() {
@@ -281,6 +297,28 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                             vm.setReminder(on, prefs.days)
                         },
                         onDays = { vm.setReminder(prefs.enabled, it) },
+                    )
+                    Spacer(Modifier.height(24.dp))
+
+                    // it-024：「数据」小节（D1），挂在提醒设置之后
+                    DataPackageSection(
+                        vm = vm,
+                        demo = vm.isDemo,
+                        onExport = {
+                            val name = "wardrobe-backup-" +
+                                java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.CHINA)
+                                    .format(java.util.Date()) + ".zip"
+                            exportLauncher.launch(name)
+                        },
+                        onImport = {
+                            importLauncher.launch(
+                                arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"),
+                            )
+                        },
+                        onToast = { appVm.toast(it) },
+                        onExportDone = { summary, file ->
+                            appVm.toastAction(summary, "分享") { vm.sharePackage(file) }
+                        },
                     )
                     Spacer(Modifier.height(32.dp))
                 }

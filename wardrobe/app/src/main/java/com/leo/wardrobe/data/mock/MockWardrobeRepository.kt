@@ -24,6 +24,9 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
     private val _data = MutableStateFlow(seed)
     override val data: StateFlow<WardrobeData> = _data.asStateFlow()
 
+    /** it-024：演示模式下导入导出入口置灰，此实现仅保接口完整 */
+    override suspend fun replaceAll(data: WardrobeData) { _data.value = data }
+
     override suspend fun ensureDefaultPerson(): Person {
         _data.value.persons.firstOrNull()?.let { return it }
         val p = Person(newId(), "我", "🙂", createdAt = System.currentTimeMillis())
