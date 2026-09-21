@@ -43,13 +43,14 @@
 ## 形状与间距
 
 - 卡片圆角 20dp；弹层顶角 28dp；chip 8dp；屏幕边距 20dp；照片宽高比 4:3
+- 触控目标 ≥44dp（it-016）：评分星输入命中区 coerceAtLeast(44dp)（视觉星尺寸不变）、Visit 删除钮 44dp；照片移除角标命中区 36dp（媒体角标例外档，DESIGN.md §2.5）
 - 层次靠留白与 hairline，阴影极轻或无
 
 ## 动效清单（弹簧参数复用 EditorialMotion 基调：smooth / pop / bouncy）
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
-| 1 | 卡组抽取（it-003） | libs/carddeck：侧滑飞出/堆叠晋升；「随机抽一张」按拍加速—减速翻张落定 + 彩屑 + 结果条 | W1 |
+| 1 | 卡组抽取（it-003；it-016 庆祝单一化） | libs/carddeck：侧滑飞出/堆叠晋升；「随机抽一张」按拍加速—减速翻张落定 + **落定单份彩屑**（原双发已修）+ 结果条 | W1 |
 | 2 | 结果卡弹入 | spring pop：scale 0.9→1 + fade，accent 描边 | W1 |
 | 3 | 记一笔成功 | 弹层收起 + snackbar「落账 ✓」，详情统计数字变化高亮 | W6→W5 |
 | 4 | 地图摘要卡 | ModalBottomSheet slide-up；marker 点击轻微 bounce | W2 |

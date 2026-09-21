@@ -475,7 +475,7 @@ private fun VisitCard(visit: Visit, fileOf: (String) -> File?, isLast: Boolean =
                             color = menuColors().inkFaint,
                         )
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(44.dp)) {  // it-016：命中区 28→44dp（DESIGN.md §2.5）
                         Icon(
                             Icons.Rounded.Delete,
                             contentDescription = "删除这条记录",

@@ -245,17 +245,21 @@ fun PhotoStrip(
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = MaterialTheme.colorScheme.surface,
+                        // it-016：媒体角标命中区 36dp（DESIGN.md §2.5 例外档），视觉不变
                         modifier = Modifier
                             .padding(3.dp)
                             .align(Alignment.TopEnd)
+                            .size(36.dp)
                             .clickable { onRemove(i) },
                     ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = "移除照片",
-                            tint = menuColors().ink,
-                            modifier = Modifier.size(18.dp).padding(2.dp),
-                        )
+                        Box(Modifier.matchParentSize(), contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = "移除照片",
+                                tint = menuColors().ink,
+                                modifier = Modifier.size(18.dp).padding(2.dp),
+                            )
+                        }
                     }
                 }
             }

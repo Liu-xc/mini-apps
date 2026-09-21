@@ -80,7 +80,8 @@ fun RatingStars(
                 if (onChange != null) {
                     IconButton(
                         onClick = { onChange(if (rating == i + 1) null else i + 1) },
-                        modifier = Modifier.size(size + 10.dp),
+                        // it-016：输入命中区 ≥44dp（DESIGN.md §2.5），视觉星尺寸不变
+                        modifier = Modifier.size((size + 10.dp).coerceAtLeast(44.dp)),
                     ) { icon() }
                 } else {
                     icon()

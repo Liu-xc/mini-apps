@@ -391,11 +391,9 @@ fun SpinScreen(
                                         winner = null
                                         deck?.let { c ->
                                         scope.launch {
-                                            confetti++
                                             winner = c.drawRandom()
-                                            if (winner != null) haptics.confirm()
                                             if (winner != null) {
-                                                kotlinx.coroutines.delay(400)
+                                                haptics.confirm()
                                                 confetti++
                                             }
                                         }
@@ -423,8 +421,6 @@ fun SpinScreen(
                                 if (w != null) {
                                     winner = w
                                     haptics.confirm()
-                                    confetti++
-                                    kotlinx.coroutines.delay(400)
                                     confetti++
                                 }
                             }
