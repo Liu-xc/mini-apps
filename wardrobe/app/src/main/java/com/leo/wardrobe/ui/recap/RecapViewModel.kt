@@ -13,6 +13,7 @@ import com.leo.wardrobe.data.packages.WardrobePackages
 import com.leo.wardrobe.domain.model.ImportMode
 import com.leo.wardrobe.domain.model.WardrobeData
 import com.leo.wardrobe.domain.model.WardrobeDiff
+import com.leo.wardrobe.domain.model.referencedImages
 import com.leo.wardrobe.domain.usecase.WardrobeRecapRange
 import com.leo.wardrobe.domain.usecase.wardrobeRecap
 import com.leo.wardrobe.platform.ReminderScheduler
@@ -117,6 +118,9 @@ class RecapViewModel(app: Application) : AndroidViewModel(app) {
             val diff: WardrobeDiff,
             val localCounts: Map<String, Int>,
             val packageCounts: Map<String, Int>,
+            /** 本地/包内被引用图片数（it-026 O2：替换明细两侧对称补图数） */
+            val localImages: Int,
+            val packageImages: Int,
         ) : ImportUi
 
         data class Running(val done: Int, val total: Int) : ImportUi
@@ -215,6 +219,8 @@ class RecapViewModel(app: Application) : AndroidViewModel(app) {
                         diff = r.diff,
                         localCounts = countsOf(container.repository.data.value),
                         packageCounts = r.manifest.counts,
+                        localImages = container.repository.data.value.referencedImages().size,
+                        packageImages = r.data.referencedImages().size,
                     )
                 }
             }

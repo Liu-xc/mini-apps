@@ -3,9 +3,8 @@
 package com.leo.wardrobe.ui.recap
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,11 +22,13 @@ import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,7 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.leo.wardrobe.domain.model.CollectionDiff
@@ -53,9 +57,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** it-026 O4：符号分层色（两应用同一套：＋绿 ↻琥珀 ＝灰，✗红 ✓绿） */
+private val SymAdd = Color(0xFF2E7D32)
+private val SymUpdate = Color(0xFFB8860B)
+private val SymKeep = Color(0xFF86909C)
+private val SymCheck = Color(0xFF2E7D32)
+/** it-026 O1：替换危险态底色（警示红浅底） */
+private val DangerTint = Color(0xFFFDECEC)
+
 /**
  * W9「数据」小节（it-024，线框 D1–D7）：导出/导入入口卡 + 导入导出全流程对话框。
- * 状态机在 [RecapViewModel]；本文件只渲染。
+ * 状态机在 [RecapViewModel]；本文件只渲染。it-026 交互加固见各标注。
  */
 @Composable
 fun DataPackageSection(
@@ -85,7 +97,8 @@ fun DataPackageSection(
                 DataRow(
                     icon = { Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = ec.accent, modifier = Modifier.size(22.dp)) },
                     title = "导入数据包",
-                    sub = "合并打标结果 / 整包恢复",
+                    // it-026 O5：入口副标题补覆盖风险暗示
+                    sub = "合并打标结果 · 整包恢复（覆盖前确认）",
                     enabled = !demo && importUi !is RecapViewModel.ImportUi.Checking && importUi !is RecapViewModel.ImportUi.Running,
                     onClick = onImport,
                 )
@@ -101,7 +114,7 @@ fun DataPackageSection(
         }
     }
 
-    ImportDialogs(importUi = importUi, vm = vm, onToast = onToast)
+    ImportDialogs(importUi = importUi, vm = vm, onToast = onToast, onExport = onExport)
     ExportDialogs(exportUi = exportUi, vm = vm, onDone = onExportDone)
 }
 
@@ -143,6 +156,7 @@ private fun ImportDialogs(
     importUi: RecapViewModel.ImportUi,
     vm: RecapViewModel,
     onToast: (String) -> Unit,
+    onExport: () -> Unit,
 ) {
     when (importUi) {
         RecapViewModel.ImportUi.Checking -> ProgressDialog("校验数据包…")
@@ -156,12 +170,23 @@ private fun ImportDialogs(
             text = {
                 Column {
                     importUi.reasons.forEach { r ->
-                        Text("✗ $r", style = MaterialTheme.typography.bodySmall)
+                        // it-026 O4：✗ 行 error 色
+                        Text(
+                            buildAnnotatedString {
+                                withStyle(SpanStyle(color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)) { append("✗ ") }
+                                append(r)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                         Spacer(Modifier.height(6.dp))
                     }
                     Spacer(Modifier.height(4.dp))
+                    // it-026 O4：✓ 安抚行绿色
                     Text(
-                        "✓ 本地数据未做任何改动",
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = SymCheck, fontWeight = FontWeight.Bold)) { append("✓ ") }
+                            append("本地数据未做任何改动")
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                     )
@@ -170,7 +195,7 @@ private fun ImportDialogs(
             confirmButton = { TextButton(onClick = vm::dismissImport) { Text("知道了") } },
         )
 
-        is RecapViewModel.ImportUi.Confirm -> ConfirmImportDialog(importUi, vm)
+        is RecapViewModel.ImportUi.Confirm -> ConfirmImportDialog(importUi, vm, onExport)
 
         is RecapViewModel.ImportUi.Done -> {
             LaunchedEffect(importUi) {
@@ -184,7 +209,7 @@ private fun ImportDialogs(
 }
 
 @Composable
-private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: RecapViewModel) {
+private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: RecapViewModel, onExport: () -> Unit) {
     var replace by remember { mutableStateOf(false) }
     var askReplace by remember { mutableStateOf(false) }
     val ec = editorialColors()
@@ -203,6 +228,20 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
                 Text("$from · $time", style = MaterialTheme.typography.labelSmall, color = ec.inkFaint)
                 Spacer(Modifier.height(12.dp))
 
+                // it-026 O1①：替换模式警示胶囊常驻（动线锚点，切回合并即消失）
+                if (replace) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = DangerTint) {
+                        Text(
+                            "当前：替换模式",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 if (!replace) {
                     Text("合并模式将发生：", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
@@ -212,19 +251,27 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
                         Text(
                             "⚠ ${state.diff.locallyNewer} 件在导出后被本地修改过，导入将覆盖这些修改",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFB8860B),
+                            color = SymUpdate,
                         )
                     }
                 } else {
                     Text("替换模式将发生：", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.height(4.dp))
+                    // it-026 O2：删除/导入两行口径对称，各带图片数
                     Text(
-                        "✕ 清除  本地${countsLine(state.localCounts)}",
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("✕ ") }
+                            append("清除  本地${countsLine(state.localCounts)} · ${state.localImages} 图")
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        "＋ 导入  包内${countsLine(state.packageCounts)}",
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = SymAdd, fontWeight = FontWeight.Bold)) { append("＋ ") }
+                            append("导入  包内${countsLine(state.packageCounts)} · ${state.packageImages} 图")
+                        },
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -239,13 +286,20 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
                     selected = replace,
                     label = "替换全部",
                     sub = "清空本地后导入包内内容",
+                    danger = true,
                 ) { replace = true }
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (replace) askReplace = true else vm.applyImport(ImportMode.MERGE) }) {
-                Text("导入")
-            }
+            // it-026 O1③：确认按钮随模式变文案并着警示色
+            TextButton(
+                onClick = { if (replace) askReplace = true else vm.applyImport(ImportMode.MERGE) },
+                colors = if (replace) {
+                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                } else {
+                    ButtonDefaults.textButtonColors()
+                },
+            ) { Text(if (replace) "替换…" else "导入") }
         },
         dismissButton = {
             TextButton(onClick = vm::dismissImport) { Text("取消") }
@@ -257,16 +311,27 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
             onDismissRequest = { askReplace = false },
             title = { Text("替换全部数据？") },
             text = {
-                Text(
-                    "将删除本地${countsLine(state.localCounts)}，替换为包内${countsLine(state.packageCounts)}。\n" +
-                        "此操作无法撤销，建议先导出一份当前数据再替换。",
-                )
+                Column {
+                    // it-026 O2：二次确认文案带图片数
+                    Text(
+                        "将删除本地${countsLine(state.localCounts)} · ${state.localImages} 张图，" +
+                            "替换为包内${countsLine(state.packageCounts)} · ${state.packageImages} 张图。\n" +
+                            "此操作无法撤销，建议先导出一份当前数据再替换。",
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    // it-026 O3：「建议先导出」升为可执行按钮（SAF 保存后回到本对话框）
+                    Button(
+                        onClick = onExport,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(),
+                    ) { Text("先导出一份当前数据（推荐）") }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
                     askReplace = false
                     vm.applyImport(ImportMode.REPLACE)
-                }) { Text("替换", color = MaterialTheme.colorScheme.error) }
+                }) { Text("仍要替换", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { askReplace = false }) { Text("取消") }
@@ -276,49 +341,85 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
 }
 
 @Composable
-private fun SelectRow(selected: Boolean, label: String, sub: String, onClick: () -> Unit) {
+private fun SelectRow(selected: Boolean, label: String, sub: String, danger: Boolean = false, onClick: () -> Unit) {
+    val highlight = selected && danger
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
+            .background(if (highlight) DangerTint else Color.Transparent)
+            .border(
+                width = if (highlight) 2.dp else 0.dp,
+                color = if (highlight) MaterialTheme.colorScheme.error else Color.Transparent,
+                shape = RoundedCornerShape(10.dp),
+            )
             .clickable { onClick() }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = if (highlight) {
+                RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.error)
+            } else {
+                RadioButtonDefaults.colors()
+            },
+        )
         Column {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(sub, style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (highlight) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal,
+            )
+            Text(
+                sub,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (highlight) MaterialTheme.colorScheme.error else editorialColors().inkFaint,
+            )
         }
+    }
+}
+
+private data class DiffPart(val symbol: String, val color: Color, val text: String)
+
+private fun diffParts(d: CollectionDiff): List<DiffPart> = buildList {
+    if (d.added > 0) add(DiffPart("＋", SymAdd, "新增 ${d.added}"))
+    if (d.updated > 0) add(DiffPart("↻", SymUpdate, "更新 ${d.updated}"))
+    if (d.kept > 0) add(DiffPart("＝", SymKeep, "保留 ${d.kept}"))
+}
+
+/** it-026 O4：差异行符号着色加粗（＋绿 ↻琥珀 ＝灰），数字保持正文色 */
+private fun diffAnnotated(label: String, d: CollectionDiff): androidx.compose.ui.text.AnnotatedString? {
+    if (d.added == 0 && d.updated == 0 && d.localOnly == 0 && d.unchanged == 0) return null
+    val parts = diffParts(d)
+    if (parts.isEmpty()) return null
+    return buildAnnotatedString {
+        parts.forEachIndexed { i, p ->
+            if (i > 0) append(" · ")
+            withStyle(SpanStyle(color = p.color, fontWeight = FontWeight.Bold)) { append(p.symbol) }
+            append(p.text)
+        }
+        append(" $label")
     }
 }
 
 @Composable
 private fun DiffLines(state: RecapViewModel.ImportUi.Confirm) {
     val lines = listOfNotNull(
-        diffLine("单品", state.diff.items),
-        diffLine("穿搭", state.diff.outfits),
-        diffLine("评论", state.diff.notes),
-        diffLine("打卡", state.diff.wearLogs),
-        diffLine("想买", state.diff.wishItems),
-        diffLine("心愿穿搭", state.diff.wishOutfits),
-        diffLine("角色", state.diff.persons),
+        diffAnnotated("单品", state.diff.items),
+        diffAnnotated("穿搭", state.diff.outfits),
+        diffAnnotated("评论", state.diff.notes),
+        diffAnnotated("打卡", state.diff.wearLogs),
+        diffAnnotated("想买", state.diff.wishItems),
+        diffAnnotated("心愿穿搭", state.diff.wishOutfits),
+        diffAnnotated("角色", state.diff.persons),
     )
     lines.forEach {
         Text(it, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(2.dp))
     }
-}
-
-private fun diffLine(label: String, d: CollectionDiff): String? {
-    if (d.added == 0 && d.updated == 0 && d.localOnly == 0 && d.unchanged == 0) return null
-    val parts = listOfNotNull(
-        if (d.added > 0) "＋新增 ${d.added}" else null,
-        if (d.updated > 0) "↻更新 ${d.updated}" else null,
-        if (d.kept > 0) "＝保留 ${d.kept}" else null,
-    )
-    if (parts.isEmpty()) return null
-    return "${parts.joinToString(" · ")} $label"
 }
 
 private val COUNT_LABELS = linkedMapOf(
