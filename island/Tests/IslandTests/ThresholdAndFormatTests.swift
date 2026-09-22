@@ -12,15 +12,6 @@ struct ThresholdAndFormatTests {
     }
 
     @Test
-    func thresholdStates() {
-        #expect(ThresholdState(remainingPercent: 100) == .healthy)
-        #expect(ThresholdState(remainingPercent: 33) == .healthy)
-        #expect(ThresholdState(remainingPercent: 20) == .warn)
-        #expect(ThresholdState(remainingPercent: 1) == .warn)
-        #expect(ThresholdState(remainingPercent: 0) == .exhausted)
-    }
-
-    @Test
     func shortResetTodayShowsClockOtherwiseDate() {
         let now = date("2026-09-22 17:00:00")
         #expect(ResetFormatter.shortReset(date("2026-09-22 19:00:00"), now: now) == "19:00")

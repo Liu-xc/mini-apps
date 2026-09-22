@@ -17,27 +17,6 @@ struct QuotaRow: Codable, Equatable, Identifiable {
     var resetDate: Date?
     /// 百分比是由「已用」字段反推的标记，spike 后可去掉
     var percentInferred: Bool
-
-    var threshold: ThresholdState? {
-        remainingPercent.map(ThresholdState.init)
-    }
-}
-
-enum ThresholdState: Equatable {
-    case healthy
-    case warn
-    case exhausted
-
-    /// 剩余 ≤20% 转橙、=0% 红色已用完
-    init(remainingPercent: Double) {
-        if remainingPercent <= 0.01 {
-            self = .exhausted
-        } else if remainingPercent <= 20 {
-            self = .warn
-        } else {
-            self = .healthy
-        }
-    }
 }
 
 struct UsageSnapshot: Codable, Equatable {

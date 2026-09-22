@@ -127,7 +127,7 @@ struct ExpandedIslandView: View {
     }
 }
 
-/// 单档一行：标签 + 百分比 · 重置时间，下方进度条
+/// 单档一行：标签 + 重置时间 · 百分比，下方进度条（恒定身份色，填充=剩余量）
 struct SimpleQuotaRow: View {
     let row: QuotaRow
     let now: Date
@@ -152,19 +152,15 @@ struct SimpleQuotaRow: View {
                 if let remaining = row.remainingPercent {
                     Text("\(Int(remaining.rounded()))%")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(row.threshold == .exhausted ? Color(red: 0xF8 / 255, green: 0x71 / 255, blue: 0x71 / 255) : .white)
+                        .foregroundStyle(.white)
                 } else {
                     Text("--%")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.4))
                 }
             }
-            QuotaBarTrack(color: color, fill: (row.remainingPercent ?? 0) / 100)
+            QuotaBarTrack(color: IslandTheme.identityColor(row.kind), fill: (row.remainingPercent ?? 0) / 100)
         }
-    }
-
-    private var color: Color {
-        IslandTheme.stateColor(row.kind, remaining: row.remainingPercent)
     }
 }
 

@@ -7,14 +7,14 @@
 | island/hidden-size | 180×safeTop pt | 隐形触发区（= 刘海挖槽矩形，内容全透明） |
 | island/expanded-size | 352×178pt（出现第三档 other 时 222） | 展开卡片（顶边贴屏幕顶沿） |
 | island/radius | 顶部 0 / 底部 16（UnevenRoundedRectangle，continuous） | 顶部两角直角与顶边无缝衔接，只圆下方 |
-| island/surface | `#000000` + 顶部 0.5pt 白 7% 高光 | 胶囊底（与刘海融为一体） |
+| island/surface | `#000000` | 卡片底（顶边贴屏幕顶沿） |
 | color/fiveHour | `#3B82F6` 蓝 | 5 小时档本色 |
 | color/weekly | `#22C55E` 绿 | 每周档本色 |
 | color/zcodeMcp | `#F59E0B` 橙 | MCP 档本色 |
 | color/other | `#94A3B8` 灰 | 未知档位 |
-| color/state-warn | `#FB923C` | 剩余 ≤20% 覆盖色 |
-| color/state-exhausted | `#F87171` | 剩余 =0 覆盖色 |
-| track | 白 13%（展开 6pt）/ 白 15%（紧凑 30×4pt） | 进度条底轨 |
+| track | 白 13%（展开 6pt） | 进度条底轨 |
+
+颜色语义：**恒定身份色，只表达剩余量**（填充比例=剩余%），不做预警变色（Leo 明确）。
 | text-primary | 白（13 semibold 标题 / 14 bold rounded 数值） | |
 | text-secondary | 白 55%（重置时间 10pt）/ 白 45%（页脚 9.5pt） | |
 
