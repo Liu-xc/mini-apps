@@ -177,3 +177,15 @@ App 按「双端点 + 自动探测」设计，spike 时用真实 Key 确定主�
 - 接真实数据的路径：设置窗口粘贴 API Key（存钥匙串）→ 自动刷新；或
   `GLM_API_KEY=xx ./tools/spike-usage.sh` 先看原始响应。14 测试仍绿。
 
+### 补充验证 2026-09-23：M0 spike 完成，真实数据上线
+
+- Leo 提供 API Key → `open.bigmodel.cn` 与 `api.z.ai` 双端点实测均 200、返回一致。
+- 真实字段语义：`percentage`=已用%（剩余=100−x）、`remaining`/`currentValue`/`usage`=绝对 token 数、
+  `unit` 3×5=5 小时 / 6×1=每周、`nextResetTime`=毫秒时间戳、`type` 恒为 CREDIT_LIMIT、
+  `data.level`=套餐档位。
+- 解析器收紧（保留宽松兜底）+ 真实响应 fixture 单测，**15/15 绿**。
+- 修复 id 撞车（type 无区分度 → 两行 id 相同 → ForEach 重复渲染同一行）。
+- 行内顺序调整：重置时间在前（灰小字）、百分比在后（粗体白）。
+- Key 入钥匙串（App 自写 ACL，`GLM_ISLAND_SEED_KEY` 调试钩子注入，已提醒 Leo 可轮换）；
+  真实模式运行实测：5 小时 100% · 06:04 / 每周 33% · 9月28日，与接口一致。**AC3 达成**。
+

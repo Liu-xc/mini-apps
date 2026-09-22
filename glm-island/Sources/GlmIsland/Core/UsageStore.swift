@@ -21,6 +21,11 @@ final class UsageStore: ObservableObject {
     init(settings: AppSettings, cache: SnapshotCache = SnapshotCache()) {
         self.settings = settings
         self.cache = cache
+        // 调试钩子：GLM_ISLAND_SEED_KEY=xx 启动时自动入钥匙串（App 自己写入，ACL 归自己）
+        let seed = ProcessInfo.processInfo.environment["GLM_ISLAND_SEED_KEY"]
+        if let seed, !seed.isEmpty, KeychainStore.loadAPIKey().isEmpty {
+            try? KeychainStore.saveAPIKey(seed)
+        }
         hasCredential = !KeychainStore.loadAPIKey().isEmpty
         snapshot = try? cache.load()
     }

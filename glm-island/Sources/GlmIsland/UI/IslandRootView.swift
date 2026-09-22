@@ -139,6 +139,16 @@ struct SimpleQuotaRow: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.85))
                 Spacer(minLength: 0)
+                if let reset = row.resetDate {
+                    Text(ResetFormatter.shortReset(reset, now: now))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                if row.resetDate != nil, row.remainingPercent != nil {
+                    Text("·")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.3))
+                }
                 if let remaining = row.remainingPercent {
                     Text("\(Int(remaining.rounded()))%")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -147,11 +157,6 @@ struct SimpleQuotaRow: View {
                     Text("--%")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.4))
-                }
-                if let reset = row.resetDate {
-                    Text("· " + ResetFormatter.shortReset(reset, now: now))
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
             QuotaBarTrack(color: color, fill: (row.remainingPercent ?? 0) / 100)

@@ -26,13 +26,26 @@ struct UsageSnapshot: Codable, Equatable {
 
 显示顺序固定：fiveHour → weekly → zcodeMcp → other（`displayRows`）。
 
-## 外部接口契约
+## 外部接口契约（2026-09-23 M0 spike 实测校准）
 
 - `GET {base}/api/monitor/usage/quota/limit`，请求头 `Authorization: <key>`（**无 Bearer 前缀**）
-- base：国内 `https://open.bigmodel.cn`；国际 `https://api.z.ai`
-- 响应：`data.limits[]`（或顶层 `limits[]`）；envelope `code != 200 / success == false` 视为业务错误
-- ⚠ limits[] 字段名无公开文档：解析器按候选键宽松匹配
-  （remaining 系 → 剩余；usage/used/ratio → 反推剩余），**待 M0 spike 真实响应校准后收紧**
+- base：国内 `https://open.bigmodel.cn`；国际 `https://api.z.ai`（同一 Key 两边都 200、返回一致）
+- 响应（真实样例见单测 fixture）：
+
+```json
+{ "code": 200, "success": true, "msg": "...",
+  "data": { "level": "pro",
+    "limits": [ { "type": "CREDIT_LIMIT", "unit": 3, "number": 5,
+                  "usage": 12000, "currentValue": 0, "remaining": 12000,
+                  "percentage": 0, "nextResetTime": 1790114662670 }, ... ] } }
+```
+
+- **档位识别靠 `unit`**：3（配 number 5）= 5 小时窗口，6（number 1）= 每周；`type` 恒为
+  CREDIT_LIMIT，无区分度
+- **`percentage` = 已用百分比**，剩余 = 100 − percentage；`usage` / `currentValue` / `remaining`
+  是**绝对 token 数**，不能当百分比读（percentage 缺失时可用 1 − currentValue/usage 反推）
+- `nextResetTime` = 毫秒时间戳
+- 该账号 limits 中**没有 MCP 档**（展示层也已按需求隐藏）
 - 伴生接口（M2 再接）：`/api/monitor/usage/model-usage`、`/api/monitor/usage/tool-usage`
 
 ## 本地存储

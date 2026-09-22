@@ -12,44 +12,53 @@ struct QuotaResponseParserTests {
     }
 
     @Test
-    func parseWithRatioAsUsedAndMixedFieldStyles() throws {
-        // 形状假设 A：data.limits；ratio=已用比例(0-1)、usage=已用百分数、remaining 直给、毫秒时间戳
+    func spikeRealResponseShape20260923() throws {
+        // M0 spike 实测响应（2026-09-23，open.bigmodel.cn 与 api.z.ai 返回一致）：
+        // unit 3×5=5 小时窗口、unit 6×1=每周；percentage=已用%；remaining 等为绝对 token 数
         let json = """
-        {"code":200,"success":true,"data":{"limits":[
-          {"windowType":"5_hours","ratio":0.67,"resetTime":"2026-09-22T19:00:00+08:00"},
-          {"windowType":"weekly","usage":38,"resetTime":"2026-09-28T00:00:00+08:00"},
-          {"tool":"zcode_mcp","remaining":100,"resetTime":1789999200000}
-        ]}}
+        {"code":200,"msg":"操作成功","data":{"limits":[
+          {"type":"CREDIT_LIMIT","unit":3,"number":5,"usage":12000,"currentValue":0,"remaining":12000,"percentage":0,"nextResetTime":1790114662670},
+          {"type":"CREDIT_LIMIT","unit":6,"number":1,"usage":60000,"currentValue":40229,"remaining":19770,"percentage":67,"nextResetTime":1790586447976}
+        ],"level":"pro"},"success":true}
         """.data(using: .utf8)!
         let snapshot = try QuotaResponseParser.parse(
             json,
             host: "https://open.bigmodel.cn",
-            now: date("2026-09-22 17:00:00")
+            now: date("2026-09-23 16:00:00")
         )
 
-        #expect(snapshot.rows.count == 3)
-        #expect(snapshot.endpointHost == "https://open.bigmodel.cn")
+        #expect(snapshot.rows.count == 2)
         #expect(snapshot.debugRawJSON != nil)
 
         let fiveHour = try #require(snapshot.row(.fiveHour))
-        #expect(abs((fiveHour.remainingPercent ?? -1) - 33) < 0.01)
-        #expect(fiveHour.percentInferred)
+        #expect(abs((fiveHour.remainingPercent ?? -1) - 100) < 0.01, "percentage 0 = 未使用，剩余 100%")
         #expect(fiveHour.label == "5 小时")
+        #expect(fiveHour.resetDate != nil)
 
         let weekly = try #require(snapshot.row(.weekly))
-        #expect(abs((weekly.remainingPercent ?? -1) - 62) < 0.01)
+        #expect(abs((weekly.remainingPercent ?? -1) - 33) < 0.5, "percentage 67 已用 → 剩余 33%")
+        #expect(weekly.label == "每周")
 
-        let mcp = try #require(snapshot.row(.zcodeMcp))
-        #expect(abs((mcp.remainingPercent ?? -1) - 100) < 0.01)
-        #expect(!mcp.percentInferred)
-        #expect(mcp.resetDate != nil)
+        // MCP 不在该账号 limits 中；displayRows 固定 5 小时 → 每周
+        #expect(snapshot.displayRows.map(\.kind) == [.fiveHour, .weekly])
+    }
+
+    @Test
+    func currentValueUsageRatioFallback() throws {
+        // percentage 缺失时用 currentValue/usage 反推
+        let json = """
+        {"limits":[{"unit":6,"currentValue":40229,"usage":60000}]}
+        """.data(using: .utf8)!
+        let snapshot = try QuotaResponseParser.parse(json, host: "x")
+        let weekly = try #require(snapshot.row(.weekly))
+        #expect(abs((weekly.remainingPercent ?? -1) - 32.95) < 0.05)
     }
 
     @Test
     func labelLessLimitsFallBackToConsoleOrder() throws {
         // 字段没给类型时按控制台顺序对号：5小时 → 每周 → MCP
         let json = """
-        {"limits":[{"a":1,"usage":10},{"b":2,"usage":20},{"c":3,"usage":30}]}
+        {"limits":[{"a":1,"used":10},{"b":2,"used":20},{"c":3,"used":30}]}
         """.data(using: .utf8)!
         let snapshot = try QuotaResponseParser.parse(json, host: "x")
 

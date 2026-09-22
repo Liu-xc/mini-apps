@@ -48,19 +48,41 @@ enum QuotaResponseParser {
         let rawLabel = firstString(dict, keys: ["windowType", "quotaType", "type", "name", "title", "tool", "planType"])
         let classified = classify(rawLabel)
         var kind = classified
-        if classified == .other, index < 3 {
-            // 字段没给类型时按控制台顺序对号：5小时/每周/MCP（spike 校准点）
+        if let unitKind = classifyUnit(dict) {
+            // 真实响应的档位类型靠 unit 区分（type 恒为 CREDIT_LIMIT）
+            kind = unitKind
+        } else if classified == .other, index < 3 {
+            // 字段没给类型时按控制台顺序对号：5小时/每周/MCP
             kind = [.fiveHour, .weekly, .zcodeMcp][index]
         }
         let (remaining, inferred) = remainingPercent(in: dict)
+        // id 必须行内唯一：unit 解析出的档位用 kind；未识别的按 index 兜底
+        let id: String
+        if classified == .other, kind != .other {
+            id = kind.rawValue
+        } else if classified == .other {
+            id = "other-\(rawLabel ?? String(index))-\(index)"
+        } else {
+            id = classified.rawValue
+        }
         return QuotaRow(
-            id: classified == .other ? "other-\(rawLabel ?? String(index))" : classified.rawValue,
+            id: id,
             kind: kind,
             label: displayLabel(kind, rawLabel),
             remainingPercent: remaining,
             resetDate: resetDate(in: dict),
             percentInferred: inferred || classified == .other
         )
+    }
+
+    /// spike 2026-09-23 实测：unit 3（配 number 5）= 5 小时窗口，unit 6（number 1）= 每周
+    static func classifyUnit(_ dict: [String: Any]) -> RowKind? {
+        guard let unit = double(dict["unit"]) else { return nil }
+        switch unit {
+        case 3: return .fiveHour
+        case 6: return .weekly
+        default: return nil
+        }
     }
 
     static func classify(_ rawLabel: String?) -> RowKind {
@@ -80,14 +102,23 @@ enum QuotaResponseParser {
         }
     }
 
-    /// 剩余百分比：优先读 remaining 系字段；只有 usage/used/ratio 时按「已用」反推
+    /// 剩余百分比。真实响应（spike 2026-09-23）字段语义：
+    /// `percentage` = **已用**百分比（需 100-x 反推剩余）；
+    /// `remaining` / `currentValue` / `usage` = **绝对 token 数**，绝不能当百分比读
     static func remainingPercent(in dict: [String: Any]) -> (Double?, Bool) {
-        for key in ["remaining", "remainingRatio", "remainingPercent", "remain", "left"] {
+        if let used = normalizedPercent(dict["percentage"]) {
+            return (100 - used, true)
+        }
+        if let current = double(dict["currentValue"]), let usage = double(dict["usage"]), usage > 0 {
+            let ratio = (1 - current / usage) * 100
+            return (min(100, max(0, ratio)), true)
+        }
+        for key in ["remainingRatio", "remainingPercent", "remain", "left"] {
             if let value = normalizedPercent(dict[key]) {
                 return (value, false)
             }
         }
-        for key in ["usage", "used", "usedRatio", "consumed", "ratio"] {
+        for key in ["used", "usedRatio", "consumed", "ratio"] {
             if let value = normalizedPercent(dict[key]) {
                 return (100 - value, true)
             }
