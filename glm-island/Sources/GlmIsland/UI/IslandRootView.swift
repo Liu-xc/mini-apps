@@ -71,7 +71,7 @@ struct IslandRootView: View {
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
         let safeTop = max(screen?.safeAreaInsets.top ?? 24, 24)
         let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
-        let content: CGFloat = 16 + 10 + n * 24 + (n - 1) * 10 + 10 + 14
+        let content: CGFloat = n * 24 + (n - 1) * 10 + 10 + 14
         return safeTop + 6 + content + 14
     }
 }
@@ -90,12 +90,6 @@ struct ExpandedIslandView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            HStack {
-                Text("剩余额度")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.92))
-                Spacer()
-            }
             ForEach(store.snapshot?.displayRows ?? []) { row in
                 SimpleQuotaRow(row: row, now: Date())
             }

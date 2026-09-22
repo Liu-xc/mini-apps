@@ -217,7 +217,7 @@ final class IslandWindowController: NSObject {
         let screen = activeScreen
         let safeTop = max(screen.safeAreaInsets.top, 24)
         let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
-        let content: CGFloat = 16 + 10 + n * 24 + (n - 1) * 10 + 10 + 14   // 头 + 行 + 页脚
+        let content: CGFloat = n * 24 + (n - 1) * 10 + 10 + 14   // 行 + 页脚
         return CGSize(width: 352, height: safeTop + 6 + content + 14)
     }
 
