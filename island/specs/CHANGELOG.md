@@ -4,7 +4,9 @@
 
 ## 未发布
 
-### it-001 — 刘海胶囊监控 MVP
+### it-001 — 灵岛（island）：刘海功能入口 + GLM Coding Plan TOKEN 监控 MVP
+- **更名与定位（Leo 反馈）**：「GLM 灵动岛」→**「灵岛 / island」**：定位为通用刘海功能入口容器，
+  GLM TOKEN 只是首个内容源，未来扩展其它厂商与能力（ADR-008）；目录/BundleID/钥匙串 service 一并迁移。
 - 数据层：官方 monitor 接口客户端（国内 bigmodel.cn / 国际 z.ai 双端点 + auto 探测记忆偏好，
   `Authorization` 直放 Key 无 Bearer 前缀）；`limits[]` 宽松解析（候选键 + 顺序兜底），
   原始响应带回设置页诊断，**字段待 M0 spike 真实响应校准**；

@@ -2,19 +2,19 @@
 import PackageDescription
 
 let package = Package(
-    name: "glm-island",
+    name: "island",
     platforms: [
         .macOS(.v14)
     ],
     targets: [
         .executableTarget(
-            name: "GlmIsland",
-            path: "Sources/GlmIsland"
+            name: "Island",
+            path: "Sources/Island"
         ),
         .testTarget(
-            name: "GlmIslandTests",
-            dependencies: ["GlmIsland"],
-            path: "Tests/GlmIslandTests"
+            name: "IslandTests",
+            dependencies: ["Island"],
+            path: "Tests/IslandTests"
         ),
     ]
 )

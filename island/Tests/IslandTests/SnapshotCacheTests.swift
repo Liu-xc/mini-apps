@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import GlmIsland
+@testable import Island
 
 @Suite
 struct SnapshotCacheTests {
@@ -8,7 +8,7 @@ struct SnapshotCacheTests {
     func roundTrip() throws {
         let cache = SnapshotCache(
             directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("glm-island-tests-\(UUID().uuidString)")
+                .appendingPathComponent("island-tests-\(UUID().uuidString)")
         )
         let rows = [
             QuotaRow(
@@ -37,7 +37,7 @@ struct SnapshotCacheTests {
     func loadMissingThrows() {
         let cache = SnapshotCache(
             directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("glm-island-tests-missing-\(UUID().uuidString)")
+                .appendingPathComponent("island-tests-missing-\(UUID().uuidString)")
         )
         #expect(throws: (any Error).self) {
             try cache.load()

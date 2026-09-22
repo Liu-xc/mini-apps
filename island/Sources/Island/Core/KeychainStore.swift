@@ -3,7 +3,7 @@ import Security
 
 /// API Key 只进钥匙串，不落任何文件/日志
 enum KeychainStore {
-    private static let service = "com.spartapps.glm-island"
+    private static let service = "com.spartapps.island"
     private static let account = "api-key"
 
     static func saveAPIKey(_ key: String) throws {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// 最近一次快照落盘（Application Support/glm-island/snapshot.json），
+/// 最近一次快照落盘（Application Support/island/snapshot.json），
 /// 断网/重启后先展示陈旧数据；缓存里只有用量，没有 Key
 struct SnapshotCache {
     private let directory: URL
@@ -11,7 +11,7 @@ struct SnapshotCache {
         } else {
             let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
                 ?? FileManager.default.temporaryDirectory
-            self.directory = base.appendingPathComponent("glm-island", isDirectory: true)
+            self.directory = base.appendingPathComponent("island", isDirectory: true)
         }
     }
 

@@ -20,7 +20,7 @@ final class SettingsWindowController {
                 backing: .buffered,
                 defer: false
             )
-            win.title = "GLM 灵动岛"
+            win.title = "灵岛"
             win.contentViewController = NSHostingController(
                 rootView: SettingsView(
                     settings: settings,

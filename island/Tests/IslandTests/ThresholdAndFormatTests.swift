@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import GlmIsland
+@testable import Island
 
 @Suite
 struct ThresholdAndFormatTests {

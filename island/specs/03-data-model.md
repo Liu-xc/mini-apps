@@ -52,8 +52,8 @@ struct UsageSnapshot: Codable, Equatable {
 
 | 数据 | 位置 | 内容 |
 |---|---|---|
-| API Key | Keychain：service `com.spartapps.glm-island` / account `api-key` | 仅 Key，绝不落文件 |
-| 快照缓存 | `~/Library/Application Support/glm-island/snapshot.json` | UsageSnapshot（无 Key） |
+| API Key | Keychain：service `com.spartapps.island` / account `api-key` | 仅 Key，绝不落文件 |
+| 快照缓存 | `~/Library/Application Support/island/snapshot.json` | UsageSnapshot（无 Key） |
 | 偏好 | UserDefaults | `endpointMode` / `refreshMinutes` / `demoMode` / `consoleURLString` / `preferredEndpoint` |
 
 ## 调试环境变量

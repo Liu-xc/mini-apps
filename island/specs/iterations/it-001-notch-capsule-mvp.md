@@ -1,4 +1,4 @@
-# it-001 — glm-island：GLM Coding Plan 灵动岛监控（刘海胶囊 MVP）
+# it-001 — 灵岛（island）：刘海功能入口 + GLM Coding Plan TOKEN 监控（MVP）
 
 状态：**已确认并实施（2026-09-22，Leo：「实施」）**
 日期：2026-09-22
@@ -79,12 +79,12 @@ App 按「双端点 + 自动探测」设计，spike 时用真实 Key 确定主�
 
 ## 影响范围
 
-- 新目录 `glm-island/`（specs + Package.swift + Sources），不触碰现有 Android 应用与 CI；
-  实施时补 `glm-island/README.md`、常青 spec 00/01/05/06、仓库根 README 总览加一行、CHANGELOG 一行。
+- 新目录 `island/`（原提案名 glm-island，实施中更名）；（specs + Package.swift + Sources），不触碰现有 Android 应用与 CI；
+  实施时补 `island/README.md`、常青 spec 00/01/05/06、仓库根 README 总览加一行、CHANGELOG 一行。
 
 ## 待确认点
 
-1. 提案整体（形态=刘海胶囊、仓库=mini-apps/glm-island、M1 范围）。
+1. 提案整体（形态=刘海胶囊、仓库=mini-apps/island、M1 范围）。
 2. 你的 API Key 属于 bigmodel.cn 还是 z.ai（有自动探测不阻塞，知道更好）。
 3. hover 即展开是否默认开启（也可设为「仅点击展开」）。
 4. M2 的通知提醒是否需要（先不做也行）。
@@ -97,7 +97,7 @@ App 按「双端点 + 自动探测」设计，spike 时用真实 Key 确定主�
 - **单测**：`swift test` **14/14 通过**（swift-testing；注意 CLT 无 XCTest 模块，见 ADR-001）。
   覆盖：宽松解析（ratio/usage/remaining/毫秒时间戳/顺序兜底）、envelope 业务错误、
   阈值边界（20/1/0）、时间格式化（固定时钟）、快照缓存 round-trip。
-- **打包**：`tools/make-app.sh` → `dist/glm-island.app`（ad-hoc 签名）启动正常。
+- **打包**：`tools/make-app.sh` → `dist/island.app`（ad-hoc 签名）启动正常。
 - **实机走查**（演示模式，M2 Air 刘海屏 1470×956）：
   - 定位正确：窗口 bounds=(811,0,352,216→228)，即刘海右缘 825-14，statusBar 层；
   - 展开态截图（`screencapture -l`）：三行明细/配色/演示徽标/页脚刷新时间与按钮全部正常，

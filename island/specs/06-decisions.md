@@ -54,6 +54,16 @@
 - 后果：平时屏幕零占用；触发区固定为刘海矩形；隐藏/展开的窗口尺寸跳变由防抖状态机吸收，
   实测 hover 一次展开、移开一次收起，零振荡。
 
+## ADR-008：更名「灵岛 / island」，定位为通用刘海功能入口容器
+
+- 背景：原名「GLM 灵动岛」把应用与首个内容源（GLM）绑死。Leo 定位：这只是他的一个功能入口，
+  当前承载 GLM TOKEN 信息，未来会扩展其它 TOKEN 厂商与其它能力。
+- 决策：目录 `island/`、显示名「灵岛」、BundleID `com.spartapps.island`、
+  钥匙串 service `com.spartapps.island`（迁移时旧条目作废，需用 GLM_ISLAND_SEED_KEY 重新注入）。
+  内容源保持 `UsageProviding` 协议缝，厂商解析器独立成类（现为 GLM 的 QuotaResponseParser），
+  it-002 起按 provider registry 演进。
+- 后果：钥匙串旧条目（com.spartapps.glm-island）废弃需重注入；其余无破坏。
+
 ## ADR-007：生长动画在 SwiftUI 内做 reveal，不做窗口尺寸动画
 
 - 背景：v4 展开时窗口矩形从挖槽插值到卡片，四边同时动，Leo 反馈像「从左下/右下角往上延伸」；

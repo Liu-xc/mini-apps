@@ -15,7 +15,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: 26)
         item.button?.image = Self.icon()
-        item.button?.toolTip = "GLM Coding Plan 用量"
+        item.button?.toolTip = "灵岛 · Coding Plan 用量"
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -37,7 +37,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(settings)
         menu.addItem(selfmenuItem("打开控制台", action: #selector(consoleTapped)))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "退出 GLM 灵动岛", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "退出灵岛", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
     private func selfmenuItem(_ title: String, action: Selector, key: String = "") -> NSMenuItem {
