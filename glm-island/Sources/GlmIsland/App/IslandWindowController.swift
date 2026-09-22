@@ -117,7 +117,6 @@ final class IslandWindowController: NSObject {
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
                 self.applyAppearance(.expanded, animate: true)
-                NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
             }
         }
         pendingHover = work

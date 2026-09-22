@@ -22,3 +22,4 @@
   hover 闪烁根因 = 窗口变形动画中窗口服务器补发成对 enter/exit 引发振荡，
   修复 = 假离开守卫（exit 时光标仍在面板内则忽略）+ enter 60ms / exit 180ms 可取消防抖；
   CGEvent 模拟悬停实测：一次展开→稳定→真离开一次收起，零振荡。
+- 触感移除（Leo 反馈「不要震动」）：hover 展开不再触发 NSHapticFeedbackManager，动画保留。

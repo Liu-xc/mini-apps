@@ -26,7 +26,7 @@
 | 展开/收起（SwiftUI 内容） | spring(response 0.36, dampingFraction 0.85) + opacity transition |
 | 进度条填充 | easeOut 0.45s（紧凑）/ 0.5s（展开） |
 | 刷新按钮 | loading 时 1s linear 无限旋转 |
-| 触感 | hover 展开 = `NSHapticFeedbackManager .alignment` |
+| 触感 | **无**（Leo 明确不要震动，hover 展开不触发 NSHapticFeedbackManager） |
 
 ## 字体
 
