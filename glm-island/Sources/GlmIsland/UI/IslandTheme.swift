@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 与控制台三行同色系：蓝 / 绿 / 橙；警戒态覆盖为橙红、耗尽为红
+/// 与控制台行同色系：蓝 / 绿 / 橙；警戒态覆盖为橙红、耗尽为红
 enum IslandTheme {
     static func identityColor(_ kind: RowKind) -> Color {
         switch kind {
@@ -25,11 +25,13 @@ enum IslandTheme {
 @MainActor
 final class IslandViewModel: ObservableObject {
     enum Appearance {
-        case compact
+        /// 默认：完全隐藏，窗口即刘海挖槽区的隐形 hover 触发区
+        case hidden
+        /// 从刘海向下展开的明细卡片
         case expanded
     }
 
-    @Published var appearance: Appearance = .compact
+    @Published var appearance: Appearance = .hidden
     var onTogglePin: (() -> Void)?
 
     func requestTogglePin() {

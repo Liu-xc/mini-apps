@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// 灵动岛根视图：紧凑胶囊 ↔ 展开面板，纯黑底与刘海融为一体
+/// 灵动岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
+/// hover/点击后以刘海为中心动画展开成明细卡片
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
@@ -9,31 +10,30 @@ struct IslandRootView: View {
     var body: some View {
         Group {
             switch viewModel.appearance {
-            case .compact:
-                CompactIslandView(snapshot: store.snapshot)
-                    .transition(.opacity)
+            case .hidden:
+                Color.clear
             case .expanded:
                 ExpandedIslandView(store: store, openSettings: openSettings)
+                    .background {
+                        // 顶部贴屏幕顶沿：两角直角与顶边无缝衔接（不与刘海之间留缝），只圆下方
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 0,
+                            bottomLeadingRadius: 16,
+                            bottomTrailingRadius: 16,
+                            topTrailingRadius: 0,
+                            style: .continuous
+                        )
+                        .fill(Color.black)
+                        .overlay(alignment: .top) {
+                            Rectangle()
+                                .fill(Color.white.opacity(0.07))
+                                .frame(height: 0.5)
+                        }
+                    }
                     .transition(.opacity)
             }
         }
         .frame(width: contentSize.width, height: contentSize.height, alignment: .top)
-        .background {
-            // 顶部两角直角（与刘海下沿无缝衔接），只圆下方两角
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0,
-                bottomLeadingRadius: viewModel.appearance == .compact ? 13 : 16,
-                bottomTrailingRadius: viewModel.appearance == .compact ? 13 : 16,
-                topTrailingRadius: 0,
-                style: .continuous
-            )
-            .fill(Color.black)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.white.opacity(0.07))
-                    .frame(height: 0.5)
-            }
-        }
         .contentShape(Rectangle())
         .onTapGesture { viewModel.requestTogglePin() }
         .animation(.spring(response: 0.36, dampingFraction: 0.85), value: viewModel.appearance)
@@ -42,11 +42,17 @@ struct IslandRootView: View {
 
     private var contentSize: CGSize {
         switch viewModel.appearance {
-        case .compact:
-            CGSize(width: 180, height: 36)
+        case .hidden:
+            notchTriggerSize
         case .expanded:
             CGSize(width: 352, height: expandedHeight)
         }
+    }
+
+    /// 隐形触发区 = 刘海挖槽矩形
+    private var notchTriggerSize: CGSize {
+        let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
+        return CGSize(width: 180, height: max(screen?.safeAreaInsets.top ?? 24, 24))
     }
 
     /// 两档 178；若接口吐出第三档（other）则加高容纳
@@ -56,68 +62,7 @@ struct IslandRootView: View {
     }
 }
 
-// MARK: - 紧凑态：两行全信息（标签 + 迷你条 + 百分比 + 重置时间）
-
-struct CompactIslandView: View {
-    let snapshot: UsageSnapshot?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ForEach(displayRows) { row in
-                CompactQuotaRow(row: row, now: Date())
-            }
-        }
-        .padding(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 10))
-    }
-
-    private var displayRows: [QuotaRow] {
-        let rows = Array((snapshot?.displayRows ?? []).prefix(2))
-        guard rows.isEmpty == false else {
-            return [
-                QuotaRow(id: "ph-0", kind: .fiveHour, label: "5 小时", remainingPercent: nil, resetDate: nil, percentInferred: false),
-                QuotaRow(id: "ph-1", kind: .weekly, label: "每周", remainingPercent: nil, resetDate: nil, percentInferred: false),
-            ]
-        }
-        return rows
-    }
-}
-
-struct CompactQuotaRow: View {
-    let row: QuotaRow
-    let now: Date
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Text(row.label)
-                .font(.system(size: 9.5, weight: .semibold))
-                .foregroundStyle(color)
-                .fixedSize()
-            QuotaBarTrack(color: color, fill: (row.remainingPercent ?? 0) / 100, height: 4)
-                .frame(width: 40)
-            Text(percentText)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .fixedSize()
-            if let reset = row.resetDate {
-                Text("· " + ResetFormatter.shortReset(reset, now: now))
-                    .font(.system(size: 9))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .fixedSize()
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var color: Color {
-        IslandTheme.stateColor(row.kind, remaining: row.remainingPercent)
-    }
-
-    private var percentText: String {
-        row.remainingPercent.map { "\(Int($0.rounded()))%" } ?? "--%"
-    }
-}
-
-// MARK: - 展开态：与控制台一致的三行明细
+// MARK: - 展开卡片：与控制台一致的明细
 
 struct ExpandedIslandView: View {
     @ObservedObject var store: UsageStore

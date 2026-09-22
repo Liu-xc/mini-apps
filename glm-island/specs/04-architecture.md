@@ -38,10 +38,11 @@ Provider      Provider     (磁盘快照)      (Security)      (UserDefaults)
 - hover：NSHostingView 子类借 `mouseEntered/Exited` + `NSTrackingArea(.activeAlways, .inVisibleRect)`
   ——别的 App 前台也生效（本 App 常驻 accessory 不持焦点）。
 - 点击外部收起：全局 + 本地 NSEvent monitor，`panel.frame.contains(NSEvent.mouseLocation)` 判定。
-- 定位（**刘海下沿锚点**，ADR-005）：刘海挖槽（0…safeTop 高度）是硬件遮挡区，窗口内容
-  绝不进入——紧凑/展开两态顶边都贴在 `safeAreaInsets.top`（刘海底沿），水平以刘海中心居中：
-  紧凑 180×36 正好接在刘海下方如"刘海长出一截"，展开 352×178 贴同一顶边向下生长；
-  无刘海屏回退菜单栏之下顶部居中。监听 `didChangeScreenParametersNotification` 重定位。
+- 定位（**默认隐藏 + 刘海触发**，ADR-005 定稿）：隐藏态窗口 = 刘海挖槽矩形
+  （180×safeTop，内容全透明，不可见但收 hover）；展开态从刘海中心向下生长、
+  **顶边贴屏幕顶沿**（y=0，顶部两角直角——与顶边无缝，不与刘海之间留缝缺角），
+  352×178（第三档 other 时 222）。无刘海屏隐藏态取菜单栏矩形同理。监听
+  `didChangeScreenParametersNotification` 重定位。
 - hover 防抖状态机：enter 60ms 延迟展开、exit 180ms 延迟收起（均可取消）；
   「exit 时光标仍在面板 frame 内」= 窗口变形动画补发的假离开，直接忽略。
   CGEvent 模拟悬停实测：一次展开→稳定→真离开后一次收起，零振荡。

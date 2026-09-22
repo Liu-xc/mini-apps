@@ -35,7 +35,7 @@ final class IslandWindowController: NSObject {
 
     func install() {
         let panel = NSPanel(
-            contentRect: frame(for: .compact),
+            contentRect: frame(for: .hidden),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -74,7 +74,7 @@ final class IslandWindowController: NSObject {
         ))
 
         panel.orderFrontRegardless()
-        applyAppearance(.compact, animate: false)
+        applyAppearance(.hidden, animate: false)
 
         // 首次未配置 Key：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
         if ProcessInfo.processInfo.environment["GLM_ISLAND_EXPAND"] == "1"
@@ -105,14 +105,14 @@ final class IslandWindowController: NSObject {
     }
 
     func reposition() {
-        applyAppearance(pinned ? .expanded : .compact, animate: false)
+        applyAppearance(pinned ? .expanded : .hidden, animate: false)
     }
 
     // MARK: - hover 状态机（防抖）
 
     private func handleEnter() {
         pendingHover?.cancel()
-        guard !pinned, viewModel.appearance == .compact else { return }
+        guard !pinned, viewModel.appearance == .hidden else { return }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
@@ -133,7 +133,7 @@ final class IslandWindowController: NSObject {
                 guard let self, let panel = self.panel, !self.pinned else { return }
                 // 延迟期间光标又进来了就不收
                 if panel.frame.contains(NSEvent.mouseLocation) { return }
-                self.applyAppearance(.compact, animate: true)
+                self.applyAppearance(.hidden, animate: true)
             }
         }
         pendingHover = work
@@ -144,7 +144,7 @@ final class IslandWindowController: NSObject {
         pendingHover?.cancel()
         if pinned {
             pinned = false
-            applyAppearance(.compact, animate: true)
+            applyAppearance(.hidden, animate: true)
         } else {
             expand(pinned: true)
         }
@@ -159,7 +159,7 @@ final class IslandWindowController: NSObject {
         guard pinned, let panel else { return }
         if !panel.frame.contains(screenPoint) {
             pinned = false
-            applyAppearance(.compact, animate: true)
+            applyAppearance(.hidden, animate: true)
         }
     }
 
@@ -167,7 +167,7 @@ final class IslandWindowController: NSObject {
         reposition()
     }
 
-    // MARK: - 布局（刘海正中）
+    // MARK: - 布局（刘海下沿锚点）
 
     private var activeScreen: NSScreen {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
@@ -175,8 +175,8 @@ final class IslandWindowController: NSObject {
             ?? NSScreen.screens[0]
     }
 
-    /// 紧凑/展开都以刘海水平中心为锚：刘海是硬件挖槽，永不与菜单栏图标冲突。
-    /// 有刘海：贴屏幕顶沿（胶囊融进刘海黑区）；无刘海：悬浮在菜单栏之下顶部居中。
+    /// 隐藏态 = 刘海挖槽矩形本身（不可见但收 hover）；展开态从刘海中心向下生长、
+    /// 顶边贴屏幕顶沿（顶部两角直角，与顶边无缝、不与刘海之间留缝）
     private func frame(for appearance: IslandViewModel.Appearance) -> NSRect {
         let screen = activeScreen
         let top = screen.frame.maxY
@@ -190,21 +190,18 @@ final class IslandWindowController: NSObject {
         } else {
             center = midX
         }
-        // 内容顶边贴刘海下沿（yTopOffset = 安全区高度），绝不进刘海挖槽区
-        let yTopOffset: CGFloat = max(screen.safeAreaInsets.top, 24)
-        let size = appearance == .compact ? Self.compactSize : expandedSize
-        return NSRect(
-            x: center - size.width / 2,
-            y: top - yTopOffset - size.height,
-            width: size.width,
-            height: size.height
-        )
+        let safeTop = max(screen.safeAreaInsets.top, 24)
+        switch appearance {
+        case .hidden:
+            return NSRect(x: center - 90, y: top - safeTop, width: 180, height: safeTop)
+        case .expanded:
+            let size = expandedSize
+            return NSRect(x: center - size.width / 2, y: top - size.height, width: size.width, height: size.height)
+        }
     }
 
-    /// 紧凑态两行全信息（180×36，正好覆住刘海宽度）；展开态两档 178，第三档（other）出现时加高
-    private static let compactSize = CGSize(width: 180, height: 36)
-
     private var expandedSize: CGSize {
+        // 两档 178；接口吐出第三档（other）时加高容纳
         let rowCount = max(2, store.snapshot?.displayRows.count ?? 2)
         return CGSize(width: 352, height: rowCount >= 3 ? 222 : 178)
     }
