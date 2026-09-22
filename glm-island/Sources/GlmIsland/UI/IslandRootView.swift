@@ -19,13 +19,20 @@ struct IslandRootView: View {
         }
         .frame(width: contentSize.width, height: contentSize.height, alignment: .top)
         .background {
-            RoundedRectangle(cornerRadius: viewModel.appearance == .compact ? 13 : 22, style: .continuous)
-                .fill(Color.black)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.07))
-                        .frame(height: 0.5)
-                }
+            // 顶部两角直角（与刘海下沿无缝衔接），只圆下方两角
+            UnevenRoundedRectangle(
+                topLeadingRadius: 0,
+                bottomLeadingRadius: viewModel.appearance == .compact ? 13 : 16,
+                bottomTrailingRadius: viewModel.appearance == .compact ? 13 : 16,
+                topTrailingRadius: 0,
+                style: .continuous
+            )
+            .fill(Color.black)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.07))
+                    .frame(height: 0.5)
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { viewModel.requestTogglePin() }

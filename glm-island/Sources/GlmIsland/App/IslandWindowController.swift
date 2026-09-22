@@ -190,7 +190,8 @@ final class IslandWindowController: NSObject {
         } else {
             center = midX
         }
-        let yTopOffset: CGFloat = hasNotch ? 0 : max(screen.safeAreaInsets.top, 24) + 4
+        // 内容顶边贴刘海下沿（yTopOffset = 安全区高度），绝不进刘海挖槽区
+        let yTopOffset: CGFloat = max(screen.safeAreaInsets.top, 24)
         let size = appearance == .compact ? Self.compactSize : expandedSize
         return NSRect(
             x: center - size.width / 2,
