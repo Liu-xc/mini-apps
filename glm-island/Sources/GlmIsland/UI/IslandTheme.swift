@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// 与控制台行同色系：蓝 / 绿 / 橙；警戒态覆盖为橙红、耗尽为红
@@ -32,6 +33,8 @@ final class IslandViewModel: ObservableObject {
     }
 
     @Published var appearance: Appearance = .hidden
+    /// 卡片揭示高度：false=只露出刘海高度（黑条与挖槽融为一体），true=向下展开到全高
+    @Published var reveal = false
     var onTogglePin: (() -> Void)?
 
     func requestTogglePin() {

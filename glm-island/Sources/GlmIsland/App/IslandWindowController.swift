@@ -74,7 +74,7 @@ final class IslandWindowController: NSObject {
         ))
 
         panel.orderFrontRegardless()
-        applyAppearance(.hidden, animate: false)
+        applyAppearance(.hidden)
 
         // 首次未配置 Key：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
         if ProcessInfo.processInfo.environment["GLM_ISLAND_EXPAND"] == "1"
@@ -105,18 +105,18 @@ final class IslandWindowController: NSObject {
     }
 
     func reposition() {
-        applyAppearance(pinned ? .expanded : .hidden, animate: false)
+        applyAppearance(pinned ? .expanded : .hidden)
     }
 
     // MARK: - hover 状态机（防抖）
 
     private func handleEnter() {
         pendingHover?.cancel()
-        guard !pinned, viewModel.appearance == .hidden else { return }
+        guard !pinned else { return }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
-                self.applyAppearance(.expanded, animate: true)
+                self.expandAnimated()
             }
         }
         pendingHover = work
@@ -133,7 +133,7 @@ final class IslandWindowController: NSObject {
                 guard let self, let panel = self.panel, !self.pinned else { return }
                 // 延迟期间光标又进来了就不收
                 if panel.frame.contains(NSEvent.mouseLocation) { return }
-                self.applyAppearance(.hidden, animate: true)
+                self.collapseAnimated()
             }
         }
         pendingHover = work
@@ -144,7 +144,7 @@ final class IslandWindowController: NSObject {
         pendingHover?.cancel()
         if pinned {
             pinned = false
-            applyAppearance(.hidden, animate: true)
+            collapseAnimated()
         } else {
             expand(pinned: true)
         }
@@ -152,14 +152,17 @@ final class IslandWindowController: NSObject {
 
     private func expand(pinned newValue: Bool) {
         pinned = newValue
-        applyAppearance(.expanded, animate: true)
+        guard let panel else { return }
+        viewModel.appearance = .expanded
+        viewModel.reveal = true
+        panel.setFrame(frame(for: .expanded), display: true)
     }
 
     private func handleOutsideClick(at screenPoint: NSPoint) {
         guard pinned, let panel else { return }
         if !panel.frame.contains(screenPoint) {
             pinned = false
-            applyAppearance(.hidden, animate: true)
+            collapseAnimated()
         }
     }
 
@@ -200,26 +203,57 @@ final class IslandWindowController: NSObject {
         }
     }
 
-    private var expandedSize: CGSize {
-        // 两档 178；接口吐出第三档（other）时加高容纳
-        let rowCount = max(2, store.snapshot?.displayRows.count ?? 2)
-        return CGSize(width: 352, height: rowCount >= 3 ? 222 : 178)
+    private func frameCenter(on screen: NSScreen) -> CGFloat {
+        let hasNotch = screen.safeAreaInsets.top > 0
+        let midX = screen.frame.midX
+        guard hasNotch else { return midX }
+        let left = screen.auxiliaryTopLeftArea?.maxX ?? midX - 90
+        let right = screen.auxiliaryTopRightArea?.minX ?? midX + 90
+        return (left + right) / 2
     }
 
-    private func applyAppearance(_ appearance: IslandViewModel.Appearance, animate: Bool) {
+    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距），高度随档数走
+    private var expandedSize: CGSize {
+        let screen = activeScreen
+        let safeTop = max(screen.safeAreaInsets.top, 24)
+        let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
+        let content: CGFloat = 16 + 10 + n * 24 + (n - 1) * 10 + 10 + 14   // 头 + 行 + 页脚
+        return CGSize(width: 352, height: safeTop + 6 + content + 14)
+    }
+
+    private func applyAppearance(_ appearance: IslandViewModel.Appearance) {
         viewModel.appearance = appearance
         guard let panel else { return }
-        let target = frame(for: appearance)
-        if animate {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.36
-                context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1.0, 0.3, 1.0)
-                context.allowsImplicitAnimation = true
-                panel.setFrame(target, display: true)
-                contentView?.layoutSubtreeIfNeeded()
+        panel.setFrame(frame(for: appearance), display: false)
+    }
+
+    /// 展开：窗口瞬间就位（此时内容是刘海高度的透明黑条），50ms 后把 reveal 拉到全高——
+    /// 先让起始态真正渲染一帧，SwiftUI 才会播「从刘海向下延伸」的高度动画
+    private func expandAnimated() {
+        guard !pinned, let panel else { return }
+        viewModel.reveal = false
+        viewModel.appearance = .expanded
+        panel.setFrame(frame(for: .expanded), display: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, !self.pinned else { return }
+                self.viewModel.reveal = true
             }
-        } else {
-            panel.setFrame(target, display: false)
         }
+    }
+
+    /// 收起：reveal 归零 = 卡片向上缩回刘海，动画结束后窗口瞬移回刘海挖槽矩形
+    private func collapseAnimated() {
+        guard !pinned else { return }
+        viewModel.reveal = false
+        let snap = DispatchWorkItem { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, !self.pinned, self.viewModel.appearance == .expanded else { return }
+                self.viewModel.appearance = .hidden
+                self.panel?.setFrame(self.frame(for: .hidden), display: false)
+            }
+        }
+        pendingHover = snap
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.36, execute: snap)
     }
 }

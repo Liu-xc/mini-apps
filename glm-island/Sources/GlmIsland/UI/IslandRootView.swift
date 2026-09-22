@@ -1,7 +1,8 @@
 import SwiftUI
+import AppKit
 
 /// 灵动岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
-/// hover/点击后以刘海为中心动画展开成明细卡片
+/// hover/点击后从刘海向下延伸出明细卡片（顶边钉死，只向下生长）
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
@@ -13,31 +14,34 @@ struct IslandRootView: View {
             case .hidden:
                 Color.clear
             case .expanded:
-                ExpandedIslandView(store: store, openSettings: openSettings)
-                    .background {
-                        // 顶部贴屏幕顶沿：两角直角与顶边无缝衔接（不与刘海之间留缝），只圆下方
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 0,
-                            bottomLeadingRadius: 16,
-                            bottomTrailingRadius: 16,
-                            topTrailingRadius: 0,
-                            style: .continuous
-                        )
-                        .fill(Color.black)
-                        .overlay(alignment: .top) {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.07))
-                                .frame(height: 0.5)
-                        }
-                    }
-                    .transition(.opacity)
+                card
             }
         }
         .frame(width: contentSize.width, height: contentSize.height, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture { viewModel.requestTogglePin() }
-        .animation(.spring(response: 0.36, dampingFraction: 0.85), value: viewModel.appearance)
+        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: viewModel.reveal)
         .animation(.easeOut(duration: 0.45), value: store.snapshot)
+    }
+
+    /// 卡片以完整尺寸布局，但可见高度由 reveal 驱动：32（刘海高度）→ 全高，
+    /// 顶边钉死、内容自上而下被揭示 = 「从刘海向下延伸」
+    private var card: some View {
+        ExpandedIslandView(store: store, openSettings: openSettings)
+            .frame(width: 352, height: expandedHeight, alignment: .top)
+            .background {
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 0,
+                    bottomLeadingRadius: 16,
+                    bottomTrailingRadius: 16,
+                    topTrailingRadius: 0,
+                    style: .continuous
+                )
+                .fill(Color.black)
+            }
+            .frame(height: viewModel.reveal ? expandedHeight : notchTriggerSize.height, alignment: .top)
+            .clipped()
+            .transition(.opacity)
     }
 
     private var contentSize: CGSize {
@@ -55,147 +59,99 @@ struct IslandRootView: View {
         return CGSize(width: 180, height: max(screen?.safeAreaInsets.top ?? 24, 24))
     }
 
-    /// 两档 178；若接口吐出第三档（other）则加高容纳
+    /// 与 IslandWindowController.expandedSize 保持同一公式
     private var expandedHeight: CGFloat {
-        let rowCount = max(2, store.snapshot?.displayRows.count ?? 2)
-        return rowCount >= 3 ? 222 : 178
+        let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
+        let safeTop = max(screen?.safeAreaInsets.top ?? 24, 24)
+        let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
+        let content: CGFloat = 16 + 10 + n * 24 + (n - 1) * 10 + 10 + 14
+        return safeTop + 6 + content + 14
     }
 }
 
-// MARK: - 展开卡片：与控制台一致的明细
+// MARK: - 展开卡片：极简两行明细（颜色只保留在进度条上）
 
 struct ExpandedIslandView: View {
     @ObservedObject var store: UsageStore
     let openSettings: () -> Void
 
+    /// 内容顶边避开刘海挖槽，留边距
+    private var topInset: CGFloat {
+        let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
+        return max(screen?.safeAreaInsets.top ?? 24, 24) + 6
+    }
+
     var body: some View {
         VStack(spacing: 10) {
-            header
-            if let snapshot = store.snapshot, !snapshot.displayRows.isEmpty {
-                VStack(spacing: 10) {
-                    ForEach(snapshot.displayRows) { row in
-                        QuotaRowView(row: row, now: Date())
-                    }
+            HStack {
+                Text("剩余额度")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.92))
+                Spacer()
+            }
+            ForEach(store.snapshot?.displayRows ?? []) { row in
+                SimpleQuotaRow(row: row, now: Date())
+            }
+            HStack(spacing: 8) {
+                Text(statusText)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.white.opacity(0.45))
+                Spacer()
+                QuotaIconButton(systemName: "arrow.clockwise", spinning: store.status == .loading) {
+                    Task { await store.refreshNow() }
                 }
-            } else {
-                emptyState
-            }
-            footer
-        }
-        .padding(EdgeInsets(top: 12, leading: 16, bottom: 10, trailing: 16))
-    }
-
-    private var header: some View {
-        HStack(spacing: 8) {
-            Text("剩余额度")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-            if store.isDemoActive {
-                QuotaBadge(text: "演示数据", color: IslandTheme.identityColor(.fiveHour))
-            }
-            Spacer()
-        }
-    }
-
-    private var footer: some View {
-        HStack(spacing: 10) {
-            Text(statusText)
-                .font(.system(size: 9.5))
-                .foregroundStyle(statusColor)
-            Spacer()
-            QuotaIconButton(systemName: "arrow.clockwise", spinning: store.status == .loading) {
-                Task { await store.refreshNow() }
-            }
-            QuotaIconButton(systemName: "gearshape") {
-                openSettings()
+                QuotaIconButton(systemName: "gearshape") {
+                    openSettings()
+                }
             }
         }
+        .padding(EdgeInsets(top: topInset, leading: 16, bottom: 14, trailing: 16))
     }
 
     private var statusText: String {
+        let prefix = store.isDemoActive ? "演示 · " : ""
         switch store.status {
-        case .idle: ""
-        case .loading: "刷新中…"
+        case .idle:
+            return prefix + "待刷新"
+        case .loading:
+            return prefix + "刷新中…"
         case .loaded:
             if let snapshot = store.snapshot {
-                ResetFormatter.relativeAge(snapshot.fetchedAt, now: Date()) + "已刷新"
-            } else {
-                "已加载"
+                return prefix + ResetFormatter.relativeAge(snapshot.fetchedAt, now: Date()) + "已刷新"
             }
-        case .failed(let message): "刷新失败：\(message)"
+            return prefix + "已加载"
+        case .failed(let message):
+            return prefix + "刷新失败：\(message)"
         }
-    }
-
-    private var statusColor: Color {
-        if case .failed = store.status {
-            return Color(red: 0xFB / 255, green: 0x92 / 255, blue: 0x3C / 255)
-        }
-        return .white.opacity(0.45)
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            if store.status == .loading {
-                ProgressView()
-                    .controlSize(.small)
-            }
-            if !store.hasCredential {
-                Text("尚未配置 API Key")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.8))
-                Button("去设置") { openSettings() }
-                    .controlSize(.small)
-                    .buttonStyle(.borderedProminent)
-            } else if case .failed(let message) = store.status {
-                Text("获取失败：\(message)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.red.opacity(0.9))
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("正在获取套餐用量…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
     }
 }
 
-struct QuotaRowView: View {
+/// 单档一行：标签 + 百分比 · 重置时间，下方进度条
+struct SimpleQuotaRow: View {
     let row: QuotaRow
     let now: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
+        VStack(spacing: 3) {
+            HStack(spacing: 6) {
                 Text(row.label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(color)
-                if row.threshold == .exhausted, let reset = row.resetDate {
-                    Text("已用完 · \(ResetFormatter.shortReset(reset, now: now))重置")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.red.opacity(0.9))
-                }
-                Spacer()
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                Spacer(minLength: 0)
                 if let remaining = row.remainingPercent {
                     Text("\(Int(remaining.rounded()))%")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(row.threshold == .exhausted ? Color(red: 0xF8 / 255, green: 0x71 / 255, blue: 0x71 / 255) : .white)
                 } else {
                     Text("--%")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.4))
                 }
-                if let reset = row.resetDate, row.threshold != .exhausted {
+                if let reset = row.resetDate {
                     Text("· " + ResetFormatter.shortReset(reset, now: now))
                         .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.white.opacity(0.5))
                 }
-                Spacer()
             }
             QuotaBarTrack(color: color, fill: (row.remainingPercent ?? 0) / 100)
         }
@@ -226,20 +182,6 @@ struct QuotaBarTrack: View {
     }
 }
 
-struct QuotaBadge: View {
-    let text: String
-    let color: Color
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(color.opacity(0.16)))
-    }
-}
-
 struct QuotaIconButton: View {
     let systemName: String
     var spinning: Bool = false
@@ -251,7 +193,7 @@ struct QuotaIconButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.white.opacity(0.55))
                 .rotationEffect(.degrees(spin ? 360 : 0))
                 .animation(
                     spinning
