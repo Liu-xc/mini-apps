@@ -38,8 +38,14 @@ Provider      Provider     (磁盘快照)      (Security)      (UserDefaults)
 - hover：NSHostingView 子类借 `mouseEntered/Exited` + `NSTrackingArea(.activeAlways, .inVisibleRect)`
   ——别的 App 前台也生效（本 App 常驻 accessory 不持焦点）。
 - 点击外部收起：全局 + 本地 NSEvent monitor，`panel.frame.contains(NSEvent.mouseLocation)` 判定。
-- 定位：优先 `safeAreaInsets.top > 0` 的屏（刘海屏），`auxiliaryTopRightArea.minX` 为刘海右缘；
-  无刘海回退顶部居中。监听 `didChangeScreenParametersNotification` 重定位。
+- 定位（**智能避让**）：优先 `safeAreaInsets.top > 0` 的屏（刘海屏），刘海范围取
+  `auxiliaryTopLeftArea.maxX` ~ `auxiliaryTopRightArea.minX`。扫描菜单栏带（layer 24 App 菜单 /
+  25 状态项、排除自家进程）的 x 占用区间，落位优先级：
+  1. 刘海右缘空隙 ≥ 118pt → 贴右缘（+6pt）；
+  2. 左缘空隙 ≥ 118pt → 贴左缘（-6pt）；
+  3. 都不够 → 刘海正下方、菜单栏之下 4pt 悬浮（无刘海屏固定走此档）。
+  展开态跟随同一锚点（交互态临时盖过图标可接受，常驻紧凑态绝不压图标）。
+  触发：`didChangeScreenParametersNotification` + 30s 定时重算；固定展开或鼠标悬停中不挪窝。
 
 ## 已知怪癖
 
