@@ -24,12 +24,13 @@ struct IslandRootView: View {
         .animation(.easeOut(duration: 0.45), value: store.snapshot)
     }
 
-    /// 卡片以完整尺寸布局，但可见高度由 reveal 驱动：32（刘海高度）→ 全高，
-    /// 顶边钉死、内容自上而下被揭示 = 「从刘海向下延伸」
+    /// 卡片以完整尺寸布局，可见区域由动画化圆角遮罩驱动：展开 = 从刘海尺寸(180×safeTop)
+    /// 长到全尺寸，收起 = 宽高一起对称缩回刘海（顶边钉死，左右向中心收拢、底边向上）
     private var card: some View {
         ExpandedIslandView(store: store, openSettings: openSettings)
             .frame(width: 352, height: expandedHeight, alignment: .top)
-            .background {
+            .background(Color.black)
+            .mask {
                 UnevenRoundedRectangle(
                     topLeadingRadius: 0,
                     bottomLeadingRadius: 16,
@@ -37,11 +38,17 @@ struct IslandRootView: View {
                     topTrailingRadius: 0,
                     style: .continuous
                 )
-                .fill(Color.black)
+                .frame(width: revealSize.width, height: revealSize.height)
+                .frame(maxWidth: 352, maxHeight: expandedHeight, alignment: .top)
             }
-            .frame(height: viewModel.reveal ? expandedHeight : notchTriggerSize.height, alignment: .top)
-            .clipped()
             .transition(.opacity)
+    }
+
+    /// reveal=false → 刘海挖槽尺寸；true → 卡片全尺寸
+    private var revealSize: CGSize {
+        viewModel.reveal
+            ? CGSize(width: 352, height: expandedHeight)
+            : CGSize(width: 180, height: notchTriggerSize.height)
     }
 
     private var contentSize: CGSize {
