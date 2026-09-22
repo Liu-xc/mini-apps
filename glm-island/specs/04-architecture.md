@@ -38,14 +38,12 @@ Provider      Provider     (磁盘快照)      (Security)      (UserDefaults)
 - hover：NSHostingView 子类借 `mouseEntered/Exited` + `NSTrackingArea(.activeAlways, .inVisibleRect)`
   ——别的 App 前台也生效（本 App 常驻 accessory 不持焦点）。
 - 点击外部收起：全局 + 本地 NSEvent monitor，`panel.frame.contains(NSEvent.mouseLocation)` 判定。
-- 定位（**智能避让**）：优先 `safeAreaInsets.top > 0` 的屏（刘海屏），刘海范围取
-  `auxiliaryTopLeftArea.maxX` ~ `auxiliaryTopRightArea.minX`。扫描菜单栏带（layer 24 App 菜单 /
-  25 状态项、排除自家进程）的 x 占用区间，落位优先级：
-  1. 刘海右缘空隙 ≥ 118pt → 贴右缘（+6pt）；
-  2. 左缘空隙 ≥ 118pt → 贴左缘（-6pt）；
-  3. 都不够 → 刘海正下方、菜单栏之下 4pt 悬浮（无刘海屏固定走此档）。
-  展开态跟随同一锚点（交互态临时盖过图标可接受，常驻紧凑态绝不压图标）。
-  触发：`didChangeScreenParametersNotification` + 30s 定时重算；固定展开或鼠标悬停中不挪窝。
+- 定位（**刘海正中锚点**，ADR-005）：刘海挖槽是硬件黑区、天然无窗口冲突，紧凑态与展开态
+  都以其水平中心居中——紧凑 118×26 融进刘海黑区，展开 352×228 贴顶向下生长；
+  无刘海屏回退菜单栏之下 4pt 顶部居中。监听 `didChangeScreenParametersNotification` 重定位。
+- hover 防抖状态机：enter 60ms 延迟展开、exit 180ms 延迟收起（均可取消）；
+  「exit 时光标仍在面板 frame 内」= 窗口变形动画补发的假离开，直接忽略。
+  CGEvent 模拟悬停实测：一次展开→稳定→真离开后一次收起，零振荡。
 
 ## 已知怪癖
 
