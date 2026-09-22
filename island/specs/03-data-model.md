@@ -42,6 +42,8 @@ struct UsageSnapshot: Codable, Equatable {
 
 - **档位识别靠 `unit`**：3（配 number 5）= 5 小时窗口，6（number 1）= 每周；`type` 恒为
   CREDIT_LIMIT，无区分度
+- **5 小时档是滚动窗口**：统计最近 5 小时用量，`remaining` 会随旧用量滑出窗口而**自动回升**、
+  随新用量增长而下降——0% 只代表此刻窗口占满，并非数据错误
 - **`percentage` = 已用百分比**，剩余 = 100 − percentage；`usage` / `currentValue` / `remaining`
   是**绝对 token 数**，不能当百分比读（percentage 缺失时可用 1 − currentValue/usage 反推）
 - `nextResetTime` = 毫秒时间戳
