@@ -50,7 +50,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let title: String
         if let snapshot = store.snapshot, !snapshot.rows.isEmpty {
             title = snapshot.rows.map { row in
-                let value = row.remainingPercent.map { "\(Int($0.rounded()))%" } ?? "--%"
+                let value = row.remainingPercent.map { "\(Int($0))%" } ?? "--%"
                 return "\(row.label) \(value)"
             }
             .joined(separator: " · ")

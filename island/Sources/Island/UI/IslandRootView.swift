@@ -150,7 +150,8 @@ struct SimpleQuotaRow: View {
                         .foregroundStyle(.white.opacity(0.3))
                 }
                 if let remaining = row.remainingPercent {
-                    Text("\(Int(remaining.rounded()))%")
+                    // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
+                    Text("\(Int(remaining))%")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 } else {

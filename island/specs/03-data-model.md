@@ -46,6 +46,8 @@ struct UsageSnapshot: Codable, Equatable {
   随新用量增长而下降——0% 只代表此刻窗口占满，并非数据错误
 - **`percentage` = 已用百分比**，剩余 = 100 − percentage；`usage` / `currentValue` / `remaining`
   是**绝对 token 数**，不能当百分比读（percentage 缺失时可用 1 − currentValue/usage 反推）
+- **显示口径**：优先精确比值 (usage−currentValue)/usage×100，**向下取整**显示
+  （99.88% → 99%，与控制台一致；`percentage` 整数近似有截断误差，只做兜底）
 - `nextResetTime` = 毫秒时间戳
 - 该账号 limits 中**没有 MCP 档**（展示层也已按需求隐藏）
 - 伴生接口（M2 再接）：`/api/monitor/usage/model-usage`、`/api/monitor/usage/tool-usage`

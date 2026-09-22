@@ -103,15 +103,16 @@ enum QuotaResponseParser {
     }
 
     /// 剩余百分比。真实响应（spike 2026-09-23）字段语义：
-    /// `percentage` = **已用**百分比（需 100-x 反推剩余）；
-    /// `remaining` / `currentValue` / `usage` = **绝对 token 数**，绝不能当百分比读
+    /// `currentValue`/`usage` = 已用/总额度的绝对 token 数（比值最精确，优先）；
+    /// `percentage` = **已用**百分比的整数近似（有截断误差，仅兜底）；
+    /// `remaining` = 绝对 token 数，绝不能当百分比读
     static func remainingPercent(in dict: [String: Any]) -> (Double?, Bool) {
+        if let current = double(dict["currentValue"]), let usage = double(dict["usage"]), usage > 0 {
+            let ratio = (usage - current) / usage * 100
+            return (min(100, max(0, ratio)), true)
+        }
         if let used = normalizedPercent(dict["percentage"]) {
             return (100 - used, true)
-        }
-        if let current = double(dict["currentValue"]), let usage = double(dict["usage"]), usage > 0 {
-            let ratio = (1 - current / usage) * 100
-            return (min(100, max(0, ratio)), true)
         }
         for key in ["remainingRatio", "remainingPercent", "remain", "left"] {
             if let value = normalizedPercent(dict[key]) {
