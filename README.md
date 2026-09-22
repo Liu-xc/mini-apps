@@ -7,6 +7,7 @@
 | 衣橱 | [`wardrobe/`](wardrobe/) | 安卓原生应用：多角色衣橱管理、滑动组合穿搭、录入去背景、导出生图素材给 AI 生图 Agent、成品效果图回录与单品双向关联、穿搭打卡与衣橱回顾、心愿清单 | 开发中 (it-020) |
 | 吃啥 | [`eats/`](eats/) | 安卓原生应用：吃喝玩乐三类记录（堂食/外卖/自做）、地图标记 + 最近一次追踪、卡组快速决策、统计回顾、想吃想玩愿望清单 | 开发中 (it-009) |
 | 剪贴盒 | [`clips/`](clips/) | 双端剪贴板历史（Android Kotlin/Compose + macOS SwiftUI），clips.json 文件格式为跨端契约，双端单测对齐 | 提案中（it-001 specs 已备，未开工） |
+| GLM 灵动岛 | [`glm-island/`](glm-island/) | macOS 刘海胶囊：GLM Coding Plan 三档用量（5 小时/每周/ZCode MCP）常驻监控，hover 展开明细、警戒变色、Key 存钥匙串 | MVP 已实现（it-001），spike 待接真实 Key |
 
 ## 公共基础设施（libs/）
 
