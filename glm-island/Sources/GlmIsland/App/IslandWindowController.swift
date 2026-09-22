@@ -191,7 +191,7 @@ final class IslandWindowController: NSObject {
             center = midX
         }
         let yTopOffset: CGFloat = hasNotch ? 0 : max(screen.safeAreaInsets.top, 24) + 4
-        let size = appearance == .compact ? Self.compactSize : Self.expandedSize
+        let size = appearance == .compact ? Self.compactSize : expandedSize
         return NSRect(
             x: center - size.width / 2,
             y: top - yTopOffset - size.height,
@@ -200,8 +200,13 @@ final class IslandWindowController: NSObject {
         )
     }
 
-    private static let compactSize = CGSize(width: 118, height: 26)
-    private static let expandedSize = CGSize(width: 352, height: 228)
+    /// 紧凑态两行全信息（180×36，正好覆住刘海宽度）；展开态两档 178，第三档（other）出现时加高
+    private static let compactSize = CGSize(width: 180, height: 36)
+
+    private var expandedSize: CGSize {
+        let rowCount = max(2, store.snapshot?.displayRows.count ?? 2)
+        return CGSize(width: 352, height: rowCount >= 3 ? 222 : 178)
+    }
 
     private func applyAppearance(_ appearance: IslandViewModel.Appearance, animate: Bool) {
         viewModel.appearance = appearance

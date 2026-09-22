@@ -59,13 +59,15 @@ struct QuotaResponseParserTests {
     }
 
     @Test
-    func displayRowsKeepsConsoleOrder() {
+    func displayRowsKeepsConsoleOrderAndHidesMCP() {
         let rows = [
             QuotaRow(id: "zcodeMcp", kind: .zcodeMcp, label: "ZCode MCP", remainingPercent: 4, resetDate: nil, percentInferred: false),
             QuotaRow(id: "weekly", kind: .weekly, label: "每周", remainingPercent: 62, resetDate: nil, percentInferred: false),
+            QuotaRow(id: "fiveHour", kind: .fiveHour, label: "5 小时", remainingPercent: 33, resetDate: nil, percentInferred: false),
         ]
         let snapshot = UsageSnapshot(rows: rows, fetchedAt: Date(), endpointHost: "x", debugRawJSON: nil)
-        #expect(snapshot.displayRows.map(\.kind) == [.weekly, .zcodeMcp])
+        // MCP 档按需求不展示（Leo, it-001）；顺序保持 5 小时 → 每周 → 其余
+        #expect(snapshot.displayRows.map(\.kind) == [.fiveHour, .weekly])
     }
 
     @Test

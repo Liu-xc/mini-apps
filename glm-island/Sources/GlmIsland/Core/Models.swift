@@ -51,18 +51,16 @@ struct UsageSnapshot: Codable, Equatable {
         rows.first { $0.kind == kind }
     }
 
-    /// UI 固定顺序：5 小时 → 每周 → ZCode MCP → 其余
+    /// UI 展示：MCP 档按需求不展示（Leo, it-001）；固定顺序 5 小时 → 每周 → 其余
     var displayRows: [QuotaRow] {
-        let ordered: [RowKind] = [.fiveHour, .weekly, .zcodeMcp]
-        var seen = Set<RowKind>()
+        let visible = rows.filter { $0.kind != .zcodeMcp }
         var result: [QuotaRow] = []
-        for kind in ordered {
-            if let matched = row(kind) {
+        for kind in [RowKind.fiveHour, .weekly] {
+            if let matched = visible.first(where: { $0.kind == kind }) {
                 result.append(matched)
-                seen.insert(kind)
             }
         }
-        result.append(contentsOf: rows.filter { !seen.contains($0.kind) })
+        result.append(contentsOf: visible.filter { $0.kind != .fiveHour && $0.kind != .weekly })
         return result
     }
 }

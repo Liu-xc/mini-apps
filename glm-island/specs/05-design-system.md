@@ -4,8 +4,8 @@
 
 | token | 值 | 用途 |
 |---|---|---|
-| island/compact-size | 118×26pt | 紧凑胶囊 |
-| island/expanded-size | 352×228pt | 展开面板 |
+| island/compact-size | 180×36pt | 紧凑胶囊（两行全信息，覆住刘海宽度） |
+| island/expanded-size | 352×178pt（出现第三档 other 时 222） | 展开面板 |
 | island/radius | 13 / 22（continuous） | 紧凑 / 展开圆角 |
 | island/surface | `#000000` + 顶部 0.5pt 白 7% 高光 | 胶囊底（与刘海融为一体） |
 | color/fiveHour | `#3B82F6` 蓝 | 5 小时档本色 |

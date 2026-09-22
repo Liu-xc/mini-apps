@@ -34,49 +34,79 @@ struct IslandRootView: View {
     }
 
     private var contentSize: CGSize {
-        viewModel.appearance == .compact
-            ? CGSize(width: 118, height: 26)
-            : CGSize(width: 352, height: 228)
+        switch viewModel.appearance {
+        case .compact:
+            CGSize(width: 180, height: 36)
+        case .expanded:
+            CGSize(width: 352, height: expandedHeight)
+        }
+    }
+
+    /// 两档 178；若接口吐出第三档（other）则加高容纳
+    private var expandedHeight: CGFloat {
+        let rowCount = max(2, store.snapshot?.displayRows.count ?? 2)
+        return rowCount >= 3 ? 222 : 178
     }
 }
 
-// MARK: - 紧凑态：三根迷你进度条
+// MARK: - 紧凑态：两行全信息（标签 + 迷你条 + 百分比 + 重置时间）
 
 struct CompactIslandView: View {
     let snapshot: UsageSnapshot?
 
-    private var kinds: [RowKind] {
-        [.fiveHour, .weekly, .zcodeMcp]
-    }
-
     var body: some View {
-        HStack(spacing: 9) {
-            ForEach(kinds, id: \.self) { kind in
-                let row = snapshot?.row(kind)
-                MiniQuotaBar(
-                    color: IslandTheme.stateColor(kind, remaining: row?.remainingPercent),
-                    fill: (row?.remainingPercent ?? 0) / 100
-                )
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(displayRows) { row in
+                CompactQuotaRow(row: row, now: Date())
             }
         }
-        .padding(.horizontal, 12)
+        .padding(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 10))
+    }
+
+    private var displayRows: [QuotaRow] {
+        let rows = Array((snapshot?.displayRows ?? []).prefix(2))
+        guard rows.isEmpty == false else {
+            return [
+                QuotaRow(id: "ph-0", kind: .fiveHour, label: "5 小时", remainingPercent: nil, resetDate: nil, percentInferred: false),
+                QuotaRow(id: "ph-1", kind: .weekly, label: "每周", remainingPercent: nil, resetDate: nil, percentInferred: false),
+            ]
+        }
+        return rows
     }
 }
 
-struct MiniQuotaBar: View {
-    let color: Color
-    let fill: Double
+struct CompactQuotaRow: View {
+    let row: QuotaRow
+    let now: Date
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            Capsule()
-                .fill(Color.white.opacity(0.15))
-            Capsule()
-                .fill(color)
-                .frame(width: max(2, 30 * min(1, max(0, fill))))
-                .animation(.easeOut(duration: 0.45), value: fill)
+        HStack(spacing: 5) {
+            Text(row.label)
+                .font(.system(size: 9.5, weight: .semibold))
+                .foregroundStyle(color)
+                .fixedSize()
+            QuotaBarTrack(color: color, fill: (row.remainingPercent ?? 0) / 100, height: 4)
+                .frame(width: 40)
+            Text(percentText)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .fixedSize()
+            if let reset = row.resetDate {
+                Text("· " + ResetFormatter.shortReset(reset, now: now))
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .fixedSize()
+            }
+            Spacer(minLength: 0)
         }
-        .frame(width: 30, height: 4)
+    }
+
+    private var color: Color {
+        IslandTheme.stateColor(row.kind, remaining: row.remainingPercent)
+    }
+
+    private var percentText: String {
+        row.remainingPercent.map { "\(Int($0.rounded()))%" } ?? "--%"
     }
 }
 
@@ -87,10 +117,10 @@ struct ExpandedIslandView: View {
     let openSettings: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             header
             if let snapshot = store.snapshot, !snapshot.displayRows.isEmpty {
-                VStack(spacing: 11) {
+                VStack(spacing: 10) {
                     ForEach(snapshot.displayRows) { row in
                         QuotaRowView(row: row, now: Date())
                     }
@@ -100,7 +130,7 @@ struct ExpandedIslandView: View {
             }
             footer
         }
-        .padding(EdgeInsets(top: 14, leading: 16, bottom: 12, trailing: 16))
+        .padding(EdgeInsets(top: 12, leading: 16, bottom: 10, trailing: 16))
     }
 
     private var header: some View {
@@ -227,6 +257,7 @@ struct QuotaRowView: View {
 struct QuotaBarTrack: View {
     let color: Color
     let fill: Double
+    var height: CGFloat = 6
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -239,7 +270,7 @@ struct QuotaBarTrack: View {
                     .animation(.easeOut(duration: 0.5), value: fill)
             }
         }
-        .frame(height: 6)
+        .frame(height: height)
     }
 }
 

@@ -76,7 +76,7 @@ struct DemoUsageProvider: UsageProviding {
                 id: RowKind.weekly.rawValue,
                 kind: .weekly,
                 label: "每周",
-                remainingPercent: 62,
+                remainingPercent: 18,
                 resetDate: at(6 * 86400 + 3 * 3600),
                 percentInferred: false
             ),
@@ -92,7 +92,7 @@ struct DemoUsageProvider: UsageProviding {
         let raw = """
         {
           "demo": true,
-          "note": "演示数据：33% / 62% / 4%（MCP 处于警戒态），用于无 Key 走查",
+          "note": "演示数据：33% / 18%（每周警戒态）；MCP 档按需求不展示，解析仍在",
           "realResponseShape": "首次保存 Key 后，这里会显示 /api/monitor/usage/quota/limit 的真实 JSON"
         }
         """
