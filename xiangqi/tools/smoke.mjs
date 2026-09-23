@@ -74,6 +74,7 @@ async function main() {
     PORT: String(PORT),
     ZAI_API_KEY: 'unused-local', // 跳过钥匙串，冒烟不碰真 key
     TURN_TIMEOUT_MS: '30000',
+    JEV_DISABLED: '1', // 假模型冒烟不打真评估 API
   });
   await waitReady(`${BASE}/api/state`);
 

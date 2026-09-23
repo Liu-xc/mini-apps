@@ -27,6 +27,7 @@
 | GameOrchestrator | `server.mjs` 内 | 回合循环、prompt 拼装、重试/超时、终局判定、SSE 广播、记分板 |
 | PiClient | `server.mjs` 内 | spawn/kill `pi --mode rpc`、JSONL 分帧（按 `\n`，不用 readline）、请求-响应配对、事件转发 |
 | Providers | `server.mjs` 内 | 合并 pi 内置 presets 与 `~/.pi/agent/models.json`，供 UI 下拉 |
+| JeVEvaluator（it-002） | `server.mjs` 内 | `.env.local` 加载 key → 串行队列对每手 `fenAfter` 调 `POST api.typesafe.ai/v1/systemone`（Choice: red_win/draw/black_win）→ 回填 `Move.eval` + 广播 `eval`；`JEV_DISABLED` 关停；Node `https.request` 直连（本机 LibreSSL 被掐但 OpenSSL 正常） |
 | 规则引擎 | `vendor/xiangqi.js` | 前端展示 + 后端校验**同一文件**，避免两套规则漂移 |
 | 棋盘 UI | `vendor/xiangqiboardjs` | 纯渲染，不懂规则；点击代走由 `app.js` 调 xiangqi.js 校验 |
 

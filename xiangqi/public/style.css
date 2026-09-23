@@ -228,6 +228,25 @@ button.ghost { padding: 4px 12px; min-height: 30px; font-size: 12px; }
 #score-rows tr { animation: score-in .25s ease; }
 @keyframes score-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; } }
 
+/* 胜率曲线（it-002） */
+.chart-wrap { padding: 8px 10px 0; }
+#winrate-chart { width: 100%; height: 150px; display: block; }
+#winrate-chart .grid { stroke: var(--hairline); stroke-width: 0.5; }
+#winrate-chart .baseline { stroke: var(--ink-faint); stroke-width: 0.8; stroke-dasharray: 4 3; }
+#winrate-chart .line-red { stroke: var(--red-piece); stroke-width: 1.8; fill: none; }
+#winrate-chart .line-black { stroke: var(--black-piece); stroke-width: 1.8; fill: none; stroke-dasharray: 5 3; }
+#winrate-chart .dot-red { fill: var(--red-piece); }
+#winrate-chart .dot-black { fill: var(--black-piece); }
+#winrate-chart .axis-label { font: 9px var(--mono); fill: var(--ink-faint); }
+#winrate-chart .empty { font: 12px var(--sans); fill: var(--ink-faint); }
+.chart-legend {
+  display: flex; gap: 14px; flex-wrap: wrap;
+  padding: 4px 14px 10px;
+  font: 11px var(--mono); color: var(--ink-faint);
+}
+.chart-legend .lg-red { color: var(--red-piece); }
+.chart-legend .lg-black { color: var(--black-piece); }
+
 .foot {
   padding: 8px 26px 22px;
   color: var(--ink-faint);

@@ -19,6 +19,18 @@
 | `--radius` | `10px` | 面板圆角 |
 | `--serif` | `"Noto Serif SC", Georgia, serif` | 标题/记谱表着法 |
 
+## 胜率曲线 token（it-002）
+
+| token | 值 | 用途 |
+|---|---|---|
+| 线-红 | `var(--red-piece)` 实线 1.8px | 红方胜率 |
+| 线-黑 | `var(--black-piece)` 虚线 1.8px | 黑方胜率（与实线区分，色盲双编码） |
+| 50% 基线 | `inkFaint` 虚线 0.8px | 均势参考 |
+| 网格 | `hairline` 0.5px @25/75 | 辅助读数 |
+| 末端标签 | 9px mono 直标百分比 | 免悬停即可读 |
+
+纯 SVG 手绘，零图表库（与仓库零构建基调一致）。
+
 ## 动效
 
 - 落子：xiangqiboardjs 自带动画即达标，不叠加额外动效（动效预算）。

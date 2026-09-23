@@ -27,6 +27,9 @@ const els = {
   overlay: byId('overlay'),
   overlayTitle: byId('overlay-title'),
   overlayReason: byId('overlay-reason'),
+  chart: byId('winrate-chart'),
+  chartLegend: byId('chart-legend'),
+  jevStatus: byId('jev-status'),
 };
 
 let state = null;
@@ -117,6 +120,7 @@ function resync(s) {
   renderScore();
   renderControls();
   renderOverlay();
+  renderChart();
   els.redLabel.textContent = s.red ? `${s.red.provider}/${s.red.model}` : '—';
   els.blackLabel.textContent = s.black ? `${s.black.provider}/${s.black.model}` : '—';
   if (s.lastError) showError(s.lastError);
@@ -264,6 +268,14 @@ function handle(msg) {
       board.position(msg.fen, true);
       break;
     }
+    case 'eval': {
+      const m = (state?.moves || []).find((x) => x.ply === msg.ply);
+      if (m) {
+        m.eval = msg.eval;
+        renderChart();
+      }
+      break;
+    }
     case 'gameover':
       resync(msg.state);
       break;
@@ -274,6 +286,60 @@ function handle(msg) {
       console.log('[arena]', msg.message);
       break;
   }
+}
+
+/* ── 胜率曲线（it-002，纯 SVG 零依赖） ── */
+
+function renderChart() {
+  const svg = els.chart;
+  const legend = els.chartLegend;
+  if (!svg || !state) return;
+  const W = 400, H = 150, L = 26, R = 40, T = 8, B = 16;
+  els.jevStatus.textContent = state.jevEnabled === false ? '未配置 JEV_API_KEY' : 'jev-latest';
+  els.jevStatus.style.color = state.jevEnabled === false ? 'var(--error)' : '';
+
+  const moves = state.moves || [];
+  const pts = moves.filter((m) => m.eval);
+  if (pts.length === 0) {
+    svg.innerHTML = `<text class="empty" x="${W / 2}" y="${H / 2}" text-anchor="middle">${
+      state.jevEnabled === false ? '未配置 JEV_API_KEY（曲线停用）' : '等待评估…'}</text>`;
+    legend.textContent = '';
+    return;
+  }
+  const maxPly = Math.max(moves.length - 1, 1);
+  const x = (ply) => L + (ply / maxPly) * (W - L - R);
+  const y = (p) => T + (1 - p) * (H - T - B);
+
+  const parts = [];
+  // 网格 25/50/75 与 50% 基线
+  for (const g of [0.25, 0.5, 0.75]) {
+    const cls = g === 0.5 ? 'baseline' : 'grid';
+    parts.push(`<line class="${cls}" x1="${L}" y1="${y(g)}" x2="${W - R}" y2="${y(g)}"/>`);
+  }
+  parts.push(`<text class="axis-label" x="${L - 4}" y="${y(1) + 8}" text-anchor="end">100</text>`);
+  parts.push(`<text class="axis-label" x="${L - 4}" y="${y(0.5) + 3}" text-anchor="end">50</text>`);
+  parts.push(`<text class="axis-label" x="${L - 4}" y="${y(0) - 2}" text-anchor="end">0</text>`);
+  parts.push(`<text class="axis-label" x="${L}" y="${H - 4}">1</text>`);
+  parts.push(`<text class="axis-label" x="${W - R}" y="${H - 4}" text-anchor="end">${maxPly + 1}</text>`);
+
+  const redLine = pts.map((m) => `${x(m.ply).toFixed(1)},${y(m.eval.red).toFixed(1)}`).join(' ');
+  const blackLine = pts.map((m) => `${x(m.ply).toFixed(1)},${y(m.eval.black).toFixed(1)}`).join(' ');
+  parts.push(`<polyline class="line-red" points="${redLine}"/>`);
+  parts.push(`<polyline class="line-black" points="${blackLine}"/>`);
+  const last = pts[pts.length - 1];
+  parts.push(`<circle class="dot-red" cx="${x(last.ply).toFixed(1)}" cy="${y(last.eval.red).toFixed(1)}" r="2.6"/>`);
+  parts.push(`<circle class="dot-black" cx="${x(last.ply).toFixed(1)}" cy="${y(last.eval.black).toFixed(1)}" r="2.6"/>`);
+  parts.push(`<text class="axis-label" x="${W - R + 4}" y="${y(last.eval.red) + 3}" fill="var(--red-piece)">${Math.round(last.eval.red * 100)}%</text>`);
+  parts.push(`<text class="axis-label" x="${W - R + 4}" y="${y(last.eval.black) + 3}" fill="var(--black-piece)">${Math.round(last.eval.black * 100)}%</text>`);
+  svg.innerHTML = parts.join('');
+
+  const pc = (v) => `${Math.round(v * 100)}%`;
+  legend.innerHTML =
+    `<span class="lg-red">红 ${pc(last.eval.red)}</span>` +
+    `<span>和 ${pc(last.eval.draw)}</span>` +
+    `<span class="lg-black">黑 ${pc(last.eval.black)}</span>` +
+    `<span>置信 ${pc(last.eval.confidence)}</span>` +
+    `<span>第 ${last.ply + 1} 手</span>`;
 }
 
 /* ── 动作 ── */

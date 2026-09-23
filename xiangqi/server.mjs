@@ -2,6 +2,7 @@
  * 静态文件 + SSE + POST /api/game；两个 pi --mode rpc 子进程各执一方（ADR-002）。
  * 启动：node server.mjs  （PORT 默认 8777） */
 import http from 'node:http';
+import https from 'node:https';
 import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync, existsSync, statSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -12,6 +13,14 @@ import { fileURLToPath } from 'node:url';
 import { iccsToZh } from './lib/zh.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// 本地私密 env（.env.local 已 gitignore，存 JEV_API_KEY 等；永不进 git/HTTP 响应）
+try {
+  for (const line of readFileSync(path.join(__dirname, '.env.local'), 'utf8').split('\n')) {
+    const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  }
+} catch { /* 无 .env.local 则跳过 */ }
 const require = createRequire(import.meta.url);
 const { Xiangqi } = require(path.join(__dirname, 'public/vendor/xiangqi.js'));
 
@@ -54,6 +63,7 @@ function log(...args) {
 // 启动时把 GLM key 从 island 钥匙串注入子进程 env（不落日志明文，ADR-005）。
 // 凭据已在 ~/.pi/agent/auth.json（pi 原生）时跳过：钥匙串 GUI 授权可能无限阻塞启动。
 const childEnv = { ...process.env };
+delete childEnv.JEV_API_KEY; // 评审 key 只留服务端进程，不下注 pi 子进程
 const hasAuthJson = (() => {
   try {
     return Object.keys(JSON.parse(readFileSync(path.join(PI_DIR, 'auth.json'), 'utf8'))).length > 0;
@@ -427,8 +437,91 @@ function serializeState() {
     gameNo: game.gameNo,
     lastError: game.lastError,
     scoreboard,
+    jevEnabled: jevEnabled(),
     limits: { turnTimeoutMs: TURN_TIMEOUT_MS, maxRetries: MAX_RETRIES, maxPlies: MAX_PLIES },
   };
+}
+
+/* ───────────────────────── Jev 胜率评估（it-002）─────────────────────────
+ * 每手落子后异步问 TypeSafe Jev：Choice(red_win/draw/black_win) → 概率回填。
+ * 串行队列不阻塞回合；失败静默跳过；JEV_DISABLED=1（假模型冒烟）整体关停。
+ * 注意：api.typesafe.ai 在本机被 LibreSSL 掐但 Node/OpenSSL 正常，故用 https.request。 */
+
+const JEV_URL = 'https://api.typesafe.ai/v1/systemone';
+const JEV_KEY = process.env.JEV_API_KEY || '';
+const jevEnabled = () => Boolean(JEV_KEY) && !process.env.JEV_DISABLED;
+
+function jevRequest(body, timeoutMs = 15_000) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(JEV_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${JEV_KEY}`, 'Content-Type': 'application/json' },
+      timeout: timeoutMs,
+    }, (res) => {
+      let data = '';
+      res.on('data', (c) => (data += c));
+      res.on('end', () => {
+        try {
+          if (res.statusCode !== 200) throw new Error(`HTTP ${res.statusCode}: ${data.slice(0, 200)}`);
+          resolve(JSON.parse(data));
+        } catch (e) { reject(e); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(new Error('jev 超时')); });
+    req.on('error', reject);
+    req.end(JSON.stringify(body));
+  });
+}
+
+async function evalPosition(moveRec, fenAfter) {
+  const chess = new Xiangqi(fenAfter);
+  const hist = game.moves.slice(Math.max(0, game.moves.length - 12))
+    .map((m) => m.zh).join(' ');
+  const state = {
+    game: '中国象棋（红方先行，文件 a-i 红方视角从左到右，纵线 0 为红方底线）',
+    fen: fenAfter,
+    board: chess.ascii(),
+    turn_now: chess.turn() === 'r' ? '红方走' : '黑方走',
+    last_move: `${moveRec.zh}(${moveRec.iccs})，走子方：${moveRec.color === 'r' ? '红' : '黑'}`,
+    recent_history: hist || '（开局）',
+  };
+  const body = {
+    state,
+    model: 'jev-latest',
+    questions: {
+      outcome: {
+        type: 'choice',
+        instructions: '评估这个中国象棋局面：从头到尾完整对局的最终结局概率如何？考虑子力、王的安全、下一步走子方。',
+        criteria: {
+          red_win: '红方最终获胜（将死或困毙黑方，或黑方无棋可下）',
+          draw: '和棋（双方均无取胜可能、僵持至规则和棋）',
+          black_win: '黑方最终获胜（将死或困毙红方，或红方无棋可下）',
+        },
+      },
+    },
+  };
+  const resp = await jevRequest(body);
+  const ans = resp.answers?.outcome?.probabilities || {};
+  const r = Number(ans.red_win ?? 0), d = Number(ans.draw ?? 0), b = Number(ans.black_win ?? 0);
+  return { red: r, draw: d, black: b, confidence: Number(resp.answers?.outcome?.confidence ?? 0) };
+}
+
+let evalChain = Promise.resolve();
+function queueEval(rec) {
+  if (!jevEnabled() || !rec) return;
+  const ply = rec.ply;
+  evalChain = evalChain.then(async () => {
+    try {
+      const ev = await evalPosition(rec, rec.fenAfter);
+      const target = game.moves.find((m) => m.ply === ply);
+      if (target) {
+        target.eval = ev;
+        broadcast('eval', { ply, eval: ev });
+      }
+    } catch (e) {
+      log('jev 评估失败(跳过该点):', String(e.message || e).slice(0, 140));
+    }
+  });
 }
 
 /* ───────────────────────── SSE ───────────────────────── */
@@ -495,6 +588,7 @@ function applyMove(iccs, by, retried) {
   game.moves.push(rec);
   game.noCapturePlies = isCapture ? 0 : game.noCapturePlies + 1;
   broadcast('move', { move: rec, fen: chess.fen(), turn: chess.turn() });
+  queueEval(rec); // it-002：异步评估本手局面胜率，回填后广播 'eval'
   return rec;
 }
 
@@ -714,7 +808,8 @@ function exportGame() {
   for (let i = 0; i < game.moves.length; i += 2) {
     const r = game.moves[i];
     const b = game.moves[i + 1];
-    lines.push(`${i / 2 + 1}. ${r.zh}(${r.iccs})${b ? `  ${b.zh}(${b.iccs})` : ''}`);
+    const ev = (m) => (m.eval ? ` [红${Math.round(m.eval.red * 100)}/和${Math.round(m.eval.draw * 100)}/黑${Math.round(m.eval.black * 100)}]` : '');
+    lines.push(`${i / 2 + 1}. ${r.zh}(${r.iccs})${ev(r)}${b ? `  ${b.zh}(${b.iccs})${ev(b)}` : ''}`);
   }
   lines.push('');
   lines.push('FEN sequence:');

@@ -36,6 +36,7 @@
 | fenAfter | string | 走后局面，供导出回放 |
 | by | `'model'\|'human'` | 手动代走标记 |
 | retried | int | 到达该着法前的重试次数 |
+| eval | null \| `{red, draw, black, confidence}`（0~1） | it-002：jev 对**走后局面**的结局概率，异步回填 |
 
 ### EndReason 枚举
 
@@ -62,3 +63,7 @@ FEN sequence: <每手 fenAfter 一行，可回放>
 - `GameStatus`: `loading | playing | paused | over`
 - `EndReason`: 如上 6 值
 - `Transport`（内部）: `rpc | print`（ADR-002 退路，不对外暴露）
+
+## SSE 事件类型
+
+`state`（全量快照，含 `jevEnabled`）/ `turn` / `thinking` / `retry` / `move` / **`eval`（it-002：{ply, eval} 回填）** / `gameover` / `error` / `log`

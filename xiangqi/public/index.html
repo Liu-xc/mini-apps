@@ -78,6 +78,11 @@
         <table class="moves"><thead><tr><th>#</th><th>红</th><th>黑</th></tr></thead><tbody id="move-rows"></tbody></table>
       </section>
       <section class="panel">
+        <header class="panel-head"><h2>胜率曲线</h2><span class="model-label" id="jev-status">jev</span></header>
+        <div class="chart-wrap"><svg id="winrate-chart" viewBox="0 0 400 150" preserveAspectRatio="none" aria-label="胜率曲线"></svg></div>
+        <div class="chart-legend" id="chart-legend"></div>
+      </section>
+      <section class="panel">
         <header class="panel-head"><h2>记分板</h2></header>
         <table class="score"><thead><tr><th>模型</th><th>胜</th><th>和</th><th>负</th></tr></thead><tbody id="score-rows"></tbody></table>
       </section>
