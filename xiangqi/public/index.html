@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 象棋竞技场</title>
+  <link rel="stylesheet" href="/vendor/xiangqiboardjs/xiangqiboardjs.css" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">炮</span>
+      <div>
+        <h1>AI 象棋竞技场</h1>
+        <p class="tagline">两个模型 · 隔离 session · 一盘定聪明</p>
+      </div>
+    </div>
+    <div class="matchup">
+      <label class="side-picker red">
+        <span class="side-dot" aria-hidden="true"></span>红方
+        <input id="red-model" list="model-list" placeholder="provider/model" value="zai/glm-4.6" />
+      </label>
+      <span class="vs">VS</span>
+      <label class="side-picker black">
+        <span class="side-dot" aria-hidden="true"></span>黑方
+        <input id="black-model" list="model-list" placeholder="provider/model" value="zai/glm-4-flash" />
+      </label>
+      <datalist id="model-list"></datalist>
+    </div>
+    <div class="controls">
+      <button id="btn-start" class="primary">开局</button>
+      <button id="btn-pause" disabled>暂停</button>
+      <button id="btn-step" disabled>单步</button>
+      <button id="btn-stop" disabled>停止</button>
+      <label class="check"><input type="checkbox" id="chk-swap" checked />连战换先</label>
+    </div>
+  </header>
+
+  <div id="error-bar" class="error-bar" hidden></div>
+  <div id="status-bar" class="status-bar">就绪 · 选择双方模型后点「开局」</div>
+
+  <main class="layout">
+    <section class="board-pane">
+      <div class="board-wrap">
+        <div id="board"></div>
+        <div id="overlay" class="overlay" hidden>
+          <div class="overlay-card">
+            <div id="overlay-title" class="overlay-title"></div>
+            <div id="overlay-reason" class="overlay-reason"></div>
+            <button id="btn-again" class="primary">再来一局</button>
+          </div>
+        </div>
+      </div>
+      <div class="board-meta">
+        <span id="turn-indicator">—</span>
+        <span id="retry-badge" class="retry-badge" hidden></span>
+      </div>
+    </section>
+
+    <aside class="side-pane">
+      <section class="panel">
+        <header class="panel-head red">
+          <h2>红方思考流</h2><span id="red-label" class="model-label">—</span>
+        </header>
+        <div id="stream-r" class="stream"></div>
+      </section>
+      <section class="panel">
+        <header class="panel-head black">
+          <h2>黑方思考流</h2><span id="black-label" class="model-label">—</span>
+        </header>
+        <div id="stream-b" class="stream"></div>
+      </section>
+      <section class="panel">
+        <header class="panel-head"><h2>着法表</h2>
+          <button id="btn-export" class="ghost">导出棋谱</button>
+        </header>
+        <table class="moves"><thead><tr><th>#</th><th>红</th><th>黑</th></tr></thead><tbody id="move-rows"></tbody></table>
+      </section>
+      <section class="panel">
+        <header class="panel-head"><h2>记分板</h2></header>
+        <table class="score"><thead><tr><th>模型</th><th>胜</th><th>和</th><th>负</th></tr></thead><tbody id="score-rows"></tbody></table>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="foot">xiangqi · xiangqiboardjs (MIT) · xiangqi.js (BSD-2) · 驱动：pi agent 双 session</footer>
+
+  <script src="/vendor/jquery.min.js"></script>
+  <script src="/vendor/xiangqiboardjs/xiangqiboardjs.min.js"></script>
+  <script src="/vendor/xiangqi.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
