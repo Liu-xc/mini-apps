@@ -63,6 +63,7 @@ FEN sequence: <每手 fenAfter 一行，可回放>
 - `GameStatus`: `loading | playing | paused | over`
 - `EndReason`: 如上 6 值
 - `Transport`（内部）: `rpc | print`（ADR-002 退路，不对外暴露）
+- `limits.turnTimeoutMs`: `0` = 无回合时限（it-003 默认）；`>0` = 静默超时毫秒数
 
 ## SSE 事件类型
 

@@ -30,7 +30,9 @@ const SESSIONS_DIR = path.join(__dirname, '.sessions');
 const PI_DIR = path.join(os.homedir(), '.pi/agent');
 
 // 对局参数（ADR-001 / ADR-004）
-const TURN_TIMEOUT_MS = Number(process.env.TURN_TIMEOUT_MS || 120_000);
+// 2026-09-24 Leo 指令「去掉时间限制」：默认 0 = 不设回合时限（模型可无限长考）；
+// 需要时限的场景显式传 TURN_TIMEOUT_MS（smoke 传 30000）。
+const TURN_TIMEOUT_MS = Number(process.env.TURN_TIMEOUT_MS ?? 0);
 const MAX_RETRIES = 3; // 非法走法最多纠错重试次数
 const MAX_PLIES = 300; // 150 回合上限
 const DRAW_NO_CAPTURE_PLIES = 120; // 60 回合无吃子
@@ -256,16 +258,19 @@ class PiClient {
       await sleep(50);
     }
 
-    // 静默超时：模型持续吐 token 就永不掐断（合法长思考），只掐「彻底无输出」
+    // 静默超时：模型持续吐 token 就永不掐断（合法长思考），只掐「彻底无输出」。
+    // timeoutMs<=0（默认）= 无限等待，完全不设时限（2026-09-24 Leo 指令）。
     this.lastActivity = Date.now();
     let idleIv;
-    const idleTimeout = new Promise((_, rej) => {
-      idleIv = setInterval(() => {
-        if (Date.now() - this.lastActivity > timeoutMs) {
-          rej(new TurnTimeout());
-        }
-      }, 2000);
-    });
+    const idleTimeout = timeoutMs > 0
+      ? new Promise((_, rej) => {
+          idleIv = setInterval(() => {
+            if (Date.now() - this.lastActivity > timeoutMs) {
+              rej(new TurnTimeout());
+            }
+          }, 2000);
+        })
+      : Promise.resolve(); // 无限等待：只等 agent_settled
     try {
       await Promise.race([run, idleTimeout]);
     } catch (e) {

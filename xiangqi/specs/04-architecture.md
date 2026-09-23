@@ -52,3 +52,4 @@ orchestrator → xiangqi.legalMoves() → prompt(FEN+ASCII+白名单+上一手�
 
 - pi RPC：`stdin` 写 `{"id","type":"prompt",...}`，`stdout` 读 `{"id","type":"response"}` 与事件流至 `agent_settled`（以官方 `rpc.md` 为准，实现前 spike 验证）。
 - 退路：RPC 不稳则切 `pi -p` 每回合一次性子进程（`--session-id` 续会话），只换 PiClient 内部实现，编排层接口不变。
+- 回合时限：**默认无限**（`TURN_TIMEOUT_MS=0`，it-003「去掉时间限制」）；>0 时为静默超时语义（见 ADR-004）。过夜自动对局与报告由 `tools/overnight.mjs` + `tools/report.mjs` 承担（US-07）。
