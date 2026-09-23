@@ -77,3 +77,5 @@
 - 截图：`assets-it-001/w2-real-flash-game.png`（真局实时思考流）、`assets-it-001/w4-final-60plies.png`（61 手终盘暂停态）。
 
 **验收结论**：AC 1-6 全部满足。遗留建议（it-002 候选）：长考绝对上限（如 10 分钟硬顶）防无限思考、回合 thinking 档位可调（`--thinking off` 提速）、长将/重复局面裁定。
+
+**终局补记（2026-09-24 02:00）**：60 手验收暂停后经「继续」恢复，**第 102 手自然终局——黑方（mimo-v2.6-flash）困毙胜红方（glm-5.3-flash），记分板 mimo 1:0 glm**。全程零超时零判负，累计 6 次非法走法全部自愈；ADR-004 的 `stalemate` 路径首次在真局自然触发（此前 mock 覆盖 checkmate/draw-max、真局1/2 覆盖 forfeit-timeout）。收官过程被思考流完整记录：mimo 在最后一步前的推理里明确写出「harmless move preserving the winning net → red is 困毙 → black wins」，随后象5退3 应验；红方光帅被车马炮围猎，仅能 「forced f2f1 now」。对局结束 pi 子进程全部回收（0 残留）。终局截图：`assets-it-001/w5-final-stalemate.png`。
