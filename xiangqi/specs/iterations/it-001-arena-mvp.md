@@ -62,4 +62,18 @@
 
 **6. 故障可读性**：pi 未装 → spawn `error` 事件转为中文报错行；模型无凭据 → 回合报「模型未返回文本：…」并判负，UI error-bar 展示。
 
-**GLM 真模型内战**：⚠️ **唯一遗留项**。key 存于 island 钥匙串（`com.spartapps.island/api-key`），但 macOS 授权弹窗全程无人点击（8s+ 阻塞实测），本会话无法读取。除「真厂商 API 调用」外的全部链路（pi RPC 双 session、白名单协议、重试、终局、UI）均已由假模型冒烟覆盖；pi→厂商一环与其余环节正交。解锁任一方式后即可补跑：① Leo 点钥匙串弹窗「始终允许」→ `node server.mjs` 启动时自动注入；② `export ZAI_API_KEY=...` 后启动；③ `pi --provider zai --model glm-4.6 -p 测试` 先验连通。补跑命令：开局选 `zai/glm-4.6` vs `zai/glm-4-flash`，观察 ≥30 手后回填本节。
+**真模型对局（Flash vs Flash，Leo 指定）**：
+
+- **凭据配置**（2026-09-23 Leo 提供两把 key）：GLM key 与 MiMo TokenPlan key 已写入 pi 原生 `~/.pi/agent/auth.json`（600 权限，`{type:"api_key"}` schema），免 env 生效；三家 provider 真调连通全过（`zai`、`zai-coding-cn`、`xiaomi-token-plan-cn` 各发一条补全均正常返回）。服务端启动改为 auth.json 存在即跳过钥匙串（旧钥匙串注入会无限阻塞启动，已修）。
+- **第一局**：`zai-coding-cn/glm-5.3-flash`(红) vs `xiaomi-token-plan-cn/mimo-v2.6-flash`(黑)，双方真实轮流调 API，前 15 手正常（屏风马开局套路、思考流含真实棋评），**第 16 手红方连续两次 120s 超时 → `forfeit-timeout` 判负**——ADR-004 超时判负路径被真局端到端实证。研判：疑似撞 GLM 端限流退避（单发补全此前秒回）。
+- **第二局**：`TURN_TIMEOUT_MS=240000` 放宽后同对阵重跑，19 手黑方（mimo）两次 240s 超时判负。
+- **两局超时的诊断与修复（关键教训）**：解剖双方 session jsonl 发现被判「超时」的一方都留有**正在流式输出的思考内容**——模型不是挂死，是在合法长思考（mimo 单步想了 40+ 分钟），被第一版「总时长超时」硬中断。**改为静默超时**（`TURN_TIMEOUT_MS` = 无任何输出的时长，默认 120s；只要持续吐 token 就不计时），同步修订 ADR-004 与 US-03 AC-3。
+- **第三局（静默超时版，验收局）**：同对阵重跑，**60 手 / 30 回合零判负达成 AC「≥30 手」**（第 61 手按暂停语义走完后暂停保留现场）。期间：
+  - **5 次非法走法全部自动纠错自愈**（`i9i7`、`a6g6`、`a3a4`、`e3e5`、`e3i2`），重试路径在真模型上实测 5 回；
+  - mimo 单步 40+ 分钟长考不被掐断（静默超时生效），思考全程经 SSE 实时可见（12s/42 增量实测）；
+  - 真实中局质量：屏风马对中炮、前后消歧记谱（前炮平5/后车进二）、吃子交换与过河兵残局；
+  - **上下文隔离实测**：双进程双 session 文件，互相 grep 不到对方 prompt/思考专属串，仅共享服务端拼装的公开棋谱。
+- 连通性：GLM key 同时通 `zai`（api.z.ai）与 `zai-coding-cn`（open.bigmodel.cn），MiMo key 通 `xiaomi-token-plan-cn`，三家各一次单发补全秒回。
+- 截图：`assets-it-001/w2-real-flash-game.png`（真局实时思考流）、`assets-it-001/w4-final-60plies.png`（61 手终盘暂停态）。
+
+**验收结论**：AC 1-6 全部满足。遗留建议（it-002 候选）：长考绝对上限（如 10 分钟硬顶）防无限思考、回合 thinking 档位可调（`--thinking off` 提速）、长将/重复局面裁定。

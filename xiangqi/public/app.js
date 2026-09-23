@@ -231,8 +231,8 @@ function handle(msg) {
       const stream = msg.side === 'r' ? els.streamR : els.streamB;
       const cls = msg.kind === 'thinking' ? 'dim' : '';
       const last = stream.lastElementChild;
-      // 同一段增量追加到同一行，避免逐 token 碎片
-      if (last && last.dataset && last.dataset.kind === msg.kind && msg.kind === 'text') {
+      // 同类增量合并进同一段，避免逐 token 碎片；kind 切换（thinking↔text）才开新段
+      if (last && last.dataset && last.dataset.kind === msg.kind) {
         last.textContent += msg.delta;
       } else {
         const div = document.createElement('div');

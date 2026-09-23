@@ -51,9 +51,19 @@ function log(...args) {
   console.log(new Date().toISOString().slice(11, 19), line);
 }
 
-// 启动时把 GLM key 从 island 钥匙串注入子进程 env（不落日志明文，ADR-005）
+// 启动时把 GLM key 从 island 钥匙串注入子进程 env（不落日志明文，ADR-005）。
+// 凭据已在 ~/.pi/agent/auth.json（pi 原生）时跳过：钥匙串 GUI 授权可能无限阻塞启动。
 const childEnv = { ...process.env };
-if (!childEnv.ZAI_API_KEY) {
+const hasAuthJson = (() => {
+  try {
+    return Object.keys(JSON.parse(readFileSync(path.join(PI_DIR, 'auth.json'), 'utf8'))).length > 0;
+  } catch {
+    return false;
+  }
+})();
+if (hasAuthJson) {
+  log('检测到 ~/.pi/agent/auth.json，凭据由 pi 原生读取，跳过钥匙串');
+} else if (!childEnv.ZAI_API_KEY) {
   try {
     const k = execFileSync('security', ['find-generic-password', '-s', 'com.spartapps.island', '-a', 'api-key', '-w'], {
       encoding: 'utf8',
@@ -94,6 +104,7 @@ class PiClient {
     this.runErrors = []; // 本回合内 error 类事件
     this.dead = false;
     this.stderrTail = '';
+    this.lastActivity = Date.now();
   }
 
   label() {
@@ -142,6 +153,7 @@ class PiClient {
 
   // 严格 JSONL：只按 \n 分帧（不能用 readline，U+2028/29 是合法 JSON 字符）
   _onStdout(chunk) {
+    this.lastActivity = Date.now(); // 任何输出都算活动：静默超时只掐死流
     this.buf += chunk.toString();
     let idx;
     while ((idx = this.buf.indexOf('\n')) >= 0) {
@@ -234,12 +246,18 @@ class PiClient {
       await sleep(50);
     }
 
-    let timer;
-    const timeout = new Promise((_, rej) => {
-      timer = setTimeout(() => rej(new TurnTimeout()), timeoutMs);
+    // 静默超时：模型持续吐 token 就永不掐断（合法长思考），只掐「彻底无输出」
+    this.lastActivity = Date.now();
+    let idleIv;
+    const idleTimeout = new Promise((_, rej) => {
+      idleIv = setInterval(() => {
+        if (Date.now() - this.lastActivity > timeoutMs) {
+          rej(new TurnTimeout());
+        }
+      }, 2000);
     });
     try {
-      await Promise.race([run, timeout]);
+      await Promise.race([run, idleTimeout]);
     } catch (e) {
       if (e.isTimeout) {
         this._send({ type: 'abort' }).catch(() => {});
@@ -248,7 +266,7 @@ class PiClient {
       }
       throw e;
     } finally {
-      clearTimeout(timer);
+      clearInterval(idleIv);
     }
 
     if (this.runTexts.length === 0) {
@@ -536,12 +554,14 @@ async function playOnePly() {
         if (retried < 1) {
           retried++;
           game.retry = retried;
+          log(`${sideName}回合超时（${TURN_TIMEOUT_MS}ms），自动重试 1/1`);
           broadcast('retry', { color, attempt: retried, max: MAX_RETRIES, reason: 'timeout' });
           isRetry = true;
           lastRetryInfo = '原因：上一次回答超时。';
           continue;
         }
         game.lastError = `${sideName}超时判负`;
+        log(`${sideName}第二次超时，判负`);
         broadcast('error', { message: game.lastError });
         endGame({ winner: color === 'r' ? 'b' : 'r', reason: 'forfeit-timeout' });
         return false;
