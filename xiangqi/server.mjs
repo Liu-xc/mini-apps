@@ -260,19 +260,24 @@ class PiClient {
 
     // 静默超时：模型持续吐 token 就永不掐断（合法长思考），只掐「彻底无输出」。
     // timeoutMs<=0（默认）= 无限等待，完全不设时限（2026-09-24 Leo 指令）。
+    // ⚠️ 无限时必须直接 await run——不能用已 resolve 的 Promise 参与 race（会立即放行导致假判负）。
     this.lastActivity = Date.now();
     let idleIv;
-    const idleTimeout = timeoutMs > 0
-      ? new Promise((_, rej) => {
+    let settled;
+    try {
+      if (timeoutMs > 0) {
+        const idleTimeout = new Promise((_, rej) => {
           idleIv = setInterval(() => {
             if (Date.now() - this.lastActivity > timeoutMs) {
               rej(new TurnTimeout());
             }
           }, 2000);
-        })
-      : Promise.resolve(); // 无限等待：只等 agent_settled
-    try {
-      await Promise.race([run, idleTimeout]);
+        });
+        settled = await Promise.race([run, idleTimeout]);
+      } else {
+        settled = await run;
+      }
+      if (settled && settled.error) throw settled.error; // 进程中途退出要带真实原因
     } catch (e) {
       if (e.isTimeout) {
         this._send({ type: 'abort' }).catch(() => {});
