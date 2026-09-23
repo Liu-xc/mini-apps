@@ -74,6 +74,12 @@ fun SlotCell(
             }
         }
     }
+    // it-029 C1：列表收缩（如关闭混入心愿撤走愿望卡）时把页码回卷进范围，
+    // 否则重组期 currentPage 仍指向旧末页，配合下方 getOrNull 防御双保险
+    LaunchedEffect(items.size) {
+        val last = items.lastIndex
+        if (last >= 0 && pagerState.currentPage > last) pagerState.scrollToPage(last)
+    }
 
     Column(modifier = modifier) {
         Box(
@@ -111,7 +117,8 @@ fun SlotCell(
                         .graphicsLayer { translationX = coachOffset.value.dp.toPx() }
                         .clip(RoundedCornerShape(12.dp)),
                 ) { page ->
-                    val item = items[page]
+                    // it-029 C1：收缩瞬间页码可能仍越界，跳过该页组合避免越界崩溃
+                    val item = items.getOrNull(page) ?: return@HorizontalPager
                     val wished = item.isWishSlot // it-019：愿望单品卡视觉
                     Box(
                         Modifier

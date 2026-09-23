@@ -55,6 +55,12 @@ fun WardrobeTheme(
             outlineVariant = WardrobePalette.HairlineDark,
             secondary = WardrobePalette.AccentDark,
             onSecondary = WardrobePalette.PaperDark,
+            // it-029 C2：M3 容器色阶未定义会跌回基线淡紫（导航/弹层），全部对齐墨绿纸面
+            surfaceContainerLowest = WardrobePalette.SurfaceDark,
+            surfaceContainerLow = WardrobePalette.SurfaceDark,
+            surfaceContainer = WardrobePalette.SurfaceDark,
+            surfaceContainerHigh = WardrobePalette.SurfaceDark,
+            surfaceContainerHighest = WardrobePalette.SurfaceDark,
         )
     } else {
         lightColorScheme(
@@ -73,6 +79,12 @@ fun WardrobeTheme(
             outlineVariant = WardrobePalette.Hairline,
             secondary = WardrobePalette.Accent,
             onSecondary = WardrobePalette.Paper,
+            // it-029 C2：M3 容器色阶未定义会跌回基线淡紫（导航/弹层），全部对齐纸面白
+            surfaceContainerLowest = WardrobePalette.SurfaceLight,
+            surfaceContainerLow = WardrobePalette.SurfaceLight,
+            surfaceContainer = WardrobePalette.SurfaceLight,
+            surfaceContainerHigh = WardrobePalette.SurfaceLight,
+            surfaceContainerHighest = WardrobePalette.SurfaceLight,
         )
     }
 

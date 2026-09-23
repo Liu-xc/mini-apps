@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,8 +38,27 @@ fun CommentTimeline(
     modifier: Modifier = Modifier,
 ) {
     var input by remember { mutableStateOf("") }
+    // it-029 C8：删除先确认（DESIGN.md §5.7——评论是不可再生的记忆，误触即失）
+    var pendingDelete by remember { mutableStateOf<Note?>(null) }
     val haptics = rememberHaptics()  // it-027：发送确认轻震（DESIGN.md §4）
     val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
+
+    pendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("删除这条评论？") },
+            text = { Text("删除后不可恢复。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = null
+                    onDelete(target.id)
+                }) { Text("删除", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("取消") }
+            },
+        )
+    }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         notes.forEach { note ->
@@ -62,7 +82,7 @@ fun CommentTimeline(
                         .padding(horizontal = 10.dp),
                 )
                 IconButton(
-                    onClick = { onDelete(note.id) },
+                    onClick = { pendingDelete = note },
                     modifier = Modifier.size(44.dp),  // it-028：命中区 28→44dp（DESIGN.md §2.5）
                 ) {
                     Icon(
