@@ -30,6 +30,7 @@ const els = {
   chart: byId('winrate-chart'),
   chartLegend: byId('chart-legend'),
   jevStatus: byId('jev-status'),
+  evalToggle: byId('chk-eval'),
 };
 
 let state = null;
@@ -134,6 +135,12 @@ function renderControls() {
   els.step.disabled = !active;
   els.stop.disabled = !active;
   els.pause.textContent = st === 'paused' ? '继续' : '暂停';
+  // it-002 修订：评估开关与服务端状态联动；key 缺失时禁用并提示
+  if (state) {
+    els.evalToggle.checked = state.evalEnabled !== false;
+    els.evalToggle.disabled = state.jevEnabled === false;
+    els.evalToggle.parentElement.title = state.jevEnabled === false ? '未配置 JEV_API_KEY' : '每手交给 Jev 模型评估红黑胜率';
+  }
   const turnName = state?.turn === 'r' ? '红方' : state?.turn === 'b' ? '黑方' : '';
   els.turn.textContent = st === 'over' || st === 'idle'
     ? STATUS_ZH[st]
@@ -295,14 +302,17 @@ function renderChart() {
   const legend = els.chartLegend;
   if (!svg || !state) return;
   const W = 400, H = 150, L = 26, R = 40, T = 8, B = 16;
-  els.jevStatus.textContent = state.jevEnabled === false ? '未配置 JEV_API_KEY' : 'jev-latest';
-  els.jevStatus.style.color = state.jevEnabled === false ? 'var(--error)' : '';
+  const evalOff = state.jevEnabled === false || state.evalEnabled === false;
+  els.jevStatus.textContent = state.jevEnabled === false ? '未配置 JEV_API_KEY'
+    : state.evalEnabled === false ? '评估已关闭' : 'jev-latest';
+  els.jevStatus.style.color = evalOff ? 'var(--error)' : '';
 
   const moves = state.moves || [];
   const pts = moves.filter((m) => m.eval);
   if (pts.length === 0) {
     svg.innerHTML = `<text class="empty" x="${W / 2}" y="${H / 2}" text-anchor="middle">${
-      state.jevEnabled === false ? '未配置 JEV_API_KEY（曲线停用）' : '等待评估…'}</text>`;
+      state.jevEnabled === false ? '未配置 JEV_API_KEY（曲线停用）'
+      : state.evalEnabled === false ? '评估已关闭（勾选「评估胜率」开启）' : '等待评估…'}</text>`;
     legend.textContent = '';
     return;
   }
@@ -371,7 +381,12 @@ function startGame() {
   hideError();
   els.streamR.innerHTML = '';
   els.streamB.innerHTML = '';
-  post({ action: 'start', red, black, swap: els.swap.checked }).catch((e) => showError(e.message));
+  post({
+    action: 'start',
+    red, black,
+    swap: els.swap.checked,
+    evalEnabled: els.evalToggle.checked, // it-002 修订：评估按局可选
+  }).catch((e) => showError(e.message));
 }
 
 async function loadProviders() {
@@ -408,6 +423,12 @@ els.pause.addEventListener('click', () => {
 els.step.addEventListener('click', () => post({ action: 'step' }).catch((e) => showError(e.message)));
 els.stop.addEventListener('click', () => post({ action: 'stop' }).catch((e) => showError(e.message)));
 els.exportBtn.addEventListener('click', exportGame);
+els.evalToggle.addEventListener('change', () => {
+  // 运行中即时开/关（对局未开始时仅影响下一局的开局参数）
+  if (state && (state.status === 'playing' || state.status === 'paused' || state.status === 'over')) {
+    post({ action: 'eval-toggle', enabled: els.evalToggle.checked }).catch((e) => showError(e.message));
+  }
+});
 
 initBoard();
 loadProviders();

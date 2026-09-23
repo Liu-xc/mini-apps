@@ -50,3 +50,5 @@
 - AC-2：侧栏「胜率曲线」面板：红胜率实线 + 黑胜率虚线 + 50% 基线 + 末端百分比标签与图例（含置信度）；刷新页面后曲线随 state 全量恢复。
 - AC-3：`JEV_API_KEY` 存于 `xiangqi/.env.local`（gitignore）；缺失时面板提示「未配置」且对局不受影响；key 永不进 git/HTTP 响应/日志。
 - AC-4：`JEV_DISABLED=1` 可整体关停（假模型冒烟用，不打真 API）。
+- AC-5（修订）：评估按局可选——控制条勾选框，开局参数生效、运行中可即时开关，关闭后新落子不评估。
+- AC-6（修订）：发给 Jev 的 prompt 全英文（state/instructions/criteria，历史走 ICCS），中文记谱与 UI 文案不进 prompt。

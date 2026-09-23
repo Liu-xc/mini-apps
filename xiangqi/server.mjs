@@ -416,6 +416,7 @@ const game = {
   retry: 0,
   gameNo: 0,
   lastError: '',
+  evalEnabled: true, // it-002 修订：jev 评估按局可选（开局参数/运行中可切）
 };
 
 let clients = { r: null, b: null };
@@ -438,6 +439,7 @@ function serializeState() {
     lastError: game.lastError,
     scoreboard,
     jevEnabled: jevEnabled(),
+    evalEnabled: game.evalEnabled,
     limits: { turnTimeoutMs: TURN_TIMEOUT_MS, maxRetries: MAX_RETRIES, maxPlies: MAX_PLIES },
   };
 }
@@ -476,14 +478,15 @@ function jevRequest(body, timeoutMs = 15_000) {
 async function evalPosition(moveRec, fenAfter) {
   const chess = new Xiangqi(fenAfter);
   const hist = game.moves.slice(Math.max(0, game.moves.length - 12))
-    .map((m) => m.zh).join(' ');
+    .map((m) => m.iccs).join(' ');
+  // Jev 的 prompt 必须英文（it-002 修订）：state 字段与问题/选项描述全英文
   const state = {
-    game: '中国象棋（红方先行，文件 a-i 红方视角从左到右，纵线 0 为红方底线）',
+    game: 'Chinese chess (Xiangqi). Red moves first. Files a-i run left to right from Red\'s view; rank 0 is Red\'s back rank, rank 9 is Black\'s back rank.',
     fen: fenAfter,
     board: chess.ascii(),
-    turn_now: chess.turn() === 'r' ? '红方走' : '黑方走',
-    last_move: `${moveRec.zh}(${moveRec.iccs})，走子方：${moveRec.color === 'r' ? '红' : '黑'}`,
-    recent_history: hist || '（开局）',
+    to_move: chess.turn() === 'r' ? 'Red to move' : 'Black to move',
+    last_move: `${moveRec.iccs} by ${moveRec.color === 'r' ? 'Red' : 'Black'}`,
+    recent_history_iccs: hist || '(opening position)',
   };
   const body = {
     state,
@@ -491,11 +494,11 @@ async function evalPosition(moveRec, fenAfter) {
     questions: {
       outcome: {
         type: 'choice',
-        instructions: '评估这个中国象棋局面：从头到尾完整对局的最终结局概率如何？考虑子力、王的安全、下一步走子方。',
+        instructions: 'Evaluate this Chinese chess (Xiangqi) position. What is the probability of each final outcome of the full game? Consider material balance, king safety, piece activity, immediate threats, and who moves next.',
         criteria: {
-          red_win: '红方最终获胜（将死或困毙黑方，或黑方无棋可下）',
-          draw: '和棋（双方均无取胜可能、僵持至规则和棋）',
-          black_win: '黑方最终获胜（将死或困毙红方，或红方无棋可下）',
+          red_win: 'Red ultimately wins (checkmates or stalemates Black)',
+          draw: 'Draw (neither side can force a win, or the game ends by draw rules)',
+          black_win: 'Black ultimately wins (checkmates or stalemates Red)',
         },
       },
     },
@@ -508,7 +511,7 @@ async function evalPosition(moveRec, fenAfter) {
 
 let evalChain = Promise.resolve();
 function queueEval(rec) {
-  if (!jevEnabled() || !rec) return;
+  if (!jevEnabled() || !game.evalEnabled || !rec) return; // it-002 修订：评估按局可选
   const ply = rec.ply;
   evalChain = evalChain.then(async () => {
     try {
@@ -588,7 +591,7 @@ function applyMove(iccs, by, retried) {
   game.moves.push(rec);
   game.noCapturePlies = isCapture ? 0 : game.noCapturePlies + 1;
   broadcast('move', { move: rec, fen: chess.fen(), turn: chess.turn() });
-  queueEval(rec); // it-002：异步评估本手局面胜率，回填后广播 'eval'
+  queueEval(rec); // it-002：评估开启时异步评估本手局面胜率，回填后广播 'eval'
   return rec;
 }
 
@@ -730,7 +733,7 @@ async function teardownClients() {
   await Promise.all([c.r?.stop(), c.b?.stop()]);
 }
 
-async function startGame({ red, black, swap }) {
+async function startGame({ red, black, swap, evalEnabled }) {
   if (game.status === 'playing' || game.status === 'paused') await stopGame();
   if (swap && game.red && game.black) {
     [red, black] = [game.black, game.red];
@@ -744,6 +747,7 @@ async function startGame({ red, black, swap }) {
   game.gameNo++;
   game.red = { ...red };
   game.black = { ...black };
+  game.evalEnabled = evalEnabled !== false; // 缺省开启；开局参数传 false 则本局不评估
   game.status = 'playing';
   stepPermits = 0;
 
@@ -898,7 +902,7 @@ const server = http.createServer(async (req, res) => {
           if (!body.red?.provider || !body.red?.model || !body.black?.provider || !body.black?.model) {
             throw new Error('红黑双方都需要选择 provider/model');
           }
-          await startGame({ red: body.red, black: body.black, swap: Boolean(body.swap) });
+          await startGame({ red: body.red, black: body.black, swap: Boolean(body.swap), evalEnabled: body.evalEnabled });
           break;
         }
         case 'pause':
@@ -934,6 +938,11 @@ const server = http.createServer(async (req, res) => {
           break;
         case 'stop':
           await stopGame();
+          break;
+        case 'eval-toggle': // it-002 修订：运行中开/关 jev 评估
+          game.evalEnabled = body.enabled !== false;
+          log(`jev 评估已${game.evalEnabled ? '开启' : '关闭'}`);
+          broadcast('state', { state: serializeState() });
           break;
         case 'human': {
           const rec = humanMove(body);

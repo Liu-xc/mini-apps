@@ -13,6 +13,8 @@ it-001 让两个模型对弈后，观战只能靠看棋评「感觉」谁占优�
   - AC-2：侧栏「胜率曲线」面板：红胜率线（红）+ 黑胜率线（黑）+ 50% 基线，落子即更新；刷新页面后历史曲线随 state 全量恢复。
   - AC-3：key 缺失时面板显示「未配置 JEV_API_KEY」且对局不受影响；key 存于 `xiangqi/.env.local`（gitignore，永不入 git/日志）。
   - AC-4：导出棋谱每手附评估值（如有）。
+  - AC-5（修订 2026-09-24 Leo 指令）：**评估按局可选**——控制条「评估胜率」勾选框，开局随参数生效、运行中可即时开关（`eval-toggle`），关闭后新落子不评估、面板显示「评估已关闭」。
+  - AC-6（修订同上）：**发给 Jev 的 prompt 全英文**——state 字段（game/fen/board/to_move/last_move/recent_history_iccs）、instructions、criteria 均英文；中文记谱与 UI 文案不进 prompt。
 
 ## 技术要点（契约已核对 docs.typesafe.ai）
 
@@ -38,3 +40,5 @@ it-001 让两个模型对弈后，观战只能靠看棋评「感觉」谁占优�
 - **AC-4**：`tools/smoke.mjs` 注入 `JEV_DISABLED=1`，回归双阶段 **PASS**（300 手 draw-max + 33 次重试，零真评估调用）。
 
 **遗留候选**：评估点为异步乱序回填，极端情况曲线中段可能先亮后段（ply 定位已保证不串位）；jev 对复杂中局的校准质量可后续用对局结果做回验。
+
+**修订验证（2026-0024 当日，AC-5/AC-6）**：mock 局三态实测——① `start(evalEnabled:false)` → 手动走子 `lastEval=None`（无评估）；② `eval-toggle on` → 下一手 `红20/和62/黑18` 回填 PASS；③ `toggle off` → `evalEnabled:false` 生效。英文 prompt 已按 AC-6 落地（代码字面量全英文，历史改走 ICCS 序列）。修掉实施期一个引用错误（`startGame` 解构作用域缺 `evalEnabled` 参数，HTTP 报 `body is not defined`）。
