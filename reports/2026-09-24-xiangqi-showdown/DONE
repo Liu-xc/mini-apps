@@ -1,0 +1,17 @@
+2026-09-23T22:21:10.797Z
+[
+  {
+    "id": "A",
+    "result": {
+      "winner": "b",
+      "reason": "checkmate"
+    }
+  },
+  {
+    "id": "B",
+    "result": {
+      "winner": "r",
+      "reason": "checkmate"
+    }
+  }
+]
