@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>衣橱 WARDROBE · UI 审查落地验证报告 · 2026-09-23</title>
+<style>
+@page { size: 210mm 297mm; margin: 0; }
+html, body { margin: 0; padding: 0; width: 210mm; background: #F7F8FA;
+  font-family: "Hiragino Sans GB","PingFang SC","Heiti SC",sans-serif;
+  color: #1D2129; line-break: strict; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { box-sizing: border-box; }
+.page { width: 210mm; height: 297mm; overflow: hidden; position: relative;
+  padding: 12mm 14mm 10mm; background: #F7F8FA; break-after: page;
+  display: flex; flex-direction: column; }
+.page:last-child { break-after: auto; }
+img { display: block; }
+.cover { padding: 18mm 16mm 16mm; background: #FFFFFF; }
+.cover .kicker { font-size: 10pt; letter-spacing: 3pt; color: #86909C; font-weight: 600; }
+.cover .hairline { width: 30mm; height: 0; border-top: 0.7mm solid #2F6BFF; margin-top: 7mm; }
+.cover h1 { font-size: 38pt; font-weight: 800; letter-spacing: 1pt; margin: 24mm 0 0; }
+.cover h1.mid { font-size: 34pt; margin-top: 30mm; }
+.cover .sub { font-size: 14pt; color: #4E5969; margin-top: 7mm; }
+.cover .summary { font-size: 10.5pt; line-height: 1.75; color: #4E5969; margin-top: 16mm; width: 108mm; }
+.cover .phones { display: flex; gap: 6mm; margin-left: auto; margin-top: auto; }
+.cover .phone { width: 34mm; height: 75.6mm; border: 0.5mm solid #C9CDD4; border-radius: 4.5mm;
+  padding: 2.2mm; background: #FFFFFF; }
+.cover .phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 2.5mm; }
+.cover .meta { display: flex; gap: 10mm; font-size: 9.5pt; color: #86909C;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 6mm; margin-top: 12mm; }
+.cover .meta b { color: #1D2129; font-weight: 600; }
+.phead { display: flex; align-items: baseline; gap: 4mm; border-bottom: 0.45mm solid #E5E6EB;
+  padding-bottom: 3.5mm; margin-bottom: 4mm; }
+.phead .no { font-size: 13pt; font-weight: 800; color: #2F6BFF; }
+.phead .t { font-size: 14.5pt; font-weight: 700; }
+.phead .sev { margin-left: auto; font-size: 8.5pt; color: #86909C; }
+.pfoot { display: flex; font-size: 8pt; color: #A9AEB8;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 2.5mm; margin-top: auto; }
+.concl { font-size: 10pt; line-height: 1.65; margin: 0 0 4mm; }
+.lead { font-size: 10pt; line-height: 1.75; color: #4E5969; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; color: #fff; border-radius: 1.2mm;
+  padding: 0.3mm 1.6mm; margin-right: 1.6mm; vertical-align: 0.3mm; }
+.tag.p0 { background: #F53F3F; } .tag.p1 { background: #FF7D00; } .tag.p2 { background: #86909C; }
+.ok { color: #00B42A; font-weight: 800; }
+.shots { display: flex; gap: 6mm; align-items: flex-start; flex: 1; }
+.shots.pair { justify-content: center; gap: 8mm; }
+.shotcol { width: 76mm; }
+.shotcol img { width: 76mm; height: 168.9mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; background: #fff; }
+.shotcol.sm { width: 56mm; }
+.shotcol.sm img { width: 56mm; height: 124.4mm; }
+.shotlabel { display: flex; align-items: center; gap: 2mm; margin-top: 2.2mm; font-size: 9pt; font-weight: 700; }
+.shotlabel .dot { width: 2.6mm; height: 2.6mm; border-radius: 50%; }
+.d-now { background: #F53F3F; } .d-new { background: #2F6BFF; }
+.shotlabel span.cap { font-weight: 400; color: #86909C; font-size: 8pt; margin-left: auto; }
+.points { flex: 1; display: flex; flex-direction: column; gap: 2.6mm; }
+.pband { display: flex; flex-wrap: wrap; gap: 2.2mm 6mm; margin-top: 3mm; }
+.pband .pt { width: calc(50% - 3mm); }
+.pt { font-size: 8.8pt; line-height: 1.5; color: #4E5969; }
+.pt .n { display: inline-flex; width: 5mm; height: 5mm; border-radius: 50%; background: #2F6BFF;
+  color: #fff; font-size: 8pt; font-weight: 700; align-items: center; justify-content: center;
+  margin-right: 1.8mm; vertical-align: -1mm; }
+table { border-collapse: collapse; width: 100%; }
+th { font-size: 8.5pt; text-align: left; color: #86909C; font-weight: 600;
+  border-bottom: 0.45mm solid #C9CDD4; padding: 1.5mm 2mm; }
+td { font-size: 8.6pt; line-height: 1.38; padding: 1.3mm 2mm; border-bottom: 0.3mm solid #E5E6EB;
+  vertical-align: top; }
+td.c { text-align: center; }
+.h2 { font-size: 13pt; font-weight: 800; margin: 4.5mm 0 2.5mm; }
+.h2:first-child { margin-top: 0; }
+.statrow { display: flex; gap: 5mm; margin: 5mm 0; }
+.stat { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 4mm; }
+.stat .v { font-size: 22pt; font-weight: 800; color: #2F6BFF; }
+.stat .l { font-size: 8.5pt; color: #86909C; margin-top: 1mm; }
+.mrow { display: flex; gap: 4mm; margin: 2mm 0; }
+.mcard { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 3.5mm; }
+.mcard b { font-size: 9.5pt; display: block; margin-bottom: 1.5mm; }
+.mcard p { margin: 0; font-size: 8.6pt; line-height: 1.6; color: #4E5969; }
+.note { background: #EFF4FF; border: 0.3mm solid #BECCFF; border-radius: 2.5mm;
+  padding: 3mm 4mm; font-size: 8.8pt; line-height: 1.6; color: #4E5969; margin-top: 3mm; }
+.note b { color: #1D2129; }
+</style></head>
+<body>
+<section class="page cover">
+  <div class="kicker">IMPLEMENTATION REVIEW</div>
+  <div class="hairline"></div>
+  <h1>衣橱 UI 审查 · 落地验证</h1>
+  <div class="sub">it-029 / it-030 / it-031 · 共性问题 C1–C10 全项复验</div>
+  <div class="summary">Leo 对 2026-09-23 衣橱 UI 审查报告拍板「实施」后，三个迭代分批落地：止血（P0 崩溃 / 评论删除确认 / 导航弹层色阶）、去 emoji 与实体名衬线纪律、版式收拢（W1 名称条 / W8 翻页器 / W10 吸底动作栏 / W7 按钮层级 / W9 空态行动）。本报告为逐项模拟器复验记录：C1–C10 全部通过，构建与单测绿，证据截图为最新构建实机采集。</div>
+  <div class="phones"><div class="phone"><img src="v31-w1d.png" alt=""></div><div class="phone"><img src="v31-records.png" alt=""></div></div>
+  <div class="meta">
+    <span>日期 <b>2026-09-23</b></span><span>范围 <b>3 迭代 · 10 项共性问题 · 6 页复验</b></span>
+    <span style="margin-left:auto">提交 df6ffba → 605d83b → 90c2387</span>
+  </div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">01</span><span class="t">总览 · C1–C10 落地复验表</span>
+    <span class="sev">全项通过</span></div>
+  <p class="lead">三个迭代对应审查报告的三组问题；每项以模拟器实测（uiautomator dump / logcat）、截图对照或源码核对复验。<span class="ok">✓</span> = 验收通过；备注列记录口径勘定与保留项。</p>
+  <div class="statrow"><div class="stat"><div class="v">10/10</div><div class="l">共性问题落地</div></div><div class="stat"><div class="v">3</div><div class="l">迭代提交</div></div><div class="stat"><div class="v">0</div><div class="l">复验 FATAL</div></div><div class="stat"><div class="v">绿</div><div class="l">构建 + 单测</div></div></div>
+  <table>
+    <tr><th style="width:9mm">#</th><th style="width:24mm">迭代</th><th>落地内容</th><th style="width:44mm">复验方式</th><th style="width:12mm">结果</th></tr>
+    <tr><td class='c'><b>C1</b></td><td>it-029 止血</td><td>混入心愿关闭时 pager 页码回卷，items[page] 不再越界（P0）</td><td>愿望卡在场开关混入、格位增删来回走查</td><td class='c'><span class="ok">✓</span> FATAL=0</td></tr>
+    <tr><td class='c'><b>C8</b></td><td>it-029 止血</td><td>评论删除出「删除这条评论？」确认对话框（§5.7 红线回正）</td><td>实测：确认后 评论（1）→（0），取消不动</td><td class='c'><span class="ok">✓</span></td></tr>
+    <tr><td class='c'><b>C2</b></td><td>it-029 止血</td><td>surfaceContainer 五档覆盖，导航/弹层紫灰 → 纸感家族</td><td>浅色走查目视正常；深色为 token 级等比替换</td><td class='c'><span class="ok">✓</span> 备注 1</td></tr>
+    <tr><td class='c'><b>C3</b></td><td>it-030 字体/图标</td><td>功能图标 emoji → Material Icons；文本提示语 emoji 清零（含补遗 6 处）</td><td>截图核对 + 全仓字符串字面量扫描清零</td><td class='c'><span class="ok">✓</span> 备注 2</td></tr>
+    <tr><td class='c'><b>C4</b></td><td>it-030 字体/图标</td><td>衣物卡 / 心愿卡 / 穿搭卡实体名统一衬线 Title（单行省略）</td><td>截图核对（记录页 / 回顾页 / 衣橱卡）</td><td class='c'><span class="ok">✓</span></td></tr>
+    <tr><td class='c'><b>C5</b></td><td>it-031 版式</td><td>W1 名称条名称优先 + 纯 n/n 角标（可点翻页）+ 12dp 间距</td><td>实测：全名无截断；点角标 2/2→1/2 不进详情</td><td class='c'><span class="ok">✓</span> 勘定见 05</td></tr>
+    <tr><td class='c'><b>C6</b></td><td>it-031 版式</td><td>W8 翻页胶囊外置卡下方居中，两侧圆钮废止</td><td>截图：帽行无遮挡（现状七成被压 → 零遮挡）</td><td class='c'><span class="ok">✓</span></td></tr>
+    <tr><td class='c'><b>C7</b></td><td>it-031 版式</td><td>W7「今天穿了这套」唯一实底主按钮，复制长图降描边</td><td>截图核对详情页底部动作区</td><td class='c'><span class="ok">✓</span></td></tr>
+    <tr><td class='c'><b>C9</b></td><td>it-031 版式</td><td>W10 种草表单「滚动区 + 固定动作栏」，收进想买吸底常驻</td><td>截图：初始视口即见主按钮（现状需滚动）</td><td class='c'><span class="ok">✓</span></td></tr>
+    <tr><td class='c'><b>C10</b></td><td>it-031 版式</td><td>W9 打卡空态卡增「去打卡」行动按钮</td><td>实测：点击直达穿搭记录 Tab</td><td class='c'><span class="ok">✓</span></td></tr>
+  </table>
+  <div class="note"><b>备注 1</b>：深色档为 token 级等比替换，浅色走查目视正常，深色未单独像素采样复验。<b>备注 2</b>：品类 emoji chips 系 it-012 spec 决策，按审查建议留待 Leo 专项裁决，本轮不动；保留项（头像选择 emoji、it-026 的 ✓/✗ 符号分层）已在迭代文档备案理由。</div>
+  <div class="note"><b>spec 同步</b>：spec 02 新增「it-029~031 交互注记」、CHANGELOG 三条、三份迭代文档「验证记录」均已回填，状态「已完成」。单测 <b>assembleDebug + testDebugUnitTest 全绿</b>。</div>
+  <div class="pfoot"><span>落地验证 · 衣橱</span><span style="margin-left:auto">1</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">02</span><span class="t">W1 搭配页 · C5 名称条复验</span>
+    <span class="sev">现状 → 落地后</span></div>
+  <p class="concl">窄格名称从截断 1–2 字到全名完整，品类前缀废止、序号角标由伪按钮变可点翻页，格间距断开深色长带；一屏高度未破。</p>
+  <div class="shots pair">
+    <div class="shotcol"><img src="assets/wardrobe-01-outfit.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>审查现状<span class="cap">截断 · 零间距 · 伪按钮</span></div></div>
+    <div class="shotcol"><img src="v31-w1d.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>落地后<span class="cap">最新构建实机</span></div></div>
+  </div>
+  <div class="pband">
+    <div class="pt"><span class="n">1</span>名称优先（加粗、单行省略）：手提包 / 牛津纺衬衫 / 直筒牛仔裤全名完整显示，品类前缀废止（品类由格位 + 图片承载）</div>
+    <div class="pt"><span class="n">2</span>右侧纯「n/n」序号角标改为可点循环翻页。实测点帽子位角标 2/2→1/2，不再穿透进单品详情（审查 P1 伪按钮闭环）</div>
+    <div class="pt"><span class="n">3</span>相邻格间距 12dp，深色名称条不再连成长带；✕ 换 Material Close 图标（原文字 ✕ 被 fallback 全宽渲染占 32dp）</div>
+    <div class="pt"><span class="n">4</span>格宽 =（行宽 − 24dp）/ 3，仅包/配饰小格系数 0.55→0.85；帽/下/鞋原比例不动，三区 + 底部动作栏一屏全显</div>
+    <div class="pt"><span class="n">5</span>过程记录：rev1 曾把全部格子比例放至 1.55 解截断，顶破一屏（底部行溢出折叠线），已回退为仅放大窄格</div>
+  </div>
+  <div class="pfoot"><span>落地验证 · 衣橱</span><span style="margin-left:auto">2</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">03</span><span class="t">W8 穿搭记录 · C6 翻页器复验</span>
+    <span class="sev">现状 → 落地后</span></div>
+  <p class="concl">翻页胶囊从拼贴浮层移出、置于卡片下方居中，帽行从七成被压到零遮挡；两侧重复圆钮删除，保留胶囊可点 + 横滑两种翻张方式。</p>
+  <div class="shots pair">
+    <div class="shotcol"><img src="assets/wardrobe-12-records.png" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>审查现状<span class="cap">胶囊压帽行</span></div></div>
+    <div class="shotcol"><img src="v31-records.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>落地后<span class="cap">最新构建实机</span></div></div>
+  </div>
+  <div class="pband">
+    <div class="pt"><span class="n">1</span>胶囊 ‹1/5› 位于卡片下方居中（红线之下、网格之上），拼贴主视觉完整无控件叠压</div>
+    <div class="pt"><span class="n">2</span>it-015 修订二的「两侧 ‹ › 圆钮」废止，同屏三套翻页语义收敛为两套（胶囊 + 横滑），‹n/m› 卡序记号沿 it-011 保留</div>
+    <div class="pt"><span class="n">3</span>空槽对比同步加深（BodyCollage「未配X」虚线 + ink 级文字，违 §5.8 的灰弱感消除）</div>
+    <div class="pt"><span class="n">4</span>胶囊可点循环翻张，横滑保留；dump 中胶囊 clickable=true</div>
+  </div>
+  <div class="pfoot"><span>落地验证 · 衣橱</span><span style="margin-left:auto">3</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">04</span><span class="t">W7 / W10 / W9 · C7 · C9 · C10 复验</span>
+    <span class="sev">三页对照</span></div>
+  <p class="concl">打卡按钮层级、种草表单吸底、空态行动三个「功能在但主路径不顺」的问题一次收拢，以下均为最新构建实机截图。</p>
+  <div class="shots">
+    <div class="shotcol sm"><img src="v31-detail-bottom.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>W7 按钮层级<span class="cap">C7</span></div>
+      <div class="points" style="margin-top:2.5mm">
+        <div class="pt">「今天穿了这套」为页面唯一全宽实底主按钮；「复制长图」降为描边次按钮，主次一眼可分（it-018 全宽实心回正）。</div>
+      </div></div>
+    <div class="shotcol sm"><img src="v31-w10.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>W10 吸底动作栏<span class="cap">C9</span></div>
+      <div class="points" style="margin-top:2.5mm">
+        <div class="pt">表单区独立滚动 + 底部固定动作栏：初始视口即见「收进想买」主按钮（现状需滚动才出现、末行被截断），任何滚动位置可见可点。</div>
+      </div></div>
+    <div class="shotcol sm"><img src="v31-recap.png" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>W9 空态行动<span class="cap">C10</span></div>
+      <div class="points" style="margin-top:2.5mm">
+        <div class="pt">「还没有穿搭打卡」空态卡增实底「去打卡」按钮，实测点击直达穿搭记录 Tab，空态从说明文变成入口（§5.8 回正）。</div>
+      </div></div>
+  </div>
+  <div class="pfoot"><span>落地验证 · 衣橱</span><span style="margin-left:auto">4</span></div>
+</section>
+<section class="page">
+  <div class="phead"><span class="no">05</span><span class="t">口径勘定 · emoji 补遗 · 备案</span></div>
+  <p class="lead">实施过程中有三处需要留痕的判断：审查报告与线框的口径冲突、it-030 验收复核清出的漏网项、以及不改写历史的提交切分备注。</p>
+  <div class="h2">一、C5 口径勘定（报告文字 vs 线框画稿）</div>
+  <table>
+    <tr><th style="width:30mm">出处</th><th>说法</th></tr>
+    <tr><td><b>审查报告 C5 文字</b></td><td>「名称优先，品类并入右侧计数角标，杜绝截断」</td></tr>
+    <tr><td><b>改版线框画稿</b></td><td>名称条 = 名称加粗 + 纯序号「n/n」，无品类前缀（Leo 过目件）</td></tr>
+    <tr><td><b>裁定</b></td><td><b>以线框为准</b>。「杜绝截断」是绑定验收：rev1 实测小格名称槽 0 宽，物理上塞不下「名称 + 品类 n/n + ✕」；品类信息已由格位 + 图片承载。it-031 的 US-31a 与验收标准已按此回正，勘定全文见 it-031 验证记录。</td></tr>
+  </table>
+  <div class="h2">二、it-030 补遗：文本提示语 emoji 清零 6 处</div>
+  <table>
+    <tr><th style="width:44mm">位置</th><th>处理</th></tr>
+    <tr><td>Wishlist「📋 复制长图」按钮</td><td>C3 明确点名的带文字 emoji 按钮（首轮漏项）→ Material ContentCopy 图标 + 文字，与 W7 同款</td></tr>
+    <tr><td>W5 / W7「💬 评论（N）」标题 ×2</td><td>去 💬，标题纯文字（复验：评论（0）前无 emoji）</td></tr>
+    <tr><td>数据包「📦 文件名」「⚠ N 件…」、Wishlist「🔗 域名 ↗」</td><td>去前缀；⚠ 的警示语义已由琥珀色 SymUpdate 承载</td></tr>
+  </table>
+  <div class="h2">三、备案（不改写历史 / 未尽项）</div>
+  <table>
+    <tr><th style="width:34mm">事项</th><th>说明</th></tr>
+    <tr><td><b>提交切分瑕疵</b></td><td>C7 / C10 两文件编辑在工作区时被 it-030 提交（605d83b）一并扫入；功能与验收不受影响，已在 it-029/031 验证记录双向备案</td></tr>
+    <tr><td><b>未实机点检项</b></td><td>Wishlist「📋」按钮所在心愿穿搭弹层当前无数据（心愿穿搭 0），以编译 + 同款已验证惯用法代码复核</td></tr>
+    <tr><td><b>保留项</b></td><td>头像选择 emoji（内容选择器）、it-026 ✓/✗ 符号分层（spec 决策）、品类 emoji chips（it-012，待专项裁决）</td></tr>
+    <tr><td><b>推送状态</b></td><td>本地产物含 CI 工作流变更，gh OAuth token 缺 workflow scope 暂未推送；待 <b>gh auth refresh -s workflow</b> 后一并上库</td></tr>
+  </table>
+  <div class="pfoot"><span>落地验证 · 衣橱</span><span style="margin-left:auto">5</span></div>
+</section></body></html>
