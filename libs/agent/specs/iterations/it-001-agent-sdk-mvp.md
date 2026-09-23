@@ -1,6 +1,6 @@
 # it-001 · agent SDK MVP（BYOK 传输层 + Agent Loop）
 
-- **状态**：**已确认（2026-09-23 Leo 拍板自研），M0 进行中，未写 SDK 代码**。设计见 [../00-architecture.md](../00-architecture.md)，决策见 [../06-decisions.md](../06-decisions.md)。
+- **状态**：**进行中——M1 传输层已完成（2026-09-23，32 单测全绿）；M0 spike 顺延（key 授权被拒 / MiMo 未注册），不阻塞 M2**。设计见 [../00-architecture.md](../00-architecture.md)，决策见 [../06-decisions.md](../06-decisions.md)。
 - **类型**：新公共 SDK（libs/agent），跨 app（wardrobe / eats / clips 皆可消费）；**本迭代不含任何 app 接入**（M3 归消费方 app 的 it-XXX）。
 
 ## 背景与动机
@@ -71,4 +71,9 @@ M0 spike（半会话）→ M1 传输层 → M2 agent loop →（M3 归消费方 
 
 ## 验证记录
 
-（待回填：单测数、M0 spike 实调结论、构建产物）
+### M1 传输层（2026-09-23）
+- 单测 **32/32 绿**：StreamAssembler 6、SseDecoder 5、OkHttpChatModel（MockWebServer 契约）12、FakeChatModel 4、ProvidersAndKeys 5
+- 覆盖：SSE 解析（多行 data / CRLF / 注释 / flush 兜底）、tool_calls 分片聚合、reasoning_content→ThinkingDelta（quirks 开关）、未知载荷容错、路径拼接（/v1 与无 /v1 两种 preset）、鉴权头、请求体序列化（视觉 parts / max_tokens / system 角色）、错误映射（401→Auth、429+Retry-After→RateLimit、400 余额→Quota、400→Schema、5xx→Provider）、未配 key→Auth、FakeChatModel 脚本回放与请求记录
+- 构建：独立 composite 构建（store 同款接线）；根版本表新增 `okhttp-mockwebserver` 与 `leo-agent` 坐标；构建用 `JAVA_HOME=homebrew openjdk@17`
+- 实现与设计的偏差：单模块落地未拆 android/（ApiKeyStore 平台实现归 app 层）；SSE 自解析未引 okhttp-sse——均已注记 ADR-003/004
+- **M0 spike 顺延**：GLM 脚本就绪（`tools/spike-glm.sh`，key 在 island 钥匙串，`security` 读取授权被拒后不再自动尝试，待手动跑）；MiMo 待注册开放平台（`tools/spike-mimo.sh`）。preset「待校准」字段不阻塞 M2

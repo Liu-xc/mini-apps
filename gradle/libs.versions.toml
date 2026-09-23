@@ -28,6 +28,7 @@ swipeableCards = "1.1.4"            # carddeck 薄封装的三方库（JitPack�
 leoStore = "0.1.0"                  # composite build 内坐标（与 libs/store version 一致）
 leoCarddeck = "0.1.0"
 leoCutout = "0.1.0"
+leoAgent = "0.1.0"                  # composite build 内坐标（与 libs/agent version 一致）
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
@@ -60,12 +61,14 @@ osmdroid-android = { module = "org.osmdroid:osmdroid-android", version.ref = "os
 onnxruntime = { module = "com.microsoft.onnxruntime:onnxruntime", version.ref = "onnxruntime" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 junit = { module = "junit:junit", version.ref = "junit" }
 swipeable-cards = { module = "com.github.smartword-app:compose-swipeable-cards", version.ref = "swipeableCards" }
 
 leo-store = { module = "com.leo.libs:store", version.ref = "leoStore" }
 leo-carddeck = { module = "com.leo.libs:carddeck", version.ref = "leoCarddeck" }
 leo-cutout = { module = "com.leo.libs:cutout", version.ref = "leoCutout" }
+leo-agent = { module = "com.leo.libs:agent", version.ref = "leoAgent" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

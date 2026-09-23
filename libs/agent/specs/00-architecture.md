@@ -1,6 +1,14 @@
 # 00 · agent 架构设计（BYOK 直连 + Agent Loop SDK）
 
-- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）。M0 spike 进行中：GLM 真调已就绪（key 取自 island 钥匙串，需授权一次）、MiMo 待 API Key；契约以实调校准回填 §5 为准（沿用 island it-001 的 M0 先例）。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
+- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）；**M1 传输层已落地**（2026-09-23，32 个 JVM 单测全绿，见 §0）。M0 spike 顺延：钥匙串授权被拒、MiMo key 未注册，preset 中「待校准」字段不阻塞 M2，spike 脚本（tools/）就绪随时手动可跑。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
+
+## 0. 实现状态（M1 传输层，2026-09-23）
+
+**单模块落地**（未拆 core/android，与 store/cutout 同例）：全部代码在 `src/main`，纯 Kotlin JVM；`ApiKeyStore` 的平台加密实现（Keystore/EncryptedSharedPreferences）归消费 app 层在 M3 注入（cutout ADR-002 同款取舍，ADR-003 已注记）。**SSE 自解析**拍板：未引 okhttp-sse，`SseDecoder` + `StreamAssembler` 纯 Kotlin 可单测（ADR-004 注记）；新增依赖仅测试期 mockwebserver。
+
+已交付：Message/Part（含 image_url 视觉位）/ToolCall 模型、ChatModel 接口（complete + `Flow<ChatEvent>` 流式）、AgentError 六分类与 HTTP 映射、ProviderPreset/Quirks/Providers、SseDecoder/StreamAssembler（tool_calls 分片聚合、reasoning_content→ThinkingDelta、未知载荷容错）、OkHttpChatModel、FakeChatModel（testing 包——「CI 永不打真 API」的关键件，亦可作 app 演示模式离线模型）。
+
+待 M0 校准回填：GLM/MiMo 确切模型可用性与名称、MiMo baseUrl（现留空占位）、tool_call_id 回喂稳定性、response_format 支持度、免费档是否存在。
 - **一句话**：各 app 内嵌 AI Agent 的公共底座——用户自带 API Key（BYOK）直连模型厂商，单一 OpenAI 兼容传输层打天下，内置 agent loop（工具调用）、流式事件流、会话持久化、用量记账；零业务概念。
 
 ## 1. 调研结论：为什么自研薄核（2026-09 盘点）
@@ -34,13 +42,12 @@
 
 ```
 libs/agent/
-├─ core/     纯 Kotlin：ChatModel 接口 + OpenAI 兼容传输 + AgentRunner + Tool DSL + 会话/上下文 + FakeChatModel
-├─ android/  KeystoreApiKeyStore（Keystore 主密钥 + AES-GCM 加密落盘）
+├─ src/      纯 Kotlin JVM 单模块（M1 落地形态，未拆 core/android，见 §0）：传输 + 事件流 + FakeChatModel
 ├─ tools/    M0 spike 脚本（真实实调校准契约）
 └─ specs/    本设计 + 决策记录 + 迭代
 ```
 
-依赖铁律：`android → core`；core 不 import Android/app 类型；**agent 与 store/sync/cutout/carddeck 互不依赖**——会话持久化经 `SessionStore` 接口注入，app 侧可用 SnapshotStore 实现，也可用 SDK 默认文件实现。
+依赖铁律：core 不 import Android/app 类型（单模块形态下同样成立）；**agent 与 store/sync/cutout/carddeck 互不依赖**——会话持久化经 `SessionStore` 接口注入，app 侧可用 SnapshotStore 实现，也可用 SDK 默认文件实现。
 
 ## 4. 核心 API（草图，定名以实现为准）
 
@@ -170,6 +177,6 @@ App 设置页：选厂商 → 贴 key → 「连通性自检」（列模型或 1
 ## 12. 开放问题（待 Leo 定）
 
 1. **首个消费方**：eats「吃啥参谋」（数据面小、闭环快）vs wardrobe「穿搭顾问」（价值大、工具重）vs clips（剪贴板摘要整理）。
-2. **MiMo 官方平台**（mimo.mi.com）注册门槛/计费是否顺手；不顺手则走第三方托管（仅换 preset 数据）。
+2. **MiMo 官方平台**（mimo.mi.com）注册门槛/计费是否顺手；不顺手则走第三方托管（仅换 preset 数据）。spike 脚本 `tools/spike-mimo.sh` 就绪：`MIMO_API_KEY` + `MIMO_BASE_URL` 两个环境变量即可跑。
 3. **视觉输入**：MVP 只保留 content parts 结构（OpenAI 格式自带 image_url），识衣/识菜后置到消费方迭代——是否同意。
 4. **目录惯例**：libs 首次出现 `specs/iterations/`（本 SDK 跨 app、无单一归属迭代）——是否认可。

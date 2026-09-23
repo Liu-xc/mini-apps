@@ -1,6 +1,6 @@
 # 06 · agent 决策记录
 
-> 状态：ADR-001 已于 2026-09-23 由 Leo 拍板（自研）；其余随 M0/M1 落地转正，定名/参数以实现为准。
+> 状态：ADR-001 于 2026-09-23 由 Leo 拍板（自研）；ADR-002~005 已随 M1 落地生效（定名以实现为准）；M0 spike 顺延（见 [00-architecture.md](00-architecture.md) §0）。
 
 ## ADR-001 · 自研薄核，不引入 Koog / LangChain4j（2026-09-23，it-001）
 
@@ -20,13 +20,13 @@
 ## ADR-003 · BYOK 直连无后端 + 密钥红线（2026-09-23，it-001）
 
 - **备选否决**：自建代理后端（统一计费/换 key）——个人应用无运维预算，且多一层用户数据出域顾虑。
-- **结论**：App 直连厂商。key 仅存本地：`android/` 提供 `KeystoreApiKeyStore`（Keystore 主密钥 + AES-GCM 落盘），core 只见 `ApiKeyStore` 接口。红线三条：数据包导出永不带 key；演示模式永不挂真 key；日志只出 mask。
+- **结论**：App 直连厂商。key 仅存本地：core 只见 `ApiKeyStore` 接口；SDK 单模块落地未含 android/（cutout ADR-002 同例），Keystore 加密实现（Keystore 主密钥 + AES-GCM 落盘）由消费 app 在 M3 提供并注入。红线三条：数据包导出永不带 key；演示模式永不挂真 key；日志只出 mask（`maskApiKey`）。
 - **后果**：换机需重新贴 key（个人应用可接受）；用户网络环境直连厂商可能需自备代理（用户侧已知问题，错误分类给可读提示）。
 
 ## ADR-004 · OkHttp + SSE + kotlinx.serialization（2026-09-23，it-001）
 
 - **备选否决**：Ktor client（多引擎配置与体积成本）；Retrofit（面向 REST 接口，SSE 流式非所长）。
-- **结论**：OkHttp 4.12（根版本表现成条目，Coil 传递依赖已在）+ `okhttp-sse`（或自解析 event-stream，M1 定）+ kotlinx.serialization（store 同款）。
+- **结论**：OkHttp 4.12（根版本表现成条目，Coil 传递依赖已在）+ **SSE 自解析**（`SseDecoder`，纯 Kotlin 可单测、quirks 可控）——M1 拍板未引 okhttp-sse；协议契约用 mockwebserver 测试（仅测试依赖）。
 - **后果**：core 纯 JVM 可跑（桌面全量自测、未来桌面端复用）；无新增大依赖。
 
 ## ADR-005 · 事件流 Flow&lt;AgentEvent&gt; + 会话存储接口注入（2026-09-23，it-001）
