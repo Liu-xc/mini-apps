@@ -21,6 +21,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,18 +40,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.ui.theme.editorialColors
+import kotlinx.coroutines.launch
 import java.io.File
 
 /**
  * 着装位卡片（it-005 人体布局；it-011 O6 可发现性）：
- * 格内 HorizontalPager 左右滑换衣；左上品类徽标、右上 ‹ n/n › 序号胶囊
- * （chevron 明示可翻）、卡底名称遮罩条；空品类为 ＋ 占位。
+ * 格内 HorizontalPager 左右滑换衣；卡底名称条=名称优先（加粗），右侧纯序号「n/n」可点翻页
+ * （it-031 C5 rev2，品类由格位+图片承载）、✕ 移除该格；空品类为 ＋ 占位。
  * coach=true 时首次进入做 ~150ms 左右微移示意（纯视觉位移，不触碰 pager 状态）。
  * aspect 为宽/高比，由着装位决定（帽近方、上身竖长、下装通栏、鞋扁平）。
  */
@@ -69,6 +73,7 @@ fun SlotCell(
 ) {
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
+    val flipScope = rememberCoroutineScope()  // it-031：名称条计数可点翻页
     LaunchedEffect(coach) {
         if (coach && items.size > 1) {
             repeat(2) {
@@ -203,48 +208,53 @@ fun SlotCell(
                                     },
                             )
                         }
-                        // it-012：品类徽标并入卡底名称条，‹ n/n › 独占右上（R2 双胶囊竞争）
-                        // 序号胶囊（右上，it-011 O6：‹ n/n › 明示可翻）
-                        Surface(
-                            color = Color(0x73000000),
-                            shape = RoundedCornerShape(topEnd = 12.dp, bottomStart = 8.dp),
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        ) {
-                            Text(
-                                "‹ ${pagerState.currentPage + 1}/${items.size} ›",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
-                        // 当前单品名（卡底遮罩条）；右端 ✕ 移除该格（it-015 修订：增删能力）
-                        Box(
+                        // it-031 C5 rev2：名称优先（审查线框画稿：名称加粗主位 + 纯序号角标）——
+                        // 品类不再进名称条（格位+图片已承载），杜绝名称截断；角标可点翻页（循环），
+                        // 替代原右上纯展示胶囊（审查 P1：胶囊看似可点实为穿透）；✕ 移除该格（it-015）
+                        Row(
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
-                                .background(Color(0x8C000000)),
+                                .background(Color(0x8C000000))
+                                .padding(horizontal = 4.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                buildString {
-                                    append(category.label)
-                                    items.getOrNull(pagerState.currentPage)?.name?.let { append(" · $it") }
-                                },
+                                items.getOrNull(pagerState.currentPage)?.name.orEmpty(),
                                 style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "${pagerState.currentPage + 1}/${items.size}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.8f),
+                                maxLines = 1,
                                 modifier = Modifier
-                                    .padding(horizontal = 6.dp, vertical = 3.dp)
-                                    .padding(end = if (onRemove != null) 30.dp else 0.dp),
+                                    .padding(horizontal = 2.dp)
+                                    .clickable {
+                                        if (items.size > 1) {
+                                            flipScope.launch {
+                                                pagerState.animateScrollToPage(
+                                                    (pagerState.currentPage + 1) % items.size,
+                                                )
+                                            }
+                                        }
+                                    },
                             )
                             if (onRemove != null) {
-                                Text(
-                                    "✕",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
+                                // it-031 C5 rev2：✕ 文字被 fallback 全宽渲染实测占 32dp，换 Close 图标
+                                // 回收 ~15dp 给名称槽（小格「杜绝截断」最后一块预算）
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = "移除该格",
+                                    tint = Color.White,
                                     modifier = Modifier
-                                        .align(Alignment.CenterEnd)
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        .padding(horizontal = 2.dp, vertical = 3.dp)
+                                        .size(10.dp)
                                         .clickable { onRemove() },
                                 )
                             }

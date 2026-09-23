@@ -4,6 +4,23 @@
 
 ## 未发布
 
+### it-031 — 版式收拢：名称条 / 翻页器 / 吸底动作栏 / 打卡层级 / 空态行动（审查 C5–C7/C9/C10）
+- W1 名称条「名称优先」：品类前缀废止 → 纯 n/n 序号角标（可点循环翻页，P1 穿透修复）+ ✕ 换 Material Close；格间距 12dp、小格系数 0.85，杜绝截断且一屏未破；
+- W8 翻页胶囊外置卡下方居中（帽行不再被压），两侧圆钮废止（it-015 修订二覆盖）；
+- W7「今天穿了这套」= 唯一实底主按钮，「复制长图」降描边；W10 种草表单固定动作栏（收进想买吸底常驻）；W9 打卡空态卡增「去打卡」直达记录 Tab；
+- 详情见 [it-031](iterations/it-031-layout-pass.md)；spec 02 增 it-029~031 交互注记。
+
+### it-030 — 去 emoji 化与字体纪律（审查 C3/C4）
+- 功能图标 emoji → Material Icons（心愿 Star、复制 ContentCopy、拍照 PhotoCamera、随机 Casino 等，含补遗：Wishlist📋 按钮/🔗 前缀、💬 评论标题×2、📦/⚠ 提示前缀）；文本提示语 emoji 清零；
+- 衣物卡/心愿卡实体名统一衬线 Title（单行省略）；品类 emoji chips（it-012）留待专项裁决；
+- 详情见 [it-030](iterations/it-030-deemoji-and-serif.md)。
+
+### it-029 — 止血：P0 崩溃修复 + 评论删除确认 + 导航/弹层色阶（审查 C1/C8/C2）
+- 修 P0：混入心愿关闭时格位 `items[page]` 越界崩溃（页码回卷防御，it-019 引入）；
+- 评论删除出确认对话框（DESIGN.md §5.7 红线回正，W5/W7 共用）；
+- `surfaceContainer*` 五档覆盖：底部导航/弹层紫灰默认值 → 纸感家族；
+- 详情见 [it-029](iterations/it-029-stop-bleed.md)。
+
 ### it-028 — 质感 pass R2：触控目标 + 首屏入场落地 + 触感补线（DESIGN.md 对表第二遍）
 - 触控目标：评论删除钮 28→44dp、卡片「···」媒体角标 36dp（新例外档入 DESIGN.md §2.5）；
 - 列表入场落地：新增 `StaggeredEntrance`，衣橱/穿搭记录两网格 24ms 错峰 fade+上移，`rememberSaveable` 仅首进播放（此前 spec 05 #7 声明存在但代码缺失，spec-code 不一致就此结清）；

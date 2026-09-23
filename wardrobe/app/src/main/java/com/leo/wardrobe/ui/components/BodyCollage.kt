@@ -198,7 +198,8 @@ private fun EmptyBodySlot(
     shape: androidx.compose.ui.graphics.Shape,
     modifier: Modifier = Modifier,
 ) {
-    val outline = editorialColors().inkFaint.copy(alpha = 0.55f)
+    // it-031 C6：空槽虚线与文字加深一档，贴近 ink 级对比（审查：inkFaint 贴近 3:1 下限）
+    val outline = editorialColors().inkFaint.copy(alpha = 0.85f)
     Box(
         modifier
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), shape)
@@ -208,7 +209,7 @@ private fun EmptyBodySlot(
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = editorialColors().inkFaint,
+            color = editorialColors().ink,
             maxLines = 1,
         )
     }

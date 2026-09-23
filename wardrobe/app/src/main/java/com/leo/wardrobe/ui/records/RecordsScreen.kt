@@ -125,71 +125,49 @@ fun RecordsScreen(
             )
             else -> {
                 // ---- 卡组：快速浏览 + 随机翻（it-007/it-010；it-011 增 ‹n/m› 卡序） ----
-                Box(
+                // it-031 C6：翻页器移出拼贴区放卡下方居中（审查 P0：胶囊浮层压住帽行）；
+                // it-015 修订二的两侧 ‹ › 圆钮废止（三重冗余），胶囊可点循环翻张+横滑保留
+                Column(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp)
-                        .clipToBounds(),
-                    contentAlignment = Alignment.Center,
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
-                    val controller = CardDeck(
-                        items = filtered,
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .fillMaxWidth()
-                            .height(380.dp),
-                        properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
-                            stackedCardsOffset = 14.dp,
-                            padding = 6.dp,
-                        ),
-                    ) { outfit ->
-                        OutfitDeckCard(vm, outfit) { onOpenOutfit(outfit.id) }
+                            .clipToBounds(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val controller = CardDeck(
+                            items = filtered,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(380.dp),
+                            properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
+                                stackedCardsOffset = 14.dp,
+                                padding = 6.dp,
+                            ),
+                        ) { outfit ->
+                            OutfitDeckCard(vm, outfit) { onOpenOutfit(outfit.id) }
+                        }
+                        deck = controller
+                        drawing = controller.isDrawing
                     }
-                    deck = controller
-                    drawing = controller.isDrawing
-                    // it-011 C1：卡序常驻，可滑动可视；it-015 修订二：两侧 ‹ › 双向循环翻张
                     Row(
-                        modifier = Modifier.align(Alignment.TopCenter),
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         androidx.compose.material3.Surface(
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 3.dp,
-                        ) {
-                            Text(
-                                "‹",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = editorialColors().ink,
-                                modifier = Modifier
-                                    .clickable { controller.previous() }
-                                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                            )
-                        }
-                        androidx.compose.material3.Surface(
+                            onClick = { deck?.next() },
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                             color = MaterialTheme.colorScheme.surface,
                             shadowElevation = 3.dp,
-                            modifier = Modifier.padding(horizontal = 6.dp),
                         ) {
                             Text(
                                 "‹ ${(deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex) + 1}/${filtered.size} ›",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = editorialColors().ink,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                            )
-                        }
-                        androidx.compose.material3.Surface(
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 3.dp,
-                        ) {
-                            Text(
-                                "›",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = editorialColors().ink,
-                                modifier = Modifier
-                                    .clickable { controller.next() }
-                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
                             )
                         }
                     }

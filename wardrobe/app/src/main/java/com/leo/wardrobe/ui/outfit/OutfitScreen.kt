@@ -424,18 +424,21 @@ private fun ZoneRow(
     onAdd: (List<WardrobeCategory>) -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // 基准格宽 = (行宽 - 区内间距) / 3：上身三件时占满，一件时居中且大小恒定
-        val cell = (maxWidth - 16.dp) / 3f
+        // 基准格宽 = (行宽 - 两个 12dp 格间距) / 3：上身三件精确占满，一件时居中且大小恒定
+        // it-031 C5：格间距 12dp（审查：相邻格名称条连成深色长带）
+        // it-031 C5 rev2：仅小格 0.55→0.85（按审查线框补宽）——原 61dp 物理塞不下
+        // 「完整名称+角标+✕」，违「杜绝截断」验收；帽/下/鞋维持原比例，不动一屏高度
+        val cell = (maxWidth - 24.dp) / 3f
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.Bottom,
         ) {
             zone.filter { it in activeCats }.forEach { cat ->
                 val w = when (cat) {
                     WardrobeCategory.HAT -> cell
                     WardrobeCategory.BOTTOM -> cell * 1.12f
-                    WardrobeCategory.BAG, WardrobeCategory.ACCESSORY -> cell * 0.55f
+                    WardrobeCategory.BAG, WardrobeCategory.ACCESSORY -> cell * 0.85f
                     WardrobeCategory.SHOES -> cell * 1.25f
                     else -> cell
                 }

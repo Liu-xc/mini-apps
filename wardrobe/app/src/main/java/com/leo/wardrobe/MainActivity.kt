@@ -254,6 +254,10 @@ private fun WardrobeRoot() {
                                 vm = recapVm,
                                 onBack = { nav.popBackStack() },
                                 onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
+                                onGoRecords = {
+                                    nav.popBackStack()
+                                    tab = Tab.RECORDS  // it-031 C10：空态「去打卡」直达
+                                },
                             )
                         }
                     }

@@ -317,7 +317,7 @@ fun OutfitDetailScreen(
             }
 
             HorizontalDivider(color = editorialColors().hairline)
-            Text("💬 评论（${notes.size}）", style = MaterialTheme.typography.titleMedium, color = editorialColors().ink)
+            Text("评论（${notes.size}）", style = MaterialTheme.typography.titleMedium, color = editorialColors().ink)
             CommentTimeline(
                 notes = notes,
                 onSend = { vm.addNote(NoteParent.OUTFIT, outfit.id, it) },

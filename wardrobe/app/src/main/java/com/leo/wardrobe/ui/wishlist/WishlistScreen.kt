@@ -40,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -588,12 +589,20 @@ private fun WishEditSheet(
     var photoFile by remember { mutableStateOf(existing?.imageFile) }
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) vm.importPhoto(uri) { f -> photoFile = f } }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        // it-031 C9：打开即全展开（与 W6 导出面板一致），固定动作栏立即可见
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        // it-023：sheet 内 snackbar 会被遮挡——名称为空时置灰保存（校验可见化）
+        val haptics = rememberHaptics()  // it-028：保存确认触感（DESIGN.md §4）
+        val canSave = name.isNotBlank()
+        // it-031 C9：滚动区 + 固定动作栏——主按钮任何滚动位置都可见可点（审查 P1：吸底失效）
+        Column(Modifier.imePadding()) {
         Column(
             Modifier
+                .weight(1f)
                 .padding(horizontal = 20.dp)
-                .imePadding()
-                .padding(bottom = 28.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -676,34 +685,38 @@ private fun WishEditSheet(
             )
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
-            // it-023：sheet 内 snackbar 会被遮挡——名称为空时置灰保存（校验可见化）
-            val haptics = rememberHaptics()  // it-028：保存确认触感（DESIGN.md §4）
-            val canSave = name.isNotBlank()
-            Button(
-                enabled = canSave,
-                onClick = {
-                    vm.saveWishItem(
-                        existing = existing,
-                        name = name,
-                        category = category,
-                        color = color,
-                        desc = desc,
-                        price = price.toDoubleOrNull(),
-                        url = url,
-                        tags = tags.toList(),
-                        photoFile = photoFile,
-                    ) { ok -> if (ok) { haptics.confirm(); onDismiss() } }
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-            ) {
-                    if (existing == null) {
-                        Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("收进想买")
-                    } else {
-                        Text("保存")
-                    }
-                }
+        }
+        androidx.compose.material3.HorizontalDivider(color = editorialColors().hairline)
+        Button(
+            enabled = canSave,
+            onClick = {
+                vm.saveWishItem(
+                    existing = existing,
+                    name = name,
+                    category = category,
+                    color = color,
+                    desc = desc,
+                    price = price.toDoubleOrNull(),
+                    url = url,
+                    tags = tags.toList(),
+                    photoFile = photoFile,
+                ) { ok -> if (ok) { haptics.confirm(); onDismiss() } }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+                .navigationBarsPadding(),
+        ) {
+            if (existing == null) {
+                Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("收进想买")
+            } else {
+                Text("保存")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
         }
     }
 }
@@ -770,7 +783,7 @@ private fun WishDetailSheet(
                 TextButton(onClick = {
                     if (!vm.share.openUrl(wish.url)) vm.toast("没有可打开该链接的应用")
                 }) {
-                    Text("🔗 ${urlHost(wish.url)} ↗")
+                    Text("${urlHost(wish.url)} ↗")
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -947,7 +960,16 @@ private fun WishOutfitDetailSheet(
                         onCopyLongImage(ownedMembers + wishMembers.map { it.asSlotItem() })
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("📋 复制长图") }
+                ) {
+                    // it-030 补遗：📋 → Material ContentCopy（C3「带文字 emoji 按钮统一线性图标」漏项）
+                    Icon(
+                        Icons.Rounded.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("复制长图")
+                }
                 OutlinedButton(
                     onClick = {
                         vm.restoreWishOutfitToSlots(wishOutfit)

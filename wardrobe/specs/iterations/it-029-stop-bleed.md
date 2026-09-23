@@ -1,6 +1,6 @@
 # it-029 · 止血：P0 崩溃修复 + 评论删除确认 + 导航/弹层色阶
 
-- **状态**：实施中（2026-09-23，Leo 对 UI 审查报告拍板「实施」）
+- **状态**：已完成（2026-09-23，Leo 对 UI 审查报告拍板「实施」；走查全过、单测绿，提交 df6ffba）
 - **来源**：[reports/2026-09-23-wardrobe-ui-audit](../../../reports/2026-09-23-wardrobe-ui-audit/) 共性问题 C1 / C8 / C2
 
 ## 背景与动机
@@ -34,3 +34,13 @@ UI 审查（2026-09-23）发现三项须立即修复的问题：
 
 `SlotGrid.kt`（越界防御 + 页码回卷）、`CommentTimeline.kt`（确认对话框，W5/W7 共用）、
 `WardrobeTheme.kt`（surfaceContainer 五档）；不动数据层。
+
+## 验证记录（2026-09-23）
+
+- 单测：`./gradlew testDebugUnitTest` 绿。
+- 模拟器复验删除确认：详情页点评论 ✕ → 出现「删除这条评论？」确认对话框 → 点「删除」→
+  评论（1）→（0），对话框关闭；全程 `adb logcat -d` FATAL 计数 0。
+- 崩溃场景走查：混入心愿开关切换、愿望卡在场时格位增删（✕ 移除格）来回操作无越界崩溃，
+  FATAL=0。
+- surface token 五档：浅色模式走查目视正常（NavigationBar/Sheet 底色随纸面）；深色档为
+  token 级等比替换，未单独复验。

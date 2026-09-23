@@ -159,7 +159,7 @@ fun ItemDetailScreen(
 
             HorizontalDivider(color = editorialColors().hairline, modifier = Modifier.padding(vertical = 18.dp))
             Text(
-                "💬 评论（${notes.size}）",
+                "评论（${notes.size}）",
                 style = MaterialTheme.typography.titleMedium,
                 color = editorialColors().ink,
             )

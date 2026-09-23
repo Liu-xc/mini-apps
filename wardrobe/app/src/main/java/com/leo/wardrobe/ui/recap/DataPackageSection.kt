@@ -231,7 +231,7 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
         title = { Text("数据包预览") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("📦 ${state.fileName}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                Text("${state.fileName}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 val time = remember(state.exportedAt) {
                     SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).format(Date(state.exportedAt))
                 }
@@ -261,7 +261,7 @@ private fun ConfirmImportDialog(state: RecapViewModel.ImportUi.Confirm, vm: Reca
                     if (state.diff.locallyNewer > 0) {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            "⚠ ${state.diff.locallyNewer} 件在导出后被本地修改过，导入将覆盖这些修改",
+                            "${state.diff.locallyNewer} 件在导出后被本地修改过，导入将覆盖这些修改",
                             style = MaterialTheme.typography.labelSmall,
                             color = SymUpdate,
                         )
