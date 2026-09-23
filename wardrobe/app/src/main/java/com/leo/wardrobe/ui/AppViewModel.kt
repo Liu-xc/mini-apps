@@ -371,7 +371,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (existing != null && photoFile != null && existing.imageFile != null && existing.imageFile != file) {
                 container.imageStore.delete(existing.imageFile)
             }
-            toast(if (existing == null) "已收进想买 🌟" else "已更新「${w.name}」")
+            toast(if (existing == null) "已收进想买" else "已更新「${w.name}」")
             onDone(true)
         }
     }
@@ -431,7 +431,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 toast("这套已在心愿穿搭中")
             } else {
                 repo.createWishOutfit(person.id, itemIds, wishItemIds, tags)
-                toast("已存为心愿穿搭 🌟")
+                toast("已存为心愿穿搭")
             }
         }
     }
@@ -466,7 +466,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 一键升级：全部愿望件买齐后转正式穿搭 */
     fun promoteWishOutfit(id: String) =
-        launchSafely(okToast = "已升级为正式穿搭 👗", failToast = "升级失败") { repo.promoteWishOutfit(id) }
+        launchSafely(okToast = "已升级为正式穿搭", failToast = "升级失败") { repo.promoteWishOutfit(id) }
 
     // ---- 便捷查询 ----
     fun itemsOfPerson(): List<Item> =

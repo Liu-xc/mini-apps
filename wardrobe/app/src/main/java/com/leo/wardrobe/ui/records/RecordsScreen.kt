@@ -117,7 +117,7 @@ fun RecordsScreen(
         when {
             outfits.isEmpty() -> EmptyState(
                 title = "还没有穿搭记录",
-                hint = "在搭配页「☆收藏这套」，或生成效果图后「＋录入成品图」，就会出现在这里",
+                hint = "在搭配页「保存这套」，或生成效果图后「录入成品图」，就会出现在这里",
             )
             filtered.isEmpty() -> EmptyState(
                 title = "该标签下没有穿搭",

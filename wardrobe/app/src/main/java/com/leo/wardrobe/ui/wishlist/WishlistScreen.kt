@@ -24,9 +24,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.outlined.Checkroom
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -144,12 +148,25 @@ fun WishlistScreen(
                 FilterChip(
                     selected = section == 0,
                     onClick = { section = 0 },
-                    label = { Text("🌟 想买单品 ${unpurchased.size}") },
+                    // it-030：emoji → Material 图标（DESIGN.md §5.2）
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("想买单品 ${unpurchased.size}")
+                        }
+                    },
                 )
                 FilterChip(
                     selected = section == 1,
                     onClick = { section = 1 },
-                    label = { Text("👗 心愿穿搭 ${wishOutfits.size}") },
+                    label = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Checkroom, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("心愿穿搭 ${wishOutfits.size}")
+                        }
+                    },
                 )
             }
 
@@ -395,7 +412,12 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text("🌟", style = MaterialTheme.typography.titleMedium)
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = null,
+                            tint = editorialColors().accent,
+                            modifier = Modifier.size(22.dp),
+                        )
                         Text(
                             wish.category.label,
                             style = MaterialTheme.typography.labelSmall,
@@ -408,7 +430,8 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
             Column(Modifier.weight(1f)) {
                 Text(
                     wish.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    // it-030 C4：实体名走衬线 Title（DESIGN.md §2.3）
+                    style = MaterialTheme.typography.titleLarge,
                     color = editorialColors().ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -439,7 +462,12 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                 }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("🌟", style = MaterialTheme.typography.titleSmall)
+                Icon(
+                    Icons.Rounded.Star,
+                    contentDescription = null,
+                    tint = editorialColors().accent,
+                    modifier = Modifier.size(14.dp),
+                )
                 Text(
                     wishDaysText(wish.createdAt),
                     style = MaterialTheme.typography.labelSmall,
@@ -461,7 +489,7 @@ private fun WishOutfitsSection(
     if (outfits.isEmpty()) {
         EmptyState(
             title = "还没有心愿穿搭",
-            hint = "搭配页点 🌟 混入心愿，把想买的和已有的拼成一套存下来",
+            hint = "搭配页点「混入心愿」，把想买的和已有的拼成一套存下来",
         )
         return
     }
@@ -500,7 +528,12 @@ private fun WishOutfitsSection(
                                 modifier = Modifier.size(72.dp),
                             )
                         } else {
-                            Text("👗", style = MaterialTheme.typography.headlineSmall)
+                            Icon(
+                                Icons.Outlined.Checkroom,
+                                contentDescription = null,
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(24.dp),
+                            )
                         }
                     }
                     Spacer(Modifier.width(12.dp))
@@ -564,7 +597,7 @@ private fun WishEditSheet(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("种草一件 🌟", style = MaterialTheme.typography.titleLarge)
+            Text("种草一件", style = MaterialTheme.typography.titleLarge)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Surface(
                     onClick = { photoPicker() },
@@ -581,7 +614,12 @@ private fun WishEditSheet(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text("📷", style = MaterialTheme.typography.titleMedium)
+                            Icon(
+                                Icons.Outlined.PhotoCamera,
+                                contentDescription = null,
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(20.dp),
+                            )
                             Text("商品图(可选)", style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
                         }
                     }
@@ -657,7 +695,15 @@ private fun WishEditSheet(
                     ) { ok -> if (ok) { haptics.confirm(); onDismiss() } }
                 },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-            ) { Text(if (existing == null) "🌟 收进想买" else "保存") }
+            ) {
+                    if (existing == null) {
+                        Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("收进想买")
+                    } else {
+                        Text("保存")
+                    }
+                }
         }
     }
 }
@@ -785,7 +831,12 @@ private fun PurchaseSheet(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Text("📷", style = MaterialTheme.typography.titleMedium)
+                            Icon(
+                                Icons.Outlined.PhotoCamera,
+                                contentDescription = null,
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(20.dp),
+                            )
                             Text("拍实物", style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
                         }
                     }
@@ -886,7 +937,7 @@ private fun WishOutfitDetailSheet(
                 MemberRow(label = "▸ ${item.category.label}·${item.name}", badge = "已有", accent = false)
             }
             wishMembers.forEach { w ->
-                MemberRow(label = "▸ ${w.category.label}·${w.name}", badge = "🌟 想买", accent = true)
+                MemberRow(label = "▸ ${w.category.label}·${w.name}", badge = "想买", accent = true)
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -916,7 +967,7 @@ private fun WishOutfitDetailSheet(
                     enabled = readyToPromote,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text(if (readyToPromote) "👗 升级为穿搭" else "还差 ${wishMembers.size} 件")
+                    Text(if (readyToPromote) "升级为穿搭" else "还差 ${wishMembers.size} 件")
                 }
             }
             if (wishOutfit.previewImages.isNotEmpty()) {

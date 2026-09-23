@@ -384,7 +384,7 @@ fun ItemEditScreen(
                         when {
                             importing -> "正在导入照片…"
                             hasPhoto -> "点击更换照片（必填）"
-                            else -> "📷 从相册选择照片（必填）"
+                            else -> "从相册选择照片（必填）"  // it-030：相机语义由左侧 Material 图标承载
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = editorialColors().ink,

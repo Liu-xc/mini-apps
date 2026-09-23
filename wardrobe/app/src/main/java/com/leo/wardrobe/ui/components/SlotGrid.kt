@@ -15,9 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -128,13 +133,18 @@ fun SlotCell(
                     ) {
                         // it-011 C5：统一浅底衬纸，完整呈现衣物轮廓
                         if (wished && item.imageFile.isEmpty()) {
-                            // 无商品图：品类占位
+                            // 无商品图：品类占位（it-030：🌟 emoji → Material Star）
                             Column(
                                 Modifier.fillMaxSize(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                Text("🌟", style = MaterialTheme.typography.headlineMedium)
+                                Icon(
+                                    Icons.Rounded.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFF3FA265),
+                                    modifier = Modifier.size(32.dp),
+                                )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     item.name.ifBlank { category.label },
@@ -156,17 +166,29 @@ fun SlotCell(
                         }
                         // it-019：愿望卡左上「想买」角标 + 虚线描边，与已有单品一眼可辨
                         if (wished) {
+                            // it-030：角标 Material Star + 想买；底色加深保证白字对比（审查 P1）
                             Surface(
-                                color = Color(0xB33FA265),
+                                color = Color(0xE63FA265),
                                 shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 8.dp),
                                 modifier = Modifier.align(Alignment.TopStart),
                             ) {
-                                Text(
-                                    "🌟 想买",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                )
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp),
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        "想买",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White,
+                                    )
+                                }
                             }
                             Box(
                                 Modifier

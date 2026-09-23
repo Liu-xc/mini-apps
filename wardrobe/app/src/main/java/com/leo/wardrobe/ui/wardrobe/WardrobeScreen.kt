@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -151,15 +152,16 @@ fun WardrobeScreen(
                             modifier = Modifier.size(18.dp),
                         )
                     }
-                    // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）
+                    // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）；it-030：emoji → Material Star
                     FilledTonalIconButton(
                         onClick = onOpenWishlist,
                         modifier = Modifier.padding(start = 8.dp).size(32.dp),
                     ) {
-                        Text(
-                            "🌟",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.semantics { contentDescription = "心愿" },
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = "心愿",
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -401,7 +403,8 @@ private fun ItemCard(
         ) {
             Text(
                 item.name,
-                style = MaterialTheme.typography.titleSmall,
+                // it-030 C4：实体名走衬线 Title（DESIGN.md §2.3，与详情页一致）
+                style = MaterialTheme.typography.titleLarge,
                 color = editorialColors().ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

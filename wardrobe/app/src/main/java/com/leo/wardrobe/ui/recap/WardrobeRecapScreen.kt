@@ -34,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,7 +86,14 @@ import java.time.LocalDate
  *  it-021：回顾域（提醒/长图）走 [RecapViewModel]，角色/数据/提示走全局 [AppViewModel]。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> Unit, onOpenItem: (String) -> Unit) {
+fun WardrobeRecapScreen(
+    appVm: AppViewModel,
+    vm: RecapViewModel,
+    onBack: () -> Unit,
+    onOpenItem: (String) -> Unit,
+    /** it-031 C10：打卡空态「去打卡」直达穿搭记录 Tab */
+    onGoRecords: () -> Unit = {},
+) {
     val data by appVm.data.collectAsState()
     val prefs by vm.recapPrefs.collectAsState()
     val person by appVm.currentPerson.collectAsState()
@@ -184,7 +192,12 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                                 Modifier.fillMaxWidth().padding(20.dp),
                                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                             ) {
-                                Text("👟", style = MaterialTheme.typography.headlineMedium)
+                                Icon(
+                                    Icons.Outlined.Checkroom,
+                                    contentDescription = null,
+                                    tint = ec.inkFaint,
+                                    modifier = Modifier.size(30.dp),
+                                )  // it-030：👟 emoji → Material 图标
                                 Spacer(Modifier.height(8.dp))
                                 Text("还没有穿搭打卡", style = MaterialTheme.typography.titleMedium, color = ec.ink)
                                 Spacer(Modifier.height(6.dp))
@@ -193,6 +206,11 @@ fun WardrobeRecapScreen(appVm: AppViewModel, vm: RecapViewModel, onBack: () -> U
                                     style = MaterialTheme.typography.bodySmall,
                                     color = ec.inkFaint,
                                 )
+                                Spacer(Modifier.height(12.dp))
+                                // it-031 C10：空态必须有行动按钮（DESIGN.md §5.8）
+                                Button(onClick = onGoRecords) {
+                                    Text("去打卡")
+                                }
                             }
                         }
                         Spacer(Modifier.height(20.dp))

@@ -370,7 +370,7 @@ fun ExportSheet(
                                 contentDescription = null,
                                 tint = editorialColors().accent,
                             )
-                            Text(if (hasWishItem) "🌟 心愿组合 · 仅预览" else "收藏这套")
+                            Text(if (hasWishItem) "心愿组合 · 仅预览" else "收藏这套")  // it-030：去 emoji
                         }
                         Button(onClick = { pickEffectImage() }, modifier = Modifier.weight(1f)) {
                             Text("＋ 录入成品图")

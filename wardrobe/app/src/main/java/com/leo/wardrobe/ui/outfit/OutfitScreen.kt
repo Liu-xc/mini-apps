@@ -21,6 +21,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.Star
@@ -198,14 +199,19 @@ fun OutfitScreen(
             TextButton(
                 onClick = { vm.setMixWishes(!mixWishes) },
             ) {
+                // it-030：🌟 emoji → Material Star/StarBorder（DESIGN.md §5.2）
+                Icon(
+                    if (mixWishes) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    contentDescription = null,
+                    tint = if (mixWishes) editorialColors().accent else editorialColors().inkFaint,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
                 Text(
-                    "🌟",
-                    style = MaterialTheme.typography.titleMedium,
+                    "混入心愿",
+                    style = MaterialTheme.typography.labelMedium,
                     color = if (mixWishes) editorialColors().accent else editorialColors().inkFaint,
                 )
-                if (mixWishes) {
-                    Text(" 混入心愿", style = MaterialTheme.typography.labelMedium, color = editorialColors().accent)
-                }
             }
             TextButton(
                 onClick = {
@@ -309,7 +315,14 @@ fun OutfitScreen(
                 onClick = { exportItems = currentItemsFromMemory },
                 enabled = effectiveItems.isNotEmpty(),
                 modifier = Modifier.weight(1f),
-            ) { Text("📋 复制长图", style = MaterialTheme.typography.titleSmall) }
+            ) {
+                Icon(
+                    Icons.Rounded.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("复制长图", style = MaterialTheme.typography.titleSmall)            }
             if (hasWishInMix) {
                 OutlinedButton(
                     onClick = {
@@ -326,8 +339,15 @@ fun OutfitScreen(
                     },
                     enabled = effectiveItems.isNotEmpty(),
                 ) {
+                    Icon(
+                        Icons.Rounded.Star,
+                        contentDescription = null,
+                        tint = editorialColors().accent,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        if (savedWishOutfit != null) "🌟 已存心愿" else "🌟 存为心愿",
+                        if (savedWishOutfit != null) "已存心愿" else "存为心愿",
                         style = MaterialTheme.typography.titleSmall,
                         color = editorialColors().accent,
                     )
