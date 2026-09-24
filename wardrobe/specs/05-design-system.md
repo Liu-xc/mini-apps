@@ -88,3 +88,11 @@
 | 去背景按钮 | OutlinedButton 全宽 44dp，AutoFixHigh 18dp 图标 + 「去背景 · 一键透明底」；推理中禁用态：18dp CircularProgressIndicator + 「正在去背景…」 |
 | 成功横条 | secondaryContainer@55% 圆角 12dp：CheckCircle(primary 18dp) + 「已去背景 · 透明底」+ 尾部 TextButton「还原」 |
 | 弹簧基调 | 棋盘格显隐随预览图 crossfade（220ms，与 PhotoCard 一致），无新增动效 |
+
+## 触控目标基线（it-033）
+
+所有**可点**的图标 / chips / 翻页 / 删除控件，触控区 **≥44dp，推荐 48dp**。图标的视觉尺寸允许小于触控区：视觉保持原规格，差值用最小交互尺寸机制补足（显式 `Modifier.size(48.dp)` 热区、外层点击盒、或组件自带的最小交互尺寸），不靠放大图标本体凑数。
+
+- **依据**：2026-09-24 走查 uiautomator bounds 实测（420dp 密度）——W3 标题行图标/卡 ⋮ ≈18dp、W4 品类 chips 19dp、W5 标签 chips 15dp、W8 分页 15dp、W5/W7 评论 × 14dp，均低于 44dp 下限。
+- **落点**：W3 📊/🌟 = 48dp、卡 ⋮ = 48dp；W4 品类 chips = 48dp、行距 ≥8dp；W5 标签 chips = 44dp；W8 分页胶囊左右半边 = 48dp；评论删除 × = 48dp；W1 名称条 ✕ = 28×44dp（窄格名称列预算优先，高度达标即可）。
+- 与「形状与间距」的 it-028 44dp 条目一脉相承：it-033 把推荐值提到 48dp；W3 卡 ⋮ 自此按 48dp 落地，DESIGN.md §2.5 给媒体卡悬浮角标的 36dp 例外档对它不再适用（例外档保留给其余仍受版面约束的媒体卡角标）。截断基线（名称先缩字号→两行→省略、卡片标题 maxLines/minLines=2）见 spec 02 的 it-033 注记。

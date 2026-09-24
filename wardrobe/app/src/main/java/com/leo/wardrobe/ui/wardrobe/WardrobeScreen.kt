@@ -34,7 +34,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -140,29 +139,56 @@ fun WardrobeScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = editorialColors().inkFaint,
                     )
-                    // it-018：衣橱回顾入口（W9）
-                    FilledTonalIconButton(
-                        onClick = onOpenRecap,
-                        modifier = Modifier.padding(start = 8.dp).size(32.dp),
+                    // it-018：衣橱回顾入口（W9）；it-033：触控热区显式 48dp，视觉圆钮保持 32dp/图标 18dp
+                    Box(
+                        Modifier
+                            .padding(start = 8.dp)
+                            .size(48.dp)
+                            .clickable { onOpenRecap() },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Rounded.BarChart,
-                            contentDescription = "衣橱回顾",
-                            tint = editorialColors().inkFaint,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    androidx.compose.foundation.shape.CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.BarChart,
+                                contentDescription = "衣橱回顾",
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                     // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）；it-030：emoji → Material Star
-                    FilledTonalIconButton(
-                        onClick = onOpenWishlist,
-                        modifier = Modifier.padding(start = 8.dp).size(32.dp),
+                    // it-033：触控热区显式 48dp，视觉不变
+                    Box(
+                        Modifier
+                            .padding(start = 8.dp)
+                            .size(48.dp)
+                            .clickable { onOpenWishlist() },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            Icons.Rounded.Star,
-                            contentDescription = "心愿",
-                            tint = editorialColors().inkFaint,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    androidx.compose.foundation.shape.CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Star,
+                                contentDescription = "心愿",
+                                tint = editorialColors().inkFaint,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -370,19 +396,30 @@ private fun ItemCard(
                     .aspectRatio(0.8f),
             )
             // it-012：··· 显式入口（P0：替代零提示长按）
+            // it-033：触控热区 48dp（外层点击盒），视觉圆钮保持 28dp/图标 18dp
             Box(Modifier.align(Alignment.TopEnd)) {
-                Surface(
-                    onClick = { menuOpen = true },
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = androidx.compose.ui.graphics.Color(0x66000000),
-                    modifier = Modifier.padding(4.dp).size(28.dp),
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .clickable { menuOpen = true },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Rounded.MoreVert,
-                        contentDescription = "编辑或删除",
-                        tint = androidx.compose.ui.graphics.Color.White,
-                        modifier = Modifier.padding(5.dp),
-                    )
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .background(
+                                androidx.compose.ui.graphics.Color(0x66000000),
+                                androidx.compose.foundation.shape.CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = "编辑或删除",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(
@@ -397,8 +434,10 @@ private fun ItemCard(
             }
         }
         // it-025：名称行尾 › 暗示可点进详情（大图/评论/穿搭反查）
+        // it-033：标题 maxLines=2 + minLines=2——长名两行不截断，两列网格行高恒定不跳动，
+        // 卡总高增幅 = 恰好一行 titleLarge（≤ 一行文字）；颜色/标签行随之下移
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
         ) {
             Text(
@@ -406,11 +445,17 @@ private fun ItemCard(
                 // it-030 C4：实体名走衬线 Title（DESIGN.md §2.3，与详情页一致）
                 style = MaterialTheme.typography.titleLarge,
                 color = editorialColors().ink,
-                maxLines = 1,
+                maxLines = 2,
+                minLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            Text("›", style = MaterialTheme.typography.titleSmall, color = editorialColors().inkFaint)
+            Text(
+                "›",
+                style = MaterialTheme.typography.titleSmall,
+                color = editorialColors().inkFaint,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
         // it-012：颜色改色点胶囊，与 #标签 并列但语义分离
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp, start = 2.dp)) {

@@ -402,14 +402,16 @@ fun ItemEditScreen(
             )
 
             Text("品类", style = MaterialTheme.typography.labelMedium, color = editorialColors().inkFaint)
+            // it-033：品类 chips 触控高 ≥48dp（含上下 padding）、行距 ≥8dp（走查实测原 19dp）
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 WardrobeCategory.entries.forEach { c ->
                     FilterChip(
                         selected = category == c,
                         onClick = { category = c },
+                        modifier = Modifier.height(48.dp),
                         label = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Image(

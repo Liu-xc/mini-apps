@@ -3,9 +3,11 @@ package com.leo.wardrobe.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -27,13 +29,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.TagPresets
 import com.leo.wardrobe.ui.theme.editorialColors
 
-/** 只读标签行：#通勤 #简约 …（横向滑动） */
+/**
+ * 只读标签行：#通勤 #简约 …（横向滑动）。
+ * it-033：[minChipHeight] >0 时 chip 高度提到该值（W5 详情页传 44dp，走查实测原 15dp），
+ * 卡片内复用处保持默认 0dp=原紧凑形制不变。
+ */
 @Composable
-fun TagRow(tags: List<String>, modifier: Modifier = Modifier) {
+fun TagRow(tags: List<String>, modifier: Modifier = Modifier, minChipHeight: Dp = 0.dp) {
     if (tags.isEmpty()) return
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
@@ -44,12 +51,18 @@ fun TagRow(tags: List<String>, modifier: Modifier = Modifier) {
                 shape = RoundedCornerShape(6.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
-                Text(
-                    "#$tag",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = editorialColors().inkFaint,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                )
+                Box(
+                    Modifier
+                        .heightIn(min = minChipHeight)
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "#$tag",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = editorialColors().inkFaint,
+                    )
+                }
             }
         }
     }

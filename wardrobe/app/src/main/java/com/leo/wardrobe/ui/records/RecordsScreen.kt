@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -37,6 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.itemById
@@ -126,7 +129,8 @@ fun RecordsScreen(
             else -> {
                 // ---- 卡组：快速浏览 + 随机翻（it-007/it-010；it-011 增 ‹n/m› 卡序） ----
                 // it-031 C6：翻页器移出拼贴区放卡下方居中（审查 P0：胶囊浮层压住帽行）；
-                // it-015 修订二的两侧 ‹ › 圆钮废止（三重冗余），胶囊可点循环翻张+横滑保留
+                // it-033：胶囊整体保持外置居中不回退，但拆左右两半边独立翻页热区
+                // ‹=上一张、›=下一张，各 48×48dp（≥44dp 基线），中心 n/m 纯展示
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -158,17 +162,46 @@ fun RecordsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         androidx.compose.material3.Surface(
-                            onClick = { deck?.next() },
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                             color = MaterialTheme.colorScheme.surface,
                             shadowElevation = 3.dp,
                         ) {
-                            Text(
-                                "‹ ${(deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex) + 1}/${filtered.size} ›",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = editorialColors().ink,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // it-033：左半边 = 上一张（48×48dp 热区）
+                                Box(
+                                    Modifier
+                                        .size(48.dp)
+                                        .clickable { deck?.previous() }
+                                        .semantics { contentDescription = "上一张" },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "‹",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = editorialColors().ink,
+                                    )
+                                }
+                                Text(
+                                    "${(deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex) + 1}/${filtered.size}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = editorialColors().ink,
+                                    modifier = Modifier.padding(horizontal = 2.dp),
+                                )
+                                // it-033：右半边 = 下一张（48×48dp 热区）
+                                Box(
+                                    Modifier
+                                        .size(48.dp)
+                                        .clickable { deck?.next() }
+                                        .semantics { contentDescription = "下一张" },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        "›",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = editorialColors().ink,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

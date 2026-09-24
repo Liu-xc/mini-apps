@@ -29,8 +29,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,9 +43,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.isWishSlot
@@ -208,9 +214,11 @@ fun SlotCell(
                                     },
                             )
                         }
-                        // it-031 C5 rev2：名称优先（审查线框画稿：名称加粗主位 + 纯序号角标）——
-                        // 品类不再进名称条（格位+图片已承载），杜绝名称截断；角标可点翻页（循环），
-                        // 替代原右上纯展示胶囊（审查 P1：胶囊看似可点实为穿透）；✕ 移除该格（it-015）
+                        // it-031 C5 rev2：名称优先（名称加粗主位 + 纯序号角标可点循环翻页 + ✕ 移除该格）
+                        // it-033 C1：名称不截断三段式——先按实际溢出动态缩字号（11→10→9→8sp 底），
+                        // 缩到底仍放不下才 maxLines=2（labelSmall 行高 14sp，两行名称条 +14dp ≤ ~18dp 上限），
+                        // 最后才省略兜底；单行时名称条高度与 it-031 完全一致，一屏网格不受影响。
+                        // ✕ 视觉放大 10→16dp、与角标拉开 8dp；触控节点由下方覆盖层补足到 28×44dp（≥44dp 高）。
                         Row(
                             Modifier
                                 .align(Alignment.BottomCenter)
@@ -219,13 +227,25 @@ fun SlotCell(
                                 .padding(horizontal = 4.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            val itemName = items.getOrNull(pagerState.currentPage)?.name.orEmpty()
+                            // 逐级缩字号：onTextLayout 检出溢出即降一档，第 5 档转两行；到顶封顶不再自增，防死循环
+                            var fitStep by remember(itemName) { mutableStateOf(0) }
                             Text(
-                                items.getOrNull(pagerState.currentPage)?.name.orEmpty(),
+                                itemName,
                                 style = MaterialTheme.typography.labelSmall,
+                                fontSize = when (fitStep) {
+                                    0 -> 11
+                                    1 -> 10
+                                    2 -> 9
+                                    else -> 8
+                                }.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
-                                maxLines = 1,
+                                maxLines = if (fitStep >= 4) 2 else 1,
                                 overflow = TextOverflow.Ellipsis,
+                                onTextLayout = { r ->
+                                    if (r.hasVisualOverflow && fitStep < 4) fitStep += 1
+                                },
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
@@ -234,7 +254,8 @@ fun SlotCell(
                                 color = Color.White.copy(alpha = 0.8f),
                                 maxLines = 1,
                                 modifier = Modifier
-                                    .padding(horizontal = 2.dp)
+                                    // it-033：与 ✕ 拉开 8dp（end），start 4dp 隔开名称列
+                                    .padding(start = 4.dp, end = 8.dp)
                                     .clickable {
                                         if (items.size > 1) {
                                             flipScope.launch {
@@ -243,21 +264,35 @@ fun SlotCell(
                                                 )
                                             }
                                         }
+                                    }
+                                    .semantics {
+                                        // it-033：序号角标补 a11y（实际 n/m）
+                                        contentDescription =
+                                            "第 ${pagerState.currentPage + 1} 件，共 ${items.size} 件，点按切换"
                                     },
                             )
                             if (onRemove != null) {
-                                // it-031 C5 rev2：✕ 文字被 fallback 全宽渲染实测占 32dp，换 Close 图标
-                                // 回收 ~15dp 给名称槽（小格「杜绝截断」最后一块预算）
+                                // it-033：✕ 视觉 16dp，居中于名称条；触控热区由名称条右端的覆盖层承载
                                 Icon(
                                     Icons.Rounded.Close,
-                                    contentDescription = "移除该格",
+                                    contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier
-                                        .padding(horizontal = 2.dp, vertical = 3.dp)
-                                        .size(10.dp)
-                                        .clickable { onRemove() },
+                                    modifier = Modifier.size(16.dp),
                                 )
                             }
+                        }
+                        if (onRemove != null) {
+                            // it-033：✕ 触控覆盖层——28×44dp，底边贴名称条右端、向上探入照片边缘一角。
+                            // 高度补足 ≥44dp 走查要求；宽度止步 28dp：窄格（包/帽 ≈100dp）名称列预算优先，
+                            // 44dp 宽列会把长名重新挤回截断（US-33b）。节点不与角标/名称重叠（角标止于 28dp 线外）。
+                            Box(
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .width(28.dp)
+                                    .height(44.dp)
+                                    .clickable { onRemove() }
+                                    .semantics { contentDescription = "移除该格" },
+                            )
                         }
                     }
                 }

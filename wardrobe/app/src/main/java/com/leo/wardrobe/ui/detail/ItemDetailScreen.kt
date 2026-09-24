@@ -125,7 +125,8 @@ fun ItemDetailScreen(
                 modifier = Modifier.padding(top = 4.dp),
             )
             if (item.tags.isNotEmpty()) {
-                Row(Modifier.padding(top = 8.dp)) { TagRow(item.tags) }
+                // it-033：详情标签 chips 触控/视觉高 ≥44dp（走查实测原 15dp）
+                Row(Modifier.padding(top = 8.dp)) { TagRow(item.tags, minChipHeight = 44.dp) }
             }
 
             if (related.isNotEmpty()) {

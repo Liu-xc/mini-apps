@@ -79,17 +79,18 @@ fun CommentTimeline(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 10.dp),
+                        .padding(start = 14.dp, end = 10.dp),  // it-033：与删除 × 间距拉开
                 )
                 IconButton(
                     onClick = { pendingDelete = note },
-                    modifier = Modifier.size(44.dp),  // it-028：命中区 28→44dp（DESIGN.md §2.5）
+                    // it-028：44dp → it-033：触控基线 48dp
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = "删除评论",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
