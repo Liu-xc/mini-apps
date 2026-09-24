@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { terrainHeight, LAKE, lakeRadiusAt } from './terrain';
 import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR } from './style';
+import { uCloudT, CLOUD_GLSL } from './cloud';
 
 /* 风动草场（it-002 AC-4 / it-005 扩展）：
    近圈 = Quaternius 真模型 ×3200（Standard 材质 + onBeforeCompile 注入风，全套 PBR/受影）
@@ -52,7 +53,7 @@ function makeSpots(
   return spots;
 }
 
-/* 风注入（近圈/芦苇共用）：sway + gust 阵风波 + 玩家避让 */
+/* 风注入（近圈/芦苇共用）：sway + gust 阵风波 + 玩家避让 + 云影（it-006） */
 function windify(mat: THREE.Material, amp: number, maxH: number, key: string): void {
   const sm = mat as THREE.MeshStandardMaterial;
   sm.side = THREE.DoubleSide;
@@ -60,11 +61,12 @@ function windify(mat: THREE.Material, amp: number, maxH: number, key: string): v
   sm.onBeforeCompile = shader => {
     shader.uniforms.uTime = uTime;
     shader.uniforms.uPlayer = uPlayer;
+    shader.uniforms.uCloudT = uCloudT;
     shader.uniforms.uAmp = { value: amp };
     shader.uniforms.uMaxH = { value: maxH };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',
-        '#include <common>\nuniform float uTime; uniform float uAmp; uniform float uMaxH;\nuniform vec3 uPlayer;')
+        '#include <common>\nuniform float uTime; uniform float uAmp; uniform float uMaxH;\nuniform vec3 uPlayer;\nvarying vec2 vCW;')
       .replace('#include <begin_vertex>', [
         '#include <begin_vertex>',
         '#ifdef USE_INSTANCING',
@@ -72,6 +74,7 @@ function windify(mat: THREE.Material, amp: number, maxH: number, key: string): v
         '#else',
         '  vec3 iOrigin = vec3(0.0);',
         '#endif',
+        '  vCW = iOrigin.xz;',
         '  float gPhase = iOrigin.x * 0.33 + iOrigin.z * 0.27;',
         '  float gSway = sin(uTime * 2.0 + gPhase) + 0.4 * sin(uTime * 4.2 + gPhase * 1.6);',
         // 阵风波：沿 (1,0.6) 方向移动的涌浪带，过境时摆幅加倍（BotW 手感）
@@ -87,6 +90,11 @@ function windify(mat: THREE.Material, amp: number, maxH: number, key: string): v
         '  float gPush = (1.0 - smoothstep(0.18, 1.5, gPd)) * 0.5;',
         '  transformed.xz += (gPd > 0.001 ? gToP / gPd : vec2(1.0, 0.0)) * gPush * gH * gH;',
       ].join('\n'));
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>',
+        '#include <common>\nuniform float uCloudT;\nvarying vec2 vCW;\n' + CLOUD_GLSL)
+      .replace('#include <map_fragment>',
+        '#include <map_fragment>\n  diffuseColor.rgb = cloudShade(diffuseColor.rgb, vCW, uCloudT);');
   };
   sm.customProgramCacheKey = () => key;
 }
@@ -211,6 +219,7 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
     uniforms: {
       uTime,
       uPlayer,
+      uCloudT,
       uMap: { value: grassTex },
       uSun: { value: SUN_DIR },
       uSunCol: { value: new THREE.Color('#fff0d6').multiplyScalar(1.9) },
@@ -258,11 +267,13 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
     fragmentShader: /* glsl */ `
       uniform sampler2D uMap;
       uniform float uTime;
+      uniform float uCloudT;
       uniform vec3 uSun, uSunCol, uSky, uGnd, uFogC;
       uniform float uFogN, uFogF;
       varying vec2 vUv;
       varying vec3 vW;
       varying float vDepth;
+      ${CLOUD_GLSL}
       void main() {
         vec4 tex = texture2D(uMap, vUv);
         if (tex.a < 0.45) discard;
@@ -271,6 +282,7 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
         vec3 amb = mix(uGnd, uSky, 0.7);
         vec3 lit = albedo * (uSunCol * (0.42 + 0.58 * ndl) + amb * 0.95);
         lit *= 1.0 + 0.05 * sin(uTime * 3.0 + vW.x * 0.4 + vW.z * 0.31);
+        lit = cloudShade(lit, vW.xz, uCloudT);
         float fogF = smoothstep(uFogN, uFogF, vDepth);
         gl_FragColor = vec4(mix(lit, uFogC, fogF), 1.0);
       }

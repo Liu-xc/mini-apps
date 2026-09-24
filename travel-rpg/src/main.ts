@@ -11,6 +11,8 @@ import { buildTrail } from './trail';
 import { buildCampfire } from './campfire';
 import { buildAmbient } from './ambient';
 import { buildDust } from './dust';
+import { buildMountains } from './mountains';
+import { uCloudT } from './cloud';
 import { getScene, deriveBlock } from './scenes';
 import { initEditor, type EditorApi } from './editor';
 import { Player } from './player';
@@ -103,6 +105,8 @@ scene.add(new THREE.HemisphereLight(PALETTE.hemiSky, PALETTE.hemiGround, 0.85));
 
 /* ---------- 世界 ---------- */
 scene.add(buildUnderlay());
+const mountainGroup = buildMountains();            // 远山剪影环（it-006）
+scene.add(mountainGroup);
 const terrain = buildTerrain();
 scene.add(terrain);
 const waterRes = buildWater();                     // 达里湖（it-005）
@@ -265,6 +269,7 @@ window.__game = {
     trailDone: trailRes.done.value,
     reedsDone: grassField.reedsDone,
     campfireReady: campfire.group.parent === scene,
+    mountainLayers: mountainGroup.children.length,
     outline: post.outlineState.on,
     envReady: !!scene.environment,
     background: !!scene.background,
@@ -300,6 +305,10 @@ function tick(dt: number): void {
   campfire.update(elapsed);
   ambientRes.update(elapsed);
   dustRes.update(dt);
+  uCloudT.value = elapsed;                          // 云影时钟（it-006）
+  /* 太阳呼吸：慢噪声轻起伏（it-006 AC-4） */
+  sun.intensity = 4.1 * (0.9 + 0.1 *
+    (0.5 + 0.5 * Math.sin(elapsed * 0.11)) * (0.6 + 0.4 * Math.sin(elapsed * 0.043 + 2)));
   motes.update(elapsed, player.pos);
   sun.position.copy(player.pos).addScaledVector(SUN_DIR, 95);
   sun.target.position.copy(player.pos);
@@ -355,6 +364,7 @@ declare global {
         trailDone: boolean;
         reedsDone: boolean;
         campfireReady: boolean;
+        mountainLayers: number;
         outline: boolean;
         envReady: boolean;
         background: boolean;

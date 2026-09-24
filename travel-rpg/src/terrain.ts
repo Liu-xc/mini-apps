@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PALETTE } from './style';
+import { uCloudT, CLOUD_GLSL } from './cloud';
 
 /* ---------- 确定性 2D 值噪声 ---------- */
 function hash2(x: number, z: number): number {
@@ -142,6 +143,7 @@ export function buildTerrain(): THREE.Mesh {
   /* 反平铺（it-005 AC-5）：albedo 改为世界坐标双尺度采样 + 宏观噪声混合，
      打断 20× 平铺网格；法线/粗糙度维持原 vMapUv 平铺（微观重复不可辨）。 */
   mat.onBeforeCompile = shader => {
+    shader.uniforms.uCloudT = uCloudT;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vTerr;')
       .replace('#include <begin_vertex>',
@@ -150,6 +152,7 @@ export function buildTerrain(): THREE.Mesh {
       .replace('#include <common>', [
         '#include <common>',
         'varying vec3 vTerr;',
+        'uniform float uCloudT;',
         'float tHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
         'float tNoise(vec2 p){',
         '  vec2 i = floor(p), f = fract(p);',
@@ -157,6 +160,7 @@ export function buildTerrain(): THREE.Mesh {
         '  return mix(mix(tHash(i), tHash(i + vec2(1.0, 0.0)), f.x),',
         '             mix(tHash(i + vec2(0.0, 1.0)), tHash(i + vec2(1.0, 1.0)), f.x), f.y);',
         '}',
+        CLOUD_GLSL,
       ].join('\n'))
       .replace('#include <map_fragment>', [
         '#ifdef USE_MAP',
@@ -166,6 +170,7 @@ export function buildTerrain(): THREE.Mesh {
         '  vec2 tUvB = vec2(-vTerr.z, vTerr.x) * 0.028 + 17.3;',
         '  diffuseColor *= mix(texture2D(map, tUvA), texture2D(map, tUvB), tM);',
         '#endif',
+        '  diffuseColor.rgb = cloudShade(diffuseColor.rgb, vTerr.xz, uCloudT);',
       ].join('\n'));
   };
   mat.customProgramCacheKey = () => 'terrainAntitile';

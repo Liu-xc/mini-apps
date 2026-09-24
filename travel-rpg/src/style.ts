@@ -2,9 +2,10 @@ import * as THREE from 'three';
 
 /* it-002 色彩纪律（白昼体系）：
    蓝调天空打底（IBL/半球光同源）、暖光只给日光本体，杜绝全屏土黄泥色。
-   雾色需与天空 HDRI 地平线一致——像素取样校准（见 it-002 验证记录）。 */
+   雾色需与天空 HDRI 地平线一致——像素取样校准（见 it-002 验证记录）；
+   it-006 按地平线重校压深一档（原 #cfe0ec 比天空亮，读作发光白带/远海）。 */
 export const PALETTE = {
-  fog: new THREE.Color('#cfe0ec'),
+  fog: new THREE.Color('#c3d5e2'),
   sunLight: new THREE.Color('#fff3de'),
   hemiSky: new THREE.Color('#a9cdf2'),
   hemiGround: new THREE.Color('#8fae68'),
