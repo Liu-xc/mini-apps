@@ -1,0 +1,1022 @@
+{
+ "version": 1,
+ "count": 96,
+ "entries": [
+  {
+   "id": "quaternius:Bush_Common",
+   "name": "Bush_Common",
+   "category": "foliage",
+   "file": "assets/quaternius/Bush_Common.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Bush_Common_Flowers",
+   "name": "Bush_Common_Flowers",
+   "category": "flower",
+   "file": "assets/quaternius/Bush_Common_Flowers.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Clover_1",
+   "name": "Clover_1",
+   "category": "foliage",
+   "file": "assets/quaternius/Clover_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Clover_2",
+   "name": "Clover_2",
+   "category": "foliage",
+   "file": "assets/quaternius/Clover_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:CommonTree_1",
+   "name": "CommonTree_1",
+   "category": "tree",
+   "file": "assets/quaternius/CommonTree_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:CommonTree_2",
+   "name": "CommonTree_2",
+   "category": "tree",
+   "file": "assets/quaternius/CommonTree_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:CommonTree_3",
+   "name": "CommonTree_3",
+   "category": "tree",
+   "file": "assets/quaternius/CommonTree_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:CommonTree_4",
+   "name": "CommonTree_4",
+   "category": "tree",
+   "file": "assets/quaternius/CommonTree_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:CommonTree_5",
+   "name": "CommonTree_5",
+   "category": "tree",
+   "file": "assets/quaternius/CommonTree_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:DeadTree_1",
+   "name": "DeadTree_1",
+   "category": "tree",
+   "file": "assets/quaternius/DeadTree_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:DeadTree_2",
+   "name": "DeadTree_2",
+   "category": "tree",
+   "file": "assets/quaternius/DeadTree_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:DeadTree_3",
+   "name": "DeadTree_3",
+   "category": "tree",
+   "file": "assets/quaternius/DeadTree_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:DeadTree_4",
+   "name": "DeadTree_4",
+   "category": "tree",
+   "file": "assets/quaternius/DeadTree_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:DeadTree_5",
+   "name": "DeadTree_5",
+   "category": "tree",
+   "file": "assets/quaternius/DeadTree_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Fern_1",
+   "name": "Fern_1",
+   "category": "foliage",
+   "file": "assets/quaternius/Fern_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Flower_3_Group",
+   "name": "Flower_3_Group",
+   "category": "flower",
+   "file": "assets/quaternius/Flower_3_Group.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Flower_3_Single",
+   "name": "Flower_3_Single",
+   "category": "flower",
+   "file": "assets/quaternius/Flower_3_Single.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Flower_4_Group",
+   "name": "Flower_4_Group",
+   "category": "flower",
+   "file": "assets/quaternius/Flower_4_Group.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Flower_4_Single",
+   "name": "Flower_4_Single",
+   "category": "flower",
+   "file": "assets/quaternius/Flower_4_Single.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Grass_Common_Short",
+   "name": "Grass_Common_Short",
+   "category": "foliage",
+   "file": "assets/quaternius/Grass_Common_Short.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Grass_Common_Tall",
+   "name": "Grass_Common_Tall",
+   "category": "foliage",
+   "file": "assets/quaternius/Grass_Common_Tall.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Grass_Wispy_Short",
+   "name": "Grass_Wispy_Short",
+   "category": "foliage",
+   "file": "assets/quaternius/Grass_Wispy_Short.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Grass_Wispy_Tall",
+   "name": "Grass_Wispy_Tall",
+   "category": "foliage",
+   "file": "assets/quaternius/Grass_Wispy_Tall.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Mushroom_Common",
+   "name": "Mushroom_Common",
+   "category": "mushroom",
+   "file": "assets/quaternius/Mushroom_Common.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Mushroom_Laetiporus",
+   "name": "Mushroom_Laetiporus",
+   "category": "mushroom",
+   "file": "assets/quaternius/Mushroom_Laetiporus.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Round_1",
+   "name": "Pebble_Round_1",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Round_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Round_2",
+   "name": "Pebble_Round_2",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Round_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Round_3",
+   "name": "Pebble_Round_3",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Round_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Round_4",
+   "name": "Pebble_Round_4",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Round_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Round_5",
+   "name": "Pebble_Round_5",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Round_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_1",
+   "name": "Pebble_Square_1",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_2",
+   "name": "Pebble_Square_2",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_3",
+   "name": "Pebble_Square_3",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_4",
+   "name": "Pebble_Square_4",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_5",
+   "name": "Pebble_Square_5",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pebble_Square_6",
+   "name": "Pebble_Square_6",
+   "category": "rock",
+   "file": "assets/quaternius/Pebble_Square_6.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Petal_1",
+   "name": "Petal_1",
+   "category": "flower",
+   "file": "assets/quaternius/Petal_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Petal_2",
+   "name": "Petal_2",
+   "category": "flower",
+   "file": "assets/quaternius/Petal_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Petal_3",
+   "name": "Petal_3",
+   "category": "flower",
+   "file": "assets/quaternius/Petal_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Petal_4",
+   "name": "Petal_4",
+   "category": "flower",
+   "file": "assets/quaternius/Petal_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Petal_5",
+   "name": "Petal_5",
+   "category": "flower",
+   "file": "assets/quaternius/Petal_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pine_1",
+   "name": "Pine_1",
+   "category": "tree",
+   "file": "assets/quaternius/Pine_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pine_2",
+   "name": "Pine_2",
+   "category": "tree",
+   "file": "assets/quaternius/Pine_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pine_3",
+   "name": "Pine_3",
+   "category": "tree",
+   "file": "assets/quaternius/Pine_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pine_4",
+   "name": "Pine_4",
+   "category": "tree",
+   "file": "assets/quaternius/Pine_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Pine_5",
+   "name": "Pine_5",
+   "category": "tree",
+   "file": "assets/quaternius/Pine_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Plant_1",
+   "name": "Plant_1",
+   "category": "foliage",
+   "file": "assets/quaternius/Plant_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Plant_1_Big",
+   "name": "Plant_1_Big",
+   "category": "foliage",
+   "file": "assets/quaternius/Plant_1_Big.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Plant_7",
+   "name": "Plant_7",
+   "category": "foliage",
+   "file": "assets/quaternius/Plant_7.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Plant_7_Big",
+   "name": "Plant_7_Big",
+   "category": "foliage",
+   "file": "assets/quaternius/Plant_7_Big.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Round_Small_1",
+   "name": "RockPath_Round_Small_1",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Round_Small_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Round_Small_2",
+   "name": "RockPath_Round_Small_2",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Round_Small_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Round_Small_3",
+   "name": "RockPath_Round_Small_3",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Round_Small_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Round_Thin",
+   "name": "RockPath_Round_Thin",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Round_Thin.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Round_Wide",
+   "name": "RockPath_Round_Wide",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Round_Wide.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Square_Small_1",
+   "name": "RockPath_Square_Small_1",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Square_Small_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Square_Small_2",
+   "name": "RockPath_Square_Small_2",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Square_Small_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Square_Small_3",
+   "name": "RockPath_Square_Small_3",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Square_Small_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Square_Thin",
+   "name": "RockPath_Square_Thin",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Square_Thin.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:RockPath_Square_Wide",
+   "name": "RockPath_Square_Wide",
+   "category": "rock",
+   "file": "assets/quaternius/RockPath_Square_Wide.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Rock_Medium_1",
+   "name": "Rock_Medium_1",
+   "category": "rock",
+   "file": "assets/quaternius/Rock_Medium_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Rock_Medium_2",
+   "name": "Rock_Medium_2",
+   "category": "rock",
+   "file": "assets/quaternius/Rock_Medium_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:Rock_Medium_3",
+   "name": "Rock_Medium_3",
+   "category": "rock",
+   "file": "assets/quaternius/Rock_Medium_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:TwistedTree_1",
+   "name": "TwistedTree_1",
+   "category": "tree",
+   "file": "assets/quaternius/TwistedTree_1.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:TwistedTree_2",
+   "name": "TwistedTree_2",
+   "category": "tree",
+   "file": "assets/quaternius/TwistedTree_2.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:TwistedTree_3",
+   "name": "TwistedTree_3",
+   "category": "tree",
+   "file": "assets/quaternius/TwistedTree_3.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:TwistedTree_4",
+   "name": "TwistedTree_4",
+   "category": "tree",
+   "file": "assets/quaternius/TwistedTree_4.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "quaternius:TwistedTree_5",
+   "name": "TwistedTree_5",
+   "category": "tree",
+   "file": "assets/quaternius/TwistedTree_5.gltf",
+   "source": "Quaternius",
+   "page": "https://quaternius.itch.io/stylized-nature-megakit",
+   "license": "CC0",
+   "tags": []
+  },
+  {
+   "id": "kenney:campfire_logs",
+   "name": "campfire_logs",
+   "category": "prop",
+   "file": "assets/nature/campfire_logs.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:campfire_stones",
+   "name": "campfire_stones",
+   "category": "prop",
+   "file": "assets/nature/campfire_stones.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:canoe",
+   "name": "canoe",
+   "category": "prop",
+   "file": "assets/nature/canoe.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:fence_bend",
+   "name": "fence_bend",
+   "category": "prop",
+   "file": "assets/nature/fence_bend.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:fence_simple",
+   "name": "fence_simple",
+   "category": "prop",
+   "file": "assets/nature/fence_simple.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:fence_simpleLow",
+   "name": "fence_simpleLow",
+   "category": "prop",
+   "file": "assets/nature/fence_simpleLow.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:log",
+   "name": "log",
+   "category": "prop",
+   "file": "assets/nature/log.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:log_stack",
+   "name": "log_stack",
+   "category": "prop",
+   "file": "assets/nature/log_stack.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:sign",
+   "name": "sign",
+   "category": "prop",
+   "file": "assets/nature/sign.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:stump_round",
+   "name": "stump_round",
+   "category": "prop",
+   "file": "assets/nature/stump_round.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:tent_detailedClosed",
+   "name": "tent_detailedClosed",
+   "category": "prop",
+   "file": "assets/nature/tent_detailedClosed.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "kenney:tent_smallOpen",
+   "name": "tent_smallOpen",
+   "category": "prop",
+   "file": "assets/nature/tent_smallOpen.glb",
+   "source": "Kenney",
+   "page": "https://kenney.nl/assets/nature-kit",
+   "license": "CC0",
+   "tags": [
+    "camp"
+   ]
+  },
+  {
+   "id": "polyhaven:boulder_01",
+   "name": "boulder_01",
+   "category": "rock",
+   "file": "assets/polyhaven/boulder_01/boulder_01_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:dandelion_01",
+   "name": "dandelion_01",
+   "category": "flower",
+   "file": "assets/polyhaven/dandelion_01/dandelion_01_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:fern_02",
+   "name": "fern_02",
+   "category": "foliage",
+   "file": "assets/polyhaven/fern_02/fern_02_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:grass_bermuda_01",
+   "name": "grass_bermuda_01",
+   "category": "foliage",
+   "file": "assets/polyhaven/grass_bermuda_01/grass_bermuda_01_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:grass_medium_01",
+   "name": "grass_medium_01",
+   "category": "foliage",
+   "file": "assets/polyhaven/grass_medium_01/grass_medium_01_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:moss_01",
+   "name": "moss_01",
+   "category": "foliage",
+   "file": "assets/polyhaven/moss_01/moss_01_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "polyhaven:rock_07",
+   "name": "rock_07",
+   "category": "rock",
+   "file": "assets/polyhaven/rock_07/rock_07_1k.gltf",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/models",
+   "license": "CC0",
+   "tags": [
+    "photoreal"
+   ]
+  },
+  {
+   "id": "kaykit:Knight",
+   "name": "Knight",
+   "category": "character",
+   "file": "assets/Knight.glb",
+   "source": "KayKit",
+   "page": "https://kaylousberg.itch.io/kaykit-adventurers",
+   "license": "CC0",
+   "tags": [
+    "animated"
+   ]
+  },
+  {
+   "id": "texture:leafy_grass_diff_2k",
+   "name": "leafy_grass_diff_2k",
+   "category": "texture",
+   "file": "textures/leafy_grass_diff_2k.jpg",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "pbr"
+   ]
+  },
+  {
+   "id": "texture:leafy_grass_nor_gl_2k",
+   "name": "leafy_grass_nor_gl_2k",
+   "category": "texture",
+   "file": "textures/leafy_grass_nor_gl_2k.jpg",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "pbr"
+   ]
+  },
+  {
+   "id": "texture:leafy_grass_rough_2k",
+   "name": "leafy_grass_rough_2k",
+   "category": "texture",
+   "file": "textures/leafy_grass_rough_2k.jpg",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "pbr"
+   ]
+  },
+  {
+   "id": "hdri:dawn_puresky_2k",
+   "name": "dawn_puresky_2k",
+   "category": "hdri",
+   "file": "textures/dawn_puresky_2k.hdr",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "dawn"
+   ]
+  },
+  {
+   "id": "hdri:puresky_2k",
+   "name": "puresky_2k",
+   "category": "hdri",
+   "file": "textures/puresky_2k.hdr",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "day"
+   ]
+  },
+  {
+   "id": "hdri:sunset_puresky_2k",
+   "name": "sunset_puresky_2k",
+   "category": "hdri",
+   "file": "textures/sunset_puresky_2k.hdr",
+   "source": "Poly Haven",
+   "page": "https://polyhaven.com/hdri",
+   "license": "CC0",
+   "tags": [
+    "sunset"
+   ]
+  },
+  {
+   "id": "three:lensflare0",
+   "name": "lensflare0",
+   "category": "prop",
+   "file": "textures/lensflare0.png",
+   "source": "three.js",
+   "page": "https://threejs.org",
+   "license": "MIT",
+   "tags": [
+    "lensflare"
+   ]
+  },
+  {
+   "id": "three:lensflare3",
+   "name": "lensflare3",
+   "category": "prop",
+   "file": "textures/lensflare3.png",
+   "source": "three.js",
+   "page": "https://threejs.org",
+   "license": "MIT",
+   "tags": [
+    "lensflare"
+   ]
+  }
+ ]
+}

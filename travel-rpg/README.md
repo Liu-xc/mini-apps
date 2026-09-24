@@ -33,6 +33,16 @@ npm run preview    # 预览生产构建
 - **风动草场**：13800 株（近圈真模型+顶点风注入 / 远圈自建卡片取包内色列），probe 实测 60fps。
 - 三站色板/构图参考自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`（ADR-003）。
 
+## 场景编排（it-003）
+
+- **`?edit=1` 屏内编辑器**：左侧资产面板（按 catalog 分类）→ 点地面放置 →
+  拖动已放物体移动 → 点选后 `R` 旋转 / `+/-` 缩放 / `Del` 删除 / `Esc` 取消；
+  空白处拖动环视。每次改动**即时写 localStorage，刷新所见即所得**；
+  「导出 JSON」= 复制到剪贴板 + 下载 `<scene>.scene.json`，粘回 `src/scenes.ts` 即入库；
+  「重置默认」清除本地覆盖、回落代码场景。
+- 场景数据：`src/scenes.ts`（schema 见 `specs/03-data-model.md`）；
+  资产目录：`public/assets/catalog.json`（`tools/gen_catalog.py` 再生成）。
+
 ## 调试钩子
 
 - `window.__game.tick(frames, dtMs?)`：同步步进游戏循环。

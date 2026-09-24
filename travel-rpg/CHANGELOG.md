@@ -2,6 +2,14 @@
 
 ## 2026-09-24
 
+- **it-003 · 资产库沉淀 + 屏内场景编排器（Leo：「继续大搞特搞，尽量多沉淀资产，快速编排场景」）**：
+  Quaternius MegaKit 扩到**全量 68 款**（156 文件 25MB）；PolyHaven 草原模型**精选 7 款 17.2MB**
+  （API 权威 include 清单下载、18MB 预算）；**三时段 puresky HDRI**（day/dawn/sunset）；
+  `catalog.json` 96 条 + `gen_catalog.py`；场景数据化（`scenes.ts`/`placer.ts`，
+  营地 14 件迁移、避让区数据派生）；**`?edit=1` 编辑器**（分类面板/点地放置/拖拽/
+  旋转缩放删除/localStorage 持久化/导出 SceneDef JSON/重置默认），controls 加 orbit 开关；
+  新建 03-data-model + ADR-004 + US-5。回归全绿：普通模式构图一致 placement=14、
+  行为断言过、编辑器冒烟过（14→15/导出合法/LS 持久化/重置回落）、构建零错。
 - **it-002 · 素材大换血 A 套 + 风动草场（Leo 确认实施）**：
   Quaternius Stylized Nature MegaKit 36 款植被/岩石（itch 四步 API 直链破解、
   脚本化 fetch、贴图压 1024 入库 18MB）替换 Kenney 植被；PolyHaven PBR 地面三件套

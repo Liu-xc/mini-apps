@@ -17,6 +17,10 @@ curl -fsSL --retry 3 -o public/textures/leafy_grass_nor_gl_2k.jpg  "${BASE_PH}_n
 curl -fsSL --retry 3 -o public/textures/leafy_grass_rough_2k.jpg   "${BASE_PH}_rough_2k.jpg"
 curl -fsSL --retry 3 -o public/textures/puresky_2k.hdr \
   "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/kloofendal_48d_partly_cloudy_puresky_2k.hdr"
+curl -fsSL --retry 3 -o public/textures/dawn_puresky_2k.hdr \
+  "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/qwantani_dawn_puresky_2k.hdr"
+curl -fsSL --retry 3 -o public/textures/sunset_puresky_2k.hdr \
+  "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/belfast_sunset_puresky_2k.hdr"
 
 # 3) three.js 官方 Lensflare 纹理（MIT）
 curl -fsSL --retry 3 -o public/textures/lensflare0.png \
@@ -38,29 +42,9 @@ curl -sL --max-time 600 -o "$TMP/megakit.zip" "$FURL"
 unzip -q "$TMP/megakit.zip" -d "$TMP/megakit"
 SRC="$TMP/megakit/glTF"
 
-# 5) 选型36 款 + 依赖贴图入库，贴图统一压 1024（预算 ~18MB）
-python3 - "$SRC" "public/assets/quaternius" <<'EOF'
-import json, shutil, sys
-SRC, DST = sys.argv[1], sys.argv[2]
-models = """CommonTree_1 CommonTree_2 CommonTree_3 CommonTree_4 CommonTree_5
-Pine_1 Pine_2 Pine_3 TwistedTree_2 TwistedTree_4 DeadTree_2
-Bush_Common Bush_Common_Flowers Plant_1_Big Plant_7_Big Fern_1
-Grass_Common_Short Grass_Common_Tall Grass_Wispy_Short Grass_Wispy_Tall
-Flower_3_Group Flower_4_Group Flower_3_Single Flower_4_Single
-Mushroom_Common Mushroom_Laetiporus
-Rock_Medium_1 Rock_Medium_2 Rock_Medium_3
-Pebble_Square_1 Pebble_Square_2 Pebble_Square_3 Pebble_Round_1 Pebble_Round_2
-Clover_1 Clover_2""".split()
-imgs = set()
-for m in models:
-    shutil.copy(f"{SRC}/{m}.gltf", DST)
-    shutil.copy(f"{SRC}/{m}.bin", DST)
-    for im in json.load(open(f"{SRC}/{m}.gltf")).get("images", []):
-        imgs.add(im["uri"])
-for u in imgs:
-    shutil.copy(f"{SRC}/{u}", DST)
-print(f"quaternius: {len(models)} models, {len(imgs)} textures")
-EOF
+# 5) Quaternius 全量 68 款 + 贴图平铺入库（it-003 资产沉淀），贴图压 1024
+mkdir -p public/assets/quaternius
+cp "$TMP/megakit/glTF/"*.gltf "$TMP/megakit/glTF/"*.bin "$TMP/megakit/glTF/"*.png public/assets/quaternius/
 for f in public/assets/quaternius/*.png; do sips -Z 1024 "$f" >/dev/null 2>&1; done
 
 # 6) Kenney Nature Kit → 只取12 款营地道具（植被已由 Quaternius 接管，ADR-002）
@@ -74,3 +58,37 @@ for m in campfire_logs campfire_stones tent_smallOpen tent_detailedClosed \
 done
 
 echo "assets ok: quaternius $(ls public/assets/quaternius | wc -l | tr -d ' ') 文件 / nature $(ls public/assets/nature | wc -l | tr -d ' ') 道具 / textures $(ls public/textures | wc -l | tr -d ' ')"
+
+# 7) Poly Haven 草原模型精选（API 权威清单，预算 18MB，it-003）
+python3 - <<'PYEOF'
+import json, subprocess, os
+CANDS = ["grass_medium_01", "grass_bermuda_01", "boulder_01", "rock_07",
+         "fern_02", "shrub_01", "dandelion_01", "tree_stump_01", "moss_01"]
+DST_ROOT, BUDGET = "public/assets/polyhaven", 18 * 1024 * 1024
+def curl(url, out):
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    return subprocess.run(["curl", "-fsSL", "--retry", "3", "--max-time", "90",
+                           "-o", out, url], capture_output=True).returncode == 0
+total = 0
+for mid in CANDS:
+    api = subprocess.run(["curl", "-fsSL", "--max-time", "25",
+                          f"https://api.polyhaven.com/files/{mid}"], capture_output=True, text=True)
+    if api.returncode: continue
+    try: d = json.loads(api.stdout)["gltf"]["1k"]["gltf"]
+    except Exception: continue
+    files, need = {"gltf": d["url"]}, d["size"]
+    for name, meta in d.get("include", {}).items():
+        files[name] = meta["url"]; need += meta["size"]
+    if total + need > BUDGET: continue
+    dstdir = f"{DST_ROOT}/{mid}"
+    ok = curl(files.pop("gltf"), f"{dstdir}/{mid}_1k.gltf")
+    for rel, url in files.items() if ok else []:
+        ok = curl(url, f"{dstdir}/{rel}")
+    if ok: total += need
+    else: subprocess.run(["rm", "-rf", dstdir])
+print(f"polyhaven: {total//1024}KB")
+PYEOF
+
+# 8) 重新生成资产目录
+python3 tools/gen_catalog.py
+echo "assets ok: quaternius $(ls public/assets/quaternius | wc -l | tr -d ' ') / nature $(ls public/assets/nature | wc -l | tr -d ' ') / polyhaven $(find public/assets/polyhaven -name '*.gltf' | wc -l | tr -d ' ') 模型 / textures $(ls public/textures | wc -l | tr -d ' ')"

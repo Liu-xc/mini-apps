@@ -21,6 +21,7 @@ export class Input {
   private zoomAcc = 0;
   private keys = new Set<string>();
   private dragging = false;
+  orbitEnabled = true;   // it-003 编辑器拖动对象时暂停环视
   private lastX = 0;
   private lastY = 0;
   private joyActive = false;
@@ -47,10 +48,13 @@ export class Input {
     });
     canvas.addEventListener('pointermove', e => {
       if (!this.dragging) return;
-      this.lookDX += e.clientX - this.lastX;
-      this.lookDY += e.clientY - this.lastY;
+      const dx = e.clientX - this.lastX;
+      const dy = e.clientY - this.lastY;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
+      if (!this.orbitEnabled) return;
+      this.lookDX += dx;
+      this.lookDY += dy;
     });
     const end = (e: PointerEvent) => {
       if (!this.dragging) return;

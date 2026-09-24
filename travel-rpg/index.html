@@ -52,6 +52,53 @@
     background: rgba(0, 0, 0, .65); padding: 6px 10px; border-radius: 6px;
     pointer-events: none;
   }
+
+  /* ---------- 场景编辑器（?edit=1，it-003） ---------- */
+  #editor{
+    position:fixed; left:18px; top:18px; bottom:18px; width:250px; z-index:30;
+    display:none; flex-direction:column; gap:10px; padding:16px 14px;
+    background:rgba(16,14,12,.78); border:1px solid rgba(245,234,210,.18);
+    border-radius:10px; backdrop-filter:blur(10px); overflow:hidden;
+    font-size:13px; letter-spacing:.06em;
+  }
+  #editor .ed-head{ font-size:15px; letter-spacing:.2em; color:#f0e4c8;
+    display:flex; justify-content:space-between; align-items:baseline; }
+  #editor .ed-count{ font-size:11px; color:rgba(232,196,124,.85); letter-spacing:.08em; }
+  #editor .ed-cats{ display:flex; flex-wrap:wrap; gap:6px; }
+  #editor .ed-cat{
+    padding:5px 10px; font-size:12px; letter-spacing:.12em; cursor:pointer;
+    background:rgba(245,234,210,.08); color:rgba(245,234,210,.8);
+    border:1px solid rgba(245,234,210,.16); border-radius:999px; font-family:inherit;
+  }
+  #editor .ed-cat.on{ background:linear-gradient(to bottom,#f0d494,#dcb46a); color:#1c160e; font-weight:600; }
+  #editor .ed-list{
+    flex:1; overflow-y:auto; display:flex; flex-wrap:wrap; gap:6px;
+    align-content:flex-start; padding-right:2px;
+  }
+  #editor .ed-list::-webkit-scrollbar{ width:5px; }
+  #editor .ed-list::-webkit-scrollbar-thumb{ background:rgba(245,234,210,.25); border-radius:3px; }
+  #editor .ed-item{
+    padding:6px 10px; font-size:12px; cursor:pointer; text-align:left;
+    background:rgba(245,234,210,.06); color:rgba(245,234,210,.85);
+    border:1px solid rgba(245,234,210,.14); border-radius:6px; font-family:inherit;
+  }
+  #editor .ed-item:hover{ border-color:rgba(232,196,124,.6); }
+  #editor .ed-item.on{ background:rgba(232,196,124,.28); border-color:#e8c47c; color:#fff; }
+  #editor .ed-bar{ display:flex; gap:8px; }
+  #editor .ed-btn{
+    flex:1; padding:9px 0; font-size:13px; letter-spacing:.14em; cursor:pointer;
+    background:linear-gradient(to bottom,#f0d494,#dcb46a); color:#1c160e;
+    border:none; border-radius:6px; font-family:inherit; font-weight:600;
+  }
+  #editor .ed-btn[data-act=reset]{ background:rgba(245,234,210,.12); color:rgba(245,234,210,.85); }
+  #editor .ed-hint{ font-size:11px; line-height:1.7; color:rgba(245,234,210,.55); letter-spacing:.05em; }
+  #editor .ed-toast{
+    position:absolute; left:14px; right:14px; bottom:118px; padding:8px 10px;
+    background:rgba(232,196,124,.92); color:#1c160e; font-size:12px; border-radius:6px;
+    opacity:0; transition:opacity .25s; pointer-events:none; text-align:center;
+  }
+  #editor .ed-toast.show{ opacity:1; }
+  body.edit #hint{ top:auto; bottom:18px; }
 </style>
 </head>
 <body>
@@ -60,6 +107,7 @@
   <div id="stick"></div>
   <button id="jump" type="button">跳</button>
   <div id="err"></div>
+  <div id="editor"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
