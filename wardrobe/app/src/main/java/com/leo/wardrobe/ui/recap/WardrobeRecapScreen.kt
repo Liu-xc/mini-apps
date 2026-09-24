@@ -10,9 +10,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +43,7 @@ import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,14 +65,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -141,7 +151,13 @@ fun WardrobeRecapScreen(
         }
     }
 
-    Scaffold { padding ->
+    // it-034 A：本页状态栏沉浸白（白顶栏铺进状态栏）——根 Scaffold 对 RECAP 已去顶，
+    // 内层 Scaffold 只留左右/底部 inset，消除状态栏下方那段浅绿带（原三层叠加 inset）
+    Scaffold(
+        contentWindowInsets = androidx.compose.material3.ScaffoldDefaults.contentWindowInsets.only(
+            WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+        ),
+    ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().background(ec.paper)) {
             if (showIdle) {
                 // 二级页独占整页（含顶栏），父页头部不堆叠（评审修复）
@@ -323,6 +339,24 @@ fun WardrobeRecapScreen(
                     ) {
                         Text(if (rendering) "生成中…" else "生成年度衣橱长图")
                     }
+                    // it-034 C7：禁用即说明解锁条件——真实门槛 = 本档位打卡次数 ≥1（hasWearData）
+                    if (!stats.hasWearData) {
+                        Spacer(Modifier.height(6.dp))
+                        val hint = when (val r = range) {
+                            is WardrobeRecapRange.Year -> "${r.year} 年打卡 ≥ 1 次后解锁"
+                            else -> "累计打卡 ≥ 1 次后解锁"
+                        } + " · 去「穿搭记录」点「今天穿了这套」"
+                        Text(
+                            hint,
+                            style = MaterialTheme.typography.bodySmall,
+                            // 对比 ≥4.5:1：浅色下 onSurfaceVariant(0x808D82) 仅 ~3:1，加深一档；
+                            // 深色下 onSurfaceVariant(0x94A294) 对墨纸 ~7:1 直接可用
+                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                            else Color(0xFF55605A),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Spacer(Modifier.height(24.dp))
 
                     ReminderSettings(
@@ -451,23 +485,71 @@ private fun VersatileCard(rank: Int, name: String, sub: String, photoFile: File?
     }
 }
 
+/**
+ * it-034 C6：品类分布色阶——同色系 6 档绿（深→浅），按数量降序铺档（数量最大段最深，
+ * 保证拿到段内白字标注的宽段一定落在深色档）；段间 2dp 留白保留。
+ * 档位按段数均摊，段数不足/超过 6 时在首尾档之间插值取档。
+ */
+private val CategoryRamp = listOf(
+    Color(0xFF14543A),
+    Color(0xFF1D6845),
+    Color(0xFF2A7D55),
+    Color(0xFF429E68),  // 品牌绿（Accent 同值）
+    Color(0xFF7CC09B),
+    Color(0xFFBFE1CE),
+)
+
 @Composable
 private fun CategoryBar(counts: Map<com.leo.wardrobe.domain.model.WardrobeCategory, Int>) {
     val ec = editorialColors()
-    val total = counts.values.sum().coerceAtLeast(1)
+    val segments = counts.filterValues { it > 0 }.entries
+        .sortedWith(
+            compareByDescending<Map.Entry<com.leo.wardrobe.domain.model.WardrobeCategory, Int>> { it.value }
+                .thenBy { it.key.ordinal },
+        )
+    val total = segments.sumOf { it.value }.coerceAtLeast(1)
     Column {
-        Row(
+        BoxWithConstraints(
             Modifier.fillMaxWidth().height(18.dp).clip(RoundedCornerShape(9.dp)),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            counts.filterValues { it > 0 }.forEach { (_, count) ->
-                val w = count / total.toFloat()
-                if (w > 0f) Box(Modifier.weight(w).fillMaxSize().background(if (counts.values.size > 1) ec.accent.copy(alpha = 0.25f + 0.5f * w) else ec.accent))
+            val gap = 2.dp
+            val avail = maxWidth - gap * (segments.size - 1).coerceAtLeast(0)
+            Row(
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(gap),
+            ) {
+                segments.forEachIndexed { i, entry ->
+                    val share = entry.value / total.toFloat()
+                    if (share <= 0f) return@forEachIndexed
+                    // 按数量降序铺 6 档：段数 n>1 时 idx = i*(5)/(n-1)，n=1 用最深档
+                    val rampIdx = if (segments.size <= 1) 0
+                    else (i * (CategoryRamp.size - 1)) / (segments.size - 1)
+                    val segColor = CategoryRamp[rampIdx.coerceIn(0, CategoryRamp.size - 1)]
+                    // 宽段（>78dp 逻辑宽）段内直标「品类 n」；窄段靠下方文字行对应
+                    val wide = avail * share > 78.dp
+                    Box(
+                        Modifier.weight(share).fillMaxSize().background(segColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (wide) {
+                            Text(
+                                "${entry.key.label} ${entry.value}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                // 白字仅用于对比 ≥4.5:1 的深色档，浅色档落墨色兜底
+                                color = if (segColor.luminance() < 0.183f) Color.White else ec.ink,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            counts.filterValues { it > 0 }.entries.joinToString(" · ") { "${it.key.label} ${it.value}" },
+            segments.joinToString(" · ") { "${it.key.label} ${it.value}" },
             style = MaterialTheme.typography.labelSmall,
             color = ec.inkFaint,
         )
@@ -521,13 +603,30 @@ private fun ReminderSettings(
                     Switch(checked = enabled, onCheckedChange = onToggle, enabled = !demo)
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // it-034 C9：chips 可用 = 总开关开 && 非演示（原仅演示禁用）；
+                // 不可用时整行 alpha 0.45 表示「跟着总开关走」
+                val chipsActive = enabled && !demo
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.alpha(if (chipsActive) 1f else 0.45f),
+                ) {
                     listOf(60, 90, 180).forEach { d ->
                         FilterChip(
                             selected = days == d,
                             onClick = { onDays(d) },
-                            enabled = !demo,
+                            enabled = chipsActive,
                             label = { Text("$d 天") },
+                            // it-034 C9：选中态统一品牌绿——primary 容器/描边 + onPrimary 文字
+                            // （与 TagInput 已选标签同构，覆盖 M3 默认淡紫灰系）
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = chipsActive,
+                                selected = days == d,
+                                selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
                         )
                     }
                 }

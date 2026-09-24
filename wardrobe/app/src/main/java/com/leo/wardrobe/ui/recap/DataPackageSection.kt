@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
@@ -94,6 +95,7 @@ fun DataPackageSection(
                     title = "导出数据包",
                     sub = "zip 备份 · 可交给 AI 加工后导回",
                     enabled = !demo && exportUi !is RecapViewModel.ExportUi.Running,
+                    demo = demo,
                     onClick = onExport,
                 )
                 DataRow(
@@ -102,6 +104,7 @@ fun DataPackageSection(
                     // it-026 O5：入口副标题补覆盖风险暗示
                     sub = "合并打标结果 · 整包恢复（覆盖前确认）",
                     enabled = !demo && importUi !is RecapViewModel.ImportUi.Checking && importUi !is RecapViewModel.ImportUi.Running,
+                    demo = demo,
                     onClick = onImport,
                 )
                 if (demo) {
@@ -126,6 +129,7 @@ private fun DataRow(
     title: String,
     sub: String,
     enabled: Boolean,
+    demo: Boolean,
     onClick: () -> Unit,
 ) {
     val ec = editorialColors()
@@ -134,6 +138,8 @@ private fun DataRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = enabled) { onClick() }
+            // it-034 C9：演示模式整行降透明（运行中置灰维持原逻辑）
+            .alpha(if (demo) 0.5f else 1f)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -147,14 +153,35 @@ private fun DataRow(
         ) { icon() }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = if (enabled) ec.ink else ec.inkFaint)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                // 演示模式的「不可点」已由整行 alpha 承担，标题不再叠加 inkFaint
+                color = if (enabled || demo) ec.ink else ec.inkFaint,
+            )
             Text(sub, style = MaterialTheme.typography.labelSmall, color = ec.inkFaint)
         }
-        Icon(
-            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = if (enabled) ec.inkFaint else ec.hairline,
-        )
+        if (demo) {
+            // it-034 C9：行内「演示模式」假徽标（浅灰底圆角 chip，纯展示不可点）
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xFFF0F1EF)),
+            ) {
+                Text(
+                    "演示模式",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ec.inkFaint,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                )
+            }
+        } else {
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = if (enabled) ec.inkFaint else ec.hairline,
+            )
+        }
     }
 }
 

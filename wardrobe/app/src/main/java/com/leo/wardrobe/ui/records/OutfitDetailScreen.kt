@@ -113,7 +113,12 @@ fun OutfitDetailScreen(
                     Icon(Icons.Rounded.Edit, contentDescription = "编辑标签")
                 }
                 IconButton(onClick = { showDelete = true }) {
-                    Icon(Icons.Rounded.Delete, contentDescription = "删除穿搭")
+                    // it-034 C5：破坏性操作警示红（执行前确认对话框已有，见下方 showDelete）
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "删除穿搭",
+                        tint = MaterialTheme.colorScheme.error,
+                    )
                 }
             },
         )

@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -21,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -177,6 +180,17 @@ private fun WardrobeRoot() {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
+        // it-034 A：白底二级页（W4/W5/W7/W9）状态栏沉浸同色——这些路由去掉根 Scaffold
+        // 顶部 inset，内容顶到窗口顶，由各页 TopAppBar 自行吸收状态栏（白顶栏铺进状态栏），
+        // 顶栏标题上方只剩常规状态栏高度；搭配/记录/衣橱/W10 维持原浅绿状态栏表现
+        contentWindowInsets = if (currentRoute in setOf(
+                Routes.ITEM_EDIT, Routes.ITEM_DETAIL, Routes.OUTFIT_DETAIL, Routes.RECAP,
+            )
+        ) {
+            ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar {

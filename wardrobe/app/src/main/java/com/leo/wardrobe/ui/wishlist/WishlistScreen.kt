@@ -740,7 +740,12 @@ private fun WishDetailSheet(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                // it-034 C5：编辑/删除两图标间距拉开 ≥16dp（删除转警示红，误触防线见确认弹窗）
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
                 Text(
                     wish.name,
                     style = MaterialTheme.typography.titleLarge,
@@ -750,7 +755,13 @@ private fun WishDetailSheet(
                     overflow = TextOverflow.Ellipsis,
                 )
                 IconButton(onClick = onEdit) { Icon(Icons.Rounded.Edit, contentDescription = "编辑") }
-                IconButton(onClick = onDelete) { Icon(Icons.Rounded.Delete, contentDescription = "删除") }
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "删除",
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
             val file = wish.imageFile?.let(vm::imageFileOf)
             if (file != null) {
@@ -943,7 +954,14 @@ private fun WishOutfitDetailSheet(
                     color = editorialColors().ink,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onDelete) { Icon(Icons.Rounded.Delete, contentDescription = "删除") }
+                IconButton(onClick = onDelete) {
+                    // it-034 C5：破坏性操作警示红（确认对话框已有，见 deleteOutfitTarget）
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = "删除",
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
             // 成员列表
             ownedMembers.forEach { item ->
