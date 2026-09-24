@@ -30,6 +30,15 @@ export const WORLD_HALF = 120;   /* 地形半径（±WORLD_HALF） */
 export const PLAYER_LIMIT = 88;  /* 角色活动边界（另加 90 半径圆钳制） */
 export const UNDERLAY_Y = -6.5;  /* 底板高度：地形边缘沉入此处，地平线无缝 */
 
+/* 达里湖（it-005 AC-1）：湖盆参数与水位。水线 = 湖岸 wobble 半径的 ~0.72 倍，
+   滩涂带宽 ~4m，湖心最深水位下 -2.6m（仿真见 it-005 验证记录）。 */
+export const LAKE = { x: 54, z: -38, r: 30, level: -1.35 };
+
+/* 湖岸线半径：角向低频噪声扰动（有机岸线的唯一事实源，水面/芦苇/地形共用） */
+export function lakeRadiusAt(ang: number): number {
+  return LAKE.r * (1 + (vnoise(Math.cos(ang) * 2 + 40, Math.sin(ang) * 2 + 40) - 0.5) * 0.42);
+}
+
 /* 任意 (x,z) 的地面高度——玩家贴地、镜头避地、散布物落位共用这一个函数 */
 export function terrainHeight(x: number, z: number): number {
   let h = 0;
@@ -39,8 +48,29 @@ export function terrainHeight(x: number, z: number): number {
   const d = Math.hypot(x, z);
   const t = Math.min(Math.max((d - 7) / 14, 0), 1);            // 出生点压平
   h *= smooth(t);
+  /* 达里湖湖盆：岸线内把地形压到水下山盘 */
+  const dx = x - LAKE.x, dz = z - LAKE.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist < LAKE.r * 2.2) {
+    const ld = dist / lakeRadiusAt(Math.atan2(dz, dx));
+    if (ld < 1.35) {
+      const shore = smooth(Math.min(Math.max((1 - ld) / 0.35, 0), 1));
+      const bed = LAKE.level - 2.6 * smooth(Math.min(Math.max((0.85 - ld) / 0.85, 0), 1));
+      h = h * (1 - shore) + bed * shore;
+    }
+  }
   const ef = smooth(Math.min(Math.max((d - 96) / 20, 0), 1));  // 世界边缘沉入底板
   return h * (1 - ef) + UNDERLAY_Y * ef;
+}
+
+/* 玩家/镜头用的「可行走地面」：湖盆内钳制在膝深水位（涉水，it-005 AC-1）。
+   湖外天然洼地不钳制——那是干沟，可以走下去。 */
+export function groundHeight(x: number, z: number): number {
+  const h = terrainHeight(x, z);
+  if (h < LAKE.level - 0.5 && Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r * 1.6) {
+    return LAKE.level - 0.5;
+  }
+  return h;
 }
 
 function pbr(url: string, srgb: boolean): THREE.Texture {
@@ -70,6 +100,9 @@ export function buildTerrain(): THREE.Mesh {
   const cLow = new THREE.Color('#7fb855');
   const cHigh = new THREE.Color('#c9d98a');
   const cRock = new THREE.Color('#a8a196');
+  const sandDry = new THREE.Color('#d6cb9c');
+  const sandWet = new THREE.Color('#c2ae7f');
+  const bedCol = new THREE.Color('#8fa07a');
   const tmp = new THREE.Color();
   const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
@@ -82,6 +115,14 @@ export function buildTerrain(): THREE.Mesh {
     const macro = fbm(x * 0.012 + 50, z * 0.012 + 50, 3) - 0.5;
     tmp.offsetHSL(0.02, 0.03, macro * 0.16);
     tmp.lerp(cRock, Math.min(slope * 2.2, 1) * 0.85);
+    /* 湖岸湿沙环（it-005 AC-5）：水位带草色 → 干沙 → 湿沙 → 水下苔底 */
+    if (y < LAKE.level + 1.1) {
+      tmp.lerp(sandDry, Math.min(Math.max((LAKE.level + 1.1 - y) / 0.9, 0), 1) * 0.75);
+      tmp.lerp(sandWet, Math.min(Math.max((LAKE.level + 0.25 - y) / 0.5, 0), 1) * 0.8);
+      if (y < LAKE.level - 0.2) {
+        tmp.lerp(bedCol, Math.min(Math.max((LAKE.level - 0.2 - y) / 1.2, 0), 1) * 0.7);
+      }
+    }
     colors[i * 3] = tmp.r;
     colors[i * 3 + 1] = tmp.g;
     colors[i * 3 + 2] = tmp.b;
@@ -89,7 +130,7 @@ export function buildTerrain(): THREE.Mesh {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const base = import.meta.env.BASE_URL;
-  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+  const mat = new THREE.MeshStandardMaterial({
     map: pbr(`${base}textures/leafy_grass_diff_2k.jpg`, true),
     normalMap: pbr(`${base}textures/leafy_grass_nor_gl_2k.jpg`, false),
     roughnessMap: pbr(`${base}textures/leafy_grass_rough_2k.jpg`, false),
@@ -97,7 +138,39 @@ export function buildTerrain(): THREE.Mesh {
     roughness: 1,
     metalness: 0,
     vertexColors: true,
-  }));
+  });
+  /* 反平铺（it-005 AC-5）：albedo 改为世界坐标双尺度采样 + 宏观噪声混合，
+     打断 20× 平铺网格；法线/粗糙度维持原 vMapUv 平铺（微观重复不可辨）。 */
+  mat.onBeforeCompile = shader => {
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTerr;')
+      .replace('#include <begin_vertex>',
+        '#include <begin_vertex>\nvTerr = transformed;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', [
+        '#include <common>',
+        'varying vec3 vTerr;',
+        'float tHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+        'float tNoise(vec2 p){',
+        '  vec2 i = floor(p), f = fract(p);',
+        '  f = f * f * (3.0 - 2.0 * f);',
+        '  return mix(mix(tHash(i), tHash(i + vec2(1.0, 0.0)), f.x),',
+        '             mix(tHash(i + vec2(0.0, 1.0)), tHash(i + vec2(1.0, 1.0)), f.x), f.y);',
+        '}',
+      ].join('\n'))
+      .replace('#include <map_fragment>', [
+        '#ifdef USE_MAP',
+        '  float tB = tNoise(vTerr.xz * 0.045) * 0.62 + tNoise(vTerr.xz * 0.012) * 0.38;',
+        '  float tM = smoothstep(0.32, 0.68, tB);',
+        '  vec2 tUvA = vTerr.xz * 0.085;',
+        '  vec2 tUvB = vec2(-vTerr.z, vTerr.x) * 0.028 + 17.3;',
+        '  diffuseColor *= mix(texture2D(map, tUvA), texture2D(map, tUvB), tM);',
+        '#endif',
+      ].join('\n'));
+  };
+  mat.customProgramCacheKey = () => 'terrainAntitile';
+
+  const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'terrain';
   mesh.receiveShadow = true;
   return mesh;

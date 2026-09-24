@@ -2,10 +2,15 @@ import * as THREE from 'three';
 import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflare.js';
-import { buildTerrain, buildUnderlay } from './terrain';
+import { buildTerrain, buildUnderlay, groundHeight } from './terrain';
 import { buildScatter, tickScatterWind } from './scatter';
 import { buildGrassField } from './grass';
 import { buildScenePlacements } from './placer';
+import { buildWater } from './water';
+import { buildTrail } from './trail';
+import { buildCampfire } from './campfire';
+import { buildAmbient } from './ambient';
+import { buildDust } from './dust';
 import { getScene, deriveBlock } from './scenes';
 import { initEditor, type EditorApi } from './editor';
 import { Player } from './player';
@@ -100,12 +105,24 @@ scene.add(new THREE.HemisphereLight(PALETTE.hemiSky, PALETTE.hemiGround, 0.85));
 scene.add(buildUnderlay());
 const terrain = buildTerrain();
 scene.add(terrain);
+const waterRes = buildWater();                     // 达里湖（it-005）
+scene.add(waterRes.mesh);
 const scatterGroup = buildScatter(avoid);
 scene.add(scatterGroup);
 const grassField = buildGrassField(avoid);
 scene.add(grassField.group);
 const placerRes = buildScenePlacements(SCENE_ID);   // 场景数据（或 localStorage 覆盖）实例化
 scene.add(placerRes.group);
+const trailRes = buildTrail();                     // 营地→湖石径（it-005）
+scene.add(trailRes.group);
+const ambientRes = buildAmbient();                 // 蝴蝶/鸟群（it-005）
+scene.add(ambientRes.group);
+const dustRes = buildDust();                       // 尘土/涟漪（it-005）
+scene.add(dustRes.group);
+/* 篝火特效：锚定场景数据里的柴堆位置（编辑器挪柴堆特效跟走） */
+const campfirePl = activeScene.placements.find(p => p.asset === 'kenney:campfire_logs');
+const campfire = buildCampfire(campfirePl?.x ?? -4.5, campfirePl?.z ?? -7.5);
+scene.add(campfire.group);
 
 /* ---------- 光斑 ---------- */
 const lensflare = new Lensflare();
@@ -174,6 +191,21 @@ document.getElementById('jump')!.addEventListener('pointerdown', e => {
   input.jumpQueued = true;
 });
 
+/* 足迹反馈接线（it-005 AC-8）：尘土 / 涟漪 */
+player.onStep = (p, running) => {
+  if (player.wading) dustRes.ripple(p.x, p.z, running ? 1.35 : 1);
+  else dustRes.puff(p.x, p.y, p.z, running ? 1.25 : 1);
+};
+player.onLand = (p, impact) => {
+  if (player.wading) {
+    dustRes.ripple(p.x, p.z, 1.7);
+  } else {
+    dustRes.puff(p.x, p.y, p.z, 1.5);
+    dustRes.puff(p.x + 0.3, p.y, p.z - 0.2, 1.1);
+  }
+  void impact;
+};
+
 /* ---------- 后期链 ---------- */
 const post = createPost(renderer, scene, camera, effect);
 
@@ -229,6 +261,10 @@ window.__game = {
     scatterChildren: scatterGroup.children.length,
     grassChildren: grassField.group.children.length,
     placementChildren: placerRes.group.children.length,
+    waterReady: !!waterRes.mesh,
+    trailDone: trailRes.done.value,
+    reedsDone: grassField.reedsDone,
+    campfireReady: campfire.group.parent === scene,
     outline: post.outlineState.on,
     envReady: !!scene.environment,
     background: !!scene.background,
@@ -237,6 +273,13 @@ window.__game = {
     editorReady: editorApi !== null,
   }),
   setOutline: (v: boolean) => { post.outlineState.on = v; },
+  /* 评审/截图用：瞬移 + 视角（it-005） */
+  tp: (x: number, z: number, yawDeg = 0, pitchDeg = 14) => {
+    player.pos.set(x, groundHeight(x, z), z);
+    player.vel.set(0, 0, 0);
+    rig.yaw = (yawDeg * Math.PI) / 180;
+    rig.pitch = (pitchDeg * Math.PI) / 180;
+  },
 };
 
 /* ---------- 主循环 ---------- */
@@ -251,8 +294,12 @@ function tick(dt: number): void {
   elapsed += dt;
   fpsFrames++; fpsClock += dt;
   if (fpsClock >= 0.5) { lastFps = Math.round(fpsFrames / fpsClock); fpsFrames = 0; fpsClock = 0; }
-  grassField.update(elapsed);
+  grassField.update(elapsed, player.pos);
   tickScatterWind(elapsed);
+  waterRes.update(elapsed);
+  campfire.update(elapsed);
+  ambientRes.update(elapsed);
+  dustRes.update(dt);
   motes.update(elapsed, player.pos);
   sun.position.copy(player.pos).addScaledVector(SUN_DIR, 95);
   sun.target.position.copy(player.pos);
@@ -304,6 +351,10 @@ declare global {
         scatterChildren: number;
         grassChildren: number;
         placementChildren: number;
+        waterReady: boolean;
+        trailDone: boolean;
+        reedsDone: boolean;
+        campfireReady: boolean;
         outline: boolean;
         envReady: boolean;
         background: boolean;
@@ -312,6 +363,7 @@ declare global {
         editorReady: boolean;
       };
       setOutline: (v: boolean) => void;
+      tp: (x: number, z: number, yawDeg?: number, pitchDeg?: number) => void;
     };
     __editor?: EditorApi;
   }

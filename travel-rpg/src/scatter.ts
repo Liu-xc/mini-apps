@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { terrainHeight } from './terrain';
+import { terrainHeight, LAKE } from './terrain';
 
 function mulberry32(seed: number): () => number {
   let s = seed | 0;
@@ -46,6 +46,7 @@ function makeSpots(
     const x = (rand() - 0.5) * spread;
     const z = (rand() - 0.5) * spread;
     if (Math.hypot(x, z) < minR) continue;
+    if (terrainHeight(x, z) < LAKE.level + 0.22) continue;   // 水下不散布（it-005）
     let ok = true;
     for (const [bx, bz] of avoid) {
       if ((x - bx) ** 2 + (z - bz) ** 2 < avoidR2) { ok = false; break; }

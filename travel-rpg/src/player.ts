@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { PLAYER_LIMIT, terrainHeight } from './terrain';
+import { PLAYER_LIMIT, terrainHeight, groundHeight } from './terrain';
 
 const GRAVITY = 22;
 const JUMP_V = 8.2;
@@ -40,6 +40,11 @@ export class Player {
   onGround = true;
   modelSource: 'fallback' | 'knight' = 'fallback';
   yaw = Math.PI;
+  wading = false;   // 涉水中（it-005 AC-1）
+  /* 足迹反馈钩子（it-005 AC-8）：dust 层在 main 接线 */
+  onStep?: (p: THREE.Vector3, running: boolean) => void;
+  onLand?: (p: THREE.Vector3, impact: number) => void;
+  private stepAcc = 0;
 
   private visual = new THREE.Group();
   private blob: THREE.Mesh;
@@ -130,7 +135,9 @@ private buildFallback(): void {
 
   /* dir：相机相对的水平移动方向（已归一化或为零向量） */
   update(dt: number, dir: THREE.Vector3, run: boolean, elapsed: number): void {
-    const speed = run ? RUN_SPEED : WALK_SPEED;
+    const wasGround = this.onGround;
+    const fallV = this.vel.y;
+    const speed = (run ? RUN_SPEED : WALK_SPEED) * (this.wading ? 0.55 : 1);
     const moving = dir.lengthSq() > 1e-4;
     const a = 1 - Math.exp(-ACCEL * dt);
     this.vel.x += ((moving ? dir.x * speed : 0) - this.vel.x) * a;
@@ -146,7 +153,9 @@ private buildFallback(): void {
       this.pos.z *= 90 / rr;
     }
 
-    const ground = terrainHeight(this.pos.x, this.pos.z);
+    const raw = terrainHeight(this.pos.x, this.pos.z);
+    const ground = groundHeight(this.pos.x, this.pos.z);
+    this.wading = ground - raw > 0.15;          // 被水位钳抬起 = 涉水
     if (this.pos.y <= ground) {
       this.pos.y = ground;
       if (this.vel.y < 0) this.vel.y = 0;
@@ -172,6 +181,19 @@ private buildFallback(): void {
       Math.max(0.25, 0.9 - h * 0.12);
 
     const sp = Math.hypot(this.vel.x, this.vel.z);
+
+    /* 足迹事件（it-005 AC-8）：步距累计 + 落地冲击 */
+    if (this.onGround) {
+      if (!wasGround && fallV < -4.5) this.onLand?.(this.pos, -fallV);
+      this.stepAcc += sp * dt;
+      if (sp > 0.6 && this.stepAcc > (run ? 2.1 : 1.55)) {
+        this.stepAcc = 0;
+        this.onStep?.(this.pos, run);
+      }
+    } else {
+      this.stepAcc = 1.2;   // 落地即触达半步
+    }
+
     const st = !this.onGround ? 'air' : sp > 6 ? 'run' : sp > 0.4 ? 'walk' : 'idle';
     if (st !== this.state) {
       this.state = st;

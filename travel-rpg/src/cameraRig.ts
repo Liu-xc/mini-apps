@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { terrainHeight } from './terrain';
+import { groundHeight } from './terrain';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const _target = new THREE.Vector3();
@@ -36,7 +36,7 @@ export class CameraRig {
     _desired.copy(this.lookTarget).add(_offset);
     this.camera.position.lerp(_desired, 1 - Math.exp(-9 * dt));
 
-    const minY = terrainHeight(this.camera.position.x, this.camera.position.z) + 0.8;
+    const minY = groundHeight(this.camera.position.x, this.camera.position.z) + 0.8;
     if (this.camera.position.y < minY) this.camera.position.y = minY;
     this.camera.lookAt(this.lookTarget);
   }

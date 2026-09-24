@@ -35,6 +35,8 @@ export const CAMP: SceneDef = {
     { asset: 'kenney:fence_simple', x: -10.6, z: -16.9, yaw: -0.35, scale: 1.15 },
     { asset: 'kenney:fence_simpleLow', x: -8.2, z: -17.8, yaw: -0.35, scale: 1.0 },
     { asset: 'kenney:log', x: 4.2, z: -4.6, yaw: 1.2, scale: 0.45 },
+    // 湖湾滩涂的独木舟（it-005 AC-3，激活入库未上场资产；石径终点旁）
+    { asset: 'kenney:canoe', x: 34.2, z: -24.4, yaw: -0.55, scale: 0.8 },
   ],
 };
 
