@@ -1,0 +1,72 @@
+[
+{"file": "wardrobe-08-W6-export.png", "pageTitle": "导出生图素材底部弹层", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "长图预览拼贴区单品标签", "issue": "「包 · 浅棕色帆布托…」标签被截断且无省略号，「下装」标签文字紧贴/溢出图片左缘，信息不完整", "fix": "标签容器收窄时加 ellipsis 并留 8dp 内边距，或两行截断"},
+  {"severity": "P1", "location": "弹层底部「文案（随选择实时生成，可编辑）」区块", "issue": "该区块被固定动作栏拦腰裁切，仅露出标题一行，无渐隐遮罩或滚动到底提示，观感像渲染不全", "fix": "内容区底部加 24dp 渐隐过渡并保证可滚动至完整露出，或动作栏上方留出安全间距"},
+  {"severity": "P2", "location": "人物描述 与 自定义要求 两个输入框", "issue": "标签模式不一致：人物描述用框内占位文字，自定义要求用缺口边框浮动标签，相邻控件两套语言", "fix": "统一为浮动标签或统一为占位符"},
+  {"severity": "P2", "location": "长图预览拼贴网格", "issue": "各行卡片宽度不一、包与牛仔裤两卡错位留白，瀑布流无对齐基线，与下方规整表单形成凌乱对比", "fix": "预览区改 2 列等宽网格或统一行基线"}
+]},
+{"file": "wardrobe-09-W9-review.png", "pageTitle": "衣橱回顾 · Leo", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "品类分布比例条", "issue": "六个品类段全部同一浅绿，段与段仅靠白色缝隙分隔，无法把色段与下方「上装5·外套4·下装6…」标签一一对应", "fix": "分段用同色系色阶或加直接段内标注"},
+  {"severity": "P2", "location": "页面顶部状态栏与标题区", "issue": "浅绿状态栏带与白色头部之间存在横向色带接缝，标题上方留白约 170px，头部显得松垮", "fix": "状态栏沉浸到头部同色，压缩标题上边距"},
+  {"severity": "P2", "location": "今年/累计分段控件", "issue": "「今年」段含 ✓ 图标明显宽于「累计」段，两段不对称，分段控件视觉不平衡", "fix": "等分两段，选中态用填充而非附加图标"},
+  {"severity": "P2", "location": "生成年度衣橱长图 按钮", "issue": "禁用态灰底灰字对比度接近阈值下限，文案几乎读不出", "fix": "禁用文字至少 #757575 或加说明性副文案（如「打卡≥3次后解锁」）"}
+]},
+{"file": "wardrobe-09b-W9-review-scrolled.png", "pageTitle": "回顾页滚动段（闲置清单/连续打卡/年度长图/衣柜提醒/数据）", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "衣柜提醒 chips", "issue": "「90天」选中态为灰色而非品牌绿，与全局绿色选中语言不一致；且总开关关闭时 chips 仍保持选中样式，状态语义矛盾", "fix": "选中态统一绿色描边/浅绿填充；总开关关闭时 chips 降透明度"},
+  {"severity": "P1", "location": "数据区 导出/导入数据包 两行", "issue": "演示模式下不可用，但行仍为正常可点态（绿色图标+深色文字+右箭头），禁用信息只靠底部小字，易误点", "fix": "行整体降透明度并去掉箭头，或在行内加「演示模式」徽标"},
+  {"severity": "P2", "location": "「演示模式不推送」「演示模式下不可用」提示", "issue": "静态说明文字使用品牌绿色，绿色在本 App 中代表可点主操作，易被理解为链接", "fix": "改用中性灰说明文字或信息图标+灰色"},
+  {"severity": "P2", "location": "滚动后首张「闲置清单」卡片", "issue": "卡片顶部被 sticky 头部截断，圆角不可见，与下方卡片完整圆角不一致", "fix": "列表顶部加 16dp 缓冲，或头部滚动时收缩"}
+]},
+{"file": "wardrobe-10-W10-wishlist.png", "pageTitle": "心愿页", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "无图心愿卡左侧缩略区", "issue": "大面积白色占位方块仅含星形+品类文字，卡片左半视觉空洞，与右侧信息密度失衡", "fix": "用品类插画/色块占位或改为无图紧凑单行卡"},
+  {"severity": "P2", "location": "品类 chips 行右端", "issue": "「鞋」chip 被屏幕右缘硬裁成半截，无渐隐或露头提示，不像可滚动", "fix": "右缘加渐隐遮罩并保留下一 chip 露头 24dp"},
+  {"severity": "P2", "location": "想买单品/心愿穿搭 分段", "issue": "两枚独立 pill 组成的分段与回顾页连体分段控件样式不统一，同为分段两套设计", "fix": "统一分段控件规格"},
+  {"severity": "P2", "location": "卡片元信息行", "issue": "「¥1599 灰蓝色 example.com」一行混排绿色价格、灰色中文、等宽域名三种样式，略显嘈杂", "fix": "域名移到次级行或弱化为灰色"}
+]},
+{"file": "wardrobe-11-W10-wish-detail.png", "pageTitle": "心愿详情底部弹层", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "弹层右上 编辑/删除 图标", "issue": "垃圾桶（破坏性）与铅笔并排、同色同规格，无红色或间距区分，误触风险", "fix": "删除改红色或移入溢出菜单，与编辑间隔 ≥16dp"},
+  {"severity": "P2", "location": "弹层内容对齐", "issue": "标题+图标行左对齐，而价格/描述/标签/链接/日期全部居中，同层混用两套对齐体系", "fix": "统一左对齐（与列表卡一致）或全部居中"},
+  {"severity": "P2", "location": "正文垂直节奏", "issue": "标签→example.com、example.com→「种草于」的段间距明显大于上方行距，留白分布不匀", "fix": "统一段间距为 16-20dp"},
+  {"severity": "P2", "location": "弹层整体", "issue": "无商品图或占位，大片留白信息密度低，与列表卡的缩略占位不呼应", "fix": "顶部加 96dp 品类占位图或色块"}
+]},
+{"file": "wardrobe-12-W1-random.png", "pageTitle": "搭配页 · 随机一套结果", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P2", "location": "卡片标签条右端 × 移除按钮", "issue": "触控节点实测 48×43dp 达标，但视觉 × 仅约 10dp 且紧贴计数，精确点按观感差", "fix": "视觉符号放大或移出标签条与计数拉开"},
+  {"severity": "P2", "location": "拼贴布局留白", "issue": "第三行左侧大片空洞、长裤卡顶部大片白，卡片无对齐基线，松散凌乱", "fix": "收敛列宽并给拼贴定义 2-3 条对齐轨道"},
+  {"severity": "P2", "location": "卡片标签文字", "issue": "「橄榄绿工…」「海军条纹…」「浅棕色…」截断较早，名称未展示完整", "fix": "标签换行或计数移至右上角腾出宽度"},
+  {"severity": "P2", "location": "卡片计数「1/4、4/5、2/6」", "issue": "计数语义不明（候选数？轮换槽位？），无任何说明", "fix": "加 tooltip 或首次使用引导"},
+  {"severity": "P2", "location": "底部动作栏", "issue": "「复制长图」为主绿色按钮重于「保存这套」，保存才是本页核心沉淀动作，主次颠倒", "fix": "保存这套升级为主按钮，复制长图改次级"}
+]},
+{"file": "wardrobe-13-W1-wishmix.png", "pageTitle": "搭配页 · 混入心愿开启态（补读成功）", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P2", "location": "整页（混入心愿开启后）", "issue": "开启后当前组合若未选中愿望件（愿望件在候选池末页），除顶栏开关变绿外页面无任何「已混入」线索，用户易误以为未生效", "fix": "开启时在受影响槽位的 n/m 计数上加 accent 高亮或一次性提示「愿望件已附加（滑到最后）」"},
+  {"severity": "P2", "location": "卡片底部标签条", "issue": "品名截断过狠只剩 3 个字加省略号，无法辨认具体单品（同 C1）", "fix": "标签两行显示或加宽"},
+  {"severity": "P2", "location": "米色打褶长裤卡", "issue": "图片未铺满卡片顶部留白边，与相邻满铺卡不一致（同 C2）", "fix": "统一 cover 裁切"},
+  {"severity": "P2", "location": "拼贴左列两张卡之间", "issue": "约 260px 纵向空档大于其它间距，排布松散（同 C13）", "fix": "收紧瀑布流回填"}
+]},
+{"file": "wardrobe-14-W3-filtered.png", "pageTitle": "衣橱筛选态（上装 · Leo 共 5 件）", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "商品网格图底部", "issue": "黑色罗纹高领衫卡底部露出相邻黑色单品弧形边缘，条纹针织卡底部露出酒红色物件条，照片裁切不当带入杂边", "fix": "裁切图上边界收紧或重新出图，保证单品独占画幅"},
+  {"severity": "P1", "location": "右上角 柱状图/星形 两枚圆形按钮", "issue": "目测直径约 32dp，小于 40dp 触控下限，且无标签语义不明", "fix": "扩至 40dp+并明确功能或并入溢出菜单"},
+  {"severity": "P2", "location": "品类 chips 行", "issue": "最右「鞋」圆形 chip 被「筛选」按钮硬裁成半圆，无渐隐过渡", "fix": "chips 可滚动并让位，筛选按钮加背景板与右缘渐隐"},
+  {"severity": "P2", "location": "卡片标题", "issue": "字号过大导致「海军条纹针织 …」截断", "fix": "降一号字号或允许两行"},
+  {"severity": "P2", "location": "品类 chips 体系", "issue": "本页圆形图片 chip+文字 chip 混排，与心愿页纯文字 pill chips 是两套品类过滤语言", "fix": "跨页统一品类 chips 规格"}
+]},
+{"file": "wardrobe-15-W7-checkedin.png", "pageTitle": "穿搭详情打卡后状态", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P1", "location": "评论行右侧 删除 ×", "issue": "× 目测约 11dp，远低于 40dp 触控下限", "fix": "扩热区至 40dp 或滑动删除"},
+  {"severity": "P2", "location": "页首头图", "issue": "头图仅露出底部一条柏油路面与鞋，主体被裁没，截图态下像图片加载不全（滚动截图所致）", "fix": "截图前回滚到顶；产品侧头部滚动时给图片渐隐而非硬裁"},
+  {"severity": "P2", "location": "右上 编辑/删除 图标", "issue": "本页图标为绿色系，而心愿详情弹层同功能图标为黑色，跨页同功能图标颜色不一致", "fix": "统一图标色板（编辑=主色，删除=警告色）"},
+  {"severity": "P2", "location": "评论文本", "issue": "第二行「松。」被屏幕底截断且句号似被裁半，观感像溢出 bug", "fix": "评论区保证完整露出或行尾安全缩进"}
+]},
+{"file": "item-01.png", "pageTitle": "单品图抽查：白色牛津纺衬衫（补读成功）", "verdict": "pass", "issues": []},
+{"file": "item-13.png", "pageTitle": "单品图抽查：象牙白真丝吊带裙（补读成功）", "verdict": "pass", "issues": []},
+{"file": "item-25.png", "pageTitle": "单品图抽查：白色缎面吊带裙", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P2", "location": "裙摆下缘", "issue": "左下裙摆轮廓弧线轻微不顺滑、左右摆长略有不对称，有 AI 生成痕迹", "fix": "出图后微调轮廓或局部重绘"},
+  {"severity": "P2", "location": "左右肩带根部", "issue": "左肩带落点比右略偏外，细看可见轻微不对称", "fix": "对称化处理"}
+]},
+{"file": "effect-commute.png", "pageTitle": "通勤效果图抽查：驼色西装+白衬衫+深灰阔腿裤街拍（补读成功）", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P2", "location": "画面底部", "issue": "人物脚部几乎贴到画框底边，全身像底部留白不足 3%，构图偏挤", "fix": "整体缩小人物 3-5% 或下移视窗，上下各留 5-8% 安全边距"},
+  {"severity": "P2", "location": "背景", "issue": "街道空无一人、光影过于均匀，街拍场景偏布景感", "fix": "加入适度虚化行人与自然光斑，或轻微增加背景颗粒"}
+]},
+{"file": "effect-date.png", "pageTitle": "约会效果图抽查：绿裹身裙+贝雷帽街边咖啡座", "verdict": "pass_with_issues", "issues": [
+  {"severity": "P2", "location": "画面顶部", "issue": "贝雷帽上缘距画幅顶仅约 2% 留白，做卡片裁切时易削顶", "fix": "原图顶部再留 5-8% 余量"},
+  {"severity": "P2", "location": "背景左侧咖啡座", "issue": "藤椅编织纹理与桌面花束细节有轻微涂抹感（AI 痕迹），放大可见", "fix": "背景局部修复或加大景深虚化规避"}
+]}
+]
