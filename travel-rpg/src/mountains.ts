@@ -11,7 +11,7 @@ const LAYERS: Layer[] = [
   { r: 142, hBase: 10, hVar: 20, col: '#6f8ba0', seed: 77 },   // 近层：矮、深
 ];
 
-/* 1D 角向 fbm（确定性） */
+/* 1D 角向 fbm（确定性，4 频段叠加弱化折线感） */
 function ridge(seeda: number, ang: number): number {
   const s = Math.sin((ang * 3 + seeda) * 12.9898) * 43758.5453;
   const n1 = s - Math.floor(s);
@@ -19,7 +19,9 @@ function ridge(seeda: number, ang: number): number {
   const n2 = s2 - Math.floor(s2);
   const s3 = Math.sin((ang * 13 + seeda * 2) * 39.425) * 9876.543;
   const n3 = s3 - Math.floor(s3);
-  return n1 * 0.55 + n2 * 0.3 + n3 * 0.15;
+  const s4 = Math.sin((ang * 23 + seeda * 3) * 17.709) * 3456.789;
+  const n4 = s4 - Math.floor(s4);
+  return n1 * 0.42 + n2 * 0.26 + n3 * 0.19 + n4 * 0.13;
 }
 
 function buildLayer(L: Layer): THREE.Mesh {

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { terrainHeight, LAKE, lakeRadiusAt } from './terrain';
-import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR } from './style';
+import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR, type TimePreset } from './style';
 import { uCloudT, CLOUD_GLSL } from './cloud';
 
 /* 风动草场（it-002 AC-4 / it-005 扩展）：
@@ -103,6 +103,7 @@ export interface GrassField {
   group: THREE.Group;
   update: (t: number, playerPos: THREE.Vector3) => void;
   reedsDone: boolean;
+  setTime: (p: TimePreset) => void;
 }
 
 export function buildGrassField(block: Array<[number, number]>): GrassField {
@@ -112,7 +113,7 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
   const nearSpots = makeSpots(rand, NEAR_COUNT, 1.6, 26, 0.36, 0.68, block);
   const farSpots = makeSpots(rand, FAR_COUNT, 3, 66, 0.26, 0.5, block);
   const dummy = new THREE.Object3D();
-  const api: GrassField = { group, update: () => {}, reedsDone: false };
+  const api: GrassField = { group, update: () => {}, reedsDone: false, setTime: () => {} };
 
   /* ---------- 近圈：Quaternius 真模型 + 风注入 ---------- */
   const base = import.meta.env.BASE_URL;
@@ -310,6 +311,11 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
   api.update = (t, playerPos) => {
     uTime.value = t;
     uPlayer.value.copy(playerPos);
+  };
+  api.setTime = (p) => {
+    (farMat.uniforms.uSunCol.value as THREE.Color).set(p.grassSunCol).multiplyScalar(p.grassSunK);
+    farMat.uniforms.uFogN.value = p.fogNear;
+    farMat.uniforms.uFogF.value = p.fogFar;
   };
   return api;
 }

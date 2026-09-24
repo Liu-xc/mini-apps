@@ -14,7 +14,8 @@ npm run build      # tsc --noEmit + vite build → dist/
 npm run preview    # 预览生产构建
 ```
 
-- 桌面：WASD/方向键移动（Shift 跑）、鼠标拖拽环视、空格跳、滚轮缩放。
+- 桌面：WASD/方向键移动（Shift 跑）、鼠标拖拽环视、空格跳、滚轮缩放、**T 换时段**
+  （day/dawn/sunset，`?time=` 可直达）。
 - 触屏：左下摇杆移动（推满跑）、右侧拖拽环视、右下「跳」按钮。
   桌面想自测移动 UI：URL 加 `?touch=1`。
 

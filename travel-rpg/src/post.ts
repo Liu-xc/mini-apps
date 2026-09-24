@@ -82,6 +82,7 @@ export interface Post {
   resize: (w: number, h: number, pr: number) => void;
   render: (dt: number) => void;
   advance: (dt: number) => void;
+  setTime: (sat: number) => void;
 }
 
 export function createPost(
@@ -125,5 +126,6 @@ export function createPost(
       composer.render(dt);
     },
     advance: (dt: number) => { gradeTime += dt; },
+    setTime: sat => { (grade.uniforms.uSat as { value: number }).value = sat; },
   };
 }

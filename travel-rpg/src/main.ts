@@ -19,7 +19,7 @@ import { Player } from './player';
 import { CameraRig } from './cameraRig';
 import { Input, isTouchMode } from './controls';
 import { createPost } from './post';
-import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR } from './style';
+import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR, TIME_PRESETS, applyPaletteToPalette, type TimeId } from './style';
 
 const SCENE_ID = 'camp';
 
@@ -72,16 +72,54 @@ scene.fog = new THREE.Fog(PALETTE.fog, FOG_NEAR, FOG_FAR);
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 1200);
 camera.position.set(0, 3, 8);
 
-/* ---------- 天空与环境光：按站时段可换（day / dawn / sunset 三张 puresky HDRI 已入库） ---------- */
-new RGBELoader().load(`${import.meta.env.BASE_URL}textures/puresky_2k.hdr`, hdr => {
-  hdr.mapping = THREE.EquirectangularReflectionMapping;
-  scene.background = hdr;
-  scene.backgroundIntensity = 0.94;   // it-002 遗留：云天略曝，压一档（像素复核地平线）
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromEquirectangular(hdr).texture;
-  scene.environmentIntensity = 0.62;
-  pmrem.dispose();
-}, undefined, () => console.warn('[env] 天空 HDRI 加载失败'));
+/* ---------- 天空与环境光：时段系统（it-007）——day/dawn/sunset 预设切换 ---------- */
+let sunBase = 4.1;   // 太阳呼吸的基准强度（随预设变）
+const envLoader = new RGBELoader();
+let timeId: TimeId = 'day';
+{
+  const t = new URLSearchParams(location.search).get('time');
+  if (t && t in TIME_PRESETS) timeId = t as TimeId;
+}
+
+function applyTime(id: TimeId): void {
+  timeId = id;
+  const p = TIME_PRESETS[id];
+  applyPaletteToPalette(p);
+  if (scene.fog instanceof THREE.Fog) {
+    scene.fog.color.copy(PALETTE.fog);
+    scene.fog.near = p.fogNear;
+    scene.fog.far = p.fogFar;
+  }
+  sun.color.copy(PALETTE.sunLight);
+  sunBase = p.sunIntensity;
+  fill.color.copy(PALETTE.fill);
+  hemi.color.set(p.hemiSky);
+  hemi.groundColor.set(p.hemiGround);
+  scene.environmentIntensity = p.envIntensity;
+  scene.backgroundIntensity = p.bgIntensity;
+  scene.backgroundRotation.set(0, p.hdriYaw, 0);
+  scene.environmentRotation.set(0, p.hdriYaw, 0);
+  waterRes.setTime(p);
+  grassField.setTime(p);
+  post.setTime(p.sat);
+  envLoader.load(`${import.meta.env.BASE_URL}textures/${p.hdr}`, hdr => {
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    const oldBg = scene.background as THREE.Texture | null;
+    const oldEnv = scene.environment as THREE.Texture | null;
+    scene.background = hdr;
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromEquirectangular(hdr).texture;
+    pmrem.dispose();
+    oldBg?.dispose();
+    oldEnv?.dispose();
+  }, undefined, () => console.warn('[env] HDRI 加载失败: ' + p.hdr));
+}
+const TIME_ORDER: TimeId[] = ['day', 'dawn', 'sunset'];
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyT' && !e.repeat) {
+    applyTime(TIME_ORDER[(TIME_ORDER.indexOf(timeId) + 1) % TIME_ORDER.length]);
+  }
+});
 
 /* ---------- 布光：白昼（蓝影纪律） ---------- */
 const sun = new THREE.DirectionalLight(PALETTE.sunLight, 4.1);
@@ -101,7 +139,8 @@ scene.add(sun.target);
 const fill = new THREE.DirectionalLight(PALETTE.fill, 0.3);
 fill.position.set(30, 45, 90);
 scene.add(fill);
-scene.add(new THREE.HemisphereLight(PALETTE.hemiSky, PALETTE.hemiGround, 0.85));
+const hemi = new THREE.HemisphereLight(PALETTE.hemiSky, PALETTE.hemiGround, 0.85);
+scene.add(hemi);
 
 /* ---------- 世界 ---------- */
 scene.add(buildUnderlay());
@@ -212,6 +251,7 @@ player.onLand = (p, impact) => {
 
 /* ---------- 后期链 ---------- */
 const post = createPost(renderer, scene, camera, effect);
+applyTime(timeId);   // 首次应用时段预设（须在世界/灯/水体/post 之后）
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -247,6 +287,7 @@ if (editMode) {
 /* ---------- 验证钩子 ---------- */
 window.__game = {
   errors,
+  scene,   // 评审/调参钩子（时段 HDRI 旋转等现场调试）
   state: () => ({
     pos: [player.pos.x, player.pos.y, player.pos.z].map(v => +v.toFixed(2)),
     onGround: player.onGround,
@@ -270,6 +311,7 @@ window.__game = {
     reedsDone: grassField.reedsDone,
     campfireReady: campfire.group.parent === scene,
     mountainLayers: mountainGroup.children.length,
+    time: timeId,
     outline: post.outlineState.on,
     envReady: !!scene.environment,
     background: !!scene.background,
@@ -306,8 +348,8 @@ function tick(dt: number): void {
   ambientRes.update(elapsed);
   dustRes.update(dt);
   uCloudT.value = elapsed;                          // 云影时钟（it-006）
-  /* 太阳呼吸：慢噪声轻起伏（it-006 AC-4） */
-  sun.intensity = 4.1 * (0.9 + 0.1 *
+  /* 太阳呼吸：慢噪声轻起伏（it-006 AC-4），基准随时段预设（it-007） */
+  sun.intensity = sunBase * (0.9 + 0.1 *
     (0.5 + 0.5 * Math.sin(elapsed * 0.11)) * (0.6 + 0.4 * Math.sin(elapsed * 0.043 + 2)));
   motes.update(elapsed, player.pos);
   sun.position.copy(player.pos).addScaledVector(SUN_DIR, 95);
@@ -344,6 +386,7 @@ declare global {
   interface Window {
     __game?: {
       errors: string[];
+      scene: THREE.Scene;
       state: () => {
         pos: number[];
         onGround: boolean;
@@ -365,6 +408,7 @@ declare global {
         reedsDone: boolean;
         campfireReady: boolean;
         mountainLayers: number;
+        time: string;
         outline: boolean;
         envReady: boolean;
         background: boolean;

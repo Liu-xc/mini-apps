@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { LAKE, terrainHeight } from './terrain';
-import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR } from './style';
+import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR, type TimePreset } from './style';
 
 /* 达里湖水面（it-005 AC-2）：单 Mesh 自定义着色器。
    顶点属性 aDepth = 水位 - 地形（CPU 预烤），驱动深浅混色/岸沫/波浪幅度；
    法线由三层滚动值噪声差分得到，太阳波光走 Bloom 阈值上的高光；
    岸线 alpha 羽化 + 场景雾对齐（与远圈草卡同式）。 */
 
-export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void } {
+export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void; setTime: (p: TimePreset) => void } {
   const R = LAKE.r * 1.35;
   const seg = 110;
   const geo = new THREE.PlaneGeometry(R * 2, R * 2, seg, seg).rotateX(-Math.PI / 2);
@@ -33,6 +33,7 @@ export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void } 
       uFogC: { value: PALETTE.fog },
       uFogN: { value: FOG_NEAR },
       uFogF: { value: FOG_FAR },
+      uFresK: { value: 0.42 },
     },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -53,7 +54,7 @@ export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void } 
     fragmentShader: /* glsl */ `
       uniform float uTime;
       uniform vec3 uSun, uSunCol, uSkyCol, uShallow, uDeep, uFogC;
-      uniform float uFogN, uFogF;
+      uniform float uFogN, uFogF, uFresK;
       varying vec3 vW;
       varying float vDepth;
       float wHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -78,7 +79,7 @@ export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void } 
         vec3 V = normalize(cameraPosition - vW);
         float fres = pow(1.0 - max(dot(V, N), 0.0), 3.0);
         vec3 col = mix(uShallow, uDeep, smoothstep(0.08, 2.4, vDepth));
-        col = mix(col, uSkyCol, fres * 0.42);
+        col = mix(col, uSkyCol, fres * uFresK);
         /* 太阳波光：收紧成细碎闪光（过宽会成皂渍斑块） */
         vec3 H = normalize(V + normalize(uSun));
         col += uSunCol * pow(max(dot(N, H), 0.0), 320.0) * 1.0;
@@ -103,5 +104,17 @@ export function buildWater(): { mesh: THREE.Mesh; update: (t: number) => void } 
   mesh.renderOrder = 2;
   mesh.frustumCulled = false;
   mesh.userData.outlineParameters = { visible: false };
-  return { mesh, update: t => { uTime.value = t; } };
+  return {
+    mesh,
+    update: t => { uTime.value = t; },
+    setTime: p => {
+      (mat.uniforms.uSkyCol.value as THREE.Color).set(p.waterSky);
+      (mat.uniforms.uShallow.value as THREE.Color).set(p.waterShallow);
+      (mat.uniforms.uDeep.value as THREE.Color).set(p.waterDeep);
+      (mat.uniforms.uSunCol.value as THREE.Color).set('#ffedc9').multiplyScalar(p.waterSunK);
+      mat.uniforms.uFresK.value = p.waterFresK;
+      mat.uniforms.uFogN.value = p.fogNear;
+      mat.uniforms.uFogF.value = p.fogFar;
+    },
+  };
 }
