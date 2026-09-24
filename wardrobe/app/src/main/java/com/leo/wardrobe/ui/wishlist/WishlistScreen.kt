@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -75,14 +76,33 @@ import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.domain.model.wishOutfitsOf
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
+import com.leo.wardrobe.ui.components.FadingScrollRow
 import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.SegmentedToggleRow
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.outfit.ExportSheet
+import com.leo.wardrobe.ui.theme.WardrobePalette
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
+
+/**
+ * it-036 C10：无图心愿卡的品类色块占位——品类 → 柔和固定色（不随主题翻转，
+ * 与线框 W10③ 同构：外套蓝灰 / 包焦糖 / 鞋松绿 …）。前景（星+品类字）按色块
+ * 亮度取白/墨，见 WishRow 的 luminance 判断。
+ */
+private val CategoryPlaceholderColors: Map<WardrobeCategory, Color> = mapOf(
+    WardrobeCategory.TOP to Color(0xFFE4F0EA),        // 浅青
+    WardrobeCategory.OUTERWEAR to Color(0xFFE2ECF6),  // 蓝灰（线框取色）
+    WardrobeCategory.BOTTOM to Color(0xFFE5E9F5),     // 靛蓝灰
+    WardrobeCategory.DRESS to Color(0xFFD8A2B3),      // 玫瑰粉（中调）
+    WardrobeCategory.SHOES to Color(0xFF86B79B),      // 松绿（中调）
+    WardrobeCategory.BAG to Color(0xFFF6EADE),        // 焦糖棕（线框取色）
+    WardrobeCategory.HAT to Color(0xFFF2ECD9),        // 麦穗黄
+    WardrobeCategory.ACCESSORY to Color(0xFFEBEDEF),  // 银灰
+)
 
 /**
  * W9 心愿页（it-019）：🌟 想买单品 / 👗 心愿穿搭 两段。
@@ -140,35 +160,29 @@ fun WishlistScreen(
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
             // 分段：想买单品 / 心愿穿搭
-            Row(
-                Modifier
+            // it-036 C11：改与 W9 回顾页「今年/累计」同规格的连体分段（共享
+            // SegmentedToggleRow，等分/连体圆角/选中填充两页同款）；原双 FilterChip 分段废止
+            SegmentedToggleRow(
+                selectedIndex = section,
+                onSelect = { section = it },
+                count = 2,
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(
-                    selected = section == 0,
-                    onClick = { section = 0 },
+            ) { i ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     // it-030：emoji → Material 图标（DESIGN.md §5.2）
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("想买单品 ${unpurchased.size}")
-                        }
-                    },
-                )
-                FilterChip(
-                    selected = section == 1,
-                    onClick = { section = 1 },
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Checkroom, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("心愿穿搭 ${wishOutfits.size}")
-                        }
-                    },
-                )
+                    Icon(
+                        if (i == 0) Icons.Rounded.Star else Icons.Outlined.Checkroom,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        if (i == 0) "想买单品 ${unpurchased.size}" else "心愿穿搭 ${wishOutfits.size}",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
 
             if (section == 0) {
@@ -308,8 +322,9 @@ private fun WishItemsSection(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            Row(
-                Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()),
+            // it-036 C11：品类筛选行右缘 28dp 渐隐（透明→页面底色），可滑才显示
+            FadingScrollRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 FilterChip(
@@ -393,13 +408,17 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
             .clickable(onClick = onClick),
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // it-036 C10：无图卡左缩略位改品类色块占位（色映射见 CategoryPlaceholderColors），
+            // 圆角与原占位一致（14dp）；星+品类字按色块亮度取白/墨保对比
+            val file = wish.imageFile?.let(fileOf)
+            val block = CategoryPlaceholderColors[wish.category]
+            val fallbackBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             Box(
                 Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    .background(if (file == null) block ?: fallbackBg else fallbackBg),
             ) {
-                val file = wish.imageFile?.let(fileOf)
                 if (file != null) {
                     AsyncImage(
                         model = file,
@@ -408,6 +427,7 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                         modifier = Modifier.size(64.dp),
                     )
                 } else {
+                    val contentOn = if (block != null && block.luminance() < 0.5f) Color.White else WardrobePalette.Ink
                     Column(
                         Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -416,13 +436,13 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                         Icon(
                             Icons.Rounded.Star,
                             contentDescription = null,
-                            tint = editorialColors().accent,
+                            tint = contentOn,
                             modifier = Modifier.size(22.dp),
                         )
                         Text(
                             wish.category.label,
                             style = MaterialTheme.typography.labelSmall,
-                            color = editorialColors().inkFaint,
+                            color = contentOn,
                         )
                     }
                 }
@@ -438,6 +458,8 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
+                // it-036 C10 元信息：第一行只留「价格(accent) + 颜色(灰)」，
+                // 域名下移一行弱化为 inkFaint 小字（与标签行同区），不再中英同行混排
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (wish.price != null) {
                         Text(
@@ -449,13 +471,16 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                     if (wish.color.isNotBlank()) {
                         Text(wish.color, style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
                     }
-                    if (wish.url.isNotBlank()) {
-                        Text(
-                            urlHost(wish.url),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = editorialColors().inkFaint,
-                        )
-                    }
+                }
+                if (wish.url.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        urlHost(wish.url),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = editorialColors().inkFaint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 if (wish.tags.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))

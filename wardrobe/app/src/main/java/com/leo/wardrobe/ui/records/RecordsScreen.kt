@@ -103,8 +103,8 @@ fun RecordsScreen(
                 enabled = deck != null && !drawing && filtered.isNotEmpty(),
             ) {
                 Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                // it-011 R3-P1：此页是随机「翻看」已有记录，与 W1 随机生成搭配区分
-                Text("随机翻一套")
+                // it-036 C12：文案与 W1 统一为「随机一套」（it-011 R3-P1 的两套文案废止），图标沿用
+                Text("随机一套")
             }
         }
 

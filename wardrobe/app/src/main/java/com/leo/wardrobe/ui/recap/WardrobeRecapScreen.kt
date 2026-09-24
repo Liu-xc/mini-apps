@@ -49,9 +49,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -88,6 +85,7 @@ import com.leo.wardrobe.domain.usecase.wardrobeRecap
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.CountUpText
 import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.SegmentedToggleRow
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
 import java.time.LocalDate
@@ -176,18 +174,20 @@ fun WardrobeRecapScreen(
                         }
                     },
                     actions = {
-                        SingleChoiceSegmentedButtonRow(Modifier.padding(end = 12.dp)) {
-                            listOf(
-                                WardrobeRecapRange.Year(thisYear) to "今年",
-                                WardrobeRecapRange.All to "累计",
-                            ).forEachIndexed { i, (r, label) ->
-                                SegmentedButton(
-                                    selected = range == r,
-                                    onClick = { range = r },
-                                    shape = SegmentedButtonDefaults.itemShape(index = i, count = 2),
-                                    label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                                )
-                            }
+                        // it-036 C11：原实现抽出为共享 SegmentedToggleRow（ui/components），
+                        // 本页「今年/累计」与 W10 心愿分段两页同款（spec 05「筛选行渐隐与分段控件」）
+                        SegmentedToggleRow(
+                            selectedIndex = if (range == WardrobeRecapRange.Year(thisYear)) 0 else 1,
+                            onSelect = { i ->
+                                range = if (i == 0) WardrobeRecapRange.Year(thisYear) else WardrobeRecapRange.All
+                            },
+                            count = 2,
+                            modifier = Modifier.padding(end = 12.dp),
+                        ) { i ->
+                            Text(
+                                if (i == 0) "今年" else "累计",
+                                style = MaterialTheme.typography.labelMedium,
+                            )
                         }
                     },
                 )
@@ -632,7 +632,14 @@ private fun ReminderSettings(
                 }
                 if (demo) {
                     Spacer(Modifier.height(6.dp))
-                    Text("演示模式不推送", style = MaterialTheme.typography.labelSmall, color = ec.accent)
+                    // it-036 C12：静态说明文字品牌绿 → 中性灰（像链接的观感废止），
+                    // 取色与 it-034 禁用说明一致：浅色 #55605A / 深色 onSurfaceVariant
+                    Text(
+                        "演示模式不推送",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else Color(0xFF55605A),
+                    )
                 }
             }
         }

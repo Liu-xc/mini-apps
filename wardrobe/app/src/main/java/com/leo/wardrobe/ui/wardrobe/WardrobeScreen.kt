@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import com.leo.wardrobe.ui.components.StaggeredEntrance
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -65,6 +63,7 @@ import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.tagsUsedIn
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
+import com.leo.wardrobe.ui.components.FadingScrollRow
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
@@ -201,11 +200,10 @@ fun WardrobeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Row(
-                    Modifier
-                        .weight(1f)
-                        .horizontalScroll(rememberScrollState()),
-                    verticalAlignment = Alignment.CenterVertically,
+                // it-036 C11：横滑区右缘 28dp 渐隐（透明→页面底色），可滑才显示；
+                // 渐隐止于滚动容器右缘，与右侧固定「筛选」钮不重叠（无需不透底板）
+                FadingScrollRow(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     FilterChip(

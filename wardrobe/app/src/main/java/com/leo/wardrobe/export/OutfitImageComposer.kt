@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.TextUtils
 import com.leo.wardrobe.data.image.ImageEditStore
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
@@ -184,12 +185,15 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
         val l = box.centerX() - dw / 2f
         val t = box.centerY() - dh / 2f
         canvas.drawBitmap(cell.photo, null, RectF(l, t, l + dw, t + dh), Paint(Paint.FILTER_BITMAP_FLAG))
-        // 底部品类标签条
+        // 底部品类标签条（it-036 C8：预览里硬截无省略号、文字贴边——
+        // 单行 ellipsize + 左右 8dp 内边距（LABEL_PAD_X ≈ 8dp @ 预览 1024px↔内容宽 380dp））
         val labelRect = RectF(r.left, r.bottom - CELL_LABEL_H, r.right, r.bottom)
         canvas.drawRect(labelRect, Paint().apply { color = 0xE6FFFFFF.toInt() })
+        val maxTextW = labelRect.width() - 2 * LABEL_PAD_X
+        val text = TextUtils.ellipsize(cell.label, labelPaint, maxTextW, TextUtils.TruncateAt.END).toString()
         canvas.drawText(
-            cell.label,
-            labelRect.left + 14f,
+            text,
+            labelRect.left + LABEL_PAD_X,
             labelRect.centerY() - (labelPaint.fontMetrics.bottom + labelPaint.fontMetrics.top) / 2f,
             labelPaint,
         )
@@ -276,6 +280,8 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
         const val PENDANT_ASPECT = 0.85f
         const val SHOES_ASPECT = 2.6f
         const val CELL_LABEL_H = 44f
+        /** it-036 C8：标签条左右内边距 ≈8dp（预览时 1024px 撑满 ~380dp 内容宽 → 1dp ≈ 2.69px） */
+        const val LABEL_PAD_X = 21f
         const val QUALITY = 90
 
         private val FALLBACK = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)

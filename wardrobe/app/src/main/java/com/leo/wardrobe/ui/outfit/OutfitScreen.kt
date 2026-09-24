@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.outfit
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -171,6 +172,25 @@ fun OutfitScreen(
         null
     }
 
+    // it-036（走查 P2）：混入心愿开关开启、但当前槽位组合里没有任何愿望件——
+    // 给一条一次性轻提示（accent 文字小条，Material Star 无 emoji；会话内只出一次，
+    // 组合已含愿望件或开关关闭即不显示；仅 UI 提示，不动 it-019 数据流）
+    var wishHintShown by remember { mutableStateOf(false) }
+    var wishHintVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(mixWishes, hasWishInMix, wishSlotItems.isEmpty()) {
+        if (mixWishes && !hasWishInMix && wishSlotItems.isNotEmpty() && !wishHintShown) {
+            wishHintShown = true
+            wishHintVisible = true
+        }
+    }
+    LaunchedEffect(wishHintVisible) {
+        if (wishHintVisible) {
+            delay(5_000)
+            wishHintVisible = false
+        }
+    }
+    val showWishHint = wishHintVisible && mixWishes && !hasWishInMix && wishSlotItems.isNotEmpty()
+
     /** 区内可添加的品类：尚未加入组合、且衣橱里有该品类衣物 */
     fun addableCats(zone: List<WardrobeCategory>): List<WardrobeCategory> =
         zone.filter { it !in activeCategories && catItems[it].orEmpty().isNotEmpty() }
@@ -232,6 +252,29 @@ fun OutfitScreen(
                 Icon(Icons.Rounded.Casino, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
                 Text("随机一套", style = MaterialTheme.typography.titleSmall)
+            }
+        }
+
+        // it-036（走查 P2）：顶栏开关下方的轻提示——「愿望件已附加，滑到候选最后可见」
+        AnimatedVisibility(visible = showWishHint) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Rounded.Star,
+                    contentDescription = null,
+                    tint = editorialColors().accent,
+                    modifier = Modifier.size(14.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "愿望件已附加，滑到候选最后可见",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = editorialColors().accent,
+                )
             }
         }
 

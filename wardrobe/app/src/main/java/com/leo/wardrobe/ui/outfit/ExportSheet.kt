@@ -54,6 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -179,11 +183,30 @@ fun ExportSheet(
                     .heightIn(max = (screenH * 0.92f).dp),
             ) {
                 // ---- 滚动区 ----
+                // it-036 C8：内容列底距 40dp = 视口底缘 24dp 渐隐带 + 16dp 动作栏安全余量
+                // （内容列经 weight 钉在动作栏之上，安全间距落在 contentPadding），
+                // 保证「文案（实时生成，可编辑）」整块可滚出到完整可见；
+                // 未滚到底时视口底缘叠 24dp 渐隐（透明→弹层背景色），提示下方还有内容
+                val scroll = rememberScrollState()
+                val sheetBg = MaterialTheme.colorScheme.surfaceContainer
                 Column(
                     Modifier
                         .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
+                        .drawWithContent {
+                            drawContent()
+                            if (scroll.value < scroll.maxValue) {
+                                val fadeH = 24.dp.toPx()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        listOf(Color.Transparent, sheetBg),
+                                    ),
+                                    topLeft = Offset(0f, size.height - fadeH),
+                                    size = Size(size.width, fadeH),
+                                )
+                            }
+                        }
+                        .verticalScroll(scroll)
+                        .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text("导出生图素材", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
@@ -313,8 +336,8 @@ fun ExportSheet(
                         value = personNote,
                         onValueChange = { personNote = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("人物描述（记住上次）") },
-                        placeholder = { Text("如：175cm 偏瘦、短黑发男生") },
+                        // it-036 C8②：两输入框统一占位符式——去 floating label（线框 W6②）
+                        placeholder = { Text("人物描述（记住上次）") },
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodySmall,
                     )
@@ -324,8 +347,8 @@ fun ExportSheet(
                         value = customPrompt,
                         onValueChange = { customPrompt = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("自定义要求（可选，追加到文案，记住上次）") },
-                        placeholder = { Text("如：胶片质感、黄昏逆光、不要配饰") },
+                        // it-036 C8②：原 floating label 缺口式 → 与人物描述同占位符式
+                        placeholder = { Text("自定义要求（可选，记住上次）") },
                         minLines = 2,
                         textStyle = MaterialTheme.typography.bodySmall,
                     )
@@ -337,7 +360,7 @@ fun ExportSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(150.dp),
-                        label = { Text("文案（随选择实时生成，可编辑）") },
+                        label = { Text("文案（实时生成，可编辑）") },
                         textStyle = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace,
                             color = editorialColors().ink,
@@ -376,7 +399,7 @@ fun ExportSheet(
                             Text("＋ 录入成品图")
                         }
                     }
-                    Spacer(Modifier.height(6.dp))
+                    // it-036 C8：原尾随 Spacer(6dp) 废止——动作栏安全余量统一走内容列 40dp 底距
                 }
 
                 // ---- it-012 底部固定动作栏：三个复制动作钉住，展开维度/滚动都推不走 ----

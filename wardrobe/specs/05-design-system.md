@@ -69,7 +69,7 @@
 
 ## 组件清单（ui/components/）
 
-`PhotoCard`（4:5 照片卡，支撑轮播形变）、`SlotPager`（品类槽位）、`TagRow`/`TagChipInput`（标签展示与录入）、`CommentTimeline`（评论时间线+输入）、`EmptyState`（Lottie+文案+行动按钮）、`EditorialHeader`（角色名+衬线排版）、`FilterChipsRow`（标签筛选条）。
+`PhotoCard`（4:5 照片卡，支撑轮播形变）、`SlotPager`（品类槽位）、`TagRow`/`TagChipInput`（标签展示与录入）、`CommentTimeline`（评论时间线+输入）、`EmptyState`（Lottie+文案+行动按钮）、`EditorialHeader`（角色名+衬线排版）、`FilterChipsRow`（标签筛选条）、`FadingScrollRow`（横滑筛选行+右缘渐隐，it-036）、`SegmentedToggleRow`（连体分段，it-036）。
 
 ## 照片容器「衬纸」（it-011 C5）
 
@@ -96,3 +96,8 @@
 - **依据**：2026-09-24 走查 uiautomator bounds 实测（420dp 密度）——W3 标题行图标/卡 ⋮ ≈18dp、W4 品类 chips 19dp、W5 标签 chips 15dp、W8 分页 15dp、W5/W7 评论 × 14dp，均低于 44dp 下限。
 - **落点**：W3 📊/🌟 = 48dp、卡 ⋮ = 48dp；W4 品类 chips = 48dp、行距 ≥8dp；W5 标签 chips = 44dp；W8 分页胶囊左右半边 = 48dp；评论删除 × = 48dp；W1 名称条 ✕ = 28×44dp（窄格名称列预算优先，高度达标即可）。
 - 与「形状与间距」的 it-028 44dp 条目一脉相承：it-033 把推荐值提到 48dp；W3 卡 ⋮ 自此按 48dp 落地，DESIGN.md §2.5 给媒体卡悬浮角标的 36dp 例外档对它不再适用（例外档保留给其余仍受版面约束的媒体卡角标）。截断基线（名称先缩字号→两行→省略、卡片标题 maxLines/minLines=2）见 spec 02 的 it-033 注记。
+
+## 筛选行渐隐与分段控件（it-036）
+
+- **横向筛选行右缘渐隐（全站规范）**：所有横向可滑的筛选/chips 行（W3 品类、W8 标签、W10 品类）右缘叠 **24–32dp**（落地 28dp）`Brush.horizontalGradient(透明 → 页面底色 paper)` 渐隐，暗示右侧还有内容可滑；**仅内容超出一屏时显示、滑到尽头自动隐去**（一屏放下不画，避免误导）。渐隐止于滚动容器右缘，行尾固定按钮（W3「筛选」）排在渐隐之外，不叠按钮底板。共享实现：`ui/components/ScrollFade.kt :: FadingScrollRow`。只加边缘渐隐，chips 本体形制/热区归 it-033 基线管。
+- **分段控件全站统一为 W9 连体规格**：等分 N 段、`SegmentedButtonDefaults.itemShape` 相连圆角、M3 默认选中填充（选中段容器填充 + 勾选图标），同高同圆角；共享实现 `ui/components/SegmentedToggle.kt :: SegmentedToggleRow`——W9 顶栏「今年/累计」与 W10「想买单品/心愿穿搭」两页共用同一 composable。新页面做二/三档切换一律复用本组件，不再另起「两个 FilterChip 并排」的伪分段形制。

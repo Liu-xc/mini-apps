@@ -41,7 +41,9 @@ fun CommentTimeline(
     // it-029 C8：删除先确认（DESIGN.md §5.7——评论是不可再生的记忆，误触即失）
     var pendingDelete by remember { mutableStateOf<Note?>(null) }
     val haptics = rememberHaptics()  // it-027：发送确认轻震（DESIGN.md §4）
-    val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
+    // it-036 C12：日期统一 YYYY/MM/DD（原 MM/dd——与 W7 顶栏「穿搭 · 2026/09/24」两套格式废止；
+    // createdAt 为完整时间戳，年份直接取到，无需补全）
+    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
 
     pendingDelete?.let { target ->
         AlertDialog(

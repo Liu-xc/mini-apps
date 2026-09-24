@@ -5,6 +5,7 @@ package com.leo.wardrobe.ui.recap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -108,10 +109,13 @@ fun DataPackageSection(
                     onClick = onImport,
                 )
                 if (demo) {
+                    // it-036 C12：静态说明文字品牌绿 → 中性灰（取色同 it-034 禁用说明：
+                    // 浅色 #55605A / 深色 onSurfaceVariant）
                     Text(
                         "演示模式下不可用，不触碰真实数据",
                         style = MaterialTheme.typography.labelSmall,
-                        color = ec.accent,
+                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else Color(0xFF55605A),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     )
                 }

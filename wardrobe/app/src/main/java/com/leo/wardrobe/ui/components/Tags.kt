@@ -68,7 +68,7 @@ fun TagRow(tags: List<String>, modifier: Modifier = Modifier, minChipHeight: Dp 
     }
 }
 
-/** 标签筛选条：#全部 + 各标签（单选） */
+/** 标签筛选条：#全部 + 各标签（单选）。it-036 C11：右缘渐隐（FadingScrollRow，W8 落点） */
 @Composable
 fun FilterChipsRow(
     options: List<String>,
@@ -76,8 +76,8 @@ fun FilterChipsRow(
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
+    FadingScrollRow(
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip(
