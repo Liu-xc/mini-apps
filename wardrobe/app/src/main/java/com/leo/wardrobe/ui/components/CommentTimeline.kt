@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
-import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -89,7 +89,7 @@ fun CommentTimeline(
                     modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
-                        Icons.Rounded.Close,
+                        Icons.Rounded.DeleteOutline,
                         contentDescription = "删除评论",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
@@ -116,7 +116,7 @@ fun CommentTimeline(
                 },
                 enabled = input.isNotBlank(),
             ) {
-                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "发送评论", modifier = Modifier.size(18.dp))
             }
         }
     }

@@ -14,8 +14,9 @@ object WardrobePalette {
     val Paper = Color(0xFFF5F9F3)
     val SurfaceLight = Color(0xFFFFFFFF)
     val Ink = Color(0xFF1D2620)
-    val InkFaint = Color(0xFF808D82)
+    val InkFaint = Color(0xFF747F75)
     val Accent = Color(0xFF429E68)
+    val AccentStrong = Color(0xFF1D6845)
     val Hairline = Color(0xFFE3EBE0)
 
     // 深色（墨纸）
@@ -33,7 +34,10 @@ data class EditorialColors(
     val surface: Color,
     val ink: Color,
     val inkFaint: Color,
+    /** Brand green for decorative graphics only. */
     val accent: Color,
+    /** High-contrast foreground for accent text and action states. */
+    val accentContent: Color,
     val hairline: Color,
 )
 
@@ -44,6 +48,7 @@ val LocalEditorialColors = staticCompositionLocalOf {
         ink = WardrobePalette.Ink,
         inkFaint = WardrobePalette.InkFaint,
         accent = WardrobePalette.Accent,
+        accentContent = WardrobePalette.AccentStrong,
         hairline = WardrobePalette.Hairline,
     )
 }

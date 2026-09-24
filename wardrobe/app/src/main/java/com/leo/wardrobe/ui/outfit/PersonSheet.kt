@@ -80,7 +80,7 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                 items(data.persons.size, key = { data.persons[it].id }) { index ->
                     val p = data.persons[index]
                     val isCurrent = p.id == current?.id
-                    // it-011 O9：当前角色浅底 + 「✓ 使用中」，替代 6px 绿点
+                    // it-037：当前角色用浅底 + 状态文字表达，避免勾号和文字重复。
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -107,10 +107,10 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                             color = editorialColors().ink,
                             modifier = Modifier.padding(start = 14.dp),
                         )
-                        // it-012：✓使用中紧跟名字（R2：不再悬在行末）
+                        // it-037：保留文字状态，取消与背景重复的勾选符号。
                         if (isCurrent && !manageMode) {
                             Text(
-                                " ✓ 使用中",
+                                "使用中",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )

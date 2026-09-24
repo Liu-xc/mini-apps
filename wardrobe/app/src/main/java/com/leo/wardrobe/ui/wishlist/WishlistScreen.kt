@@ -61,6 +61,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -378,7 +380,7 @@ private fun WishItemsSection(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                         ) {
-                            Text("✓", color = editorialColors().accent)
+                            Text("✓", color = editorialColors().accentContent)
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 w.name,
@@ -386,7 +388,7 @@ private fun WishItemsSection(
                                 color = editorialColors().inkFaint,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text("已在衣橱 →", style = MaterialTheme.typography.labelSmall, color = editorialColors().accent)
+                            Text("已在衣橱 →", style = MaterialTheme.typography.labelSmall, color = editorialColors().accentContent)
                         }
                     }
                 }
@@ -465,7 +467,7 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                         Text(
                             "¥${wish.price.toString().removeSuffix(".0")}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = editorialColors().accent,
+                            color = editorialColors().accentContent,
                         )
                     }
                     if (wish.color.isNotBlank()) {
@@ -572,7 +574,7 @@ private fun WishOutfitsSection(
                         Text(
                             "$wishCount 件已有 · ${w.wishItemIds.size} 件想买",
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (wishCount == 0) editorialColors().accent else editorialColors().inkFaint,
+                            color = if (wishCount == 0) editorialColors().accentContent else editorialColors().inkFaint,
                         )
                         if (w.tags.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
@@ -586,7 +588,7 @@ private fun WishOutfitsSection(
                             color = editorialColors().inkFaint,
                         )
                     } else {
-                        Text("可升级 ✓", style = MaterialTheme.typography.labelMedium, color = editorialColors().accent)
+                        Text("可升级 ✓", style = MaterialTheme.typography.labelMedium, color = editorialColors().accentContent)
                     }
                 }
             }
@@ -637,7 +639,9 @@ private fun WishEditSheet(
                     onClick = { photoPicker() },
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.size(88.dp, 66.dp),
+                    modifier = Modifier
+                        .size(88.dp, 66.dp)
+                        .semantics { contentDescription = "选择商品图（可选）" },
                 ) {
                     val f = photoFile?.let(vm::imageFileOf)
                     if (f != null) {
@@ -654,7 +658,7 @@ private fun WishEditSheet(
                                 tint = editorialColors().inkFaint,
                                 modifier = Modifier.size(20.dp),
                             )
-                            Text("商品图(可选)", style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
+                            Text("商品图", style = MaterialTheme.typography.labelSmall, color = editorialColors().inkFaint)
                         }
                     }
                 }
@@ -663,20 +667,20 @@ private fun WishEditSheet(
                         value = name,
                         onValueChange = { name = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("名称 *") },
+                        placeholder = { Text("名称（必填）") },
                         singleLine = true,
                     )
                     OutlinedTextField(
                         value = price,
                         onValueChange = { price = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("价格 ¥（可选）") },
+                        placeholder = { Text("价格（可选，元）") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
                 }
             }
-            Text("品类 *", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
+            Text("品类（必选）", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
             Row(
                 Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -705,7 +709,7 @@ private fun WishEditSheet(
                 value = desc,
                 onValueChange = { desc = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("描述（可选，拼进生图文案）") },
+                placeholder = { Text("描述（可选，用于搭配文案）") },
                 singleLine = true,
             )
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
@@ -799,7 +803,7 @@ private fun WishDetailSheet(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (wish.price != null) {
-                    Text("¥${wish.price.toString().removeSuffix(".0")}", style = MaterialTheme.typography.titleMedium, color = editorialColors().accent)
+                    Text("¥${wish.price.toString().removeSuffix(".0")}", style = MaterialTheme.typography.titleMedium, color = editorialColors().accentContent)
                 }
                 Text(wish.category.label, style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
                 if (wish.color.isNotBlank()) {
@@ -1081,7 +1085,7 @@ private fun MemberRow(label: String, badge: String, accent: Boolean) {
         Text(
             badge,
             style = MaterialTheme.typography.labelSmall,
-            color = if (accent) editorialColors().accent else editorialColors().inkFaint,
+            color = if (accent) editorialColors().accentContent else editorialColors().inkFaint,
         )
     }
 }

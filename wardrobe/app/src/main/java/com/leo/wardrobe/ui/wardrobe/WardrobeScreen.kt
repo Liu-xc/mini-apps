@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,7 +36,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -71,7 +73,7 @@ import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.theme.editorialColors
 
 /**
- * W3 衣橱页（US-01/02/03/13）：品类分组 + 标签筛选 + 点编辑 + 滑动删除（确认）+ FAB。
+ * W3 衣橱页（US-01/02/03/13）：品类分组 + 标签筛选 + 点编辑 + 滑动删除（确认）。
  */
 @OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -117,180 +119,179 @@ fun WardrobeScreen(
         mutableStateOf(if (personId != null) data.tagsUsedIn(personId) else emptyList())
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (categoryTab == null) "衣橱 · ${person?.name ?: ""}" else "${categoryTab!!.label} · ${person?.name ?: ""}",
+                style = MaterialTheme.typography.headlineMedium,
+                color = editorialColors().ink,
+                modifier = Modifier.clickable { tapForDemo() },
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (categoryTab == null) "衣橱 · ${person?.name ?: ""}" else "${categoryTab!!.label} · ${person?.name ?: ""}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = editorialColors().ink,
-                    modifier = Modifier.clickable { tapForDemo() },
+                    "共 ${filtered.size} 件",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = editorialColors().inkFaint,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "共 ${filtered.size} 件",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = editorialColors().inkFaint,
-                    )
-                    // it-018：衣橱回顾入口（W9）；it-033：触控热区显式 48dp，视觉圆钮保持 32dp/图标 18dp
-                    Box(
-                        Modifier
-                            .padding(start = 8.dp)
-                            .size(48.dp)
-                            .clickable { onOpenRecap() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                    androidx.compose.foundation.shape.CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Rounded.BarChart,
-                                contentDescription = "衣橱回顾",
-                                tint = editorialColors().inkFaint,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                    // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）；it-030：emoji → Material Star
-                    // it-033：触控热区显式 48dp，视觉不变
-                    Box(
-                        Modifier
-                            .padding(start = 8.dp)
-                            .size(48.dp)
-                            .clickable { onOpenWishlist() },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(32.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                    androidx.compose.foundation.shape.CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Rounded.Star,
-                                contentDescription = "心愿",
-                                tint = editorialColors().inkFaint,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // it-012 O4'：品类图标 Tab（横滑）+「筛选」固定行尾不再被挤出屏外
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // it-036 C11：横滑区右缘 28dp 渐隐（透明→页面底色），可滑才显示；
-                // 渐隐止于滚动容器右缘，与右侧固定「筛选」钮不重叠（无需不透底板）
-                FadingScrollRow(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // it-018：衣橱回顾入口（W9）；it-033：触控热区显式 48dp，视觉圆钮保持 32dp/图标 18dp
+                Box(
+                    Modifier
+                        .padding(start = 8.dp)
+                        .size(48.dp)
+                        .clickable { onOpenRecap() },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    FilterChip(
-                        selected = categoryTab == null,
-                        onClick = { categoryTab = null },
-                        label = { Text("全部") },
-                    )
-                    WardrobeCategory.entries.forEach { c ->
-                        val selected = categoryTab == c
-                        Surface(
-                            onClick = { categoryTab = if (categoryTab == c) null else c },
-                            shape = androidx.compose.foundation.shape.CircleShape,
-                            color = if (selected) editorialColors().accent.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                            border = androidx.compose.foundation.BorderStroke(
-                                if (selected) 1.5.dp else 0.dp,
-                                editorialColors().accent,
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                androidx.compose.foundation.shape.CircleShape,
                             ),
-                            modifier = Modifier.size(44.dp),
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Image(
-                                    painter = painterResource(c.iconRes),
-                                    contentDescription = c.label,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        }
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.BarChart,
+                            contentDescription = "衣橱回顾",
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
-                // 筛选固定：角标常驻可见（R2 P1 修法）
-                FilterChip(
-                    selected = filterTag != null,
-                    onClick = { filterSheetOpen = true },
-                    label = { Text(if (filterTag != null) "筛选·1" else "筛选") },
-                )
-            }
-
-            if (allItems.isEmpty()) {
-                EmptyState(
-                    title = "衣橱还空着",
-                    hint = "点右下角 ＋ 拍照录入第一件衣物",
-                    modifier = Modifier.padding(top = 24.dp),
-                )
-            } else if (filtered.isEmpty()) {
-                EmptyState(
-                    title = "该筛选下没有衣物",
-                    hint = "换个品类或标签试试",
-                    modifier = Modifier.padding(top = 24.dp),
-                )
-            } else {
-                // it-011 C6：两列卡片网格——首屏 4–6 件直达浏览；去行内品类小标，
-                // 「全部」下保留品类小节标题；滑动删除改长按删除（网格里滑动会让位滚动）
-                // it-028：首屏瀑布入场落地（specs/05 #7），rememberSaveable 保证仅首进播放（DESIGN.md §3 预算）
-                var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-                androidx.compose.runtime.LaunchedEffect(Unit) {
-                    kotlinx.coroutines.delay(900)
-                    entranceDone = true
-                }
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                // it-019：心愿入口（W9'：想买单品 + 心愿穿搭）；it-030：emoji → Material Star
+                // it-033：触控热区显式 48dp，视觉不变
+                Box(
+                    Modifier
+                        .padding(start = 8.dp)
+                        .size(48.dp)
+                        .clickable { onOpenWishlist() },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
-                    val sorted = filtered.sortedBy { it.category.ordinal }
-                    itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
-                        StaggeredEntrance(index = index, animate = !entranceDone) {
-                            ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
-                        }
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                androidx.compose.foundation.shape.CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Star,
+                            contentDescription = "心愿",
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
             }
         }
 
-        FloatingActionButton(
+        // it-012 O4'：品类图标 Tab（横滑）+「筛选」固定行尾不再被挤出屏外
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // it-036 C11：横滑区右缘 28dp 渐隐（透明→页面底色），可滑才显示；
+            // 渐隐止于滚动容器右缘，与右侧固定「筛选」钮不重叠（无需不透底板）
+            FadingScrollRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = categoryTab == null,
+                    onClick = { categoryTab = null },
+                    label = { Text("全部") },
+                )
+                WardrobeCategory.entries.forEach { c ->
+                    val selected = categoryTab == c
+                    Surface(
+                        onClick = { categoryTab = if (categoryTab == c) null else c },
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = if (selected) editorialColors().accent.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            if (selected) 1.5.dp else 0.dp,
+                            MaterialTheme.colorScheme.primary,
+                        ),
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Image(
+                                painter = painterResource(c.iconRes),
+                                contentDescription = c.label,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            // 筛选固定：角标常驻可见（R2 P1 修法）
+            FilterChip(
+                selected = filterTag != null,
+                onClick = { filterSheetOpen = true },
+                label = { Text(if (filterTag != null) "筛选·1" else "筛选") },
+            )
+        }
+
+        if (allItems.isEmpty()) {
+            EmptyState(
+                title = "衣橱还空着",
+                hint = "点下方「添加衣物」拍照录入第一件",
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 24.dp),
+            )
+        } else if (filtered.isEmpty()) {
+            EmptyState(
+                title = "该筛选下没有衣物",
+                hint = "换个品类或标签试试",
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 24.dp),
+            )
+        } else {
+            // it-011 C6：两列卡片网格——首屏 4–6 件直达浏览；去行内品类小标，
+            // 「全部」下保留品类小节标题；滑动删除改长按删除（网格里滑动会让位滚动）
+            // it-028：首屏瀑布入场落地（specs/05 #7），rememberSaveable 保证仅首进播放（DESIGN.md §3 预算）
+            var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(900)
+                entranceDone = true
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
+                val sorted = filtered.sortedBy { it.category.ordinal }
+                itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
+                    StaggeredEntrance(index = index, animate = !entranceDone) {
+                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
+                    }
+                }
+            }
+        }
+        Button(
             onClick = { onEditItem(null) },
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp),
-            containerColor = editorialColors().accent,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .heightIn(min = 48.dp),
+            shape = RoundedCornerShape(16.dp),
         ) {
-            Icon(Icons.Rounded.Add, contentDescription = "添加衣物")
+            Icon(Icons.Rounded.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("添加衣物")
         }
     }
 

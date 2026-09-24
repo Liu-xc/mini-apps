@@ -292,11 +292,11 @@ fun ExportSheet(
                                 modifier = Modifier.weight(1f),
                             )
                             if (selCount > 0) {
-                                Surface(shape = RoundedCornerShape(50), color = editorialColors().accent) {
+                                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primary) {
                                     Text(
                                         "$selCount",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
                                     )
                                 }

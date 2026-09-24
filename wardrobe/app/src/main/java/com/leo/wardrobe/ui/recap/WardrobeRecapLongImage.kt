@@ -83,7 +83,7 @@ class WardrobeRecapLongImage(
         if (showTop) {
             y = sectionTitle(canvas, y, "最百搭 TOP3")
             stats.topVersatile.forEachIndexed { i, t ->
-                val rankBg = Paint().apply { color = ACCENT; isAntiAlias = true }
+                val rankBg = Paint().apply { color = ACCENT_ACTION; isAntiAlias = true }
                 canvas.drawCircle(PAD + 34f, y + 60f, 34f, rankBg)
                 center(canvas, "${i + 1}", PAD + 34f, y + 60f, rankTextPaint)
                 canvas.drawText(t.item.name.take(12), PAD + 84f, y + 78f, itemPaint)
@@ -144,7 +144,7 @@ class WardrobeRecapLongImage(
 
     private fun sectionTitle(canvas: Canvas, top: Int, text: String): Int {
         val y = top + TITLE_H / 2f
-        canvas.drawRoundRect(RectF(PAD.toFloat(), y - 34f, PAD + 12f, y + 34f), 6f, 6f, Paint().apply { color = ACCENT })
+        canvas.drawRoundRect(RectF(PAD.toFloat(), y - 34f, PAD + 12f, y + 34f), 6f, 6f, Paint().apply { color = ACCENT_GRAPHIC })
         canvas.drawText(text, PAD + 44f, y + 22f, sectionPaint)
         return top + TITLE_H
     }
@@ -183,8 +183,9 @@ class WardrobeRecapLongImage(
 
         const val BG = 0xFFF5F8F2.toInt()
         const val INK = 0xFF1D2620.toInt()
-        const val FAINT = 0xFF808D82.toInt()
-        const val ACCENT = 0xFF429E68.toInt()
+        const val FAINT = 0xFF747F75.toInt()
+        const val ACCENT_GRAPHIC = 0xFF429E68.toInt()
+        const val ACCENT_ACTION = 0xFF1D6845.toInt()
         const val BAR = 0xFFDCE6D8.toInt()
         const val HAIR = 0xFFE3EBE0.toInt()
 

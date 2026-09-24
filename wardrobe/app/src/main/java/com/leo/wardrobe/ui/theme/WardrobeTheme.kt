@@ -25,6 +25,7 @@ fun WardrobeTheme(
             ink = WardrobePalette.InkDark,
             inkFaint = WardrobePalette.InkFaintDark,
             accent = WardrobePalette.AccentDark,
+            accentContent = WardrobePalette.AccentDark,
             hairline = WardrobePalette.HairlineDark,
         )
     } else {
@@ -34,6 +35,7 @@ fun WardrobeTheme(
             ink = WardrobePalette.Ink,
             inkFaint = WardrobePalette.InkFaint,
             accent = WardrobePalette.Accent,
+            accentContent = WardrobePalette.AccentStrong,
             hairline = WardrobePalette.Hairline,
         )
     }
@@ -42,6 +44,7 @@ fun WardrobeTheme(
         darkColorScheme(
             primary = WardrobePalette.AccentDark,
             onPrimary = WardrobePalette.PaperDark,
+            outline = WardrobePalette.InkFaintDark,
             primaryContainer = Color(0xFF1E4230),
             onPrimaryContainer = Color(0xFFCDEBD6),
             secondaryContainer = Color(0xFF243127),
@@ -64,8 +67,9 @@ fun WardrobeTheme(
         )
     } else {
         lightColorScheme(
-            primary = WardrobePalette.Accent,
-            onPrimary = WardrobePalette.Paper,
+            primary = WardrobePalette.AccentStrong,
+            onPrimary = WardrobePalette.SurfaceLight,
+            outline = WardrobePalette.InkFaint,
             primaryContainer = Color(0xFFDDF0E4),
             onPrimaryContainer = Color(0xFF1E5B36),
             secondaryContainer = Color(0xFFEAF3EC),
@@ -77,8 +81,8 @@ fun WardrobeTheme(
             surfaceVariant = WardrobePalette.SurfaceLight,
             onSurfaceVariant = WardrobePalette.InkFaint,
             outlineVariant = WardrobePalette.Hairline,
-            secondary = WardrobePalette.Accent,
-            onSecondary = WardrobePalette.Paper,
+            secondary = WardrobePalette.AccentStrong,
+            onSecondary = WardrobePalette.SurfaceLight,
             // it-029 C2：M3 容器色阶未定义会跌回基线淡紫（导航/弹层），全部对齐纸面白
             surfaceContainerLowest = WardrobePalette.SurfaceLight,
             surfaceContainerLow = WardrobePalette.SurfaceLight,

@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -48,7 +47,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.isWishSlot
@@ -179,7 +177,7 @@ fun SlotCell(
                         if (wished) {
                             // it-030：角标 Material Star + 想买；底色加深保证白字对比（审查 P1）
                             Surface(
-                                color = Color(0xE63FA265),
+                                color = MaterialTheme.colorScheme.primary,
                                 shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 8.dp),
                                 modifier = Modifier.align(Alignment.TopStart),
                             ) {
@@ -190,14 +188,14 @@ fun SlotCell(
                                     Icon(
                                         Icons.Rounded.Star,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(12.dp),
                                     )
                                     Spacer(Modifier.width(2.dp))
                                     Text(
                                         "想买",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                     )
                                 }
                             }
@@ -215,9 +213,7 @@ fun SlotCell(
                             )
                         }
                         // it-031 C5 rev2：名称优先（名称加粗主位 + 纯序号角标可点循环翻页 + ✕ 移除该格）
-                        // it-033 C1：名称不截断三段式——先按实际溢出动态缩字号（11→10→9→8sp 底），
-                        // 缩到底仍放不下才 maxLines=2（labelSmall 行高 14sp，两行名称条 +14dp ≤ ~18dp 上限），
-                        // 最后才省略兜底；单行时名称条高度与 it-031 完全一致，一屏网格不受影响。
+                        // it-039：固定清晰字号单行显示，超长名称省略；语义保留完整名称。
                         // ✕ 视觉放大 10→16dp、与角标拉开 8dp；触控节点由下方覆盖层补足到 28×44dp（≥44dp 高）。
                         Row(
                             Modifier
@@ -228,30 +224,21 @@ fun SlotCell(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             val itemName = items.getOrNull(pagerState.currentPage)?.name.orEmpty()
-                            // 逐级缩字号：onTextLayout 检出溢出即降一档，第 5 档转两行；到顶封顶不再自增，防死循环
-                            var fitStep by remember(itemName) { mutableStateOf(0) }
                             Text(
                                 itemName,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontSize = when (fitStep) {
-                                    0 -> 11
-                                    1 -> 10
-                                    2 -> 9
-                                    else -> 8
-                                }.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
-                                maxLines = if (fitStep >= 4) 2 else 1,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                onTextLayout = { r ->
-                                    if (r.hasVisualOverflow && fitStep < 4) fitStep += 1
-                                },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { contentDescription = itemName },
                             )
                             Text(
                                 "${pagerState.currentPage + 1}/${items.size}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.8f),
+                                color = Color.White,
                                 maxLines = 1,
                                 modifier = Modifier
                                     // it-033：与 ✕ 拉开 8dp（end），start 4dp 隔开名称列

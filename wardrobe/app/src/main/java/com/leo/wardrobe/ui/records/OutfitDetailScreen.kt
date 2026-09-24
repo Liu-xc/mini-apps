@@ -196,7 +196,7 @@ fun OutfitDetailScreen(
                     Surface(
                         onClick = { pickEffect() },
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                        color = editorialColors().accent,
+                        color = MaterialTheme.colorScheme.primary,
                         shadowElevation = 3.dp,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -209,7 +209,7 @@ fun OutfitDetailScreen(
                             Icon(
                                 Icons.Rounded.Add,
                                 contentDescription = null,
-                                tint = androidx.compose.ui.graphics.Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(15.dp),
                             )
                             Text(

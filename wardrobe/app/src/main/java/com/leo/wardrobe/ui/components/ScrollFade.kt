@@ -35,10 +35,10 @@ fun FadingScrollRow(
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(8.dp),
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     fadeWidth: Dp = 28.dp,
+    fadeColor: Color = editorialColors().paper,
     content: @Composable RowScope.() -> Unit,
 ) {
     val state = rememberScrollState()
-    val pageBg = editorialColors().paper
     // 读在组合期：滚动/内容变化都会重组，draw 块只负责画
     val fadeActive = state.maxValue > 0 && state.value < state.maxValue
     Box(
@@ -47,7 +47,7 @@ fun FadingScrollRow(
             if (fadeActive) {
                 val w = fadeWidth.toPx()
                 drawRect(
-                    brush = Brush.horizontalGradient(listOf(Color.Transparent, pageBg)),
+                    brush = Brush.horizontalGradient(listOf(Color.Transparent, fadeColor)),
                     topLeft = Offset(size.width - w, 0f),
                     size = Size(w, size.height),
                 )

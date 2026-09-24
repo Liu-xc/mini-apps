@@ -230,7 +230,7 @@ fun OutfitScreen(
                 Text(
                     "混入心愿",
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (mixWishes) editorialColors().accent else editorialColors().inkFaint,
+                    color = if (mixWishes) editorialColors().accentContent else editorialColors().inkFaint,
                 )
             }
             TextButton(
@@ -273,7 +273,7 @@ fun OutfitScreen(
                 Text(
                     "愿望件已附加，滑到候选最后可见",
                     style = MaterialTheme.typography.labelSmall,
-                    color = editorialColors().accent,
+                    color = editorialColors().accentContent,
                 )
             }
         }
@@ -392,7 +392,7 @@ fun OutfitScreen(
                     Text(
                         if (savedWishOutfit != null) "已存心愿" else "存为心愿",
                         style = MaterialTheme.typography.titleSmall,
-                        color = editorialColors().accent,
+                        color = editorialColors().accentContent,
                     )
                 }
             } else {
@@ -578,4 +578,3 @@ private fun OutfitSlot(
         onRemove = onRemove,
     )
 }
-
