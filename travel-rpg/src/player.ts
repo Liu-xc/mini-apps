@@ -47,6 +47,7 @@ export class Player {
   /* 足迹反馈钩子（it-005 AC-8）：dust 层在 main 接线 */
   onStep?: (p: THREE.Vector3, running: boolean) => void;
   onLand?: (p: THREE.Vector3, impact: number) => void;
+  onSwimChange?: (swimming: boolean, p: THREE.Vector3) => void;   // it-010 AC-2
   private stepAcc = 0;
   private bones: THREE.Bone[] = [];
   private swimPivot: THREE.Group | null = null;   // 髋部枢轴（俯卧用）
@@ -180,8 +181,10 @@ private buildFallback(): void {
     this.wading = !this.swimming && ground - raw > 0.15;   // 被水位钳抬起 = 涉水
     const waterDepth = LAKE.level - raw;
     /* 游泳切换（it-008 AC-1）：深水入水（滞回防抖），浅水自动回岸 */
+    const wasSwimming = this.swimming;
     if (!this.swimming && waterDepth > 1.0) this.swimming = true;
     else if (this.swimming && waterDepth < 0.85) this.swimming = false;
+    if (wasSwimming !== this.swimming) this.onSwimChange?.(this.swimming, this.pos);
 
     if (this.swimming) {
       /* 浮在水面：重力停用，位置向水面收敛 */

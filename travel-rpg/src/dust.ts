@@ -19,8 +19,22 @@ function puffTexture(): THREE.CanvasTexture {
 interface Puff { sp: THREE.Sprite; life: number; big: number; }
 interface Ripple { m: THREE.Mesh; life: number; }
 
+function sprayTexture(): THREE.CanvasTexture {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const c = cv.getContext('2d')!;
+  const g = c.createRadialGradient(32, 32, 3, 32, 32, 30);
+  g.addColorStop(0, 'rgba(240,247,244,0.95)');
+  g.addColorStop(1, 'rgba(240,247,244,0)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(cv);
+}
+
 export function buildDust(): {
   group: THREE.Group;
+  splashCount: number;
+  splash: (x: number, y: number, z: number) => void;
   puff: (x: number, y: number, z: number, big?: number) => void;
   ripple: (x: number, z: number, big?: number) => void;
   update: (dt: number) => void;
@@ -59,16 +73,48 @@ export function buildDust(): {
   }
   let rippleCursor = 0;
 
-  return {
+  /* 水花池：白沫纵向堆叠（入水/出水瞬间） */
+  const sprays: Puff[] = [];
+  const sprayTex = sprayTexture();
+  for (let i = 0; i < 12; i++) {
+    const mat = new THREE.SpriteMaterial({
+      map: sprayTex, transparent: true, opacity: 0, depthWrite: false,
+    });
+    mat.userData.outlineParameters = { visible: false };
+    const sp = new THREE.Sprite(mat);
+    sp.visible = false;
+    sp.renderOrder = 3;
+    group.add(sp);
+    sprays.push({ sp, life: 0, big: 1 });
+  }
+  let sprayCursor = 0;
+
+  const api = {
     group,
-    puff(x, y, z, big = 1) {
+    splashCount: 0,
+    splash(x: number, y: number, z: number) {
+      this.splashCount++;
+      const n = 6;
+      for (let i = 0; i < n; i++) {
+        const s = sprays[sprayCursor++ % sprays.length];
+        s.life = 1;
+        s.big = 0.8 + Math.random() * 0.7;
+        s.sp.visible = true;
+        s.sp.position.set(
+          x + (Math.random() - 0.5) * 0.5,
+          y + 0.1 + Math.random() * 0.55,
+          z + (Math.random() - 0.5) * 0.5,
+        );
+      }
+    },
+    puff(x: number, y: number, z: number, big = 1) {
       const p = puffs[puffCursor++ % puffs.length];
       p.life = 1;
       p.big = big;
       p.sp.visible = true;
       p.sp.position.set(x + (Math.random() - 0.5) * 0.3, y + 0.12, z + (Math.random() - 0.5) * 0.3);
     },
-    ripple(x, z, big = 1) {
+    ripple(x: number, z: number, big = 1) {
       const r = ripples[rippleCursor++ % ripples.length];
       r.life = 1;
       r.m.visible = true;
@@ -77,6 +123,15 @@ export function buildDust(): {
       r.m.userData.big = big;
     },
     update(dt: number) {
+      for (const p of sprays) {
+        if (p.life <= 0) continue;
+        p.life -= dt * 2.6;
+        if (p.life <= 0) { p.sp.visible = false; continue; }
+        const k = 1 - p.life;
+        p.sp.scale.setScalar((0.3 + k * 0.7) * p.big);
+        (p.sp.material as THREE.SpriteMaterial).opacity = p.life * 0.75;
+        p.sp.position.y += dt * 1.4;
+      }
       for (const p of puffs) {
         if (p.life <= 0) continue;
         p.life -= dt * 2.1;
@@ -97,4 +152,5 @@ export function buildDust(): {
       }
     },
   };
+  return api;
 }

@@ -174,6 +174,49 @@ export function buildScatter(avoid: Array<[number, number]>): THREE.Group {
   loadSpec(['Pebble_Round_1', 'Pebble_Round_2'],
     microPebbleSpots, 0.02, 0.6, { cast: false });
 
+  /* 路线走廊散布（it-010 AC-1）：站间荒野沿中心线确定性撒布 */
+  const ROUTES: Array<[number, number, number, number]> = [
+    [0, 0, -50, -32],    // 达里湖 ↔ 石林
+    [0, 0, -27, 55],     // 达里湖 ↔ 乌兰布统
+  ];
+  const routeSmall: Spot[] = [];   // 岩/灌木/花
+  const routeTree: Spot[] = [];    // 枯木地标树
+  for (const [x0, z0, x1, z1] of ROUTES) {
+    const len = Math.hypot(x1 - x0, z1 - z0);
+    const n = Math.floor(len / 7);
+    const px = -(z1 - z0) / len, pz = (x1 - x0) / len;
+    for (let i = 2; i < n - 1; i++) {
+      const t = i / n;
+      const cx = x0 + (x1 - x0) * t, cz = z0 + (z1 - z0) * t;
+      const off = (rand() - 0.5) * 16;
+      const x = cx + px * off, z = cz + pz * off;
+      if (Math.hypot(x, z) < 12) continue;                     // 避开营地
+      if (terrainHeight(x, z) < LAKE.level + 0.3) continue;    // 避开水域
+      const roll = rand();
+      const spot: Spot = {
+        x, z, yaw: rand() * Math.PI * 2,
+        targetH: 0, j: 0.9 + rand() * 0.3,
+      };
+      if (roll < 0.55) { spot.targetH = 0.4 + rand() * 0.7; routeSmall.push(spot); }
+      else if (roll < 0.72) { spot.targetH = 3.2 + rand() * 1.4; routeTree.push(spot); }
+    }
+  }
+  /* 中点小地标：巨石对 + 倒木 */
+  for (const [x0, z0, x1, z1] of ROUTES) {
+    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+    if (terrainHeight(mx, mz) < LAKE.level + 0.3) continue;
+    routeSmall.push({ x: mx - 1.8, z: mz + 1.2, yaw: 0.8, targetH: 2.1, j: 1 });
+    routeSmall.push({ x: mx + 1.6, z: mz - 1, yaw: 2.4, targetH: 1.6, j: 1 });
+    routeTree.push({ x: mx + 0.4, z: mz + 2.2, yaw: 1.4, targetH: 3.6, j: 1 });
+  }
+  const ROUTE_SMALL = [
+    'Rock_Medium_2', 'Pebble_Square_4', 'Bush_Common', 'Bush_Common_Flowers',
+    'Flower_3_Group', 'Clover_2', 'Plant_7',
+  ];
+  loadSpec(ROUTE_SMALL, routeSmall, 0.05, 0.9, { cast: true, leafGlow: true });
+  loadSpec(['DeadTree_1', 'DeadTree_4', 'TwistedTree_3'], routeTree, 0.1, 0.8,
+    { cast: true, leafGlow: true });
+
   /* 远景林带剪影：真树（Pine_2），雾中出层次 */
   const ringSpots: Spot[] = [];
   for (let i = 0; i < 55; i++) {

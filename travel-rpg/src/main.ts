@@ -100,6 +100,7 @@ function applyTime(id: TimeId): void {
   hemi.groundColor.set(p.hemiGround);
   scene.environmentIntensity = p.envIntensity;
   scene.backgroundIntensity = p.bgIntensity;
+  _timeFog.set(p.fog);
   scene.backgroundRotation.set(0, p.hdriYaw, 0);
   scene.environmentRotation.set(0, p.hdriYaw, 0);
   waterRes.setTime(p);
@@ -248,6 +249,7 @@ player.onStep = (p, running) => {
   if (player.swimming || player.wading) dustRes.ripple(p.x, p.z, player.swimming ? 1.1 : (running ? 1.35 : 1));
   else dustRes.puff(p.x, p.y, p.z, running ? 1.25 : 1);
 };
+player.onSwimChange = (_swimming, p) => dustRes.splash(p.x, p.y, p.z);
 player.onLand = (p, impact) => {
   if (player.wading) {
     dustRes.ripple(p.x, p.z, 1.7);
@@ -307,7 +309,10 @@ if (!editMode) {
 }
 
 const post = createPost(renderer, scene, camera, effect);
+const _regionTint = new THREE.Color();
+const _timeFog = new THREE.Color();
 applyTime(timeId);   // 首次应用时段预设（须在世界/灯/水体/post 之后）
+_timeFog.set(TIME_PRESETS[timeId].fog);
 
 window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -370,6 +375,7 @@ window.__game = {
     time: timeId,
     station: station.id,
     region: regionName,
+    splash: dustRes.splashCount,
     swimming: player.swimming,
     boating: boat ? boat.isRiding() : false,
     hasSwimClip: player.clipNames.some(n => /swim|float/i.test(n)),
@@ -433,6 +439,18 @@ function tick(dt: number): void {
     .addScaledVector(_right, input.move.x)
     .addScaledVector(_dir, input.move.y);
   if (_moveDir.lengthSq() > 1) _moveDir.normalize();
+
+  /* 区域雾色过渡（it-010 AC-3）：站域 25m 全量 → 60m 消退 */
+  {
+    const { st, dist } = nearestStation();
+    const w = Math.min(Math.max((60 - dist) / 35, 0), 1);
+    if (w > 0 && st.tint) {
+      PALETTE.fog.lerp(_regionTint.set(st.tint), Math.min(1, w * dt * 2.2));
+    } else {
+      PALETTE.fog.lerp(_timeFog, Math.min(1, dt * 1.5));
+    }
+    if (scene.fog instanceof THREE.Fog) scene.fog.color.copy(PALETTE.fog);
+  }
 
   /* 区域徽标刷新 */
   if (!editMode && hintBase) {
@@ -508,6 +526,7 @@ declare global {
         time: string;
         station: string;
         region: string;
+        splash: number;
         swimming: boolean;
         boating: boolean;
         hasSwimClip: boolean;
