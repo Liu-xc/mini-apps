@@ -2,6 +2,13 @@
 
 ## 2026-09-24
 
+- **it-011 · 路牌文字与音频初版**：**路牌程序化文字**（Placement.label 可选字段
+  + placer 板面正/背叠 Canvas 木纹文字面片——Kenney 盒子 UV 吃不进换 map 材质，
+  叠面片对任意 glTF 板面都稳；4 块路牌「石林 →」等近景可读）；**音频系统初版**
+  （audio.ts 全 WebAudio 合成零资产：风双 LFO 阵风、日间鸟鸣、湖岸水声近湖渐入、
+  草/水脚步、落地闷响、入水水花、划桨；首次手势解锁 + M 静音，probe audio
+  ready/steps）。回归全绿（构建零错/errs=[]/行为断言/world 48 摆放）。规格见
+  specs/iterations/it-011-sign-text-audio.md。
 - **it-010 · 站间路上内容与水花过渡**：**路牌+走廊散布**（三站出口 kenney sign、
   两条路线走廊沿中心线 ±8m 确定性撒布岩/灌木/花/枯木 ~40 件、中点巨石对+倒木
   小地标，营地 12m/水域自动避开）；**入水/出水水花**（onSwimChange 触发白沫

@@ -10,6 +10,7 @@ export interface Placement {
   z: number;
   yaw: number;     // 弧度
   scale: number;   // 目标高度（米）
+  label?: string;  // 路牌文字（it-011，仅 sign 类资产）——程序化木纹文字
 }
 
 export interface SceneDef {
@@ -38,8 +39,8 @@ export const CAMP: SceneDef = {
     { asset: 'kenney:fence_simpleLow', x: -8.2, z: -17.8, yaw: -0.35, scale: 1.0 },
     { asset: 'kenney:log', x: 4.2, z: -4.6, yaw: 1.2, scale: 0.45 },
     // 出口路牌（it-010 AC-1）：西北朝石林 / 西南朝乌兰布统
-    { asset: 'kenney:sign', x: -14.5, z: -11, yaw: 2.4, scale: 1.35 },
-    { asset: 'kenney:sign', x: -11, z: 9.5, yaw: 0.9, scale: 1.35 },
+    { asset: 'kenney:sign', x: -14.5, z: -11, yaw: 2.4, scale: 1.35, label: '石林 →' },
+    { asset: 'kenney:sign', x: -11, z: 9.5, yaw: 0.9, scale: 1.35, label: '乌兰布统 →' },
   ],
 };
 
@@ -66,7 +67,7 @@ export const SHILIN: SceneDef = {
     { asset: 'quaternius:TwistedTree_2', x: -38, z: -45, yaw: 2.9, scale: 5.2 },
     { asset: 'polyhaven:tree_stump_01', x: -49, z: -36, yaw: 0.4, scale: 0.7 },
     { asset: 'polyhaven:moss_01', x: -61, z: -44, yaw: 1.1, scale: 0.8 },
-    { asset: 'kenney:sign', x: -44, z: -27, yaw: -0.7, scale: 1.35 },
+    { asset: 'kenney:sign', x: -44, z: -27, yaw: -0.7, scale: 1.35, label: '达里湖 →' },
   ],
 };
 
@@ -90,7 +91,7 @@ export const WULAN: SceneDef = {
     { asset: 'polyhaven:dandelion_01', x: -30, z: 53, yaw: 0.8, scale: 0.45 },
     { asset: 'polyhaven:dandelion_01', x: -18, z: 51, yaw: 2.1, scale: 0.4 },
     { asset: 'polyhaven:fern_02', x: -15, z: 43, yaw: 1.4, scale: 0.9 },
-    { asset: 'kenney:sign', x: -21, z: 47, yaw: -0.5, scale: 1.35 },
+    { asset: 'kenney:sign', x: -21, z: 47, yaw: -0.5, scale: 1.35, label: '达里湖 →' },
   ],
 };
 

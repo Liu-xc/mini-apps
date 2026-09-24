@@ -19,6 +19,7 @@ Placement {
   z: number
   yaw: number           // 弧度
   scale: number         // 相对 catalog 记录的标准高度缩放
+  label?: string        // 路牌文字（it-011，仅 sign 类资产；Canvas 木纹文字纹理）
 }
 ```
 

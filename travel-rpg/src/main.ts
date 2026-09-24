@@ -14,6 +14,7 @@ import { buildDust } from './dust';
 import { buildMountains } from './mountains';
 import { uCloudT } from './cloud';
 import { buildBoat } from './canoe';
+import { createAudio } from './audio';
 import { getWorldScene, deriveBlock, STATIONS } from './scenes';
 import { initEditor, type EditorApi } from './editor';
 import { Player } from './player';
@@ -173,6 +174,14 @@ scene.add(campfire.group);
 /* 划船载具（it-008 AC-2）：达里湖站离岸浮位 */
 const boat = buildBoat(37.5, -26.5);
 scene.add(boat.group);
+/* 音频（it-011）：程序化合成，首次手势解锁，M 静音 */
+const audio = createAudio();
+const unlockAudio = () => audio.unlock();
+window.addEventListener('keydown', unlockAudio, { once: false });
+window.addEventListener('pointerdown', unlockAudio, { once: false });
+window.addEventListener('keydown', e => {
+  if (e.code === 'KeyM' && !e.repeat) audio.setMuted(!audio.isMuted());
+});
 
 /* ---------- 光斑 ---------- */
 const lensflare = new Lensflare();
@@ -246,11 +255,20 @@ player.pos.set(station.spawn[0], groundHeight(station.spawn[0], station.spawn[1]
 
 /* 足迹反馈接线（it-005 AC-8）：尘土 / 涟漪；游泳划水也出涟漪 */
 player.onStep = (p, running) => {
-  if (player.swimming || player.wading) dustRes.ripple(p.x, p.z, player.swimming ? 1.1 : (running ? 1.35 : 1));
-  else dustRes.puff(p.x, p.y, p.z, running ? 1.25 : 1);
+  if (player.swimming || player.wading) {
+    dustRes.ripple(p.x, p.z, player.swimming ? 1.1 : (running ? 1.35 : 1));
+    audio.step('water');
+  } else {
+    dustRes.puff(p.x, p.y, p.z, running ? 1.25 : 1);
+    audio.step('grass');
+  }
 };
-player.onSwimChange = (_swimming, p) => dustRes.splash(p.x, p.y, p.z);
+player.onSwimChange = (_swimming, p) => {
+  dustRes.splash(p.x, p.y, p.z);
+  audio.splash();
+};
 player.onLand = (p, impact) => {
+  audio.land(impact);
   if (player.wading) {
     dustRes.ripple(p.x, p.z, 1.7);
   } else {
@@ -376,6 +394,7 @@ window.__game = {
     station: station.id,
     region: regionName,
     splash: dustRes.splashCount,
+    audio: { ready: audio.isReady(), muted: audio.isMuted(), steps: audio.stepCount },
     swimming: player.swimming,
     boating: boat ? boat.isRiding() : false,
     hasSwimClip: player.clipNames.some(n => /swim|float/i.test(n)),
@@ -478,12 +497,17 @@ function tick(dt: number): void {
     if (Math.abs(boat.speed()) > 0.8 && boatRippleT <= 0) {
       dustRes.ripple(boat.pos.x, boat.pos.z, 1.6);
       boatRippleT = 0.28;
+      audio.paddle();
     }
     rig.update(dt, boat.pos, 1.5);   // 骑乘镜头拉远（it-009 AC-3）
     post.render(dt);
     return;
   }
 
+  audio.tick(dt, {
+    nearLake: Math.max(0, 1 - Math.max(0, Math.hypot(player.pos.x - 54, player.pos.z + 38) - 24) / 40),
+    day: timeId !== 'sunset',
+  });
   player.update(dt, _moveDir, input.run, elapsed);
   rig.update(dt, player.pos);
   post.render(dt);
@@ -527,6 +551,7 @@ declare global {
         station: string;
         region: string;
         splash: number;
+        audio: { ready: boolean; muted: boolean; steps: number };
         swimming: boolean;
         boating: boolean;
         hasSwimClip: boolean;
