@@ -1,0 +1,382 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""report_template.py — 「现状截图 vs 改版线框」对照式 UX 评审报告生成器。
+
+数据驱动：只改下面 ★数据区★，结构自动生成：
+  封面 → 总评/方法/共性问题表 → 分节页 → 每主题一页（结论/问题清单/左右对照/要点）
+  → 落地拆分 → 附录（实测记录 + 证据截图）
+
+布局铁律（不可改）：全程 flex 流式，禁用 position:absolute
+（html2pdf-next.js 会把 absolute 强转 static，封面会塌叠）。
+
+用法: python3 report_template.py [输出.html，默认 report.html]
+之后: check-html 验证 → html2pdf-next.js 渲染 → pdf_qa + 视觉验收门
+"""
+import html
+import os
+import sys
+
+ASSETS = "assets"  # 截图/线框所在目录（相对输出 HTML）
+
+# ═══════════════════════ ★数据区·按评审填写★ ═══════════════════════
+
+META = dict(
+    title="衣橱 WARDROBE · 第三轮走查",
+    sub="r3 · 新语料首检 · 问题清单与修法线框",
+    date="2026-09-24",
+    scope="1 应用 · 19 页面/状态 · 3 路视觉评审",
+    summary="对 it-032 新语料 + it-033~036 后最新构建的第三轮全页走查：19 态截图、"
+            "三路视觉评审（像素指纹身份复核）、热区探针定论。"
+            "产出 P0×2 / P1×3 / P2×5 与修法线框；前两轮修复零回归。",
+    cover_shots=["wardrobe-r3-01-W1-match.png", "wardrobe-r3-10-W8-records.png"],
+    stats=[("19", "截图状态"), ("2", "P0 级问题"), ("3", "P1 级问题"), ("20+", "热区/交互实测")],
+    methods=[
+        ("实机截图走查", "16:34 最新构建装机，W1–W10 + 过程态 + 深色 19 态，像素指纹身份复核"),
+        ("视觉评审三路并行", "3 代理对表 DESIGN.md，WCAG 逐像素实测、420dpi 换算、先身份核对"),
+        ("交互实测验证", "uiautomator bounds 探针逐项断言，「视觉小 ≠ 命中小」一律以 dump 定论"),
+    ],
+)
+
+SECTIONS = [
+    dict(label="衣橱 · WARDROBE", kicker="PART 01", app="wardrobe",
+         shots=["wardrobe-r3-05-W3-closet.png", "wardrobe-r3-12-W9-review.png",
+                "wardrobe-r3-13-W10-wishlist.png"]),
+]
+
+THEMES = [
+    dict(app="wardrobe", no="R3-1", title="W3 衣橱 · FAB 遮挡卡片文字",
+         concl="右下 FAB 足迹压住第四张卡 meta 行，「#复古」字形被切半——内容被遮挡是本轮唯一版式类 "
+               "P0。修法是列表让位而非挪 FAB（FAB 热区 56dp 本身达标）；品类 chip 的 emoji 属 "
+               "it-012 已知待专项，不计入本轮新增。",
+         problems=[
+             ("P0", "FAB (880,1927)-(1026,2073) 覆盖卡片 meta，「#复古」被切成半字（05/06 两帧实拍）"),
+         ],
+         shot="wardrobe-r3-06-W3-filtered.png", wire="wf-closet.png",
+         points=[
+             (1, "网格底部预留 padding 让出 FAB 足迹：末行 meta 不进半径，#复古 全字可见"),
+         ]),
+    dict(app="wardrobe", no="R3-2", title="底部导航 · 选中态三重编码",
+         concl="选中语义同时用色块 pill、图标变色、文字变色三个通道承载，正面命中 §5.2 反例清单第 2 条"
+               "（历史遗留，前两轮未点名）；且选中文字 #429E68 3.24:1 同时不达 §2.2。砍掉文字通道"
+               "一次解决两个问题。",
+         problems=[
+             ("P0", "导航选中 = pill + 图标 + 文字三色同语义（19 帧全页可见）"),
+             ("P1", "选中文字 3.24:1 < 4.5（与 C3 同根因，此处随三重编码一并修）"),
+         ],
+         shot="wardrobe-r3-10-W8-records.png", wire="wf-nav.png",
+         points=[
+             (1, "保留 pill + 图标两图形通道表选中（48dp 热区实测达标，不动）"),
+             (2, "文字三档同色不再随选中变化，反例解除、对比度问题同步消除"),
+         ]),
+    dict(app="wardrobe", no="R3-3", title="W2 角色弹层 · 同一语义三重编码",
+         concl="「Leo ✓ 使用中」= 浅绿色块 + 对勾图标 + 文字，三通道同语义，同违 §5.2 反例；"
+               "「使用中」绿字 2.79:1 连 3:1 硬底都不到。行本身整行可点（411×48dp 实测）——只修编码与文字色。",
+         problems=[
+             ("P0", "选中行色块+对勾+文字三重编码（04 帧）"),
+             ("P1", "「使用中」2.79:1 < 3:1 硬底（§2.2）"),
+         ],
+         shot="wardrobe-r3-04-W2-roles.png", wire="wf-roles.png",
+         points=[
+             (1, "删除行内对勾：只留浅绿色块 + 「使用中」文字，两通道达标"),
+         ]),
+    dict(app="wardrobe", no="R3-4", title="对比度体系 · accent 白字与弱化文本",
+         concl="token 级双问题：#429E68 白字全线 3.1–3.3:1 < §2.2 硬表（主按钮/随机/导航/价格/FAB 5+ 处同根因），"
+               "弱化文本多处跌破 3:1 下限。仓内已有 #1D6845 深阶（比例条在用，6.7:1）——换 token 一次、全站生效。",
+         problems=[
+             ("P1", "白字/accent 3.12–3.32:1 < 4.5：复制长图/今天穿了这套/去打卡/种草 FAB/随机一套/价格字"),
+             ("P1", "弱化文本破下限：演示角标 1.71、使用中 2.79、名称条计数 3.74/3.93、保存这套标签用途越界 3.26"),
+             ("P2", "导出面板禁用按钮名 1.43:1（禁用态虽获豁免，按钮名应可读）"),
+         ],
+         shot="wardrobe-r3-15-W1-random.png", wire="fig-contrast.png",
+         points=[
+             (1, "白字按钮底色换 #1D6845 深阶（6.7:1，仓内已有此色）"),
+             (2, "accent 作字改深阶；图形/块面/FAB 仍可用 #429E68（占比 <10% 不变）"),
+             (3, "弱化文本逐项提到 token 下限：角标/计数 → ≥3，正文 → ≥4.5"),
+         ]),
+    dict(app="wardrobe", no="R3-5", title="W1 名称条 · 长名孤字折行",
+         concl="新语料长名（浅蓝色牛仔夹克 / 深蓝色牛仔 A 字裙）在 it-033 三段式字号下仍折出孤字行——"
+               "「不截断」以单字换行的方式达成，观感比省略号更差。热区无问题（角标/✕ 均 48dp），只修排版。",
+         problems=[
+             ("P1", "名称条两行孤字：夹/克、卫/衣、A 字/裙，鼠尾草绿背包名省略号截断（01/02/04 帧）"),
+             ("P2", "计数小字 3.74:1 < 4.5（深浅两色模式均见）"),
+         ],
+         shot="wardrobe-r3-01-W1-match.png", wire="wf-namebar.png",
+         points=[
+             (1, "名称单行省略：压到最小字号仍超宽 → 尾部 …，禁止折出孤字行"),
+             (2, "计数提纯白 ≥4.5:1、与关闭钮右对齐，不参与换行"),
+         ]),
+]
+
+COMMONS = [
+    ("C1", "选中态三重编码：底导航 pill+图标+文字、角色弹层色块+对勾+文字", "全局 · W2", "P0", "各砍一通道 → wf-nav / wf-roles"),
+    ("C2", "FAB 足迹遮挡卡片 meta 文字（#复古 切半）", "W3", "P0", "列表底部让位 FAB → wf-closet"),
+    ("C3", "白字/accent 3.1–3.3:1 < 4.5（token 级，5+ 处同根因）", "W1/W6/W7/W9/W10", "P1", "底色/作字换 #1D6845 深阶 → fig-contrast"),
+    ("C4", "弱化文本破下限：角标 1.71 / 使用中 2.79 / 计数 3.7", "W9/W2/W1", "P1", "逐项提到 inkFaint≥3、正文≥4.5 → fig-contrast"),
+    ("C5", "名称条长名孤字折行（三段式字号仍溢出）", "W1", "P1", "单行 ellipsis 禁折行 → wf-namebar"),
+    ("C6", "浅色描边紫灰残留 #79747E（输入框/分段控件 M3 默认 outline）", "W10 · 分段", "P2", "描边换 #808D82 灰绿阶"),
+    ("C7", "W10 顶栏 72dp 空白、底距 10.3dp、与 W1 顶栏形制不一", "W10", "P2", "核 inset 叠加，补足 20dp 节奏"),
+    ("C8", "表单文案：括号半角全角混用、星号空格不一、内部术语泄漏", "W10 表单", "P2", "统一全角，占位改用户语言"),
+    ("C9", "标签建议行右缘硬切、无 28dp 渐隐（违 it-036 自定规范）", "W10 表单", "P2", "接入 FadingScrollRow"),
+    ("C10", "杂项：FAB 投影、评论✕字形、发送键对比、愿望卡锚点", "W3/W5/W7/W1", "P2", "减淡/放大/inkFaint/加锚点"),
+]
+
+SPLITS = [
+    ("wardrobe / it-037 · 红线收口（建议）", [
+        ("O1", "底导航与角色弹层选中态砍到双通道（反例 #2 解除）", "R3-2 · R3-3"),
+        ("O2", "W3 网格 contentPaddingBottom 让出 FAB 足迹", "R3-1"),
+    ]),
+    ("wardrobe / it-038 · 对比度 token 修（建议）", [
+        ("O3", "白字按钮/accent 字换 #1D6845 深阶；角标/计数/使用中逐项提下限", "R3-4 · R3-2"),
+    ]),
+    ("wardrobe / it-039 · 版式与文案杂项（建议）", [
+        ("O4", "名称条单行省略+计数纯白；紫灰描边/占位文案/渐隐/顶栏节奏一并收口", "R3-5 · C6–C10"),
+    ]),
+]
+
+TESTS = [
+    ("角标循环翻页", "外套位 tap 后 3/4 → 4/4，页码前进、返回计数 0——C5 可点修复无回归"),
+    ("热区 bounds 探针 ×12+", "12+ 处全 48dp：FAB 56、分页双半、chips、格内✕、底栏×4、角色行 411×48、CTA、去打卡——视觉「40dp」判定全部撤回"),
+    ("分段控件往返", "今年 ↔ 累计 切换成功；未选侧 61×48dp 可点、选中侧 no-op——行为与热区均正常"),
+    ("W10 吸底 CTA", "「收进想买」初始视口完整可见（45.3dp）——历史 P1 修复未回归"),
+    ("深色模式色阶", "底 #10150F 墨绿纸、全 token 命中、主按钮白字 9.08:1——紫灰跑色未回归（浅色描边残留见 C6）"),
+    ("随机一套", "与初始帧 6 槽位 4 槽不同（帽/包小池再抽中属合理）——随机生效"),
+    ("混入心愿开启", "星标高亮 + 提示行出现、各格分母 +1（4/4→4/5、2/2→2/3）——会话级 accent 提示在位"),
+    ("渲染全程", "19 态导航 0 FATAL；12c 帧与 12b 字节级重复已删（资产去重）"),
+    ("身份复核", "19 文件像素指纹与标称一致 100%（本机 Read 串图，取证全程子代理+指纹双轨）"),
+    ("覆盖度备注", "「添加单品」弹层新语料不可达（八品类全激活）；打卡 0 态使已打卡双按钮态不可达"),
+]
+
+EVIDENCE = [
+    ("wardrobe-r3-06-W3-filtered.png", "FAB 把「#复古」切成半字（P0 · C2 实拍）"),
+    ("wardrobe-r3-04-W2-roles.png", "角色弹层三重编码：色块+对勾+使用中（P0 · C1）"),
+    ("wardrobe-r3-01-W1-match.png", "名称条孤字折行：夹/克、卫/衣（P1 · C5）"),
+]
+
+# ═══════════════════════ 以下为生成逻辑（一般不动） ═══════════════════════
+
+CSS = """
+@page { size: 210mm 297mm; margin: 0; }
+html, body { margin: 0; padding: 0; width: 210mm; background: #F7F8FA;
+  font-family: "Hiragino Sans GB","PingFang SC","Heiti SC",sans-serif;
+  color: #1D2129; line-break: strict; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+* { box-sizing: border-box; }
+.page { width: 210mm; height: 297mm; overflow: hidden; position: relative;
+  padding: 12mm 14mm 10mm; background: #F7F8FA; break-after: page;
+  display: flex; flex-direction: column; }
+.page:last-child { break-after: auto; }
+img { display: block; }
+.cover { padding: 18mm 16mm 16mm; background: #FFFFFF; }
+.cover .kicker { font-size: 10pt; letter-spacing: 3pt; color: #86909C; font-weight: 600; }
+.cover .hairline { width: 30mm; height: 0; border-top: 0.7mm solid #2F6BFF; margin-top: 7mm; }
+.cover h1 { font-size: 40pt; font-weight: 800; letter-spacing: 1pt; margin: 24mm 0 0; }
+.cover h1.mid { font-size: 34pt; margin-top: 30mm; }
+.cover .sub { font-size: 14pt; color: #4E5969; margin-top: 7mm; }
+.cover .summary { font-size: 10.5pt; line-height: 1.75; color: #4E5969; margin-top: 20mm; width: 104mm; }
+.cover .phones { display: flex; gap: 6mm; margin-left: auto; margin-top: auto; }
+.cover .phone { width: 34mm; height: 75.6mm; border: 0.5mm solid #C9CDD4; border-radius: 4.5mm;
+  padding: 2.2mm; background: #FFFFFF; }
+.cover .phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 2.5mm; }
+.cover .meta { display: flex; gap: 10mm; font-size: 9.5pt; color: #86909C;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 6mm; margin-top: 12mm; }
+.cover .meta b { color: #1D2129; font-weight: 600; }
+.phead { display: flex; align-items: baseline; gap: 4mm; border-bottom: 0.45mm solid #E5E6EB;
+  padding-bottom: 3.5mm; margin-bottom: 4mm; }
+.phead .no { font-size: 13pt; font-weight: 800; color: #2F6BFF; }
+.phead .t { font-size: 14.5pt; font-weight: 700; }
+.phead .sev { margin-left: auto; font-size: 8.5pt; color: #86909C; }
+.pfoot { display: flex; font-size: 8pt; color: #A9AEB8;
+  border-top: 0.3mm solid #E5E6EB; padding-top: 2.5mm; margin-top: auto; }
+.concl { font-size: 10pt; line-height: 1.65; margin: 0 0 4mm; }
+.problems { display: flex; flex-wrap: wrap; gap: 1.6mm 4mm; margin-bottom: 4.5mm; }
+.prob { width: calc(50% - 2mm); font-size: 8.8pt; line-height: 1.5; color: #4E5969; }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; color: #fff; border-radius: 1.2mm;
+  padding: 0.3mm 1.6mm; margin-right: 1.6mm; vertical-align: 0.3mm; }
+.tag.p0 { background: #F53F3F; } .tag.p1 { background: #FF7D00; } .tag.p2 { background: #86909C; }
+.shots { display: flex; gap: 6mm; align-items: flex-start; flex: 1; }
+.shotcol { width: 76mm; }
+.shotcol img { width: 76mm; height: 168.9mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; background: #fff; }
+.shotlabel { display: flex; align-items: center; gap: 2mm; margin-top: 2.2mm; font-size: 9pt; font-weight: 700; }
+.shotlabel .dot { width: 2.6mm; height: 2.6mm; border-radius: 50%; }
+.d-now { background: #F53F3F; } .d-new { background: #2F6BFF; }
+.shotlabel span.cap { font-weight: 400; color: #86909C; font-size: 8pt; margin-left: auto; }
+.points { flex: 1; display: flex; flex-direction: column; gap: 2.6mm; }
+.pt { font-size: 8.8pt; line-height: 1.5; color: #4E5969; word-break: break-word; overflow-wrap: anywhere; }
+.pt .n { display: inline-flex; width: 5mm; height: 5mm; border-radius: 50%; background: #2F6BFF;
+  color: #fff; font-size: 8pt; font-weight: 700; align-items: center; justify-content: center;
+  margin-right: 1.8mm; vertical-align: -1mm; }
+table { border-collapse: collapse; width: 100%; }
+th { font-size: 9pt; text-align: left; color: #86909C; font-weight: 600;
+  border-bottom: 0.45mm solid #C9CDD4; padding: 2mm 2.5mm; }
+td { font-size: 9.3pt; line-height: 1.5; padding: 1.9mm 2.5mm; border-bottom: 0.3mm solid #E5E6EB;
+  vertical-align: top; }
+td.c { text-align: center; }
+.h2 { font-size: 13pt; font-weight: 800; margin: 4.5mm 0 2.5mm; break-after: avoid; }
+.keep { break-inside: avoid; }
+.h2:first-child { margin-top: 0; }
+.lead { font-size: 10pt; line-height: 1.75; color: #4E5969; }
+.statrow { display: flex; gap: 5mm; margin: 3.5mm 0; }
+.stat { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 3mm 4mm; }
+.stat .v { font-size: 20pt; font-weight: 800; color: #2F6BFF; }
+.stat .l { font-size: 8.5pt; color: #86909C; margin-top: 1mm; }
+.mrow { display: flex; gap: 4mm; margin: 2mm 0; }
+.mcard { flex: 1; background: #fff; border: 0.3mm solid #E5E6EB; border-radius: 2.5mm; padding: 3.5mm; }
+.mcard b { font-size: 9.5pt; display: block; margin-bottom: 1.5mm; }
+.mcard p { margin: 0; font-size: 8.6pt; line-height: 1.6; color: #4E5969; }
+.appendix-shot { display: flex; gap: 5mm; }
+.appendix-shot .acol { flex: 1; text-align: center; }
+.appendix-shot img { width: 39.6mm; height: 88mm; object-fit: cover; object-position: top;
+  border: 0.3mm solid #E5E6EB; border-radius: 2mm; margin: 0 auto; }
+.appendix-shot .cap { font-size: 7.5pt; color: #86909C; margin-top: 1.5mm; line-height: 1.45; }
+"""
+
+A = ASSETS
+
+
+def esc(s):
+    return html.escape(s, quote=False)
+
+
+def sev_counts(th):
+    c = {"P0": 0, "P1": 0, "P2": 0}
+    for s, _ in th["problems"]:
+        c[s] += 1
+    return " ".join(f"{k}×{v}" for k, v in c.items() if v)
+
+
+def theme_page(th, pageno):
+    probs = "".join(
+        f'<div class="prob"><span class="tag {p[0].lower()}">{p[0]}</span>{esc(p[1])}</div>'
+        for p in th["problems"])
+    pts = "".join(
+        f'<div class="pt"><span class="n">{n}</span>{esc(t)}</div>'
+        for n, t in th["points"])
+    appname = next((s["label"].split(" · ")[0] for s in SECTIONS if s["app"] == th["app"]), "")
+    return f"""
+<section class="page">
+  <div class="phead"><span class="no">{esc(th['no'])}</span><span class="t">{esc(th['title'])}</span>
+    <span class="sev">{sev_counts(th)}</span></div>
+  <p class="concl">{esc(th['concl'])}</p>
+  <div class="problems">{probs}</div>
+  <div class="shots">
+    <div class="shotcol"><img src="{A}/{esc(th['shot'])}" alt="">
+      <div class="shotlabel"><span class="dot d-now"></span>现状截图<span class="cap">模拟器实机</span></div></div>
+    <div class="shotcol"><img src="{A}/{esc(th['wire'])}" alt="">
+      <div class="shotlabel"><span class="dot d-new"></span>改版线框<span class="cap">蓝色徽标 = 变更点</span></div></div>
+    <div class="points">{pts}</div>
+  </div>
+  <div class="pfoot"><span>{esc(appname)} · UX 评审报告</span><span style="margin-left:auto">{pageno}</span></div>
+</section>"""
+
+
+def divider(sec, pageno):
+    imgs = "".join(f'<div class="phone"><img src="{A}/{esc(s)}" alt=""></div>' for s in sec["shots"])
+    n = sum(1 for t in THEMES if t["app"] == sec["app"])
+    return f"""
+<section class="page cover">
+  <div class="kicker">{esc(sec['kicker'])}</div>
+  <div class="hairline"></div>
+  <h1 class="mid">{esc(sec['label'])}</h1>
+  <div class="sub">{n} 个页面 · 现状与改版线框对照</div>
+  <div class="phones">{imgs}</div>
+  <div class="meta"><span>UX 评审报告 · {esc(META['date'])}</span><span style="margin-left:auto">{pageno}</span></div>
+</section>"""
+
+
+def build():
+    pages, pageno = [], 1
+
+    stats = "".join(f'<div class="stat"><div class="v">{esc(v)}</div><div class="l">{esc(l)}</div></div>'
+                    for v, l in META["stats"])
+    methods = "".join(f'<div class="mcard"><b>{esc(a)}</b><p>{esc(b)}</p></div>' for a, b in META["methods"])
+    crows = "".join(
+        f"<tr><td class='c'><b>{c[0]}</b></td><td>{esc(c[1])}</td><td class='c'>{esc(c[2])}</td>"
+        f"<td class='c'><span class='tag {c[3].lower()}'>{c[3]}</span></td><td>{esc(c[4])}</td></tr>"
+        for c in COMMONS)
+    cover_phones = "".join(f'<div class="phone"><img src="{A}/{esc(s)}" alt=""></div>'
+                           for s in META["cover_shots"])
+
+    pages.append(f"""
+<section class="page cover">
+  <div class="kicker">UX REVIEW</div>
+  <div class="hairline"></div>
+  <h1>{esc(META['title'])}</h1>
+  <div class="sub">{esc(META['sub'])}</div>
+  <div class="summary">{esc(META['summary'])}</div>
+  <div class="phones">{cover_phones}</div>
+  <div class="meta">
+    <span>日期 <b>{esc(META['date'])}</b></span><span>范围 <b>{esc(META['scope'])}</b></span>
+    <span style="margin-left:auto">蓝色徽标与改版要点编号对应</span>
+  </div>
+</section>""")
+    pageno += 1
+
+    pages.append(f"""
+<section class="page">
+  <div class="phead"><span class="no">00</span><span class="t">总评 · 方法与共性问题</span></div>
+  <p class="lead" style="font-size:9.5pt">级别：<span class="tag p0">P0</span> 红线/内容受损 · <span class="tag p1">P1</span> 基线差距 · <span class="tag p2">P2</span> 打磨项；前两轮修复项已逐条复验，零回归。</p>
+  <div class="statrow">{stats}</div>
+  <div class="h2">评审方法</div>
+  <div class="mrow">{methods}</div>
+  <div class="h2">跨应用共性问题（优先修）</div>
+  <table>
+    <tr><th style="width:9mm">#</th><th>问题</th><th style="width:36mm">涉及页面</th>
+        <th style="width:12mm">级别</th><th style="width:52mm">修法（对应线框）</th></tr>
+    {crows}
+  </table>
+  <div class="pfoot"><span>总评</span><span style="margin-left:auto">{pageno}</span></div>
+</section>""")
+    pageno += 1
+
+    for sec in SECTIONS:
+        pages.append(divider(sec, pageno))
+        pageno += 1
+        for th in (t for t in THEMES if t["app"] == sec["app"]):
+            pages.append(theme_page(th, pageno))
+            pageno += 1
+
+    srows = ""
+    for name, items in SPLITS:
+        srows += f'<div class="h2">{esc(name)}</div><table>'
+        srows += '<tr><th style="width:14mm">线框</th><th>内容</th><th style="width:22mm">对应</th></tr>'
+        for o, content, target in items:
+            srows += f"<tr><td class='c'>{esc(o)}</td><td>{esc(content)}</td><td class='c'>{esc(target)}</td></tr>"
+        srows += "</table>"
+    pages.append(f"""
+<section class="page">
+  <div class="phead"><span class="no">→</span><span class="t">落地拆分建议</span></div>
+  <p class="lead">按仓库迭代流程确认后动工；先修共性问题（功能在但用户够不着/猜不到），再修各 App 核心体验。</p>
+  {srows}
+  <div class="pfoot"><span>落地拆分</span><span style="margin-left:auto">{pageno}</span></div>
+</section>""")
+    pageno += 1
+
+    trows = "".join(f"<tr><td><b>{esc(a)}</b></td><td>{esc(b)}</td></tr>" for a, b in TESTS)
+    ev = "".join(f'<div class="acol"><img src="{A}/{esc(p)}" alt=""><div class="cap">{esc(c)}</div></div>'
+                 for p, c in EVIDENCE)
+    pages.append(f"""
+<section class="page">
+  <div class="phead"><span class="no">A</span><span class="t">附录 · 交互实测记录与资产</span></div>
+  <div class="h2">实测验证（uiautomator / 源码核对）</div>
+  <table><tr><th style="width:34mm">项目</th><th>结论</th></tr>{trows}</table>
+  <div class="h2">实证截图</div>
+  <div class="appendix-shot">{ev}</div>
+  <div class="keep"><div class="h2">资产清单</div>
+  <p class="lead" style="font-size:9pt">现状截图与改版线框见 {A}/ 目录；本报告由 report_template.py 生成，可改数据重出。</p></div>
+  <div class="pfoot"><span>附录</span><span style="margin-left:auto">{pageno}</span></div>
+</section>""")
+
+    doc = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>{esc(META['title'])} · UX 评审报告 · {esc(META['date'])}</title>
+<style>{CSS}</style></head>
+<body>{''.join(pages)}</body></html>"""
+
+    out = sys.argv[1] if len(sys.argv) > 1 else "report.html"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(doc)
+    print("written", out, len(doc), "bytes")
+
+
+if __name__ == "__main__":
+    build()
