@@ -4,7 +4,8 @@ import * as THREE from 'three';
 let gradient: THREE.DataTexture | null = null;
 export function toonGradient(): THREE.DataTexture {
   if (!gradient) {
-    const data = new Uint8Array([105, 190, 255]);
+    /* 阶距拉开：阴影区落暗阶，保证投影在 toon 量化后仍可见（评审轮 P0-a） */
+    const data = new Uint8Array([60, 152, 255]);
     gradient = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
     gradient.minFilter = THREE.NearestFilter;
     gradient.magFilter = THREE.NearestFilter;

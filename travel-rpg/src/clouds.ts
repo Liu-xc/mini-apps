@@ -56,8 +56,9 @@ export function buildClouds(count = 9): CloudLayer {
       transparent: true,
       depthWrite: false,
       fog: false,
-      opacity: 0.5 + rnd() * 0.3,
+      opacity: 0.6 + rnd() * 0.3,
     });
+    mat.userData.outlineParameters = { visible: false };
     const sp = new THREE.Sprite(mat);
     const w = 60 + rnd() * 80;
     sp.scale.set(w, w * 0.42, 1);

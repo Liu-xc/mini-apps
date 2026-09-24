@@ -52,6 +52,8 @@ export class Player {
       new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false }),
     );
     this.blob.renderOrder = 1;
+    this.blob.visible = false;   // 实时阴影接管脚下投影（评审轮 P0 修复）
+    (this.blob.material as THREE.MeshBasicMaterial).userData.outlineParameters = { visible: false };
     this.group.add(this.blob);
     this.buildFallback();
     this.group.position.copy(this.pos);
@@ -81,9 +83,12 @@ export class Player {
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
-        model.scale.setScalar(1.6 / (size.y || 1));
+        model.scale.setScalar(1.72 / (size.y || 1));
         const box2 = new THREE.Box3().setFromObject(model);
         model.position.y -= box2.min.y;   // 脚底落地
+        model.traverse(o => {
+          if (o instanceof THREE.Mesh) o.castShadow = true;
+        });
         this.visual.clear();
         this.visual.add(model);
         this.modelSource = 'knight';

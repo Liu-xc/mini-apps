@@ -20,16 +20,24 @@ npm run preview    # 预览生产构建
 
 ## 技术与素材
 
-- Three.js 0.171 + Vite 6 + TS strict（ADR-001）；触屏摇杆 nipplejs。
-- 全场景 MeshToonMaterial cel-shading + 顶点色（ADR-002）。
+- Three.js 0.171 + Vite 6 + TS strict（ADR-001）；描边 three 官方 OutlineEffect；
+  触屏摇杆 nipplejs；色调 ACES Filmic + PCFSoft4K 阴影（太阳跟随玩家）。
+- **高清规格**：地面 Poly Haven **2K** 贴图（anisotropy16）+ HDRI **2K** 环境光（PMREM）
+  + dpr=1 设备 **1.5× 超采样**渲染；全场景 MeshToonMaterial cel-shading + 顶点色（ADR-002）。
 - 素材（全部 CC0，`tools/fetch-assets.sh` 可复现下载）：
   - 角色：**KayKit Adventurers `Knight.glb`**（76 段动画，Idle/Walking/Running/Jump 状态机；
     加载失败自动回落程序化斗笠旅人）；
-  - 植被：**Kenney Nature Kit** 子集 20 款 GLB（8 秋色树/5 岩/2 灌木/2 草/3 花，InstancedMesh）；
-  - 地面：**Poly Haven `leafy_grass`** 1K diffuse × 顶点色。
-- 三站色板/光位迁自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`。
+  - 环境：**Kenney Nature Kit 52 款**（14 树/9 岩/4 灌木/6 草/7 花/12 营地道具
+    ——帐篷、篝火、栅栏、木柴、路牌、独木舟……InstancedMesh）；
+  - 地面：**Poly Haven `leafy_grass` 2K** × 顶点色 + 大尺度明暗斑块；
+  - 环境光：**Poly Haven `spruit_sunrise` 2K HDRI**。
+- 出生点营地（帐篷+篝火+栅栏+木柴）+ 远景林带剪影 + 太阳光斑辉光；
+  三站色板/光位迁自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`。
 
 ## 调试钩子
 
 - `window.__game.tick(frames, dtMs?)`：同步步进游戏循环（内嵌浏览器 RAF 挂起时的断言通道）。
 - `window.__game.state()`：pos / onGround / model / camYaw / camDist / drawCalls / errors。
+- `window.__game.probe()`：阴影贴图/描边开关/散布加载数/HDRI 状态。
+- `window.__game.setOutline(bool)`：运行时开关描边（对照实验）。
+- `errors` 现已同时捕获 `console.error`（shader 编译失败只走 console，曾漏检导致黑天）。
