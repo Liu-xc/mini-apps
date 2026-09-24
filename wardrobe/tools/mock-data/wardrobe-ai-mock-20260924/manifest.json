@@ -1,0 +1,16 @@
+{
+  "packageFormat": 1,
+  "app": "wardrobe",
+  "schemaVersion": 1,
+  "exportedAt": 1790218521405,
+  "generator": "agent: gpt-5 + imagegen",
+  "counts": {
+    "persons": 2,
+    "items": 36,
+    "outfits": 9,
+    "notes": 5,
+    "wearLogs": 0,
+    "wishItems": 4,
+    "wishOutfits": 1
+  }
+}

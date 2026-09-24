@@ -11,6 +11,7 @@ import com.leo.wardrobe.domain.model.WardrobeData
 import com.leo.wardrobe.domain.model.WearLog
 import com.leo.wardrobe.domain.model.WishItem
 import com.leo.wardrobe.domain.model.WishOutfit
+import kotlinx.serialization.json.Json
 
 /**
  * 演示种子数据（it-015）：两个角色（覆盖角色隔离）、17 件衣物（八品类全覆盖，
@@ -18,6 +19,14 @@ import com.leo.wardrobe.domain.model.WishOutfit
  * 时间按「当前时刻 − N 天」相对生成，任何时候进入演示模式数据都「新鲜」；id 全确定，便于走查断言。
  */
 object MockWardrobeData {
+
+    private val assetJson = Json { ignoreUnknownKeys = true }
+
+    /**
+     * APK 内置的完整演示数据（图片与 JSON 同源于 wardrobe/tools/mock-data）。
+     * 保留 [create] 作为 JVM 单测的历史确定性种子；正式演示入口由 AppContainer 调用此解析器。
+     */
+    fun fromJson(json: String): WardrobeData = assetJson.decodeFromString(json)
 
     private const val P1 = "p1"
     private const val P2 = "p2"

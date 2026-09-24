@@ -5,6 +5,7 @@ import com.leo.libs.store.FileMediaStore
 import com.leo.libs.store.SnapshotStore
 import com.leo.wardrobe.data.image.ImageFileStore
 import com.leo.wardrobe.data.mock.DemoMode
+import com.leo.wardrobe.data.mock.MockWardrobeData
 import com.leo.wardrobe.data.mock.MockWardrobeRepository
 import com.leo.wardrobe.data.prefs.PrefsStore
 import com.leo.wardrobe.data.repo.WardrobeRepositoryImpl
@@ -17,7 +18,7 @@ import com.leo.wardrobe.export.ShareClipboard
 import java.io.File
 
 /** 组合根：手动构造器装配（ADR-003）， specs/04-architecture.md */
-class AppContainer(context: Context) {
+class AppContainer(private val context: Context) {
 
     /** 演示模式（it-015）：开关在组合根构造时读取，切换经 DemoMode 重启进程生效 */
     private val demo = DemoMode.isEnabled(context)
@@ -47,7 +48,7 @@ class AppContainer(context: Context) {
     val imageEditStore: com.leo.wardrobe.data.image.ImageEditStore get() = imageStore
 
     val repository: WardrobeRepository =
-        if (demo) MockWardrobeRepository() else WardrobeRepositoryImpl(snapshotStore, imageStore)
+        if (demo) MockWardrobeRepository(loadMockData()) else WardrobeRepositoryImpl(snapshotStore, imageStore)
 
     /** it-024：数据包导出/导入（演示模式下入口置灰，服务层再兜底拒绝） */
     val packages = com.leo.wardrobe.data.packages.WardrobePackages(repository, snapshotStore, imageStore, demo)
@@ -82,4 +83,10 @@ class AppContainer(context: Context) {
             }
         }
     }
+
+    /** 与 APK 内置图片同源的完整演示 JSON；图片由 init 中的解包逻辑统一准备。 */
+    private fun loadMockData(): WardrobeData =
+        MockWardrobeData.fromJson(
+            context.assets.open("mock/wardrobe.json").bufferedReader().use { it.readText() },
+        )
 }
