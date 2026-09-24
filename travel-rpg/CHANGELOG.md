@@ -2,6 +2,15 @@
 
 ## 2026-09-24
 
+- **it-002 · 素材大换血 A 套 + 风动草场（Leo 确认实施）**：
+  Quaternius Stylized Nature MegaKit 36 款植被/岩石（itch 四步 API 直链破解、
+  脚本化 fetch、贴图压 1024 入库 18MB）替换 Kenney 植被；PolyHaven PBR 地面三件套
+  （2K diff+normal+rough）；puresky HDRI 同时做真云背景与 IBL；官方 Lensflare 替代
+  手绘光斑；sky.ts/clouds.ts 手绘天云代码删除、林带锥体换真树环；
+  **风动草场 13800 株**（近圈真模型 onBeforeCompile 风注入 + 远圈色列卡片自定义着色器）；
+  EffectComposer 后期链（描边渲染→Bloom→ACES 输出→暗角/饱和→FXAA，HalfFloat+MSAA×4）；
+  白昼蓝影色彩纪律（4.1 日光/0.85 蓝半球/0.62 IBL）。自评 5.0→6.5 锁定；
+  回归全绿（真实帧移动/同步 tick 跳跃/errs=[]/probe fps=60）。ADR-002 修订 + ADR-003。
 - **it-001 · 视觉评审 + 高清化轮（回应「美工质量/高清」批评）**：
   系统性自审两轮（P0：零阴影/无分级/天空无层次/地面脏；P1：草花暗青/前景空/无描边）后落地——
   PCFSoft **4K 阴影**（太阳跟随玩家，toon 色阶拉开保住投影对比）、**ACES Filmic 分级**

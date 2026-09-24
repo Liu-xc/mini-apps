@@ -1,34 +1,24 @@
 import * as THREE from 'three';
 
-/* 全场景共享的 3 阶 cel-shading gradientMap（ADR-002） */
-let gradient: THREE.DataTexture | null = null;
-export function toonGradient(): THREE.DataTexture {
-  if (!gradient) {
-    /* 阶距拉开：阴影区落暗阶，保证投影在 toon 量化后仍可见（评审轮 P0-a） */
-    const data = new Uint8Array([60, 152, 255]);
-    gradient = new THREE.DataTexture(data, 3, 1, THREE.RedFormat);
-    gradient.minFilter = THREE.NearestFilter;
-    gradient.magFilter = THREE.NearestFilter;
-    gradient.needsUpdate = true;
-  }
-  return gradient;
-}
-
-export function makeToon(
-  color: THREE.ColorRepresentation,
-  opts: THREE.MeshToonMaterialParameters = {},
-): THREE.MeshToonMaterial {
-  return new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...opts });
-}
-
-/* 黄金时刻色板——迁自平面气氛稿（reports/2026-09-24-travel-rpg-scenes，乌兰布统站） */
+/* it-002 色彩纪律（白昼体系）：
+   蓝调天空打底（IBL/半球光同源）、暖光只给日光本体，杜绝全屏土黄泥色。
+   雾色需与天空 HDRI 地平线一致——像素取样校准（见 it-002 验证记录）。 */
 export const PALETTE = {
-  skyTop: new THREE.Color('#2b4a7c'),
-  skyHorizon: new THREE.Color('#f2d6a4'),
-  skyHaze: new THREE.Color('#e6d2a8'),
-  sunColor: new THREE.Color('#fff3d0'),
-  fog: new THREE.Color('#f2d6a4'),   // 与 skyHorizon 同色：地平线雾与天空无缝相接
-  sunLight: new THREE.Color('#ffe2b0'),
-  hemiSky: new THREE.Color('#a8c6e8'),
-  hemiGround: new THREE.Color('#c8a068'),
+  fog: new THREE.Color('#cfe0ec'),
+  sunLight: new THREE.Color('#fff3de'),
+  hemiSky: new THREE.Color('#a9cdf2'),
+  hemiGround: new THREE.Color('#8fae68'),
+  fill: new THREE.Color('#e7f0fa'),
+  underlay: new THREE.Color('#b9c9a0'),
 };
+
+/* 太阳方向：白昼仰角 40°（阴影清晰、云层受光合理） */
+export const SUN_DIR = new THREE.Vector3().setFromSphericalCoords(
+  1,
+  THREE.MathUtils.degToRad(50),
+  THREE.MathUtils.degToRad(140),
+);
+
+/* 雾参数：场景雾与草场自定义着色器共用，保证颜色/过渡一致 */
+export const FOG_NEAR = 75;
+export const FOG_FAR = 215;

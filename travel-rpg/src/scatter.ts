@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { terrainHeight } from './terrain';
-import { makeToon } from './style';
 
 function mulberry32(seed: number): () => number {
   let s = seed | 0;
@@ -13,44 +12,51 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/* Kenney Nature Kit 子集（CC0，tools/fetch-assets.sh 可重下）——全部现成开源素材 */
+/* it-002 素材换血：植被/岩石 = Quaternius Stylized Nature MegaKit（CC0）；
+   营地道具保留 Kenney（CC0）。下载与选型清单见 tools/fetch-assets.sh。 */
+const Q = 'assets/quaternius/';
+const K = 'assets/nature/';
+
 const TREE_TYPES = [
-  'tree_oak_fall', 'tree_default_fall', 'tree_simple_fall', 'tree_fat_fall',
-  'tree_tall_fall', 'tree_blocks_fall', 'tree_pineRoundC', 'tree_pineRoundE',
-  'tree_blocks', 'tree_default', 'tree_oak', 'tree_pineTallA',
-  'tree_thin_fall', 'tree_small_fall',
+  'CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_4', 'CommonTree_5',
+  'Pine_1', 'Pine_3', 'TwistedTree_2', 'TwistedTree_4', 'DeadTree_2',
 ];
 const ROCK_TYPES = [
-  'rock_largeA', 'rock_largeC', 'rock_smallA', 'rock_smallFlatA', 'rock_tallA',
-  'rock_largeB', 'rock_largeD', 'rock_smallC', 'rock_tallB',
+  'Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3',
+  'Pebble_Square_1', 'Pebble_Square_2', 'Pebble_Square_3',
+  'Pebble_Round_1', 'Pebble_Round_2',
 ];
-const BUSH_TYPES = ['plant_bush', 'plant_bushLarge', 'plant_bushDetailed', 'plant_bushSmall'];
-const GRASS_TYPES = [
-  'grass', 'grass_large', 'grass_leafs', 'grass_leafsLarge',
-  'plant_flatShort', 'plant_flatTall',
-];
-const FLOWER_TYPES = [
-  'flower_yellowA', 'flower_redA', 'flower_purpleA',
-  'flower_yellowB', 'flower_redB', 'flower_purpleB',
-  'flower_yellowC', 'flower_yellowC',
+const BUSH_TYPES = ['Bush_Common', 'Bush_Common_Flowers', 'Plant_1_Big', 'Plant_7_Big', 'Fern_1'];
+const FLOWER_TYPES = ['Flower_3_Group', 'Flower_4_Group', 'Flower_3_Single', 'Flower_4_Single'];
+const MUSH_TYPES = ['Mushroom_Common', 'Mushroom_Laetiporus'];
+const CLOVER_TYPES = ['Clover_1', 'Clover_2'];
+
+/* 出生点营地（道具坐标即草场/散布的避让区，改动需同步） */
+export const CAMP_BLOCK: Array<[number, number]> = [
+  [-4.5, -7.5], [6.2, -10.5], [-8.2, -4.5], [2.6, -13.5], [9.5, -5.5],
+  [-13, -16], [-10.6, -16.9], [-8.2, -17.8], [4.2, -4.6],
+  [-14, -10], [12.5, -17], [-6.5, -13], [7, -8], [-17, -4],
 ];
 
 interface Spot { x: number; z: number; yaw: number; targetH: number; j: number; }
 
-/* 全部点位在同步阶段一次算完（含目标高度/抖动）——异步加载只读不掷随机，
-   布局每次刷新完全一致 */
 function makeSpots(
   rand: () => number, count: number, spread: number, minR: number,
-  hMin: number, hMax: number,
+  hMin: number, hMax: number, avoidCamp = true,
 ): Spot[] {
   const spots: Spot[] = [];
-  for (let i = 0; i < count; i++) {
-    let x = 0, z = 0, tries = 0;
-    do {
-      x = (rand() - 0.5) * spread;
-      z = (rand() - 0.5) * spread;
-      tries++;
-    } while (Math.hypot(x, z) < minR && tries < 24);
+  let guard = count * 6;
+  while (spots.length < count && guard-- > 0) {
+    const x = (rand() - 0.5) * spread;
+    const z = (rand() - 0.5) * spread;
+    if (Math.hypot(x, z) < minR) continue;
+    if (avoidCamp) {
+      let ok = true;
+      for (const [bx, bz] of CAMP_BLOCK) {
+        if ((x - bx) ** 2 + (z - bz) ** 2 < 7) { ok = false; break; }
+      }
+      if (!ok) continue;
+    }
     spots.push({
       x, z,
       yaw: rand() * Math.PI * 2,
@@ -61,31 +67,50 @@ function makeSpots(
   return spots;
 }
 
-/* 散布物：加载 Kenney GLB → 按类型实例化（共享矩阵，低 draw call），渐进入场 */
+interface HeroDef { n: string; x: number; z: number; h: number; yaw?: number; src: 'q' | 'k'; }
+
+/* 出生点营地 + 框景：树/岩石用 Quaternius，道具用 Kenney */
+const HERO: HeroDef[] = [
+  { n: 'CommonTree_3', x: -14, z: -10, h: 6.2, yaw: 0.7, src: 'q' },
+  { n: 'Pine_1', x: 12.5, z: -17, h: 7.0, yaw: -0.4, src: 'q' },
+  { n: 'Rock_Medium_1', x: -6.5, z: -13, h: 1.5, yaw: 1.1, src: 'q' },
+  { n: 'Rock_Medium_2', x: 7, z: -8, h: 1.1, src: 'q' },
+  { n: 'Pebble_Square_1', x: -17, z: -4, h: 0.8, yaw: 2.1, src: 'q' },
+  { n: 'campfire_logs', x: -4.5, z: -7.5, h: 0.75, yaw: 0.6, src: 'k' },
+  { n: 'tent_smallOpen', x: 6.2, z: -10.5, h: 1.7, yaw: -2.4, src: 'k' },
+  { n: 'log_stack', x: -8.2, z: -4.5, h: 0.85, yaw: 0.3, src: 'k' },
+  { n: 'sign', x: 2.6, z: -13.5, h: 1.35, yaw: 0.15, src: 'k' },
+  { n: 'stump_round', x: 9.5, z: -5.5, h: 0.7, src: 'k' },
+  { n: 'fence_simple', x: -13, z: -16, h: 1.15, yaw: -0.35, src: 'k' },
+  { n: 'fence_simple', x: -10.6, z: -16.9, h: 1.15, yaw: -0.35, src: 'k' },
+  { n: 'fence_simpleLow', x: -8.2, z: -17.8, h: 1.0, yaw: -0.35, src: 'k' },
+  { n: 'log', x: 4.2, z: -4.6, h: 0.45, yaw: 1.2, src: 'k' },
+];
+
 export function buildScatter(): THREE.Group {
   const group = new THREE.Group();
   group.name = 'scatter';
   const rand = mulberry32(20260924);
   const loader = new GLTFLoader();
-  const base = `${import.meta.env.BASE_URL}assets/nature/`;
   const dummy = new THREE.Object3D();
 
-  const treeSpots = makeSpots(rand, 130, 184, 14, 3.6, 6.8);
-  const rockSpots = makeSpots(rand, 42, 176, 10, 0.5, 1.9);
-  const bushSpots = makeSpots(rand, 34, 150, 10, 0.7, 1.5);
-  const grassSpots = makeSpots(rand, 340, 62, 2.5, 0.35, 0.75);
-  const flowerSpots = makeSpots(rand, 170, 62, 3.5, 0.35, 0.62);
+  const treeSpots = makeSpots(rand, 130, 184, 14, 4.0, 7.2);
+  const rockSpots = makeSpots(rand, 40, 176, 9, 0.5, 1.9);
+  const bushSpots = makeSpots(rand, 36, 150, 8, 0.7, 1.6);
+  const flowerSpots = makeSpots(rand, 70, 88, 4, 0.3, 0.6);
+  const mushSpots = makeSpots(rand, 18, 70, 5, 0.22, 0.45);
+  const cloverSpots = makeSpots(rand, 24, 76, 4, 0.2, 0.4);
 
   const loadSpec = (
-    names: string[], spots: Spot[], sink: number, jitter: number,
-    opts: { cast: boolean; lift?: number; tint?: string } = { cast: true },
+    names: string[], spots: Spot[], sink: number, jitter: number, base: string,
+    opts: { cast: boolean } = { cast: true },
   ): void => {
     const share = Math.ceil(spots.length / names.length);
     for (const name of names) {
       const slice = spots.splice(0, share);
       if (slice.length === 0) return;
       loader.load(
-        base + name + '.glb',
+        base + name + '.gltf',
         gltf => {
           gltf.scene.updateMatrixWorld(true);
           const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -95,18 +120,6 @@ export function buildScatter(): THREE.Group {
           for (const m of meshes) {
             m.updateMatrixWorld(true);
             const local = m.matrixWorld.clone();
-            /* 草：贴图染绿（原色偏灰白）+ 微 emissive；花：只微提亮保原色 */
-            const mats = Array.isArray(m.material) ? m.material : [m.material];
-            for (const mat of mats) {
-              if (opts.tint && 'color' in mat) {
-                (mat as THREE.MeshStandardMaterial).color = new THREE.Color(opts.tint);
-              }
-              if (opts.lift && 'emissive' in mat) {
-                (mat as THREE.MeshStandardMaterial).emissive = new THREE.Color('#5a7040');
-                (mat as THREE.MeshStandardMaterial).emissiveIntensity = opts.lift;
-              }
-              if (opts.lift) mat.userData.outlineParameters = { visible: false };
-            }
             const inst = new THREE.InstancedMesh(m.geometry, m.material, slice.length);
             inst.castShadow = opts.cast;
             inst.receiveShadow = true;
@@ -133,75 +146,54 @@ export function buildScatter(): THREE.Group {
     }
   };
 
-  loadSpec(TREE_TYPES, treeSpots, 0.12, 1.5);
-  loadSpec(ROCK_TYPES, rockSpots, 0.08, 1.2);
-  loadSpec(BUSH_TYPES, bushSpots, 0.05, 1.0);
-  loadSpec(GRASS_TYPES, grassSpots, 0.0, 0.8, { cast: false, lift: 0.15, tint: '#6f9448' });
-  loadSpec(FLOWER_TYPES, flowerSpots, 0.0, 0.8, { cast: false, lift: 0.18 });
+  loadSpec(TREE_TYPES, treeSpots, 0.1, 1.5, Q);
+  loadSpec(ROCK_TYPES, rockSpots, 0.06, 1.0, Q);
+  loadSpec(BUSH_TYPES, bushSpots, 0.04, 1.0, Q);
+  loadSpec(FLOWER_TYPES, flowerSpots, 0.0, 0.6, Q, { cast: false });
+  loadSpec(MUSH_TYPES, mushSpots, 0.0, 0.5, Q, { cast: false });
+  loadSpec(CLOVER_TYPES, cloverSpots, 0.0, 0.5, Q, { cast: false });
 
-  /* 远景林带剪影：雾中出层次（简单锥体环，r 100~115） */
-  const tlGeo = new THREE.ConeGeometry(1, 3, 6);
-  tlGeo.translate(0, 1.5, 0);
-  const tlColors = ['#6a5340', '#4f5a44'];
-  for (let v = 0; v < 2; v++) {
-    const tl = new THREE.InstancedMesh(tlGeo, makeToon(tlColors[v]), 55);
-    tl.castShadow = false;
-    tl.receiveShadow = false;
-    for (let i = 0; i < 55; i++) {
-      const ang = rand() * Math.PI * 2;
-      const r = 100 + rand() * 15;
-      const x = Math.cos(ang) * r, z = Math.sin(ang) * r;
-      dummy.position.set(x, terrainHeight(x, z) - 2.1, z);
-      dummy.rotation.set(0, rand() * Math.PI * 2, 0);
-      const h = 3.5 + rand() * 3.2;
-      dummy.scale.set(h * 0.45, h, h * 0.45);
-      dummy.updateMatrix();
-      tl.setMatrixAt(i, dummy.matrix);
-    }
-    tl.instanceMatrix.needsUpdate = true;
-    tl.computeBoundingSphere();
-    group.add(tl);
+  /* 远景林带剪影：真树（Pine_2）替代旧锥体，雾中出层次 */
+  const ringSpots: Spot[] = [];
+  for (let i = 0; i < 55; i++) {
+    const ang = rand() * Math.PI * 2;
+    const r = 100 + rand() * 15;
+    ringSpots.push({
+      x: Math.cos(ang) * r, z: Math.sin(ang) * r,
+      yaw: rand() * Math.PI * 2,
+      targetH: 6 + rand() * 5, j: 0.9 + rand() * 0.25,
+    });
   }
+  loadSpec(['Pine_2'], ringSpots, 2.0, 0.6, Q, { cast: false });
 
-  /* 出生点营地 + 框景：全部 Kenney 现成道具（评审轮 P1：前景空） */
-  interface Hero { n: string; x: number; z: number; h: number; yaw?: number; }
-  const HERO: Hero[] = [
-    { n: 'tree_oak_fall', x: -14, z: -10, h: 5.6 },
-    { n: 'tree_pineRoundC', x: 12.5, z: -17, h: 6.4 },
-    { n: 'rock_largeA', x: -6.5, z: -13, h: 1.5 },
-    { n: 'rock_largeC', x: 7, z: -8, h: 1.1 },
-    { n: 'rock_smallA', x: -17, z: -4, h: 0.8 },
-    { n: 'campfire_logs', x: -4.5, z: -7.5, h: 0.75, yaw: 0.6 },
-    { n: 'tent_smallOpen', x: 6.2, z: -10.5, h: 1.7, yaw: -2.4 },
-    { n: 'log_stack', x: -8.2, z: -4.5, h: 0.85, yaw: 0.3 },
-    { n: 'sign', x: 2.6, z: -13.5, h: 1.35, yaw: 0.15 },
-    { n: 'stump_round', x: 9.5, z: -5.5, h: 0.7 },
-    { n: 'fence_simple', x: -13, z: -16, h: 1.15, yaw: -0.35 },
-    { n: 'fence_simple', x: -10.6, z: -16.9, h: 1.15, yaw: -0.35 },
-    { n: 'fence_simpleLow', x: -8.2, z: -17.8, h: 1.0, yaw: -0.35 },
-    { n: 'log', x: 4.2, z: -4.6, h: 0.45, yaw: 1.2 },
-  ];
-  for (const heroDef of HERO) {
-    loader.load(
-      base + heroDef.n + '.glb',
-      gltf => {
-        gltf.scene.updateMatrixWorld(true);
-        const b = new THREE.Box3().setFromObject(gltf.scene);
-        const bh = Math.max(b.max.y - b.min.y, 0.001);
-        gltf.scene.scale.setScalar(heroDef.h / bh);
-        if (heroDef.yaw) gltf.scene.rotation.y = heroDef.yaw;
-        gltf.scene.updateMatrixWorld(true);
-        const b2 = new THREE.Box3().setFromObject(gltf.scene);
-        const ground = terrainHeight(heroDef.x, heroDef.z);
-        gltf.scene.position.set(heroDef.x, ground - b2.min.y, heroDef.z);
-        gltf.scene.traverse(o => {
-          if (o instanceof THREE.Mesh) { o.castShadow = true; o.receiveShadow = true; }
-        });
-        group.add(gltf.scene);
-      },
-      undefined,
-      () => console.warn('[scatter] 道具加载失败:', heroDef.n),
-    );
+  /* 营地 hero：按 src 分基址 */
+  const heroesByBase: Record<'q' | 'k', HeroDef[]> = { q: [], k: [] };
+  for (const h of HERO) heroesByBase[h.src].push(h);
+  for (const src of ['q', 'k'] as const) {
+    const base = src === 'q' ? Q : K;
+    const ext = src === 'q' ? '.gltf' : '.glb';
+    for (const h of heroesByBase[src]) {
+      loader.load(
+        base + h.n + ext,
+        gltf => {
+          gltf.scene.updateMatrixWorld(true);
+          const b = new THREE.Box3().setFromObject(gltf.scene);
+          const bh = Math.max(b.max.y - b.min.y, 0.001);
+          gltf.scene.scale.setScalar(h.h / bh);
+          if (h.yaw) gltf.scene.rotation.y = h.yaw;
+          gltf.scene.updateMatrixWorld(true);
+          const b2 = new THREE.Box3().setFromObject(gltf.scene);
+          const ground = terrainHeight(h.x, h.z);
+          gltf.scene.position.set(h.x, ground - b2.min.y, h.z);
+          gltf.scene.traverse(o => {
+            if (o instanceof THREE.Mesh) { o.castShadow = true; o.receiveShadow = true; }
+          });
+          group.add(gltf.scene);
+        },
+        undefined,
+        () => console.warn('[scatter] 道具加载失败:', h.n),
+      );
+    }
   }
 
   return group;

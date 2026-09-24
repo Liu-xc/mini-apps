@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { PLAYER_LIMIT, terrainHeight } from './terrain';
-import { makeToon } from './style';
 
 const GRAVITY = 22;
 const JUMP_V = 8.2;
@@ -28,6 +27,10 @@ function blobTexture(): THREE.CanvasTexture {
   c.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(cv);
 }
+
+/* 兜底旅人材质（PBR，与 it-002 世界光照一致） */
+const std = (color: string) =>
+  new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 });
 
 /* 角色：运动学跑跳 + 地形贴合 + 动画状态机（M0） */
 export class Player {
@@ -61,15 +64,15 @@ export class Player {
     this.loadGltf();
   }
 
-  /* 程序化斗笠旅人（glTF 到位前的占位，也是加载失败的兜底） */
-  private buildFallback(): void {
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.66, 4, 10), makeToon('#37414f'));
+/* 程序化斗笠旅人（glTF 到位前的占位，也是加载失败的兜底） */
+private buildFallback(): void {
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.66, 4, 10), std('#37414f'));
     body.position.y = 0.59;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), makeToon('#e8c9a0'));
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), std('#e8c9a0'));
     head.position.y = 1.3;
-    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.44, 0.24, 10), makeToon('#c9a45f'));
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.44, 0.24, 10), std('#c9a45f'));
     hat.position.y = 1.5;
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.16), makeToon('#1c2129'));
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.16), std('#1c2129'));
     nose.position.set(0, 1.28, 0.2);
     this.visual.add(body, head, hat, nose);
   }
@@ -83,7 +86,7 @@ export class Player {
         const model = gltf.scene;
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
-        model.scale.setScalar(1.72 / (size.y || 1));
+        model.scale.setScalar(1.8 / (size.y || 1));
         const box2 = new THREE.Box3().setFromObject(model);
         model.position.y -= box2.min.y;   // 脚底落地
         model.traverse(o => {

@@ -18,26 +18,28 @@ npm run preview    # 预览生产构建
 - 触屏：左下摇杆移动（推满跑）、右侧拖拽环视、右下「跳」按钮。
   桌面想自测移动 UI：URL 加 `?touch=1`。
 
-## 技术与素材
+## 技术与素材（it-002 现行）
 
-- Three.js 0.171 + Vite 6 + TS strict（ADR-001）；描边 three 官方 OutlineEffect；
-  触屏摇杆 nipplejs；色调 ACES Filmic + PCFSoft4K 阴影（太阳跟随玩家）。
-- **高清规格**：地面 Poly Haven **2K** 贴图（anisotropy16）+ HDRI **2K** 环境光（PMREM）
-  + dpr=1 设备 **1.5× 超采样**渲染；全场景 MeshToonMaterial cel-shading + 顶点色（ADR-002）。
-- 素材（全部 CC0，`tools/fetch-assets.sh` 可复现下载）：
-  - 角色：**KayKit Adventurers `Knight.glb`**（76 段动画，Idle/Walking/Running/Jump 状态机；
-    加载失败自动回落程序化斗笠旅人）；
-  - 环境：**Kenney Nature Kit 52 款**（14 树/9 岩/4 灌木/6 草/7 花/12 营地道具
-    ——帐篷、篝火、栅栏、木柴、路牌、独木舟……InstancedMesh）；
-  - 地面：**Poly Haven `leafy_grass` 2K** × 顶点色 + 大尺度明暗斑块；
-  - 环境光：**Poly Haven `spruit_sunrise` 2K HDRI**。
-- 出生点营地（帐篷+篝火+栅栏+木柴）+ 远景林带剪影 + 太阳光斑辉光；
-  三站色板/光位迁自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`。
+- Three.js 0.171 + Vite 6 + TS strict（ADR-001）；**EffectComposer 后期链**：
+  描边渲染（OutlineEffect）→ UnrealBloom → ACES 输出 → 暗角/饱和 → FXAA；
+  PCFSoft 4K 阴影（太阳跟随玩家）；触屏摇杆 nipplejs。
+- **画面路线 = A 套精细风格化（ADR-002）**，素材全 CC0、`tools/fetch-assets.sh` 一键重下
+  （含 Quaternius itch 四步 API 流程）：
+  - 植被/岩石：**Quaternius Stylized Nature MegaKit 36 款**（评分 5.0 的口碑包）；
+  - 地面：**Poly Haven leafy_grass 2K 三件套**（diffuse+normal+roughness）；
+  - 天空/IBL 同源：**Poly Haven puresky 2K HDRI**（真云背景 + 环境反射）；
+  - 角色：**KayKit Adventurers Knight.glb**（76 段动画，失败回落程序化兜底）；
+  - 营地道具：**Kenney 12 款**（帐篷/篝火/栅栏/木柴）；光斑：three 官方 Lensflare。
+- **风动草场**：13800 株（近圈真模型+顶点风注入 / 远圈自建卡片取包内色列），probe 实测 60fps。
+- 三站色板/构图参考自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`（ADR-003）。
 
 ## 调试钩子
 
-- `window.__game.tick(frames, dtMs?)`：同步步进游戏循环（内嵌浏览器 RAF 挂起时的断言通道）。
-- `window.__game.state()`：pos / onGround / model / camYaw / camDist / drawCalls / errors。
-- `window.__game.probe()`：阴影贴图/描边开关/散布加载数/HDRI 状态。
+- `window.__game.tick(frames, dtMs?)`：同步步进游戏循环。
+  ⚠️ IAB 内嵌浏览器 RAF 会在调用间隙挂起、且后期链下 **批量 ≈20 帧/调用** 为上限
+  （3 秒调用预算）；「派发输入 + 同步 tick」必须在同一次 evaluate。
+- `window.__game.state()`：pos / onGround / model / camYaw / camDist / calls / errors
+  （注：calls/tris 反映 composer 末尾全屏 pass，恒为 1，非场景统计）。
+- `window.__game.probe()`：阴影/描边/散布/草场/背景/IBL 就绪状态与 fps。
 - `window.__game.setOutline(bool)`：运行时开关描边（对照实验）。
-- `errors` 现已同时捕获 `console.error`（shader 编译失败只走 console，曾漏检导致黑天）。
+- `errors` 同时捕获 `console.error`（shader 编译失败只走 console）。

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeToon } from './style';
+import { PALETTE } from './style';
 
 /* ---------- 确定性 2D 值噪声 ---------- */
 function hash2(x: number, z: number): number {
@@ -43,7 +43,16 @@ export function terrainHeight(x: number, z: number): number {
   return h * (1 - ef) + UNDERLAY_Y * ef;
 }
 
-/* ---------- 地形网格（顶点色 + toon） ---------- */
+function pbr(url: string, srgb: boolean): THREE.Texture {
+  const t = new THREE.TextureLoader().load(url);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(20, 20);
+  t.anisotropy = 16;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/* ---------- 地形网格：PolyHaven PBR 三件套（diff + normal + rough） ---------- */
 export function buildTerrain(): THREE.Mesh {
   const size = WORLD_HALF * 2;
   const seg = 192;
@@ -57,9 +66,10 @@ export function buildTerrain(): THREE.Mesh {
   geo.computeVertexNormals();
   const nrm = geo.attributes.normal;
 
-  const cLow = new THREE.Color('#d9e6c0');   // 轻 tint：让贴图本色出镜
-  const cHigh = new THREE.Color('#f6e6bc');
-  const cRock = new THREE.Color('#efe9dc');
+  /* 白昼植被色系（替换旧金色时刻土黄） */
+  const cLow = new THREE.Color('#7fb855');
+  const cHigh = new THREE.Color('#c9d98a');
+  const cRock = new THREE.Color('#a8a196');
   const tmp = new THREE.Color();
   const colors = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) {
@@ -69,9 +79,8 @@ export function buildTerrain(): THREE.Mesh {
     tmp.copy(cLow).lerp(cHigh, ht);
     const v = vnoise(x * 0.25 + 5, z * 0.25 + 5) - 0.5;
     tmp.offsetHSL(0, 0, v * 0.05);
-    /* 大尺度明暗斑块：消掉贴图均质的「地毯感」 */
     const macro = fbm(x * 0.012 + 50, z * 0.012 + 50, 3) - 0.5;
-    tmp.offsetHSL(0, 0.02, macro * 0.16);
+    tmp.offsetHSL(0.02, 0.03, macro * 0.16);
     tmp.lerp(cRock, Math.min(slope * 2.2, 1) * 0.85);
     colors[i * 3] = tmp.r;
     colors[i * 3 + 1] = tmp.g;
@@ -79,16 +88,16 @@ export function buildTerrain(): THREE.Mesh {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  /* Poly Haven leafy_grass（CC0）漫反射贴图 × 顶点色微调 */
-  const map = new THREE.TextureLoader().load(
-    `${import.meta.env.BASE_URL}textures/leafy_grass_diff_2k.jpg`,
-  );
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  map.repeat.set(20, 20);
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.anisotropy = 16;
-
-  const mesh = new THREE.Mesh(geo, makeToon('#ffffff', { vertexColors: true, map }));
+  const base = import.meta.env.BASE_URL;
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    map: pbr(`${base}textures/leafy_grass_diff_2k.jpg`, true),
+    normalMap: pbr(`${base}textures/leafy_grass_nor_gl_2k.jpg`, false),
+    roughnessMap: pbr(`${base}textures/leafy_grass_rough_2k.jpg`, false),
+    normalScale: new THREE.Vector2(1.15, 1.15),
+    roughness: 1,
+    metalness: 0,
+    vertexColors: true,
+  }));
   mesh.name = 'terrain';
   mesh.receiveShadow = true;
   return mesh;
@@ -98,10 +107,10 @@ export function buildTerrain(): THREE.Mesh {
 export function buildUnderlay(): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(1400, 1400).rotateX(-Math.PI / 2),
-    makeToon('#98a566'),
+    new THREE.MeshStandardMaterial({ color: PALETTE.underlay, roughness: 1, metalness: 0 }),
   );
   mesh.position.y = UNDERLAY_Y;
   mesh.name = 'underlay';
-  (mesh.material as THREE.MeshToonMaterial).userData.outlineParameters = { visible: false };
+  mesh.material.userData.outlineParameters = { visible: false };
   return mesh;
 }

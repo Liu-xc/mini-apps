@@ -9,7 +9,7 @@ const _desired = new THREE.Vector3();
 /* 第三人称弹性跟随镜头：拖拽环视 + 滚轮缩放 + 地形避让 */
 export class CameraRig {
   yaw = 0;
-  pitch = 0.30;
+  pitch = 0.37;
   dist = 7.5;
   private lookTarget = new THREE.Vector3(0, 1.5, 0);
 
