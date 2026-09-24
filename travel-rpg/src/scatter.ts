@@ -12,6 +12,10 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+/* 共享风时钟（与 grass.ts 的 uTime 各自独立但同频，视觉无碍） */
+const swayTime = { value: 0 };
+export function tickScatterWind(t: number): void { swayTime.value = t; }
+
 /* 氛围散布（it-002/003）：植被/岩石 = Quaternius MegaKit；
    策展式摆放走 scenes.ts + placer.ts，此处只做种子随机的背景填充。 */
 const Q = 'assets/quaternius/';
@@ -74,7 +78,7 @@ export function buildScatter(avoid: Array<[number, number]>): THREE.Group {
 
   const loadSpec = (
     names: string[], spots: Spot[], sink: number, jitter: number,
-    opts: { cast: boolean } = { cast: true },
+    opts: { cast: boolean; sway?: number; leafGlow?: boolean } = { cast: true },
   ): void => {
     const share = Math.ceil(spots.length / names.length);
     for (const name of names) {
@@ -91,6 +95,43 @@ export function buildScatter(avoid: Array<[number, number]>): THREE.Group {
           for (const m of meshes) {
             m.updateMatrixWorld(true);
             const local = m.matrixWorld.clone();
+            const mat = m.material as THREE.Material;
+            /* 树叶透光：叶片材质加微量暖绿 emissive，背光侧不发死黑（假次表面） */
+            if (opts.leafGlow && /leaf|leave|_c|foliage/i.test(mat.name) &&
+                'emissive' in mat) {
+              const sm = mat as THREE.MeshStandardMaterial;
+              sm.emissive = new THREE.Color('#3d4422');
+              sm.emissiveIntensity = 0.4;
+            }
+            /* 植被随风：与草场同族的轻量摆动（花 > 草木 > 灌木） */
+            if (opts.sway && 'onBeforeCompile' in mat) {
+              const sm = mat as THREE.MeshStandardMaterial;
+              const amp = opts.sway;
+              sm.onBeforeCompile = shader => {
+                shader.uniforms.uTime = swayTime;
+                shader.uniforms.uAmp = { value: amp };
+                shader.uniforms.uMaxH = { value: boxH };
+                shader.vertexShader = shader.vertexShader
+                  .replace('#include <common>',
+                    '#include <common>\nuniform float uTime; uniform float uAmp; uniform float uMaxH;')
+                  .replace('#include <begin_vertex>', [
+                    '#include <begin_vertex>',
+                    '#ifdef USE_INSTANCING',
+                    '  vec3 sOrigin = vec3(instanceMatrix[3][0], instanceMatrix[3][1], instanceMatrix[3][2]);',
+                    '#else',
+                    '  vec3 sOrigin = vec3(0.0);',
+                    '#endif',
+                    '  float sPhase = sOrigin.x * 0.41 + sOrigin.z * 0.33;',
+                    '  float sSway = sin(uTime * 1.7 + sPhase) + 0.5 * sin(uTime * 3.3 + sPhase * 1.9);',
+                    '  float sWave = fract((sOrigin.x + sOrigin.z * 0.6) * 0.006 - uTime * 0.05);',
+                    '  sSway *= 1.0 + 1.2 * (smoothstep(0.88, 1.0, sWave) + smoothstep(0.12, 0.0, sWave));',
+                    '  float sH = clamp(transformed.y / max(uMaxH, 0.001), 0.0, 1.0);',
+                    '  transformed.x += sSway * uAmp * sH * sH;',
+                    '  transformed.z += sSway * uAmp * 0.6 * sH * sH;',
+                  ].join('\n'));
+              };
+              sm.customProgramCacheKey = () => 'sway' + amp;
+            }
             const inst = new THREE.InstancedMesh(m.geometry, m.material, slice.length);
             inst.castShadow = opts.cast;
             inst.receiveShadow = true;
@@ -117,12 +158,20 @@ export function buildScatter(avoid: Array<[number, number]>): THREE.Group {
     }
   };
 
-  loadSpec(TREE_TYPES, treeSpots, 0.1, 1.5);
-  loadSpec(ROCK_TYPES, rockSpots, 0.06, 1.0);
-  loadSpec(BUSH_TYPES, bushSpots, 0.04, 1.0);
-  loadSpec(FLOWER_TYPES, flowerSpots, 0.0, 0.6, { cast: false });
+  loadSpec(TREE_TYPES, treeSpots, 0.1, 1.5, { cast: true, leafGlow: true });
+  loadSpec(ROCK_TYPES, rockSpots, 0.06, 1.0, { cast: true });
+  loadSpec(BUSH_TYPES, bushSpots, 0.04, 1.0, { cast: true, sway: 0.05, leafGlow: true });
+  loadSpec(FLOWER_TYPES, flowerSpots, 0.0, 0.6, { cast: false, sway: 0.09 });
   loadSpec(MUSH_TYPES, mushSpots, 0.0, 0.5, { cast: false });
-  loadSpec(CLOVER_TYPES, cloverSpots, 0.0, 0.5, { cast: false });
+  loadSpec(CLOVER_TYPES, cloverSpots, 0.0, 0.5, { cast: false, sway: 0.06 });
+
+  /* 微观地表（it-004 AC-6）：落瓣 + 小碎石——启用入库未上场的资产 */
+  const petalSpots = makeSpots(rand, 46, 70, 1.5, 0.1, 0.2, []);
+  loadSpec(['Petal_1', 'Petal_2', 'Petal_3', 'Petal_4', 'Petal_5'],
+    petalSpots, 0.0, 0.4, { cast: false });
+  const microPebbleSpots = makeSpots(rand, 44, 76, 1.5, 0.12, 0.3, []);
+  loadSpec(['Pebble_Round_1', 'Pebble_Round_2'],
+    microPebbleSpots, 0.02, 0.6, { cast: false });
 
   /* 远景林带剪影：真树（Pine_2），雾中出层次 */
   const ringSpots: Spot[] = [];

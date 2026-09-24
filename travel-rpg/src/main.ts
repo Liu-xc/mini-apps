@@ -3,7 +3,7 @@ import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflare.js';
 import { buildTerrain, buildUnderlay } from './terrain';
-import { buildScatter } from './scatter';
+import { buildScatter, tickScatterWind } from './scatter';
 import { buildGrassField } from './grass';
 import { buildScenePlacements } from './placer';
 import { getScene, deriveBlock } from './scenes';
@@ -69,6 +69,7 @@ camera.position.set(0, 3, 8);
 new RGBELoader().load(`${import.meta.env.BASE_URL}textures/puresky_2k.hdr`, hdr => {
   hdr.mapping = THREE.EquirectangularReflectionMapping;
   scene.background = hdr;
+  scene.backgroundIntensity = 0.94;   // it-002 遗留：云天略曝，压一档（像素复核地平线）
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromEquirectangular(hdr).texture;
   scene.environmentIntensity = 0.62;
@@ -117,6 +118,45 @@ new THREE.TextureLoader().load(
   t => lensflare.addElement(new LensflareElement(t, 80, 0.45)),
 );
 scene.add(lensflare);
+
+/* ---------- 花粉/光尘（it-004 AC-7）：随玩家视野域漂移的暖色微粒 ---------- */
+const motes = (() => {
+  const N = 70;
+  const base = new Float32Array(N * 3);
+  const phase = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const a = (i * 2.399963) % (Math.PI * 2);
+    const r = 4 + ((i * 7919) % 100) / 100 * 26;
+    base[i * 3] = Math.cos(a) * r;
+    base[i * 3 + 1] = 0.4 + ((i * 104729) % 100) / 100 * 6.5;
+    base[i * 3 + 2] = Math.sin(a) * r;
+    phase[i] = (i * 1.7) % 6.28;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(base.slice(), 3));
+  const mat = new THREE.PointsMaterial({
+    color: '#fff3cf', size: 0.085, sizeAttenuation: true,
+    transparent: true, opacity: 0.5, depthWrite: false,
+  });
+  mat.userData.outlineParameters = { visible: false };
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  points.name = 'motes';
+  scene.add(points);
+  return {
+    update(t: number, focus: THREE.Vector3) {
+      points.position.set(focus.x, 0, focus.z);
+      const attr = geo.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < N; i++) {
+        const b = i * 3;
+        attr.setX(i, base[b] + Math.sin(t * 0.32 + phase[i]) * 1.6);
+        attr.setY(i, base[b + 1] + Math.sin(t * 0.55 + phase[i] * 1.7) * 0.7);
+        attr.setZ(i, base[b + 2] + Math.cos(t * 0.27 + phase[i]) * 1.6);
+      }
+      attr.needsUpdate = true;
+    },
+  };
+})();
 
 /* ---------- 角色 / 镜头 / 输入 ---------- */
 const player = new Player(scene);
@@ -212,6 +252,8 @@ function tick(dt: number): void {
   fpsFrames++; fpsClock += dt;
   if (fpsClock >= 0.5) { lastFps = Math.round(fpsFrames / fpsClock); fpsFrames = 0; fpsClock = 0; }
   grassField.update(elapsed);
+  tickScatterWind(elapsed);
+  motes.update(elapsed, player.pos);
   sun.position.copy(player.pos).addScaledVector(SUN_DIR, 95);
   sun.target.position.copy(player.pos);
   sun.target.updateMatrixWorld();

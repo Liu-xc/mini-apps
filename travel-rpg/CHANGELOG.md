@@ -2,6 +2,12 @@
 
 ## 2026-09-24
 
+- **it-004 · 精细度打磨（Leo：「继续打磨精细度」）**：分级升级（S 形对比+冷阴影/
+  暖高光分离调+时变胶片颗粒）、天空 `backgroundIntensity 0.94` 压曝（像素复核地平线）、
+  草场**阵风波**（沿 (1,0.6) 移动 gust 带，近圈/远圈同式）、花/三叶草/灌木分级随风摆
+  （共享 swayTime 时钟）、树叶 emissive 透光、**激活入库未上场资产**（Petal 落瓣×46 +
+  小碎石×44，scatter 47→54）、花粉光尘 Points×70 随玩家漂移。回归全绿（构建零错/
+  errs=[]/行为断言/编辑器完好）。规格见 specs/iterations/it-004-fidelity-pass.md。
 - **it-003 · 资产库沉淀 + 屏内场景编排器（Leo：「继续大搞特搞，尽量多沉淀资产，快速编排场景」）**：
   Quaternius MegaKit 扩到**全量 68 款**（156 文件 25MB）；PolyHaven 草原模型**精选 7 款 17.2MB**
   （API 权威 include 清单下载、18MB 预算）；**三时段 puresky HDRI**（day/dawn/sunset）；

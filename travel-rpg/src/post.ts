@@ -37,6 +37,8 @@ const GradeShader = {
     tDiffuse: { value: null as THREE.Texture | null },
     uVig: { value: 0.26 },
     uSat: { value: 1.12 },
+    uTime: { value: 0 },
+    uGrain: { value: 0.014 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -49,13 +51,26 @@ const GradeShader = {
     uniform sampler2D tDiffuse;
     uniform float uVig;
     uniform float uSat;
+    uniform float uTime;
+    uniform float uGrain;
     varying vec2 vUv;
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
       float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
       c.rgb = mix(vec3(l), c.rgb, uSat);
+      /* 轻对比曲线（S 形近似）：中灰拉开，不压死黑白 */
+      c.rgb = clamp((c.rgb - 0.5) * 1.05 + 0.5, 0.0, 1.0);
+      /* 冷阴影 / 暖高光 分离调（色彩纪律的分级层表达） */
+      float sh = 1.0 - smoothstep(0.0, 0.5, l);
+      float hi = smoothstep(0.5, 1.0, l);
+      c.rgb += vec3(-0.012, 0.002, 0.024) * sh;
+      c.rgb += vec3(0.022, 0.008, -0.014) * hi;
+      /* 暗角 */
       float d = distance(vUv, vec2(0.5));
       c.rgb *= 1.0 - uVig * smoothstep(0.42, 0.92, d);
+      /* 微量胶片颗粒（时间抖动） */
+      float g = fract(sin(dot(vUv + fract(uTime * 0.37), vec2(12.9898, 78.233))) * 43758.5453);
+      c.rgb += (g - 0.5) * uGrain;
       gl_FragColor = c;
     }
   `,
@@ -66,6 +81,7 @@ export interface Post {
   outlineState: { on: boolean };
   resize: (w: number, h: number, pr: number) => void;
   render: (dt: number) => void;
+  advance: (dt: number) => void;
 }
 
 export function createPost(
@@ -90,6 +106,7 @@ export function createPost(
   composer.addPass(grade);
   const fxaa = new ShaderPass(FXAAShader);
   composer.addPass(fxaa);
+  let gradeTime = 0;
 
   const resize = (w: number, h: number, pr: number) => {
     composer.setSize(w, h);
@@ -98,5 +115,15 @@ export function createPost(
   };
   resize(window.innerWidth, window.innerHeight, renderer.getPixelRatio());
 
-  return { composer, outlineState, resize, render: dt => composer.render(dt) };
+  return {
+    composer,
+    outlineState,
+    resize,
+    render: dt => {
+      gradeTime += dt;
+      (grade.uniforms.uTime as { value: number }).value = gradeTime;
+      composer.render(dt);
+    },
+    advance: (dt: number) => { gradeTime += dt; },
+  };
 }

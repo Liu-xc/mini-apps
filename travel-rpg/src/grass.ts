@@ -98,6 +98,10 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
           '#endif',
           '  float gPhase = iOrigin.x * 0.33 + iOrigin.z * 0.27;',
           '  float gSway = sin(uTime * 2.0 + gPhase) + 0.4 * sin(uTime * 4.2 + gPhase * 1.6);',
+          // 阵风波：沿 (1,0.6) 方向移动的涌浪带，过境时摆幅加倍（BotW 手感）
+          '  float gWave = fract((iOrigin.x + iOrigin.z * 0.6) * 0.006 - uTime * 0.05);',
+          '  float gGust = smoothstep(0.88, 1.0, gWave) + smoothstep(0.12, 0.0, gWave);',
+          '  gSway *= 1.0 + 1.5 * gGust;',
           '  float gH = clamp(transformed.y / max(uMaxH, 0.001), 0.0, 1.0);',
           '  transformed.x += gSway * uAmp * gH * gH;',
           '  transformed.z += gSway * uAmp * 0.5 * gH * gH;',
@@ -162,6 +166,9 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
         vec3 origin = imat[3].xyz;
         float phase = origin.x * 0.31 + origin.z * 0.23;
         float sway = sin(uTime * 2.0 + phase) + 0.4 * sin(uTime * 4.1 + phase * 1.6);
+        float wave = fract((origin.x + origin.z * 0.6) * 0.006 - uTime * 0.05);
+        float gust = smoothstep(0.88, 1.0, wave) + smoothstep(0.12, 0.0, wave);
+        sway *= 1.0 + 1.5 * gust;
         float h = clamp(p.y, 0.0, 1.0);
         p.x += sway * 0.22 * h * h;
         p.z += sway * 0.11 * h * h;
