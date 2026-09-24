@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { PLAYER_LIMIT, terrainHeight, groundHeight } from './terrain';
+import { PLAYER_LIMIT, terrainHeight, groundHeight, LAKE } from './terrain';
 
 const GRAVITY = 22;
 const JUMP_V = 8.2;
 const WALK_SPEED = 4.2;
 const RUN_SPEED = 7.6;
+const SWIM_SPEED = 2.6;
 const ACCEL = 10;
 
 /* 状态 → KayKit 动画剪辑候选（名字按优先级回退，剪辑缺失时保持当前动作） */
@@ -14,6 +15,7 @@ const STATE_ANIMS: Record<string, readonly string[]> = {
   walk: ['walking_a', 'walking_b', 'walking', 'walk'],
   run: ['running_a', 'running_b', 'running', 'run'],
   air: ['jump_idle', 'jump'],
+  swim: ['swimming', 'swim', 'unarmed_idle', 'walking_c'],   // KayKit 无游泳剪辑：垂臂踩水/划水回退
 };
 
 function blobTexture(): THREE.CanvasTexture {
@@ -40,11 +42,14 @@ export class Player {
   onGround = true;
   modelSource: 'fallback' | 'knight' = 'fallback';
   yaw = Math.PI;
-  wading = false;   // 涉水中（it-005 AC-1）
+  wading = false;    // 涉水中（it-005 AC-1）
+  swimming = false;  // 游泳中（it-008 AC-1）
   /* 足迹反馈钩子（it-005 AC-8）：dust 层在 main 接线 */
   onStep?: (p: THREE.Vector3, running: boolean) => void;
   onLand?: (p: THREE.Vector3, impact: number) => void;
   private stepAcc = 0;
+
+  get clipNames(): string[] { return [...this.actions.keys()]; }
 
   private visual = new THREE.Group();
   private blob: THREE.Mesh;
@@ -114,20 +119,22 @@ private buildFallback(): void {
     );
   }
 
-  private playAny(names: readonly string[]): void {
+  private playAny(names: readonly string[]): boolean {
     for (const name of names) {
       const next = this.actions.get(name);
       if (next && next !== this.current) {
         this.current?.fadeOut(0.22);
         next.reset().fadeIn(0.22).play();
         this.current = next;
-        return;
+        return true;
       }
+      if (next) return true;   // 已是当前动作
     }
+    return false;
   }
 
   tryJump(): void {
-    if (this.onGround) {
+    if (this.onGround && !this.swimming) {
       this.vel.y = JUMP_V;
       this.onGround = false;
     }
@@ -137,12 +144,13 @@ private buildFallback(): void {
   update(dt: number, dir: THREE.Vector3, run: boolean, elapsed: number): void {
     const wasGround = this.onGround;
     const fallV = this.vel.y;
-    const speed = (run ? RUN_SPEED : WALK_SPEED) * (this.wading ? 0.55 : 1);
+    const base = this.swimming ? SWIM_SPEED : (run ? RUN_SPEED : WALK_SPEED);
+    const speed = base * (this.wading ? 0.55 : 1);
     const moving = dir.lengthSq() > 1e-4;
     const a = 1 - Math.exp(-ACCEL * dt);
     this.vel.x += ((moving ? dir.x * speed : 0) - this.vel.x) * a;
     this.vel.z += ((moving ? dir.z * speed : 0) - this.vel.z) * a;
-    this.vel.y -= GRAVITY * dt;
+    if (!this.swimming) this.vel.y -= GRAVITY * dt;
 
     this.pos.addScaledVector(this.vel, dt);
     this.pos.x = Math.max(-PLAYER_LIMIT, Math.min(PLAYER_LIMIT, this.pos.x));
@@ -155,8 +163,19 @@ private buildFallback(): void {
 
     const raw = terrainHeight(this.pos.x, this.pos.z);
     const ground = groundHeight(this.pos.x, this.pos.z);
-    this.wading = ground - raw > 0.15;          // 被水位钳抬起 = 涉水
-    if (this.pos.y <= ground) {
+    this.wading = !this.swimming && ground - raw > 0.15;   // 被水位钳抬起 = 涉水
+    const waterDepth = LAKE.level - raw;
+    /* 游泳切换（it-008 AC-1）：深水入水（滞回防抖），浅水自动回岸 */
+    if (!this.swimming && waterDepth > 1.0) this.swimming = true;
+    else if (this.swimming && waterDepth < 0.85) this.swimming = false;
+
+    if (this.swimming) {
+      /* 浮在水面：重力停用，位置向水面收敛 */
+      this.vel.y = 0;
+      const surf = LAKE.level - 0.22;
+      this.pos.y += (surf - this.pos.y) * (1 - Math.exp(-6 * dt));
+      this.onGround = false;
+    } else if (this.pos.y <= ground) {
       this.pos.y = ground;
       if (this.vel.y < 0) this.vel.y = 0;
       this.onGround = true;
@@ -197,9 +216,11 @@ private buildFallback(): void {
     const st = !this.onGround ? 'air' : sp > 6 ? 'run' : sp > 0.4 ? 'walk' : 'idle';
     if (st !== this.state) {
       this.state = st;
-      this.playAny(STATE_ANIMS[st]);
+      if (!this.playAny(STATE_ANIMS[st])) this.playAny(STATE_ANIMS.air);   // 无游泳剪辑时优雅回退
     }
-    if (this.modelSource === 'fallback') {
+    if (this.swimming) {
+      this.visual.position.y = Math.sin(elapsed * 2.2) * 0.05;   // 水面起伏
+    } else if (this.modelSource === 'fallback') {
       this.visual.position.y =
         sp > 0.4 && this.onGround ? Math.abs(Math.sin(elapsed * 10)) * 0.05 : 0;
     }

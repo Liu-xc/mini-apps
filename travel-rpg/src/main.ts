@@ -13,6 +13,8 @@ import { buildAmbient } from './ambient';
 import { buildDust } from './dust';
 import { buildMountains } from './mountains';
 import { uCloudT } from './cloud';
+import { buildBoat } from './canoe';
+import { STATIONS } from './scenes';
 import { getScene, deriveBlock } from './scenes';
 import { initEditor, type EditorApi } from './editor';
 import { Player } from './player';
@@ -21,7 +23,10 @@ import { Input, isTouchMode } from './controls';
 import { createPost } from './post';
 import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR, TIME_PRESETS, applyPaletteToPalette, type TimeId } from './style';
 
-const SCENE_ID = 'camp';
+/* 三站选择（it-008 AC-3）：?scene= 直达，默认达里湖 */
+const station = STATIONS.find(st => st.id === new URLSearchParams(location.search).get('scene'))
+  ?? STATIONS.find(st => st.id === 'dali')!;
+const SCENE_ID = station.sceneId;
 
 /* ---------- 错误收集（验证钩子 + 页面角标；console.error 一并捕获） ---------- */
 const errors: string[] = [];
@@ -75,7 +80,7 @@ camera.position.set(0, 3, 8);
 /* ---------- 天空与环境光：时段系统（it-007）——day/dawn/sunset 预设切换 ---------- */
 let sunBase = 4.1;   // 太阳呼吸的基准强度（随预设变）
 const envLoader = new RGBELoader();
-let timeId: TimeId = 'day';
+let timeId: TimeId = station.time;
 {
   const t = new URLSearchParams(location.search).get('time');
   if (t && t in TIME_PRESETS) timeId = t as TimeId;
@@ -166,6 +171,9 @@ scene.add(dustRes.group);
 const campfirePl = activeScene.placements.find(p => p.asset === 'kenney:campfire_logs');
 const campfire = buildCampfire(campfirePl?.x ?? -4.5, campfirePl?.z ?? -7.5);
 scene.add(campfire.group);
+/* 划船载具（it-008 AC-2）：只在水域世界生成 */
+const boat = SCENE_ID === 'camp' ? buildBoat(37.5, -26.5) : null;   // 离岸浮位（避开滩上散布岩）
+if (boat) scene.add(boat.group);
 
 /* ---------- 光斑 ---------- */
 const lensflare = new Lensflare();
@@ -234,9 +242,12 @@ document.getElementById('jump')!.addEventListener('pointerdown', e => {
   input.jumpQueued = true;
 });
 
-/* 足迹反馈接线（it-005 AC-8）：尘土 / 涟漪 */
+/* 站点出生点（it-008 AC-3） */
+player.pos.set(station.spawn[0], groundHeight(station.spawn[0], station.spawn[1]) + 0.05, station.spawn[1]);
+
+/* 足迹反馈接线（it-005 AC-8）：尘土 / 涟漪；游泳划水也出涟漪 */
 player.onStep = (p, running) => {
-  if (player.wading) dustRes.ripple(p.x, p.z, running ? 1.35 : 1);
+  if (player.swimming || player.wading) dustRes.ripple(p.x, p.z, player.swimming ? 1.1 : (running ? 1.35 : 1));
   else dustRes.puff(p.x, p.y, p.z, running ? 1.25 : 1);
 };
 player.onLand = (p, impact) => {
@@ -250,6 +261,38 @@ player.onLand = (p, impact) => {
 };
 
 /* ---------- 后期链 ---------- */
+/* 划船上下船（it-008 AC-2）+ 站点循环（AC-3） */
+const promptEl = document.getElementById('prompt')!;
+function toggleBoat(): void {
+  if (!boat || editMode) return;
+  if (boat.isRiding()) {
+    const out = boat.dismount();
+    player.pos.copy(out);
+    player.vel.set(0, 0, 0);
+    player.group.visible = true;
+  } else if (boat.tryMount(player.pos)) {
+    player.group.visible = false;
+  }
+}
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'KeyE') toggleBoat();
+  if (e.code === 'KeyG' && !editMode) {
+    const i = STATIONS.findIndex(st => st.id === station.id);
+    const next = STATIONS[(i + 1) % STATIONS.length];
+    location.href = `${location.pathname}?scene=${next.id}`;
+  }
+});
+promptEl.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  toggleBoat();
+});
+/* 站名徽标 */
+if (!editMode) {
+  const hintEl = document.getElementById('hint')!;
+  hintEl.textContent = `【${station.name}】` + hintEl.textContent;
+}
+
 const post = createPost(renderer, scene, camera, effect);
 applyTime(timeId);   // 首次应用时段预设（须在世界/灯/水体/post 之后）
 
@@ -312,6 +355,11 @@ window.__game = {
     campfireReady: campfire.group.parent === scene,
     mountainLayers: mountainGroup.children.length,
     time: timeId,
+    station: station.id,
+    swimming: player.swimming,
+    boating: boat ? boat.isRiding() : false,
+    hasSwimClip: player.clipNames.some(n => /swim|float/i.test(n)),
+    clipNames: player.clipNames.slice(0, 80),
     outline: post.outlineState.on,
     envReady: !!scene.environment,
     background: !!scene.background,
@@ -333,6 +381,8 @@ window.__game = {
 const _dir = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _moveDir = new THREE.Vector3();
+let boatRippleT = 0;
+let promptState = '';
 let last = performance.now();
 let elapsed = 0;
 let fpsFrames = 0, fpsClock = 0, lastFps = 0;
@@ -368,6 +418,28 @@ function tick(dt: number): void {
     .addScaledVector(_right, input.move.x)
     .addScaledVector(_dir, input.move.y);
   if (_moveDir.lengthSq() > 1) _moveDir.normalize();
+
+  /* 交互提示条（近船/骑乘） */
+  const nearBoat = !!boat && !editMode && player.pos.distanceTo(boat.pos) < 2.6;
+  const label = boat?.isRiding() ? 'E 下船' : nearBoat ? 'E 上船' : '';
+  if (label !== promptState) {
+    promptState = label;
+    promptEl.textContent = label;
+    promptEl.style.display = label ? 'block' : 'none';
+  }
+
+  /* 划船：玩家物理挂起，镜头跟船（it-008 AC-2） */
+  if (boat?.isRiding()) {
+    boat.update(dt, elapsed, input.move.y, input.move.x);
+    boatRippleT -= dt;
+    if (Math.abs(boat.speed()) > 0.8 && boatRippleT <= 0) {
+      dustRes.ripple(boat.pos.x, boat.pos.z, 1.6);
+      boatRippleT = 0.28;
+    }
+    rig.update(dt, boat.pos);
+    post.render(dt);
+    return;
+  }
 
   player.update(dt, _moveDir, input.run, elapsed);
   rig.update(dt, player.pos);
@@ -409,6 +481,11 @@ declare global {
         campfireReady: boolean;
         mountainLayers: number;
         time: string;
+        station: string;
+        swimming: boolean;
+        boating: boolean;
+        hasSwimClip: boolean;
+        clipNames: string[];
         outline: boolean;
         envReady: boolean;
         background: boolean;

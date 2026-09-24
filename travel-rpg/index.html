@@ -46,6 +46,16 @@
   #jump:active { background: rgba(232, 196, 124, .35); }
   body.touch #stick, body.touch #jump { display: block; }
 
+  #prompt {
+    position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom));
+    transform: translateX(-50%); z-index: 6; display: none;
+    padding: 9px 22px; border-radius: 999px;
+    color: rgba(245, 234, 210, .95); font-size: 14px; letter-spacing: .12em;
+    background: rgba(18, 15, 12, .5); border: 1px solid rgba(232, 196, 124, .55);
+    backdrop-filter: blur(8px); text-shadow: 0 1px 6px rgba(0,0,0,.6);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+
   #err {
     position: fixed; left: 12px; bottom: 12px; max-width: 70vw; z-index: 9;
     display: none; color: #ffb4b4; font: 12px/1.5 ui-monospace, monospace;
@@ -103,7 +113,8 @@
 </head>
 <body>
   <div id="app"></div>
-  <div id="hint">WASD 移动 · 拖拽环视 · 空格跳跃 · 滚轮缩放 · T 换时段</div>
+  <div id="hint">WASD 移动 · 拖拽环视 · 空格跳跃 · 滚轮缩放 · T 换时段 · G 换站</div>
+  <div id="prompt" style="display:none"></div>
   <div id="stick"></div>
   <button id="jump" type="button">跳</button>
   <div id="err"></div>

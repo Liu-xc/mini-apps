@@ -2,6 +2,14 @@
 
 ## 2026-09-24
 
+- **it-008 · 游泳、划船与三站**：**游泳**（水深>1.0m 贴水面浮游+起伏+划水涟漪，
+  KayKit 无游泳剪辑实证后 unarmed_idle 优雅回退，滞回回岸）；**划船**（canoe 载具化：
+  近船 E 提示、上下船衔接游泳/涉水、W/S 推进 A/D 转向、碰岸回弹、搁浅推离、尾迹
+  涟漪、泊位移离岸避开散布岩+模型长轴自动对齐）；**三站 preset**（STATIONS 表=
+  场景+时段+出生点：石林白昼/达里湖湖湾/乌兰布统黄昏，?scene= 直达+G 循环，
+  polyhaven boulder_01 等首次上场）。回归全绿（构建零错/errs=[]/骑乘位移与游泳
+  切换断言/probe+station·swimming·boating·clipNames）。规格见
+  specs/iterations/it-008-swim-boat-stations.md。
 - **it-007 · 时段光照系统**：day/dawn/sunset 三档预设一键切换（T 键 / `?time=`）——
   三张 puresky HDRI 背景+IBL 旋转换装、雾色/雾距、日光色/强/仰角方位（黄昏 25° 长影）、
   半球/补光、环境强度、分级饱和度、草地/水体着色器全联动；山脊 4 频段细分。
