@@ -366,7 +366,8 @@ if (editMode) {
 /* ---------- 验证钩子 ---------- */
 window.__game = {
   errors,
-  scene,   // 评审/调参钩子（时段 HDRI 旋转等现场调试）
+  scene,    // 评审/调参钩子（时段 HDRI 旋转等现场调试）
+  post,     // 后期链钩子（AO 开关等现场排查）
   state: () => ({
     pos: [player.pos.x, player.pos.y, player.pos.z].map(v => +v.toFixed(2)),
     onGround: player.onGround,
@@ -526,6 +527,7 @@ declare global {
     __game?: {
       errors: string[];
       scene: THREE.Scene;
+      post: import('./post').Post;
       state: () => {
         pos: number[];
         onGround: boolean;

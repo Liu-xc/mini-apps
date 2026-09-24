@@ -2,6 +2,11 @@
 
 ## 2026-09-24
 
+- **it-012 · 渲染审美拉满（Leo：「画面的审美能够拉满」）**：**湖面平面反射**
+  （water.ts 重构 Reflector 管线：512 RT 倒映远山/树/天空，与水深混色/岸沫/波光
+  融合，波纹法线扰动反射 UV，浅弱深强）；近圈草 3200→4600；**AO 尝试后暂缓**
+  （N8AO 全白/GTAO 半屏黑，均与自研 OutlineRenderPass 冲突，finding 全记录待复活）。
+  回归 errs=[]、构建零错。规格见 specs/iterations/it-012-render-beauty.md。
 - **it-011 · 路牌文字与音频初版**：**路牌程序化文字**（Placement.label 可选字段
   + placer 板面正/背叠 Canvas 木纹文字面片——Kenney 盒子 UV 吃不进换 map 材质，
   叠面片对任意 glTF 板面都稳；4 块路牌「石林 →」等近景可读）；**音频系统初版**

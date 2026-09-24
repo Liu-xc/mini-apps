@@ -10,7 +10,7 @@ import { uCloudT, CLOUD_GLSL } from './cloud';
    芦苇 = 岸线水位带 Wispy/Common_Tall（it-005 AC-3，共用风场）
    玩家避让（it-005 AC-8）：1.5m 内草叶向玩家反方向推开的 uniform 注入。 */
 
-const NEAR_COUNT = 3200;
+const NEAR_COUNT = 4600;
 const FAR_COUNT = 10600;
 const uTime: { value: number } = { value: 0 };   // 近/远共用时间
 const uPlayer = { value: new THREE.Vector3(0, 0, 0) };  // 玩家避让（it-005）
@@ -110,7 +110,7 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
   const group = new THREE.Group();
   group.name = 'grassField';
   const rand = mulberry32(90210);
-  const nearSpots = makeSpots(rand, NEAR_COUNT, 1.6, 26, 0.36, 0.68, block);
+  const nearSpots = makeSpots(rand, NEAR_COUNT, 1.6, 28, 0.34, 0.72, block);
   const farSpots = makeSpots(rand, FAR_COUNT, 3, 66, 0.26, 0.5, block);
   const dummy = new THREE.Object3D();
   const api: GrassField = { group, update: () => {}, reedsDone: false, setTime: () => {} };

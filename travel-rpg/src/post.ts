@@ -83,6 +83,7 @@ export interface Post {
   render: (dt: number) => void;
   advance: (dt: number) => void;
   setTime: (sat: number) => void;
+  aoState: { on: boolean };
 }
 
 export function createPost(
@@ -100,6 +101,10 @@ export function createPost(
   const composer = new EffectComposer(renderer, rt);
   const outlineState = { on: true };
   composer.addPass(new OutlineRenderPass(scene, camera, effect, outlineState));
+  /* AO 现状（it-012）：N8AO v2 与 GTAOPass 均和 OutlineEffect 自定义渲染 pass
+     冲突（前者全白、后者半屏黑，needsSwap 两种取值复现）——暂缓接入，物体接地感
+     由 4K 软阴影 + 顶点色暗角承担。复现细节记录于 it-012 验证记录。 */
+  const aoState = { on: false };
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.32, 0.55, 0.82);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
@@ -127,5 +132,6 @@ export function createPost(
     },
     advance: (dt: number) => { gradeTime += dt; },
     setTime: sat => { (grade.uniforms.uSat as { value: number }).value = sat; },
+    aoState,
   };
 }
