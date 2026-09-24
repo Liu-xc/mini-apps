@@ -9,6 +9,7 @@
 | 剪贴盒 | [`clips/`](clips/) | 双端剪贴板历史（Android Kotlin/Compose + macOS SwiftUI），clips.json 文件格式为跨端契约，双端单测对齐 | 提案中（it-001 specs 已备，未开工） |
 | 灵岛 | [`island/`](island/) | macOS 刘海功能入口容器：默认隐形，hover 刘海动画展开内容卡片；首个内容源为 GLM Coding Plan TOKEN 用量（剩余%·重置时间·进度条），数据源可插拔、可扩展多厂商与能力 | it-001 已接真实数据（MVP 完成） |
 | 象棋竞技场 | [`xiangqi/`](xiangqi/) | 本地 web 应用（仓库首例）：两个大模型各开一个隔离的 pi agent session 对弈中国象棋（ICCS + 合法走法白名单协议），实时观战思考流、中文记谱、换先记分板、棋谱导出 | it-001 已实现（MVP 完成） |
+| 赤峰环线 | [`travel-rpg/`](travel-rpg/) | 网页游戏：Three.js 塞尔达式 3D 探索 RPG，把赤峰环线自驾（石林/达里湖/乌兰布统）做成可探索世界，PC + mobile web 一套代码 | it-001 M0 地基验证（开发中） |
 
 ## 公共基础设施（libs/）
 
@@ -35,3 +36,4 @@
 ## 环境要求
 
 - 安卓应用（衣橱、吃啥）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见各应用目录的 README：[wardrobe/README.md](wardrobe/README.md)、[eats/README.md](eats/README.md)。
+- 网页应用（象棋竞技场、赤峰环线）：Node.js 20+。构建方式见各应用目录的 README：[xiangqi/README.md](xiangqi/README.md)、[travel-rpg/README.md](travel-rpg/README.md)。
