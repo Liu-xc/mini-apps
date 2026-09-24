@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { terrainHeight } from './terrain';
-import { getScene, type SceneDef } from './scenes';
+import type { SceneDef } from './scenes';
 
 /* 场景摆放（it-003）：按 SceneDef 数据实例化。
    任意来源模型统一归一化到 1 米高，再按 placement.scale（目标米数）缩放。 */
@@ -45,10 +45,9 @@ export interface PlacerResult {
   ready: Promise<PlacedObject[]>;
 }
 
-export function buildScenePlacements(sceneId: string): PlacerResult {
-  const scene: SceneDef = getScene(sceneId);
+export function buildScenePlacements(scene: SceneDef): PlacerResult {
   const group = new THREE.Group();
-  group.name = `placements:${sceneId}`;
+  group.name = `placements:${scene.id}`;
   const ready = (async () => {
     const catalog = await loadCatalog();
     const placed: PlacedObject[] = [];

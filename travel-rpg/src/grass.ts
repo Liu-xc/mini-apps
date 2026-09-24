@@ -87,7 +87,7 @@ function windify(mat: THREE.Material, amp: number, maxH: number, key: string): v
         // 玩家避让：1.5m 内草叶推开（it-005 AC-8）
         '  vec2 gToP = iOrigin.xz - uPlayer.xz;',
         '  float gPd = length(gToP);',
-        '  float gPush = (1.0 - smoothstep(0.18, 1.5, gPd)) * 0.5;',
+        '  float gPush = (1.0 - smoothstep(0.18, 1.8, gPd)) * 0.75;',
         '  transformed.xz += (gPd > 0.001 ? gToP / gPd : vec2(1.0, 0.0)) * gPush * gH * gH;',
       ].join('\n'));
     shader.fragmentShader = shader.fragmentShader
@@ -256,7 +256,7 @@ export function buildGrassField(block: Array<[number, number]>): GrassField {
         p.z += sway * 0.11 * h * h;
         vec2 toP = origin.xz - uPlayer.xz;
         float pd = length(toP);
-        float push = (1.0 - smoothstep(0.18, 1.5, pd)) * 0.5;
+        float push = (1.0 - smoothstep(0.18, 1.8, pd)) * 0.75;
         p.xz += (pd > 0.001 ? toP / pd : vec2(1.0, 0.0)) * push * h * h;
         vec4 wp = modelMatrix * imat * vec4(p, 1.0);
         vW = wp.xyz;

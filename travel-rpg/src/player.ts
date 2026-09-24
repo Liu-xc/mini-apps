@@ -15,7 +15,7 @@ const STATE_ANIMS: Record<string, readonly string[]> = {
   walk: ['walking_a', 'walking_b', 'walking', 'walk'],
   run: ['running_a', 'running_b', 'running', 'run'],
   air: ['jump_idle', 'jump'],
-  swim: ['swimming', 'swim', 'unarmed_idle', 'walking_c'],   // KayKit 无游泳剪辑：垂臂踩水/划水回退
+  swim: ['swimming', 'swim', 'idle'],   // KayKit 无游泳剪辑：直身 idle 供程序化压平+划臂
 };
 
 function blobTexture(): THREE.CanvasTexture {
@@ -48,8 +48,11 @@ export class Player {
   onStep?: (p: THREE.Vector3, running: boolean) => void;
   onLand?: (p: THREE.Vector3, impact: number) => void;
   private stepAcc = 0;
+  private bones: THREE.Bone[] = [];
+  private swimPivot: THREE.Group | null = null;   // 髋部枢轴（俯卧用）
 
   get clipNames(): string[] { return [...this.actions.keys()]; }
+  get boneNames(): string[] { return this.bones.map(b => b.name); }
 
   private visual = new THREE.Group();
   private blob: THREE.Mesh;
@@ -109,6 +112,17 @@ private buildFallback(): void {
         for (const clip of gltf.animations) {
           this.actions.set(clip.name.toLowerCase(), this.mixer.clipAction(clip));
         }
+        this.visual.traverse(o => {
+          if (o instanceof THREE.SkinnedMesh) this.bones = o.skeleton.bones;
+        });
+        /* 髋部枢轴（it-009 游泳俯卧）：模型下移使枢轴位于髋高 */
+        const HIP = 0.95;
+        const pivot = new THREE.Group();
+        pivot.position.y = HIP;
+        pivot.add(model);
+        model.position.y -= HIP;
+        this.visual.add(pivot);
+        this.swimPivot = pivot;
         this.playAny(STATE_ANIMS.idle);
       },
       undefined,
@@ -219,11 +233,27 @@ private buildFallback(): void {
       if (!this.playAny(STATE_ANIMS[st])) this.playAny(STATE_ANIMS.air);   // 无游泳剪辑时优雅回退
     }
     if (this.swimming) {
-      this.visual.position.y = Math.sin(elapsed * 2.2) * 0.05;   // 水面起伏
-    } else if (this.modelSource === 'fallback') {
+      this.visual.position.y = -0.55 + Math.sin(elapsed * 2.2) * 0.05;   // 半沉+起伏
+      if (this.swimPivot) this.swimPivot.rotation.x = 1.35;              // 俯卧（绕髋，近水平）
+    } else {
       this.visual.position.y =
-        sp > 0.4 && this.onGround ? Math.abs(Math.sin(elapsed * 10)) * 0.05 : 0;
+        this.modelSource === 'fallback' && sp > 0.4 && this.onGround
+          ? Math.abs(Math.sin(elapsed * 10)) * 0.05 : 0;
+      if (this.swimPivot) this.swimPivot.rotation.x = 0;
     }
     this.mixer?.update(dt);
+    /* 程序化蛙泳：mixer 写完姿态后覆写臂/腿（it-009 AC-1） */
+    if (this.swimming && this.bones.length > 0) {
+      const ph = elapsed * 3.6;
+      const sweep = Math.sin(ph);
+      const byName = (n: string) => this.bones.find(b => b.name === n);
+      const armL = byName('upperarml'), armR = byName('upperarmr');
+      const legL = byName('upperlegl'), legR = byName('upperlegr');
+      if (armL) { armL.rotation.x = -0.6 + sweep * 1.1; armL.rotation.z = 0.55 + sweep * 0.25; }
+      if (armR) { armR.rotation.x = -0.6 + sweep * 1.1; armR.rotation.z = -0.55 - sweep * 0.25; }
+      const kick = Math.sin(elapsed * 5.2) * 0.4;
+      if (legL) legL.rotation.x = kick;
+      if (legR) legR.rotation.x = -kick;
+    }
   }
 }

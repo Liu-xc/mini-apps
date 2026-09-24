@@ -6,9 +6,9 @@ import { terrainHeight, LAKE } from './terrain';
    浅水/岸线阻挡（碰岸回弹），波浪起伏+艏摇。下船落在船侧，衔接游泳/涉水。 */
 
 const THRUST_ACC = 5.5;
-const MAX_FWD = 3.8;
+const MAX_FWD = 4.4;
 const MAX_REV = 1.6;
-const TURN_RATE = 1.5;
+const TURN_RATE = 1.9;
 
 export interface Boat {
   group: THREE.Group;

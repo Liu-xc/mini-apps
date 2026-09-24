@@ -25,14 +25,14 @@ export class CameraRig {
     if (delta !== 0) this.dist = clamp(this.dist + delta * 0.012, 3.5, 14);
   }
 
-  update(dt: number, playerPos: THREE.Vector3): void {
+  update(dt: number, playerPos: THREE.Vector3, distBias = 0): void {
     _target.set(playerPos.x, playerPos.y + 1.5, playerPos.z);
     this.lookTarget.lerp(_target, 1 - Math.exp(-12 * dt));
 
     const cp = Math.cos(this.pitch);
     _offset
       .set(Math.sin(this.yaw) * cp, Math.sin(this.pitch), Math.cos(this.yaw) * cp)
-      .multiplyScalar(this.dist);
+      .multiplyScalar(this.dist + distBias);
     _desired.copy(this.lookTarget).add(_offset);
     this.camera.position.lerp(_desired, 1 - Math.exp(-9 * dt));
 

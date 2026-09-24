@@ -14,8 +14,7 @@ import { buildDust } from './dust';
 import { buildMountains } from './mountains';
 import { uCloudT } from './cloud';
 import { buildBoat } from './canoe';
-import { STATIONS } from './scenes';
-import { getScene, deriveBlock } from './scenes';
+import { getWorldScene, deriveBlock, STATIONS } from './scenes';
 import { initEditor, type EditorApi } from './editor';
 import { Player } from './player';
 import { CameraRig } from './cameraRig';
@@ -23,10 +22,9 @@ import { Input, isTouchMode } from './controls';
 import { createPost } from './post';
 import { PALETTE, SUN_DIR, FOG_NEAR, FOG_FAR, TIME_PRESETS, applyPaletteToPalette, type TimeId } from './style';
 
-/* 三站选择（it-008 AC-3）：?scene= 直达，默认达里湖 */
+/* 三站选择（it-008）：?scene= 决定出生站，默认达里湖 */
 const station = STATIONS.find(st => st.id === new URLSearchParams(location.search).get('scene'))
   ?? STATIONS.find(st => st.id === 'dali')!;
-const SCENE_ID = station.sceneId;
 
 /* ---------- 错误收集（验证钩子 + 页面角标；console.error 一并捕获） ---------- */
 const errors: string[] = [];
@@ -49,7 +47,7 @@ setInterval(() => {
 
 /* 编辑模式（?edit=1）：it-003 屏内场景编排器 */
 const editMode = new URLSearchParams(location.search).has('edit');
-const activeScene = getScene(SCENE_ID);            // localStorage 覆盖 > 代码场景
+const activeScene = getWorldScene();              // 合并世界（it-009）：localStorage world 覆盖 > 三站代码场景
 const avoid = deriveBlock(activeScene.placements); // 营地避让区 = 数据派生（单一事实源）
 
 /* ---------- 渲染器 ---------- */
@@ -159,7 +157,7 @@ const scatterGroup = buildScatter(avoid);
 scene.add(scatterGroup);
 const grassField = buildGrassField(avoid);
 scene.add(grassField.group);
-const placerRes = buildScenePlacements(SCENE_ID);   // 场景数据（或 localStorage 覆盖）实例化
+const placerRes = buildScenePlacements(activeScene);   // 合并世界实例化（it-009）
 scene.add(placerRes.group);
 const trailRes = buildTrail();                     // 营地→湖石径（it-005）
 scene.add(trailRes.group);
@@ -171,9 +169,9 @@ scene.add(dustRes.group);
 const campfirePl = activeScene.placements.find(p => p.asset === 'kenney:campfire_logs');
 const campfire = buildCampfire(campfirePl?.x ?? -4.5, campfirePl?.z ?? -7.5);
 scene.add(campfire.group);
-/* 划船载具（it-008 AC-2）：只在水域世界生成 */
-const boat = SCENE_ID === 'camp' ? buildBoat(37.5, -26.5) : null;   // 离岸浮位（避开滩上散布岩）
-if (boat) scene.add(boat.group);
+/* 划船载具（it-008 AC-2）：达里湖站离岸浮位 */
+const boat = buildBoat(37.5, -26.5);
+scene.add(boat.group);
 
 /* ---------- 光斑 ---------- */
 const lensflare = new Lensflare();
@@ -278,19 +276,34 @@ window.addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'KeyE') toggleBoat();
   if (e.code === 'KeyG' && !editMode) {
-    const i = STATIONS.findIndex(st => st.id === station.id);
+    const cur = STATIONS.find(st => st.id === probeStation().id) ?? STATIONS[1];
+    const i = STATIONS.indexOf(cur);
     const next = STATIONS[(i + 1) % STATIONS.length];
-    location.href = `${location.pathname}?scene=${next.id}`;
+    if (boat?.isRiding()) toggleBoat();
+    player.pos.set(next.spawn[0], groundHeight(next.spawn[0], next.spawn[1]) + 0.05, next.spawn[1]);
+    player.vel.set(0, 0, 0);
   }
 });
 promptEl.addEventListener('pointerdown', e => {
   e.preventDefault();
   toggleBoat();
 });
-/* 站名徽标 */
+/* 区域徽标：站域 20m 内显示站名，荒野显示荒野（it-009 AC-2） */
+const hintEl = document.getElementById('hint')!;
+let hintBase = '';
+let regionName = station.name;
+function nearestStation(): { st: (typeof STATIONS)[number]; dist: number } {
+  let best = STATIONS[0], bd = 1e9;
+  for (const st of STATIONS) {
+    const d = Math.hypot(player.pos.x - st.spawn[0], player.pos.z - st.spawn[1]);
+    if (d < bd) { bd = d; best = st; }
+  }
+  return { st: best, dist: bd };
+}
+function probeStation() { return nearestStation().st; }
 if (!editMode) {
-  const hintEl = document.getElementById('hint')!;
-  hintEl.textContent = `【${station.name}】` + hintEl.textContent;
+  hintBase = hintEl.textContent!.replace(/^【.*?】/, '');
+  hintEl.textContent = `【${regionName}】` + hintBase;
 }
 
 const post = createPost(renderer, scene, camera, effect);
@@ -312,7 +325,7 @@ if (editMode) {
     '编辑模式 · 点地面放置 · 拖动移动 · R 旋转 +/− 缩放 · Del 删除';
   placerRes.ready.then(placed => {
     initEditor({
-      sceneId: SCENE_ID,
+      sceneId: 'world',
       scene: activeScene,
       placed,
       group: placerRes.group,
@@ -356,10 +369,12 @@ window.__game = {
     mountainLayers: mountainGroup.children.length,
     time: timeId,
     station: station.id,
+    region: regionName,
     swimming: player.swimming,
     boating: boat ? boat.isRiding() : false,
     hasSwimClip: player.clipNames.some(n => /swim|float/i.test(n)),
     clipNames: player.clipNames.slice(0, 80),
+    bones: player.boneNames.slice(0, 60),
     outline: post.outlineState.on,
     envReady: !!scene.environment,
     background: !!scene.background,
@@ -419,6 +434,16 @@ function tick(dt: number): void {
     .addScaledVector(_dir, input.move.y);
   if (_moveDir.lengthSq() > 1) _moveDir.normalize();
 
+  /* 区域徽标刷新 */
+  if (!editMode && hintBase) {
+    const { st, dist } = nearestStation();
+    const rn = dist < 20 ? st.name : '环线荒野';
+    if (rn !== regionName) {
+      regionName = rn;
+      hintEl.textContent = `【${rn}】` + hintBase;
+    }
+  }
+
   /* 交互提示条（近船/骑乘） */
   const nearBoat = !!boat && !editMode && player.pos.distanceTo(boat.pos) < 2.6;
   const label = boat?.isRiding() ? 'E 下船' : nearBoat ? 'E 上船' : '';
@@ -436,7 +461,7 @@ function tick(dt: number): void {
       dustRes.ripple(boat.pos.x, boat.pos.z, 1.6);
       boatRippleT = 0.28;
     }
-    rig.update(dt, boat.pos);
+    rig.update(dt, boat.pos, 1.5);   // 骑乘镜头拉远（it-009 AC-3）
     post.render(dt);
     return;
   }
@@ -482,10 +507,12 @@ declare global {
         mountainLayers: number;
         time: string;
         station: string;
+        region: string;
         swimming: boolean;
         boating: boolean;
         hasSwimClip: boolean;
         clipNames: string[];
+        bones: string[];
         outline: boolean;
         envReady: boolean;
         background: boolean;
