@@ -1,0 +1,250 @@
+{
+ "flatLay": {
+  "gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    147.5,
+    106.7,
+    102.3
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.43
+  },
+  "gen2_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    146.6,
+    106.7,
+    102.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 38.92
+  },
+  "gen2_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    146.6,
+    106.7,
+    102.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 47.89
+  },
+  "gen3_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    145.7,
+    106.9,
+    101.8
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 38.73
+  },
+  "gen3_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    145.7,
+    106.9,
+    101.8
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 52.51
+  },
+  "exact_gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    147.5,
+    106.7,
+    102.3
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.43
+  }
+ },
+ "hanger": {
+  "gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    130.0,
+    129.5,
+    129.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.48
+  },
+  "gen2_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    128.6,
+    129.7,
+    131.2
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.06
+  },
+  "gen2_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    128.6,
+    129.7,
+    131.2
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 48.47
+  },
+  "gen3_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    128.1,
+    130.2,
+    131.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 38.91
+  },
+  "gen3_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    128.1,
+    130.2,
+    131.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 52.65
+  },
+  "exact_gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    130.0,
+    129.5,
+    129.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.48
+  }
+ },
+ "lowContrast": {
+  "gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.4,
+    216.0,
+    218.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 41.78
+  },
+  "gen2_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.6,
+    216.3,
+    218.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 41.72
+  },
+  "gen2_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.6,
+    216.3,
+    218.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 53.11
+  },
+  "gen3_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.6,
+    216.4,
+    217.9
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 41.66
+  },
+  "gen3_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.6,
+    216.4,
+    217.9
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 57.18
+  },
+  "exact_gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    216.4,
+    216.0,
+    218.0
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 41.78
+  }
+ },
+ "onBody": {
+  "gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    165.2,
+    169.0,
+    170.4
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.12
+  },
+  "gen2_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    164.4,
+    169.1,
+    171.3
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 38.7
+  },
+  "gen2_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    164.4,
+    169.1,
+    171.3
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 48.87
+  },
+  "gen3_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    163.8,
+    169.2,
+    171.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 38.56
+  },
+  "gen3_vs_prev": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    163.8,
+    169.2,
+    171.6
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 53.22
+  },
+  "exact_gen1_vs_gen0": {
+   "iou": 1.0,
+   "transparent_rgb_mean": [
+    165.2,
+    169.0,
+    170.4
+   ],
+   "frac_transparent_rgb_pure_black": 0.0,
+   "visible_rgb_psnr": 39.12
+  }
+ }
+}

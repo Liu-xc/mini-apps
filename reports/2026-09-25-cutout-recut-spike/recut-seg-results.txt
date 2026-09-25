@@ -1,0 +1,4 @@
+flatLay | in=1.0000 | out(gen1)=0.9995 | out(gen3)=0.9993 | cov0=0.403 | cov1=0.403
+hanger | in=1.0000 | out(gen1)=0.9996 | out(gen3)=0.9995 | cov0=0.440 | cov1=0.440
+lowContrast | in=1.0000 | out(gen1)=0.9454 | out(gen3)=0.9445 | cov0=0.414 | cov1=0.436
+onBody | in=1.0000 | out(gen1)=0.9996 | out(gen3)=0.9996 | cov0=0.451 | cov1=0.451
