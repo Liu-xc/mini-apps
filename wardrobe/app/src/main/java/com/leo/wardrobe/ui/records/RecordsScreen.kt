@@ -273,11 +273,13 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
                     .weight(1f),
             ) {
                 if (effect != null) {
-                    // 用户导入的成品穿搭图：全幅展示
+                    // 用户导入的成品穿搭图：衬纸 Fit 完整展示（it-042 C2——原全幅 Crop 在宽盒里
+                    // 把竖图人物头部裁掉，与同页网格缩略（0.86 近原比）两种呈现打架；it-011 C5 同语言）
                     com.leo.wardrobe.ui.components.PhotoCard(
                         file = vm.imageFileOf(effect.file),
                         contentDescription = "穿搭成品图",
                         corner = 0.dp,
+                        mat = true,
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {

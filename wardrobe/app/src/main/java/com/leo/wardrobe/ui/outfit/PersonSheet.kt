@@ -108,11 +108,13 @@ fun PersonSheet(vm: AppViewModel, onDismiss: () -> Unit) {
                             modifier = Modifier.padding(start = 14.dp),
                         )
                         // it-037：保留文字状态，取消与背景重复的勾选符号。
+                        // it-042 C1：删 ✓ 后状态词与角色名首尾相接（dump x=225），补 8dp 分读。
                         if (isCurrent && !manageMode) {
                             Text(
                                 "使用中",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 8.dp),
                             )
                         }
                         Spacer(Modifier.weight(1f))

@@ -59,6 +59,7 @@ import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.SlotCell
+import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.delay
@@ -289,11 +290,14 @@ fun OutfitScreen(
             // it-015 修订（Leo）：每区只渲染已加入的品类格，件数由用户增删决定——
             // 夏天上身可只 1 件短袖，冬天内搭+外套两件，不再固定每行三格；
             // 区尾「＋」弹层添加品类（写入组合记忆），格底 ✕ 移除（清记忆）
+            val slotScroll = rememberScrollState()
             Column(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(slotScroll)
+                    // it-042 C8：行卡视口底缘渐隐（缓解拦腰裁切，下方还有内容的提示）
+                    .fadingBottomEdge(active = { slotScroll.value < slotScroll.maxValue })
                     .padding(start = 12.dp, end = 12.dp, top = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -576,5 +580,7 @@ private fun OutfitSlot(
         aspect = aspect,
         coach = coach,
         onRemove = onRemove,
+        // it-042 C4：长按走统一 toast 通道读全名
+        onLongPress = { vm.toast(it.name) },
     )
 }

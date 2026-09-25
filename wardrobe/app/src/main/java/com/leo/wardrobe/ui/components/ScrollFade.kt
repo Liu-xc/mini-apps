@@ -64,3 +64,30 @@ fun FadingScrollRow(
         )
     }
 }
+
+/**
+ * it-042 C8：滚动容器底缘渐隐（[FadingScrollRow] 的纵向版，同一视觉语言）。
+ *
+ * 内容可继续向下滚动时，在容器底缘叠一条 [fadeHeight]（落地 28dp）的
+ * `Brush.verticalGradient(透明 → 页面底色)`，缓解行卡在视口底缘被拦腰裁切的观感；
+ * 滚到底/一屏放得下即隐去（[active] 由调用方给出滚动判定）。
+ *
+ * 判定 lambda 在 draw 期求值：滚动状态读取只触发重绘，不引发组合帧重组。
+ * 落点：W1 槽位滚动列、W3 衣橱卡网格。
+ */
+@Composable
+fun Modifier.fadingBottomEdge(
+    active: () -> Boolean,
+    fadeHeight: Dp = 28.dp,
+    fadeColor: Color = editorialColors().paper,
+): Modifier = this.drawWithContent {
+    drawContent()
+    if (active()) {
+        val h = fadeHeight.toPx()
+        drawRect(
+            brush = Brush.verticalGradient(listOf(Color.Transparent, fadeColor)),
+            topLeft = Offset(0f, size.height - h),
+            size = Size(size.width, h),
+        )
+    }
+}

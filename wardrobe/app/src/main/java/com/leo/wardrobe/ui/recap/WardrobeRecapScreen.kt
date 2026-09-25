@@ -288,30 +288,34 @@ fun WardrobeRecapScreen(
                         Spacer(Modifier.height(12.dp))
                     }
 
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = ec.surface,
-                        tonalElevation = 1.dp,
-                        onClick = { showIdle = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("闲置清单", style = MaterialTheme.typography.titleSmall, color = ec.ink)
-                                Text(
-                                    "${stats.idleItems.size} 件从没上过身",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = ec.inkFaint,
+                    // it-042 C6：打卡为 0 时闲置=全部（如 20/20），与上方打卡空态重复表达——隐藏，
+                    // 有打卡数据后闲置语义才成立（二级页入口随之恢复）
+                    if (stats.hasWearData) {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = ec.surface,
+                            tonalElevation = 1.dp,
+                            onClick = { showIdle = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("闲置清单", style = MaterialTheme.typography.titleSmall, color = ec.ink)
+                                    Text(
+                                        "${stats.idleItems.size} 件从没上过身",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = ec.inkFaint,
+                                    )
+                                }
+                                Icon(
+                                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                                    contentDescription = "查看闲置清单",
+                                    tint = ec.inkFaint,
                                 )
                             }
-                            Icon(
-                                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                                contentDescription = "查看闲置清单",
-                                tint = ec.inkFaint,
-                            )
                         }
+                        Spacer(Modifier.height(12.dp))
                     }
-                    Spacer(Modifier.height(12.dp))
 
                     if (stats.topOutfit != null) {
                         Surface(shape = MaterialTheme.shapes.large, color = ec.surface, tonalElevation = 1.dp) {

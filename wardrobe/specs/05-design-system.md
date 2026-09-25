@@ -73,7 +73,7 @@
 
 ## 组件清单（ui/components/）
 
-`PhotoCard`（4:5 照片卡，支撑轮播形变）、`SlotPager`（品类槽位）、`TagRow`/`TagChipInput`（标签展示与录入）、`CommentTimeline`（评论时间线+输入）、`EmptyState`（Lottie+文案+行动按钮）、`EditorialHeader`（角色名+衬线排版）、`FilterChipsRow`（标签筛选条）、`FadingScrollRow`（横滑筛选行+右缘渐隐，it-036）、`SegmentedToggleRow`（连体分段，it-036）。
+`PhotoCard`（4:5 照片卡，支撑轮播形变）、`SlotPager`（品类槽位）、`TagRow`/`TagChipInput`（标签展示与录入）、`CommentTimeline`（评论时间线+输入）、`EmptyState`（Lottie+文案+行动按钮）、`EditorialHeader`（角色名+衬线排版）、`FilterChipsRow`（标签筛选条）、`FadingScrollRow`（横滑筛选行+右缘渐隐，it-036）、`SegmentedToggleRow`（连体分段，it-036）、`fadingBottomEdge`（滚动容器底缘渐隐，it-042）。
 
 ## 照片容器「衬纸」（it-011 C5）
 
@@ -82,7 +82,7 @@
 | `photoMat` 浅色 | `surfaceVariant @ 55%` | 单品照片统一浅底圆角容器（W1 格位/W3 网格/W5 大图/W7 单品行），ContentScale.Fit 完整呈现轮廓 |
 | `photoMat` 深色 | 同上（暗色 surfaceVariant） | 深色模式同构 |
 
-成品图（用户导入/生图产出）保持全幅 Crop 不套衬纸；后续接抠图能力时把衬底换透明即可。
+成品图（用户导入/生图产出）：W7 详情轮播保持 0.86 近原比全幅 Crop（竖图头部余量足）；**W8 卡组 hero 自 it-042 改衬纸 Fit**——原全幅 Crop 在宽盒（≈1.1）里把 0.8 竖图人物头部裁掉，与同页网格缩略两种呈现打架（05 原「成品图一律全幅 Crop」条款作废）；后续接抠图能力时把衬底换透明即可。
 
 ## 透明底棋盘格 + 去背景状态（it-016 US-15）
 
@@ -112,3 +112,10 @@
 - **固定操作入口**：W3 全宽底部 CTA 与滚动内容分区布局，卡片不进入其点击区域；操作热区至少 48dp。
 - **名称与标签滚动**：W1 窄槽名称一行省略且保持完整 a11y 名称；共享 TagInput 两个横向行在可继续滚动时使用 `FadingScrollRow` 右缘 28dp 渐隐。
 - **对比度语义色**：`EditorialColors.accent` 专用于图形强调；新增 `accentContent` 用于强调文字，Material `primary`/`secondary` 用于实心动作底色。浅色固定 `accentContent/primary=#1D6845`、按钮字白色；深色使用 `#74C790` 并配墨纸/深色容器。次级文字 token 调为浅色 `#747F75`、深色 `#94A294`。复算记录见 it-038 验证记录。
+
+## it-042 第五轮走查修复（2026-09-25）
+
+- **滚动容器底缘渐隐（C8，与筛选行渐隐同语言的纵向版）**：内容可继续向下滚动时，容器底缘叠 **28dp** `Brush.verticalGradient(透明 → 页面底色 paper)`，滚到底/一屏放下即隐；判定 lambda 在 draw 期求值（滚动只触发重绘，不引发组合帧重组）。落点：W1 槽位滚动列、W3 衣橱卡网格。共享实现 `ui/components/ScrollFade.kt :: Modifier.fadingBottomEdge`。
+- **拉丁小字字距（C7）**：`labelSmall` 全局 `letterSpacing=2.sp` 只服务中文标签；拉丁域名等文本（W10 卡片 `urlHost`）局部 `copy(letterSpacing = 0.sp)` 归零，字号/颜色 token 不动。
+- **状态文字分读（C1）**：W2「使用中」与角色名之间固定 **8dp** 间距（it-037 删 ✓ 后不再有自然分隔，状态词不得与名称粘连成词）。
+- **完整名称可见兜底（C4）**：W1 槽位照片区长按经统一 toast 通道显示当前单品完整名称（单行省略与 a11y contentDescription 之外的可见路径）；单击/滑动/角标/✕ 行为不回退。

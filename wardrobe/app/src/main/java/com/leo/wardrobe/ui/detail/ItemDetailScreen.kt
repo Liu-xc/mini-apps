@@ -185,7 +185,8 @@ fun OutfitThumb(
     onClick: () -> Unit,
 ) {
     val data by vm.data.collectAsState()
-    val dateFormat = remember { SimpleDateFormat("MM/dd", Locale.getDefault()) }
+    // it-042 C3：并入 it-036 C12 的全站日期格式（yyyy/MM/dd），废止 MM/dd 双轨
+    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
     val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val effect = outfit.effectImages.firstOrNull()
 

@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import com.leo.wardrobe.ui.components.StaggeredEntrance
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -69,6 +70,7 @@ import com.leo.wardrobe.ui.components.FadingScrollRow
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.theme.editorialColors
 
@@ -265,9 +267,15 @@ fun WardrobeScreen(
                 kotlinx.coroutines.delay(900)
                 entranceDone = true
             }
+            val gridState = rememberLazyGridState()
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
+                    .fadingBottomEdge(active = { gridState.canScrollForward }),
+                state = gridState,
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),

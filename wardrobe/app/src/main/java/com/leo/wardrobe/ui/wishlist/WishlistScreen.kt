@@ -66,6 +66,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.leo.wardrobe.domain.model.Item
@@ -478,7 +479,8 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
                     Spacer(Modifier.height(2.dp))
                     Text(
                         urlHost(wish.url),
-                        style = MaterialTheme.typography.labelSmall,
+                        // it-042 C7：labelSmall 全局 letterSpacing=2sp 对拉丁域名字距过散，归零
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
                         color = editorialColors().inkFaint,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

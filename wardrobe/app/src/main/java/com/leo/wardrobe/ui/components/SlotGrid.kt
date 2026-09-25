@@ -2,8 +2,10 @@ package com.leo.wardrobe.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +63,7 @@ import java.io.File
  * coach=true 时首次进入做 ~150ms 左右微移示意（纯视觉位移，不触碰 pager 状态）。
  * aspect 为宽/高比，由着装位决定（帽近方、上身竖长、下装通栏、鞋扁平）。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlotCell(
     category: WardrobeCategory,
@@ -74,6 +77,8 @@ fun SlotCell(
     coach: Boolean = false,
     /** it-015 修订：移除该格（非空时显示 ✕）；null = 不提供移除 */
     onRemove: (() -> Unit)? = null,
+    /** it-042 C4：长按照片区读完整名称（窄槽单行省略的可见兜底）；null = 不提供 */
+    onLongPress: ((Item) -> Unit)? = null,
 ) {
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
@@ -138,7 +143,11 @@ fun SlotCell(
                         Modifier
                             .fillMaxSize()
                             .graphicsLayer { if (wished) alpha = 0.72f }
-                            .clickable { onCardTap(item) },
+                            // it-042 C4：单击进详情不变；长按补全名提示（窄槽「鼠尾…」兜底）
+                            .combinedClickable(
+                                onClick = { onCardTap(item) },
+                                onLongClick = { onLongPress?.invoke(item) },
+                            ),
                     ) {
                         // it-011 C5：统一浅底衬纸，完整呈现衣物轮廓
                         if (wished && item.imageFile.isEmpty()) {
