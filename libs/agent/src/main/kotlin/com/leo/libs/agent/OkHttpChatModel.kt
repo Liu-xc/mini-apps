@@ -13,6 +13,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -39,7 +40,9 @@ class OkHttpChatModel(
 
     private val endpoint: String get() = preset.baseUrl.trimEnd('/') + "/chat/completions"
 
-    override suspend fun complete(request: ChatRequest): ChatCompletion {
+    override suspend fun complete(request: ChatRequest): ChatCompletion = withContext(Dispatchers.IO) {
+        // 阻塞式 execute 必须在 IO 线程——直接在 Main 上调会 NetworkOnMainThreadException
+        // （it-041 阶段 A 模拟器实测抓到，M1 单测环境未覆盖）
         val call = newCall(request, stream = false)
         try {
             call.execute().use { resp ->
@@ -47,7 +50,7 @@ class OkHttpChatModel(
                 if (!resp.isSuccessful) {
                     throw AgentError.fromHttp(resp.code, body, resp.header("Retry-After"))
                 }
-                return wireJson.decodeFromString(WireChatResponse.serializer(), body).toCompletion()
+                return@withContext wireJson.decodeFromString(WireChatResponse.serializer(), body).toCompletion()
             }
         } catch (e: IOException) {
             throw AgentError.Network(e)
