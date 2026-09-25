@@ -44,7 +44,7 @@ fun TagRow(tags: List<String>, modifier: Modifier = Modifier, minChipHeight: Dp 
     if (tags.isEmpty()) return
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         tags.forEach { tag ->
             Surface(
@@ -111,7 +111,7 @@ fun TagInput(
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (tags.isNotEmpty()) {
             FadingScrollRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 fadeColor = MaterialTheme.colorScheme.surface,
             ) {
@@ -147,7 +147,7 @@ fun TagInput(
         // 预设标签（未选中的）
         val remaining = TagPresets.quickPicks.filter { it !in tags }
         FadingScrollRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             fadeColor = MaterialTheme.colorScheme.surface,
         ) {
             remaining.take(14).forEach { preset ->

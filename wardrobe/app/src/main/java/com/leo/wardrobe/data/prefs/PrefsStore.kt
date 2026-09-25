@@ -121,4 +121,14 @@ class PrefsStore(private val context: Context) {
             it[keyAiCustomModel] = model
         }
     }
+
+    // it-043 O4（走查 C6）：最近一次自检结果持久化——「OK|model|epochMs」或「ERR|message|epochMs」
+
+    private val keyAiLastCheck = stringPreferencesKey("ai_last_check")
+
+    val aiLastCheck: Flow<String?> = context.store.data.map { it[keyAiLastCheck] }
+
+    suspend fun setAiLastCheck(value: String) {
+        context.store.edit { it[keyAiLastCheck] = value }
+    }
 }

@@ -12,6 +12,15 @@ import com.leo.wardrobe.domain.model.outfitsOf
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
+/** it-043 O3（走查 C3）：工具名的用户侧中文标签——对话界面不铺 raw 英文标识 */
+fun toolLabel(name: String): String = when (name) {
+    "search_items" -> "查单品"
+    "search_outfits" -> "查穿搭"
+    "wear_stats" -> "穿用统计"
+    "current_person" -> "当前角色"
+    else -> "查衣橱"
+}
+
 /**
  * it-041 US-41b：注册给模型的只读衣橱工具——全部从 repo 快照读（零写路径），
  * 数据经工具结果回喂进模型上下文（与导出长图给生图 Agent 同性质）。

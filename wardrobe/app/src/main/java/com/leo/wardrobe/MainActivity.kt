@@ -317,6 +317,12 @@ private fun WardrobeRoot() {
                             com.leo.wardrobe.ui.chat.ChatScreen(
                                 vm = chatVm,
                                 onBack = { nav.popBackStack() },
+                                // it-043 O3：Key/网络类错误直达设置
+                                onOpenSettings = {
+                                    nav.navigate(Routes.SETTINGS)
+                                },
+                                // it-044 O6：复制回复的全局 toast
+                                appVm = vm,
                             )
                         }
                     }

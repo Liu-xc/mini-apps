@@ -94,6 +94,11 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         _error.value = null
     }
 
+    /** it-044 O6（走查 C11）：复制回复到剪贴板；toast 由屏幕层走全局 snackbar */
+    fun copyReply(text: String) {
+        container.share.copyText(text)
+    }
+
     private suspend fun runLoop() {
         job?.cancel()
         _running.value = true

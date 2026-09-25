@@ -2,6 +2,7 @@ package com.leo.wardrobe.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -134,7 +136,11 @@ fun SettingsScreen(
                     ) {
                         Text("厂商", style = MaterialTheme.typography.titleMedium, color = ec.ink)
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { presetMenu = true }) {
+                            // it-044 O5（走查 C9）：内容零水平内边距 → caret 右缘与输入框右缘同线
+                            TextButton(
+                                onClick = { presetMenu = true },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                            ) {
                                 Text(presetName, color = ec.ink)
                                 Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = ec.inkFaint)
                             }
@@ -179,7 +185,10 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text("模型", style = MaterialTheme.typography.titleMedium, color = ec.ink)
-                            TextButton(onClick = { modelMenu = true }) {
+                            TextButton(
+                                onClick = { modelMenu = true },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                            ) {
                                 Text(
                                     connection.model.ifBlank { "默认 · ${preset.defaultModel}" },
                                     color = ec.ink,
@@ -268,26 +277,51 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    // 自检状态
-                    when (val c = check) {
-                        is CheckState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth())
-                        is CheckState.Success -> Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Icon(
-                                Icons.Rounded.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Text(c.detail, style = MaterialTheme.typography.bodyMedium, color = ec.ink)
+                    // 自检状态（it-043 O4）：容器化状态行；Idle 时回落到持久化的上次结果（走查 C6）
+                    if (check is CheckState.Running) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    } else {
+                        val last by vm.lastCheck.collectAsState()
+                        val shown: Triple<Boolean, String, Long>? = when (val c = check) {
+                            is CheckState.Success -> Triple(true, c.detail, System.currentTimeMillis())
+                            is CheckState.Failure -> Triple(false, c.message, System.currentTimeMillis())
+                            CheckState.Idle -> last?.let { Triple(it.ok, it.detail, it.at) }
+                            else -> null
                         }
-                        is CheckState.Failure -> Text(
-                            c.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        CheckState.Idle -> {}
+                        shown?.let { (ok, detail, at) ->
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    Icon(
+                                        if (ok) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
+                                        contentDescription = null,
+                                        tint = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Text(
+                                        detail,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (ok) ec.ink else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        remember(at) {
+                                            java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                                                .format(java.util.Date(at))
+                                        },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = ec.inkFaint,
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     // 动作行
@@ -304,7 +338,13 @@ fun SettingsScreen(
                             Text(if (running) "自检中…" else "保存并自检")
                         }
                         if (keyMask != null && !vm.isDemo) {
-                            TextButton(onClick = { clearAsk = true }) { Text("清除 Key") }
+                            // it-043 O4（走查 C8）：回退动作中性弱色，与主 CTA 分层（仍带二次确认）
+                            TextButton(
+                                onClick = { clearAsk = true },
+                                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                    contentColor = ec.inkFaint,
+                                ),
+                            ) { Text("清除 Key") }
                         }
                     }
 
@@ -359,10 +399,10 @@ fun SettingsScreen(
                                             color = ec.inkFaint,
                                         )
                                     }
-                                    // 数字 count-up（DESIGN.md 红线⑨）
+                                    // 数字 count-up（DESIGN.md 红线⑨）；it-043 O4：标注「累计」口径（走查 C6）
                                     CountUpText(
                                         target = usage.totalTokens,
-                                        format = { "$it tokens" },
+                                        format = { "累计 $it tokens" },
                                         style = MaterialTheme.typography.titleMedium,
                                         color = ec.ink,
                                     )
@@ -406,7 +446,8 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "版本 ${BuildConfig.VERSION_NAME} · 联网仅用于模型直连（ADR-024）",
+                        // it-043 O4（走查 C3）：版本行去 ADR 编号等内部决策黑话
+                        "版本 ${BuildConfig.VERSION_NAME} · 联网仅用于模型对话与自检",
                         style = MaterialTheme.typography.labelMedium,
                         color = ec.inkFaint,
                     )

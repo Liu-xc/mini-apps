@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -66,6 +67,26 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _check = MutableStateFlow<CheckState>(CheckState.Idle)
     val check: StateFlow<CheckState> = _check.asStateFlow()
+
+    /** it-043 O4（走查 C6）：最近一次自检（持久化，重进页面仍可见） */
+    data class LastCheck(val ok: Boolean, val detail: String, val at: Long)
+
+    val lastCheck: StateFlow<LastCheck?> = prefs.aiLastCheck
+        .map { raw -> parseLastCheck(raw) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private fun parseLastCheck(raw: String?): LastCheck? {
+        raw ?: return null
+        val parts = raw.split('|', limit = 3)
+        if (parts.size != 3) return null
+        val at = parts[2].toLongOrNull() ?: return null
+        return LastCheck(ok = parts[0] == "OK", detail = parts[1], at = at)
+    }
+
+    private suspend fun persistLastCheck(ok: Boolean, detail: String) {
+        val safe = detail.replace('|', '/').take(120)
+        prefs.setAiLastCheck("${if (ok) "OK" else "ERR"}|$safe|${System.currentTimeMillis()}")
+    }
 
     /** US-41d：累计用量（厂商×模型），进入设置页与每次对话后刷新 */
     private val _usage = MutableStateFlow<Map<Pair<String, String>, com.leo.libs.agent.Usage>>(emptyMap())
@@ -128,21 +149,26 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 container.chatModel(preset).complete(
                     ChatRequest(messages = listOf(Message.user("ping")), model = model, maxTokens = 8),
                 )
+                persistLastCheck(ok = true, detail = "连通正常 · $model")
                 _check.value = CheckState.Success("连通正常 · $model")
             } catch (e: AgentError) {
                 android.util.Log.e("Settings", "self-check AgentError", e)
+                persistLastCheck(ok = false, detail = e.userMessage)
                 _check.value = CheckState.Failure(e.userMessage)
             } catch (e: Exception) {
                 android.util.Log.e("Settings", "self-check ${e::class.java.name}", e)
-                _check.value = CheckState.Failure(e.message?.ifBlank { null } ?: "未知错误")
+                val msg = e.message?.ifBlank { null } ?: "未知错误"
+                persistLastCheck(ok = false, detail = msg)
+                _check.value = CheckState.Failure(msg)
             }
         }
     }
 
-    /** 清除当前厂商的 Key（US-41a；UI 侧带确认） */
+    /** 清除当前厂商的 Key（US-41a；UI 侧带确认）；同时清掉自检状态（Key 已非同一个） */
     fun clearKey(presetId: String) {
         viewModelScope.launch {
             keyStore.delete(presetId)
+            prefs.setAiLastCheck("")
             _check.value = CheckState.Idle
         }
     }

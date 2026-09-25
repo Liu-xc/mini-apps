@@ -205,14 +205,19 @@ fun ItemDetailScreen(
             }
 
             // it-040 US-40：操作状态条（候选预览 / 推理中 / 已抠态重新抠 / 原图态去背景）
+            // it-043 O1（走查 C5/C7）：原图态 CTA 升实心高对比（页面唯一主动作）；状态带加 hairline 边界与页面底可分辨
             when {
-                candidate != null -> Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
-                    modifier = Modifier
+                candidate != null -> Column(
+                    Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp),
                 ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, editorialColors().hairline),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
@@ -233,6 +238,14 @@ fun ItemDetailScreen(
                         TextButton(onClick = { discardCandidate() }) { Text("还原") }
                         Button(onClick = { keepCandidate() }) { Text("保留") }
                     }
+                    }
+                    // it-044 O7（走查 W5-09）：说明棋盘格语义，避免被理解成「背景坏了」
+                    Text(
+                        "棋盘格 = 透明底",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = editorialColors().inkFaint,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp),
+                    )
                 }
 
                 recutRunning -> OutlinedButton(
@@ -252,6 +265,7 @@ fun ItemDetailScreen(
                 isCutout -> Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, editorialColors().hairline),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp),
@@ -277,10 +291,15 @@ fun ItemDetailScreen(
                     }
                 }
 
-                else -> OutlinedButton(
+                else -> androidx.compose.material3.Button(
                     onClick = { startRecut() },
                     enabled = !recutRunning,
                     shape = RoundedCornerShape(12.dp),
+                    // it-043 O1：实心填充 + 白字（对比 6.7:1），摆脱幽灵态
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = androidx.compose.ui.graphics.Color.White,
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 10.dp)
@@ -298,8 +317,9 @@ fun ItemDetailScreen(
             Text(
                 listOfNotNull(item.color.takeIf { it.isNotBlank() }, item.desc.takeIf { it.isNotBlank() })
                     .joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = editorialColors().inkFaint,
+                // it-043 O1（走查 C1/C9）：颜色/材质关键描述升主文本色，不再用弱文本降级
+                style = MaterialTheme.typography.bodyMedium,
+                color = editorialColors().ink,
                 modifier = Modifier.padding(top = 4.dp),
             )
             if (item.tags.isNotEmpty()) {
