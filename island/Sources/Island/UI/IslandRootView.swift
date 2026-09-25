@@ -93,7 +93,7 @@ struct ExpandedIslandView: View {
             }
             HStack(spacing: 8) {
                 Text(statusText)
-                    .font(.system(size: 9.5))
+                    .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer()
                 QuotaIconButton(systemName: "arrow.clockwise", spinning: store.status == .loading) {
@@ -163,7 +163,7 @@ struct ProviderPanel: View {
         }
         .padding(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
         .frame(maxWidth: .infinity)
-        .frame(height: IslandRootView.panelHeight)
+        .frame(height: IslandRootView.panelHeight, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.white.opacity(0.04))
@@ -181,7 +181,7 @@ struct ActivityRingsView: View {
     let rows: [QuotaRow]
     var centerTitle: String = ""
 
-    private var ringWidth: CGFloat { rows.count >= 2 ? 8 : 9 }
+    private var ringWidth: CGFloat { rows.count >= 2 ? 7 : 8 }
     private var gap: CGFloat { 3 }
     private var clusterSize: CGFloat { 64 }
 
@@ -211,7 +211,7 @@ struct ActivityRingsView: View {
                     )
                     .rotationEffect(.degrees(-90))
                     .frame(width: diameter, height: diameter)
-                    .shadow(color: color.opacity(0.3), radius: 2.5)
+                    .shadow(color: color.opacity(0.25), radius: 2)
                     .animation(.easeOut(duration: 0.6), value: fill)
             }
             if rows.isEmpty {
@@ -221,8 +221,8 @@ struct ActivityRingsView: View {
             }
             if !centerTitle.isEmpty {
                 Text(centerTitle)
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.system(size: 8.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.55))
             }
         }
         .frame(width: clusterSize, height: clusterSize)
@@ -241,24 +241,24 @@ struct RingStatRow: View {
                 .frame(width: 5, height: 5)
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
                 if let reset = row.resetDate {
                     Text(ResetFormatter.shortReset(reset, now: now) + " 重置")
-                        .font(.system(size: 8.5))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(.system(size: 8))
+                        .foregroundStyle(.white.opacity(0.38))
                 }
                 if let used = row.usedTokens, let limit = row.limitTokens, limit >= 1_000_000_000 {
                     Text("已用 \(ResetFormatter.billion(used)) / \(ResetFormatter.billion(limit))")
-                        .font(.system(size: 8.5))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .font(.system(size: 8))
+                        .foregroundStyle(.white.opacity(0.38))
                 }
             }
             Spacer(minLength: 0)
             if let remaining = row.remainingPercent {
                 // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
                 Text("\(Int(remaining))%")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             } else {
                 Text("--%")

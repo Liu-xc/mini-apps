@@ -64,6 +64,8 @@ ProviderKind 枚举 + 按源快照缓存（snapshot-<kind>.json）+ 按源钥匙
   MiMo 源 99%（Cookie 拉取平台真实数据，剩余=(1−percent)×100）；两源快照独立、互不覆盖。
 - **测试**：swift-testing **17/17**（新增 MiMo 解析 fixture：percent 小数比例、补偿包 limit=0 跳过、
   envelope 401/缺 data 报错）。
+- **精修增补 5（Leo 反馈「双环要对齐、字号小一点、环不够精致」）**：面板内容顶部对齐
+  （修 MiMo 环下坠 25pt）、环宽 7/8、辉光/底轨收敛、图例字号整体缩一档、token 行去后缀防换行。
 - **体验增补 4（Leo 反馈「老弹钥匙串密码」「MiMo 要展示已用 token（B）」）**：
   凭证迁出钥匙串改 0600 本地文件（ad-hoc 重签名导致 ACL 每版失效的弹窗根治，首启自动迁移）；
   MiMo 图例新增「已用 5.58B / 456B」（billion，≥100B 无小数）；环心对齐、小百分比最小可见弧、
