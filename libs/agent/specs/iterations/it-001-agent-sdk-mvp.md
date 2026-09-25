@@ -52,9 +52,9 @@
 
 ## 验收标准（整体）
 
-- [ ] core 为纯 Kotlin（无 `android.*` import），桌面 JVM 全量单测
+- [x] core 为纯 Kotlin（无 `android.*` import），桌面 JVM 全量单测（SourcePurityTest 断言 + 63 测绿，2026-09-25）
 - [ ] MockWebServer 契约测试：SSE delta 聚合 / tool_calls 分片累积 / `[DONE]` / usage / 错误体 / GLM 无 /v1 路径风格
-- [ ] FakeChatModel loop 测试：工具回喂 / maxSteps 熔断 / 错误恢复 / 取消
+- [x] FakeChatModel loop 测试：工具回喂 / maxSteps 熔断 / 错误恢复 / 取消（it-002 落地，AgentRunnerTest 11 例，2026-09-25）
 - [x] M0 spike 完成：GLM+MiMo 真调各一发（非流式/流式/工具调用），baseUrl/模型名/quirks 回填 spec，脚本入 `tools/`（2026-09-25，见验证记录）
 - [ ] key 红线断言：导出与日志路径不含明文 key（接口级测试）
 

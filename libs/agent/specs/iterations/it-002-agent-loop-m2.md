@@ -1,6 +1,6 @@
 # it-002 · agent loop（M2）——工具调用 + 会话 + 上下文 + 用量
 
-- **状态**：提案，待 Leo 确认后开工
+- **状态**：**已实现（2026-09-25，/goal 批准实施）**——单测 63/63 绿（M1 32 + 本轮 31），见文末验证记录
 - **类型**：libs/agent SDK 迭代（it-001 里程碑 M2 的承接迭代）
 - **关联**：US-A3 / US-A4 / US-A5（it-001 定义，本迭代实现）；设计见 [../00-architecture.md](../00-architecture.md) §4/§7/§9/§11，决策见 [../06-decisions.md](../06-decisions.md) ADR-005
 
@@ -132,6 +132,10 @@ M1 的 32 测回归不破。
 2. **M0 spike 时序**：M2 是纯 FakeChatModel 测试，不依赖真 key，**可与 M0 并行**；但 it-041 阶段 A（真调自检）前必须补跑 M0（`tools/spike-glm.sh` 需要你手动跑一次钥匙串授权，或直接给 `GLM_API_KEY` 环境变量）。
 3. 无其他待拍板项——DSL/事件/存储形态均已在 00-architecture §4 与 ADR-005 定过。
 
-## 验证记录
+## 验证记录 · 2026-09-25
 
-（开工后回填：单测计数、构建命令、M1 回归结果）
+- 构建：`JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew test`（libs/agent 独立构建）→ **BUILD SUCCESSFUL，63/63 绿、0 失败 0 错误**（M1 的 32 全部回归通过 + 本轮新增 31）
+- 新增源码：`AgentRunner.kt`（AgentConfig / AgentEvent 8 枚 / AgentRunner）、`tool/JsonSchema.kt`（扁平 DSL）、`tool/ToolRegistry.kt`（ToolResult + 注册执行）、`session/SessionStore.kt`（接口 + InMemory + File 原子写）、`session/ContextPolicy.kt`（DefaultContextPolicy）、`usage/UsageLedger.kt`（接口 + InMemory + File）；`ChatModel.kt` 的 `Usage` 补 `@Serializable` 与 `operator plus`
+- 测试 4 文件 31 例：`AgentRunnerTest`（11：单工具回喂事件序与 system 常驻 / 多 tool_calls 逐个回喂 / 未知工具 / 工具抛异常 / maxSteps 熔断收尾轮无 tools / 收尾轮仍回 tool_calls 截断 / Failed 历史不回滚 / 失败续跑 / 取消即停 / usage 跨步累计+TextDelta 保序 / 历史 system 丢弃）、`ToolDslTest`（8：schema 结构/重名抛错/分发参数/未知工具/非法 JSON/非对象参数/空参=「{}」/异常转错误）、`SessionAndPolicyTest`（9：文件会话往返保真/路径穿越清洗/损坏文件容错/游离头部丢弃/近 12 轮窗口/token 超窗裁剪/单轮过大保底/无孤儿 tool/用量累计与文件往返）、`SourcePurityTest`（1：main 无 `import android.`）
+- **实现与提案的偏差**：① ToolCallDelta 不在 loop 层二次装配——传输层 `Completed.message.toolCalls` 已是全量，loop 直接消费（提案预留的「internal 提升」不需要）；② `ContextPolicy.trim` 的 system 参数为 `Message?`（systemPrompt 可空）；③ **新增调用方契约**：用户输入消息由 app 在发送时自行 append 进 SessionStore，runner 只持久化自己产出的消息（首轮测试失败后定的，已写入 AgentRunner KDoc）；④ 待确认决策 1（maxSteps 熔断策略）按推荐方案「工具回喂后去 tools 追问收尾轮」实施
+- 遗留：`response_format` 支持度未校验（与 M0 共享的遗留，非阻塞）

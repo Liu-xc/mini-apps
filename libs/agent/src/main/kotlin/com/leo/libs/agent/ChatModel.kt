@@ -1,6 +1,7 @@
 package com.leo.libs.agent
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
 /** 工具定义（parameters 为 JSON Schema，透传厂商） */
@@ -19,11 +20,18 @@ data class ChatRequest(
     val maxTokens: Int? = null,
 )
 
+@Serializable
 data class Usage(
     val promptTokens: Int = 0,
     val completionTokens: Int = 0,
     val totalTokens: Int = 0,
-)
+) {
+    operator fun plus(other: Usage) = Usage(
+        promptTokens + other.promptTokens,
+        completionTokens + other.completionTokens,
+        totalTokens + other.totalTokens,
+    )
+}
 
 data class ChatCompletion(
     val message: Message,

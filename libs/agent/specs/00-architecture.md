@@ -1,6 +1,6 @@
 # 00 · agent 架构设计（BYOK 直连 + Agent Loop SDK）
 
-- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）；**M0 spike 完成**（2026-09-25，GLM/MiMo 真调四步全过，baseUrl/模型名/quirks 已回填 §5 与 Providers，详见 [it-001 验证记录](iterations/it-001-agent-sdk-mvp.md)）；**M1 传输层已落地**（2026-09-23，32 个 JVM 单测全绿，见 §0）。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
+- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）；**M0 spike 完成**（2026-09-25，GLM/MiMo 真调四步全过，baseUrl/模型名/quirks 已回填 §5 与 Providers，详见 [it-001 验证记录](iterations/it-001-agent-sdk-mvp.md)）；**M1 传输层已落地**（2026-09-23，32 个 JVM 单测全绿，见 §0）；**M2 agent loop 已落地**（2026-09-25，[it-002](iterations/it-002-agent-loop-m2.md)，63 测全绿）。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
 
 ## 0. 实现状态（M1 传输层，2026-09-23）
 
@@ -49,7 +49,7 @@ libs/agent/
 
 依赖铁律：core 不 import Android/app 类型（单模块形态下同样成立）；**agent 与 store/sync/cutout/carddeck 互不依赖**——会话持久化经 `SessionStore` 接口注入，app 侧可用 SnapshotStore 实现，也可用 SDK 默认文件实现。
 
-## 4. 核心 API（草图，定名以实现为准）
+## 4. 核心 API（草图，定名以实现为准——M2 后实现与草图的偏差见 [it-002 验证记录](iterations/it-002-agent-loop-m2.md)：ToolCallDelta 由传输层装配不进 loop、ContextPolicy.system 可空、SessionStore 为 append/messages/clear 三方法）
 
 ### 4.1 Provider 预设——数据，不是代码分支
 
@@ -172,7 +172,7 @@ App 设置页：选厂商 → 贴 key → 「连通性自检」（列模型或 1
 |---|---|---|
 | **M0 spike**（✅ 完成 2026-09-25） | 真调 GLM+MiMo 各一发：非流式/流式/工具调用；脚本入 `tools/` | preset 的 baseUrl/模型名/quirks 回填本 spec |
 | **M1 传输层** | ChatModel + preset + SSE 流式 + 错误分类 + ApiKeyStore（+android 实现） | MockWebServer 契约测试绿 |
-| **M2 agent loop** | ToolRegistry DSL + 多步循环 + 会话/上下文 + 用量 | FakeChatModel loop 测试绿 |
+| **M2 agent loop**（✅ 完成 2026-09-25） | ToolRegistry DSL + 多步循环 + 会话/上下文 + 用量 | FakeChatModel loop 测试绿 |
 | **M3 消费方接入** | 首个 app 挂设置页+对话入口（UI 归 app it-XXX，走 DESIGN.md） | 实机走查 |
 
 ## 12. 开放问题（待 Leo 定）
