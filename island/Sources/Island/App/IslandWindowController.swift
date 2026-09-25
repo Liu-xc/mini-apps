@@ -1,17 +1,15 @@
 import AppKit
 import SwiftUI
 
-/// NSHostingView 子类：借用 mouseEntered/Exited 实现 hover 展开（.activeAlways，别的 App 前台也生效）
+/// NSHostingView 子类：可见卡片矩形之外的事件全部穿透（hitTest 返回 nil，
+/// 事件落到下层窗口——菜单栏图标照常可点）
 final class IslandContentView: NSHostingView<IslandRootView> {
-    var onMouseEnter: (() -> Void)?
-    var onMouseExit: (() -> Void)?
+    /// point（contentView 坐标，左下原点）是否落在当前可见卡片内
+    var visibleCardChecker: ((NSPoint) -> Bool)?
 
-    override func mouseEntered(with event: NSEvent) {
-        onMouseEnter?()
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        onMouseExit?()
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if let checker = visibleCardChecker, !checker(point) { return nil }
+        return super.hitTest(point)
     }
 }
 
@@ -23,8 +21,10 @@ final class IslandWindowController: NSObject {
     private var contentView: IslandContentView?
     private var pinned = false
     private var monitors: [Any] = []
-    /// 防抖：进入/退出都走可取消延迟，吸收窗口变形时窗口服务器补发的成对 enter/exit
+    /// 悬停轮询 + 防抖
+    private var hoverTimer: Timer?
     private var pendingHover: DispatchWorkItem?
+    private var lastInside = false
 
     var onOpenSettings: (() -> Void)?
     var onOpenConsole: (() -> Void)?
@@ -34,8 +34,9 @@ final class IslandWindowController: NSObject {
     }
 
     func install() {
+        // 窗口永久固定为展开尺寸、永不改变大小——显隐/动画全部由遮罩驱动，零窗口跳动
         let panel = NSPanel(
-            contentRect: frame(for: .hidden),
+            contentRect: NSRect(origin: frame(for: .hidden).origin, size: expandedSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -58,20 +59,16 @@ final class IslandWindowController: NSObject {
         )
         let content = IslandContentView(rootView: root)
         content.autoresizingMask = [.width, .height]
-        content.onMouseEnter = { [weak self] in self?.handleEnter() }
-        content.onMouseExit = { [weak self] in self?.handleExit() }
         panel.contentView = content
         contentView = content
 
         viewModel.onTogglePin = { [weak self] in self?.togglePin() }
         self.panel = panel
 
-        content.addTrackingArea(NSTrackingArea(
-            rect: .zero,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-            owner: content,
-            userInfo: nil
-        ))
+        // 点击穿透判定：仅当前可见卡片矩形内响应（随 reveal 动画实时更新）
+        content.visibleCardChecker = { [weak self] point in
+            self?.visibleCardRect.contains(point) ?? false
+        }
 
         panel.orderFrontRegardless()
         applyAppearance(.hidden)
@@ -79,7 +76,7 @@ final class IslandWindowController: NSObject {
         // 首次未配置任何凭证：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
         if ProcessInfo.processInfo.environment["GLM_ISLAND_EXPAND"] == "1"
             || (store.credentialKinds.isEmpty && store.allRows.isEmpty) {
-            expand(pinned: true)
+            applyAppearance(.expanded)
         }
 
         monitors.append(NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -96,6 +93,14 @@ final class IslandWindowController: NSObject {
             monitors.append(token)
         }
 
+        // 悬停轮询：30Hz 读取光标位置与可见卡片矩形求交（不依赖事件路由，
+        // 永久全尺寸窗口 + hitTest 穿透的形态下最可靠）
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateHover()
+            }
+        }
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenChanged),
@@ -104,19 +109,22 @@ final class IslandWindowController: NSObject {
         )
     }
 
-    func reposition() {
-        applyAppearance(pinned ? .expanded : .hidden)
-    }
+    // MARK: - hover 状态机（轮询 + 防抖）
 
-    // MARK: - hover 状态机（防抖）
+    private func updateHover() {
+        let inside = visibleCardRect.contains(NSEvent.mouseLocation)
+        guard inside != lastInside else { return }
+        lastInside = inside
+        inside ? handleEnter() : handleExit()
+    }
 
     private func handleEnter() {
         pendingHover?.cancel()
-        guard !pinned else { return }
+        guard !pinned, viewModel.appearance == .hidden else { return }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
-                self.expandAnimated()
+                self.applyAppearance(.expanded)
             }
         }
         pendingHover = work
@@ -125,15 +133,14 @@ final class IslandWindowController: NSObject {
 
     private func handleExit() {
         pendingHover?.cancel()
-        guard !pinned, let panel, viewModel.appearance == .expanded else { return }
-        // 假离开：窗口变形时窗口服务器会补发 exit，但光标其实还在面板内
-        if panel.frame.contains(NSEvent.mouseLocation) { return }
+        guard !pinned, viewModel.appearance == .expanded else { return }
+        // 光标仍在可见卡片内就不收
+        if visibleCardRect.contains(NSEvent.mouseLocation) { return }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
-                guard let self, let panel = self.panel, !self.pinned else { return }
-                // 延迟期间光标又进来了就不收
-                if panel.frame.contains(NSEvent.mouseLocation) { return }
-                self.collapseAnimated()
+                guard let self, !self.pinned else { return }
+                if self.visibleCardRect.contains(NSEvent.mouseLocation) { return }
+                self.applyAppearance(.hidden)
             }
         }
         pendingHover = work
@@ -142,65 +149,36 @@ final class IslandWindowController: NSObject {
 
     private func togglePin() {
         pendingHover?.cancel()
-        if pinned {
-            pinned = false
-            collapseAnimated()
-        } else {
-            expand(pinned: true)
-        }
-    }
-
-    private func expand(pinned newValue: Bool) {
-        pinned = newValue
-        guard let panel else { return }
-        viewModel.appearance = .expanded
-        viewModel.reveal = true
-        panel.setFrame(frame(for: .expanded), display: true)
+        pinned.toggle()
+        applyAppearance(pinned ? .expanded : .hidden)
     }
 
     private func handleOutsideClick(at screenPoint: NSPoint) {
-        guard pinned, let panel else { return }
-        if !panel.frame.contains(screenPoint) {
+        guard pinned else { return }
+        if !visibleCardRect.contains(screenPoint) {
             pinned = false
-            collapseAnimated()
+            applyAppearance(.hidden)
         }
     }
 
     @objc private func screenChanged() {
-        reposition()
+        // 显示器/刘海参数变化：窗口（永久全尺寸）重新对位
+        guard let panel else { return }
+        panel.setFrame(frame(for: .expanded), display: false)
     }
 
-    // MARK: - 布局（刘海下沿锚点）
+    func reposition() {
+        // 显示器/刘海参数变化：窗口（永久全尺寸）重新对位
+        guard let panel else { return }
+        panel.setFrame(frame(for: .expanded), display: false)
+    }
+
+    // MARK: - 布局（刘海下沿锚点，遮罩驱动）
 
     private var activeScreen: NSScreen {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
             ?? NSScreen.main
             ?? NSScreen.screens[0]
-    }
-
-    /// 隐藏态 = 刘海挖槽矩形本身（不可见但收 hover）；展开态从刘海中心向下生长、
-    /// 顶边贴屏幕顶沿（顶部两角直角，与顶边无缝、不与刘海之间留缝）
-    private func frame(for appearance: IslandViewModel.Appearance) -> NSRect {
-        let screen = activeScreen
-        let top = screen.frame.maxY
-        let hasNotch = screen.safeAreaInsets.top > 0
-        let midX = screen.frame.midX
-        let center: CGFloat
-        if hasNotch {
-            let left = screen.auxiliaryTopLeftArea?.maxX ?? midX - 90
-            let right = screen.auxiliaryTopRightArea?.minX ?? midX + 90
-            center = (left + right) / 2
-        } else {
-            center = midX
-        }
-        let safeTop = max(screen.safeAreaInsets.top, 24)
-        switch appearance {
-        case .hidden:
-            return NSRect(x: center - 90, y: top - safeTop, width: 180, height: safeTop)
-        case .expanded:
-            let size = expandedSize
-            return NSRect(x: center - size.width / 2, y: top - size.height, width: size.width, height: size.height)
-        }
     }
 
     private func frameCenter(on screen: NSScreen) -> CGFloat {
@@ -212,48 +190,35 @@ final class IslandWindowController: NSObject {
         return (left + right) / 2
     }
 
-    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距），含内容源切换 chips 行
+    private func frame(for appearance: IslandViewModel.Appearance) -> NSRect {
+        let screen = activeScreen
+        let top = screen.frame.maxY
+        let center = frameCenter(on: screen)
+        let size = expandedSize
+        return NSRect(x: center - size.width / 2, y: top - size.height, width: size.width, height: size.height)
+    }
+
+    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距）
     private var expandedSize: CGSize {
         let screen = activeScreen
         let safeTop = max(screen.safeAreaInsets.top, 24)
         return CGSize(width: 352, height: safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14)
     }
 
+    /// 当前可见卡片矩形（全局坐标，左下原点；随显隐变化，与视图遮罩同尺寸）
+    private var visibleCardRect: NSRect {
+        let screen = activeScreen
+        let safeTop = max(screen.safeAreaInsets.top, 24)
+        let hidden = viewModel.appearance == .hidden
+        let w: CGFloat = hidden ? 180 : 352
+        let h: CGFloat = hidden ? safeTop : safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14
+        let center = frameCenter(on: screen)
+        let top = screen.frame.maxY
+        return NSRect(x: center - w / 2, y: top - h, width: w, height: h)
+    }
+
     private func applyAppearance(_ appearance: IslandViewModel.Appearance) {
+        // 窗口永不改变大小；显隐完全由 SwiftUI 遮罩尺寸驱动（从刘海长出/缩回）
         viewModel.appearance = appearance
-        guard let panel else { return }
-        panel.setFrame(frame(for: appearance), display: false)
-    }
-
-    /// 展开：窗口瞬间就位（此时内容是刘海高度的透明黑条），50ms 后把 reveal 拉到全高——
-    /// 先让起始态真正渲染一帧，SwiftUI 才会播「从刘海向下延伸」的高度动画
-    private func expandAnimated() {
-        guard !pinned, let panel else { return }
-        viewModel.reveal = false
-        viewModel.appearance = .expanded
-        panel.setFrame(frame(for: .expanded), display: true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, !self.pinned else { return }
-                self.viewModel.reveal = true
-            }
-        }
-    }
-
-    /// 收起：窗口全程不动（保持全尺寸），遮罩宽高一起对称缩回刘海；
-    /// 遮罩终态 = 刘海挖槽矩形（黑区融合，不可见），此刻再切隐藏态并归位窗口——零跳变
-    private func collapseAnimated() {
-        guard !pinned else { return }
-        viewModel.reveal = false
-        let snap = DispatchWorkItem { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self, !self.pinned, self.viewModel.appearance == .expanded else { return }
-                self.viewModel.appearance = .hidden
-                self.viewModel.reveal = false
-                self.panel?.setFrame(self.frame(for: .hidden), display: false)
-            }
-        }
-        pendingHover = snap
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: snap)
     }
 }

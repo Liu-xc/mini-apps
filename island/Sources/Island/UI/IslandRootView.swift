@@ -1,34 +1,29 @@
 import SwiftUI
 import AppKit
 
-/// 灵岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
-/// hover/点击后从刘海向下延伸出内容卡片（并排双源环形面板）
+/// 灵岛根视图：卡片常驻层级内，可见区域由「随显隐状态变化的圆角遮罩」驱动——
+/// 隐藏 = 刘海挖槽尺寸（黑区融合不可见）；展开 = 从刘海向下生长到全尺寸。
+/// 无视图插入/移除，动画从第一帧就在刘海上，零闪现。
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
     let openSettings: () -> Void
 
     var body: some View {
-        Group {
-            switch viewModel.appearance {
-            case .hidden:
-                Color.clear
-            case .expanded:
-                card
-            }
-        }
-        .frame(width: contentSize.width, height: contentSize.height, alignment: .top)
-        .contentShape(Rectangle())
-        .onTapGesture { viewModel.requestTogglePin() }
-        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: viewModel.reveal)
-        .animation(.easeOut(duration: 0.45), value: store.allRows)
+        card
+            .frame(width: 352, height: expandedHeight, alignment: .top)
+            .contentShape(Rectangle())
+            .onTapGesture { viewModel.requestTogglePin() }
+            .animation(.spring(response: 0.32, dampingFraction: 0.9), value: viewModel.appearance)
+            .animation(.easeOut(duration: 0.45), value: store.allRows)
     }
 
-    /// 卡片以完整尺寸布局；展开=遮罩从刘海高度长到全高，收起=窗口动画整体缩回刘海
+    /// 卡片可见区域 = 动画化圆角遮罩：hidden=刘海挖槽尺寸（黑区融合），expanded=全尺寸
     private var card: some View {
         ExpandedIslandView(store: store, openSettings: openSettings)
             .frame(width: 352, height: expandedHeight, alignment: .top)
-            .background {
+            .background(Color.black)
+            .mask {
                 UnevenRoundedRectangle(
                     topLeadingRadius: 0,
                     bottomLeadingRadius: 16,
@@ -36,14 +31,12 @@ struct IslandRootView: View {
                     topTrailingRadius: 0,
                     style: .continuous
                 )
-                .fill(Color.black)
+                .frame(width: maskSize.width, height: maskSize.height)
+                .frame(width: 352, height: expandedHeight, alignment: .top)
             }
-            .frame(height: viewModel.reveal ? expandedHeight : notchTriggerSize.height, alignment: .top)
-            .clipped()
-            .transition(.opacity)
     }
 
-    private var contentSize: CGSize {
+    private var maskSize: CGSize {
         switch viewModel.appearance {
         case .hidden:
             notchTriggerSize
@@ -52,7 +45,7 @@ struct IslandRootView: View {
         }
     }
 
-    /// 隐形触发区 = 刘海挖槽矩形
+    /// 隐藏态遮罩 = 刘海挖槽矩形
     private var notchTriggerSize: CGSize {
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
         return CGSize(width: 180, height: max(screen?.safeAreaInsets.top ?? 24, 24))
@@ -163,7 +156,7 @@ struct ProviderPanel: View {
         }
         .padding(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
         .frame(maxWidth: .infinity)
-        .frame(height: IslandRootView.panelHeight, alignment: .top)
+        .frame(height: 126, alignment: .top)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.white.opacity(0.04))
