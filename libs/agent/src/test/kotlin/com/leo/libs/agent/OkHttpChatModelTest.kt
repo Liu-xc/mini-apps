@@ -2,6 +2,10 @@ package com.leo.libs.agent
 
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -67,6 +71,34 @@ class OkHttpChatModelTest {
         assertTrue(body.contains("\"max_tokens\":32"))
         assertTrue(body.contains("\"role\":\"system\""))
         assertTrue(body.contains("\"content\":\"你是管家\""))
+    }
+
+    @Test
+    fun `tools 与 tool_calls 回喂强制携带 type=function`() = runBlocking {
+        // encodeDefaults=false 会把等默认值的 type 省略——GLM 严格校验必填（it-041 实测 1214）
+        server.enqueue(MockResponse().setBody(completionBody("ok")))
+        model.complete(
+            ChatRequest(
+                messages = listOf(
+                    Message.user("查"),
+                    Message.assistantToolCalls(listOf(ToolCall("c1", "search", """{"q":"x"}"""))),
+                    Message.toolResult("c1", "结果"),
+                ),
+                tools = listOf(
+                    ToolSpec("search", "搜索", Json.parseToJsonElement("""{"type":"object"}""")),
+                ),
+            ),
+        )
+        val body = server.takeRequest().body.readUtf8()
+        val json = Json.parseToJsonElement(body).jsonObject
+        val tool = json.getValue("tools").jsonArray[0].jsonObject
+        assertEquals("function", tool["type"]?.jsonPrimitive?.content)
+        assertTrue(tool.getValue("function").jsonObject.containsKey("parameters"))
+        val assistant = json.getValue("messages").jsonArray
+            .map { it.jsonObject }
+            .first { it["role"]?.jsonPrimitive?.content == "assistant" }
+        val call = assistant.getValue("tool_calls").jsonArray[0].jsonObject
+        assertEquals("function", call["type"]?.jsonPrimitive?.content)
     }
 
     @Test

@@ -8,6 +8,7 @@ import com.leo.libs.agent.Role
 import com.leo.libs.agent.ToolCall
 import com.leo.libs.agent.ToolSpec
 import com.leo.libs.agent.Usage
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -52,7 +53,9 @@ internal data class WireMessage(
 
 @Serializable
 internal data class WireTool(
-    val type: String = "function",
+    // encodeDefaults=false 会把等默认值的 type 省略，GLM 严格校验 tools[].type 必填
+    // （it-041 实测 1214 "type cannot be empty"）→ 强制编码
+    @EncodeDefault val type: String = "function",
     val function: WireFunctionDef,
 )
 
@@ -62,7 +65,8 @@ internal data class WireFunctionDef(val name: String, val description: String, v
 @Serializable
 internal data class WireToolCall(
     val id: String,
-    val type: String = "function",
+    // 回喂 assistant.tool_calls 历史同样要求 type 字段（同上）
+    @EncodeDefault val type: String = "function",
     val function: WireFunctionCall,
 )
 
