@@ -3,12 +3,13 @@ import Foundation
 /// 纯函数时间格式化（now 注入，便于固定时钟单测）
 enum ResetFormatter {
     /// 今天 → "19:00"；否则 → "9月28日"
-    static func shortReset(_ date: Date, now: Date = Date()) -> String {
+    static func shortReset(_ date: Date, now: Date = Date(), withTime: Bool = false) -> String {
         if Calendar.current.isDate(date, inSameDayAs: now) {
             return clockString(date)
         }
         let components = Calendar.current.dateComponents([.month, .day], from: date)
-        return "\(components.month ?? 0)月\(components.day ?? 0)日"
+        let day = "\(components.month ?? 0)月\(components.day ?? 0)日"
+        return withTime ? day + " " + clockString(date) : day
     }
 
     /// 48 小时内的倒计时（"2小时7分" / "42分"），否则 nil
@@ -28,6 +29,11 @@ enum ResetFormatter {
         if seconds < 3600 { return "\(seconds / 60)分钟前" }
         if seconds < 86400 { return "\(seconds / 3600)小时前" }
         return "\(seconds / 86400)天前"
+    }
+
+    /// 时刻 HH:mm（5 小时档滚动窗口重置用）
+    static func clock(_ date: Date) -> String {
+        clockString(date)
     }
 
     /// token 数 → billion 单位（5387634858 → "5.39B"）

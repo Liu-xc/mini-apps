@@ -120,7 +120,7 @@ struct DemoUsageProvider: UsageProviding {
             ]
         case .mimo:
             rows = [
-                QuotaRow(id: "mimo-plan_total_token", kind: .mimo, label: "MiMo TOKEN",
+                QuotaRow(id: "mimo-plan_total_token", kind: .mimo, label: "MiMo",
                          remainingPercent: 96, resetDate: nil, percentInferred: false),
             ]
         }

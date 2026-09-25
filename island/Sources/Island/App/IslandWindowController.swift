@@ -216,8 +216,7 @@ final class IslandWindowController: NSObject {
     private var expandedSize: CGSize {
         let screen = activeScreen
         let safeTop = max(screen.safeAreaInsets.top, 24)
-        let content: CGFloat = 18 + 8 + 80 + 10 + 14   // chips + 圆环簇(80) + 页脚
-        return CGSize(width: 352, height: safeTop + 6 + content + 14)
+        return CGSize(width: 352, height: safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14)
     }
 
     private func applyAppearance(_ appearance: IslandViewModel.Appearance) {
@@ -241,18 +240,24 @@ final class IslandWindowController: NSObject {
         }
     }
 
-    /// 收起：reveal 归零 = 卡片向上缩回刘海，动画结束后窗口瞬移回刘海挖槽矩形
+    /// 收起：窗口带着内容平滑缩回刘海矩形（顶边钉死，宽高一起收），全程无跳变；
+    /// 动画完成后再切换到隐藏态并同步模型帧
     private func collapseAnimated() {
-        guard !pinned else { return }
-        viewModel.reveal = false
+        guard !pinned, let panel else { return }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.34
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.3, 0.9, 0.3, 1.0)
+            panel.animator().setFrame(frame(for: .hidden), display: true)
+        }
         let snap = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned, self.viewModel.appearance == .expanded else { return }
                 self.viewModel.appearance = .hidden
+                self.viewModel.reveal = false
                 self.panel?.setFrame(self.frame(for: .hidden), display: false)
             }
         }
         pendingHover = snap
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.36, execute: snap)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.38, execute: snap)
     }
 }

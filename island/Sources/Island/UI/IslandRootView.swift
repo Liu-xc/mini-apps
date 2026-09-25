@@ -24,7 +24,7 @@ struct IslandRootView: View {
         .animation(.easeOut(duration: 0.45), value: store.allRows)
     }
 
-    /// 卡片以完整尺寸布局，可见区域由动画化圆角遮罩驱动：从刘海尺寸向下长到全高
+    /// 卡片以完整尺寸布局；展开=遮罩从刘海高度长到全高，收起=窗口动画整体缩回刘海
     private var card: some View {
         ExpandedIslandView(store: store, openSettings: openSettings)
             .frame(width: 352, height: expandedHeight, alignment: .top)
@@ -66,7 +66,7 @@ struct IslandRootView: View {
         return safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14
     }
 
-    static let panelHeight: CGFloat = 138
+    static let panelHeight: CGFloat = 126
 }
 
 // MARK: - 展开卡片：并排双源环形面板
@@ -138,7 +138,7 @@ struct ProviderPanel: View {
     let openSettings: () -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 6) {
             ActivityRingsView(rows: rows, centerTitle: kind.title)
                 .frame(width: 64, height: 64)
                 .padding(.top, 2)
@@ -161,7 +161,7 @@ struct ProviderPanel: View {
                 }
             }
         }
-        .padding(EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10))
+        .padding(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
         .frame(maxWidth: .infinity)
         .frame(height: IslandRootView.panelHeight, alignment: .top)
         .background(
@@ -234,35 +234,47 @@ struct RingStatRow: View {
     let row: QuotaRow
     let now: Date
 
+    /// 5 小时档的重置时刻只显示 HH:mm（跨天也不带日期，保证单行放下）
+    private var resetText: String? {
+        guard let reset = row.resetDate else { return nil }
+        return row.kind == .fiveHour
+            ? ResetFormatter.clock(reset)
+            : ResetFormatter.shortReset(reset, now: now)
+    }
+
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Circle()
                 .fill(IslandTheme.levelColor(row.remainingPercent))
-                .frame(width: 5, height: 5)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(row.label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
-                if let reset = row.resetDate {
-                    Text(ResetFormatter.shortReset(reset, now: now) + " 重置")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.white.opacity(0.38))
-                }
-                if let used = row.usedTokens, let limit = row.limitTokens, limit >= 1_000_000_000 {
-                    Text("已用 \(ResetFormatter.billion(used)) / \(ResetFormatter.billion(limit))")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.white.opacity(0.38))
-                }
-            }
+                .frame(width: 6, height: 6)
+            Text(row.label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.9))
             Spacer(minLength: 0)
+            if let reset = resetText {
+                Text(reset)
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+            if let used = row.usedTokens, let limit = row.limitTokens, limit >= 1_000_000_000 {
+                Text("\(ResetFormatter.billion(used))/\(ResetFormatter.billion(limit))")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.42))
+                    .padding(.trailing, resetText == nil ? 2 : 0)
+            }
+            if row.remainingPercent != nil, resetText != nil {
+                Text("·")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.25))
+            }
             if let remaining = row.remainingPercent {
                 // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
                 Text("\(Int(remaining))%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             } else {
                 Text("--%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.4))
             }
         }

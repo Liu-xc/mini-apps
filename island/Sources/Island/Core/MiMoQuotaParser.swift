@@ -51,7 +51,7 @@ enum MiMoQuotaParser {
 
     static func displayLabel(for name: String) -> String {
         switch name {
-        case "plan_total_token": "MiMo TOKEN"
+        case "plan_total_token": "MiMo"
         case "month_total_token": "MiMo 当月"
         case "compensation_total_token": "MiMo 补偿包"
         default: "MiMo"
