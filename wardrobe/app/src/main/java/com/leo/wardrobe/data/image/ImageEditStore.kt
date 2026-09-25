@@ -16,6 +16,9 @@ interface ImageEditStore {
     /** 读取存储位图（合成图/长图用；失败返回 null） */
     suspend fun decode(file: String): Bitmap?
 
+    /** it-040 US-40：当前图是否已带透明底（采样 alpha 检测启发式，供 W5 状态条文案） */
+    fun looksCutout(fileName: String): Boolean
+
     /** 合成图等导出临时文件目录（FileProvider export 路径） */
     fun exportDir(): File
 }

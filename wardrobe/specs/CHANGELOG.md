@@ -4,6 +4,12 @@
 
 ## 未发布
 
+### it-040 — 已录入衣物补抠（W5 状态条）
+- W5 大图下新增去背景状态条：原图态「去背景」/ 已抠态「重新抠图」（alpha 采样检测，无状态字段），推理中进度态，候选预览期棋盘格 + 还原/保留。
+- 补抠走「候选新图」模式（ADR-023）：推理产独立新文件、当前图全程不动，保留才换图删旧、还原即弃候选；跨会话不可撤销如实呈现。
+- 阶段 A spike 放行：WebP q82 往返透明区 RGB 零清黑、alpha 代际 IoU=1.0、u2netp 二次分割 IoU ≥0.945（[报告](../../reports/2026-09-25-cutout-recut-spike/)）。
+- 详情见 [it-040](iterations/it-040-backfill-cutout.md)；specs/01（US-40 + US-15 AC 修订）/02/06（ADR-023）同步更新。
+
 ### it-041 — AI 模型接入（阶段 A：设置页与连通性自检）
 - 新增 W11 设置页（W3 标题行 ⚙ 入口）：厂商（智谱 GLM / MiMo 按量 / Token 套餐 / 自定义）与模型档选择、API Key Keystore AES-GCM 密文存取（界面只显 mask）、「保存并自检」1-token ping 按错误分类呈现，自检成功给确认触感；清除 Key 二次确认。
 - 接入 libs/agent SDK（includeBuild + `libs.leo.agent`），Manifest 新增 INTERNET 权限（唯一用途 BYOK 模型直连，ADR-024）；演示模式禁用 Key 输入并永不挂真 Key。

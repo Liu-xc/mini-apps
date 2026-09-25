@@ -83,6 +83,27 @@ class ImageFileStore(
         runCatching { BitmapFactory.decodeFile(media.file(file)?.absolutePath) }.getOrNull()
     }
 
+    /**
+     * it-040 US-40：透明底检测——采样到 ≤128px 后统计 alpha<255 像素占比 ≥ 5% 即判已抠。
+     * 原图（JPEG/WebP 无 alpha 或全不透明）占比为 0；抗锯齿边缘远低于阈值。
+     */
+    override fun looksCutout(fileName: String): Boolean = runCatching {
+        val path = media.file(fileName)?.absolutePath ?: return@runCatching false
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching false
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > DETECT_MAX_SIDE) sample *= 2
+        val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+        val bmp = BitmapFactory.decodeFile(path, opts) ?: return@runCatching false
+        val pixels = IntArray(bmp.width * bmp.height)
+        bmp.getPixels(pixels, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+        bmp.recycle()
+        var clear = 0
+        for (p in pixels) if ((p ushr 24) < 255) clear++
+        clear.toFloat() / pixels.size >= CUTOUT_ALPHA_RATIO
+    }.getOrDefault(false)
+
     /** it-024 数据包导入：包内图片字节 → 解码/缩放/WebP 压缩 → 以新 uuid.webp 落盘；不可解码返回 null */
     suspend fun putPackageImage(bytes: ByteArray): String? = withContext(Dispatchers.IO) {
         runCatching {
@@ -171,5 +192,9 @@ class ImageFileStore(
         const val MAX_SIDE = 1440
         const val QUALITY = 82
         private const val TAG = "Wardrobe"
+
+        /** it-040：透明底检测的采样上限与 alpha 占比阈值 */
+        private const val DETECT_MAX_SIDE = 128
+        private const val CUTOUT_ALPHA_RATIO = 0.05f
     }
 }

@@ -205,6 +205,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         launchSafely(quiet = true) { container.imageStore.delete(name) }
     }
 
+    /** it-040 US-40：透明底检测（W5 状态条文案；≤128px 采样，同步开销可忽略） */
+    fun looksCutoutPhoto(name: String): Boolean = container.imageEditStore.looksCutout(name)
+
+    /**
+     * it-040 US-40b：补抠候选图落定——item.imageFile 换新、删旧图。
+     * 候选图在预览期独立存在，还原=直接弃候选（当前图全程未动，会话内天然可反悔）；
+     * 落定后跨会话不可撤销（ADR-023）。失败 toast 并回调 false。
+     */
+    fun applyPhotoRecut(itemId: String, newFile: String, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val item = data.value.itemById(itemId)
+                if (item == null) { onDone(false); return@launch }
+                if (item.imageFile == newFile) { onDone(true); return@launch }
+                repo.upsertItem(item.copy(imageFile = newFile, updatedAt = System.currentTimeMillis()))
+                container.imageStore.delete(item.imageFile)
+                toast("已更新「${item.name}」的背景")
+                onDone(true)
+            } catch (t: Throwable) {
+                android.util.Log.e("Wardrobe", "applyPhotoRecut failed", t)
+                toast("保存失败：${t.message ?: t.javaClass.simpleName}")
+                onDone(false)
+            }
+        }
+    }
+
     /** photoFile 为已落盘的图片文件名（选择时即导入）；编辑时为 null 表示沿用旧照片 */
     fun saveItem(existing: Item?, photoFile: String?, name: String, category: WardrobeCategory,
                  color: String, desc: String, tags: List<String>, onDone: (Boolean) -> Unit) {
