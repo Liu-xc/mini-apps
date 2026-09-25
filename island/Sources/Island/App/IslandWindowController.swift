@@ -76,9 +76,9 @@ final class IslandWindowController: NSObject {
         panel.orderFrontRegardless()
         applyAppearance(.hidden)
 
-        // 首次未配置 Key：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
+        // 首次未配置任何凭证：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
         if ProcessInfo.processInfo.environment["GLM_ISLAND_EXPAND"] == "1"
-            || (!store.isConfigured(.glm) && store.displaySnapshot == nil) {
+            || (store.credentialKinds.isEmpty && store.allRows.isEmpty) {
             expand(pinned: true)
         }
 

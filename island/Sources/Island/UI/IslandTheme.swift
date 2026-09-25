@@ -1,19 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// 与控制台行同色系：蓝 / 绿 / 橙。恒定身份色，不做预警变色（Leo：只展示剩余量）
-enum IslandTheme {
-    static func identityColor(_ kind: RowKind) -> Color {
-        switch kind {
-        case .fiveHour: Color(red: 0x3B / 255, green: 0x82 / 255, blue: 0xF6 / 255)
-        case .weekly: Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255)
-        case .zcodeMcp: Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255)
-        case .mimo: Color(red: 0xFF / 255, green: 0x69 / 255, blue: 0x00 / 255)
-        case .other: Color(red: 0x94 / 255, green: 0xA3 / 255, blue: 0xB8 / 255)
-        }
-    }
-}
-
 /// 胶囊两态由窗口控制器驱动；点击「固定展开」的回调也由它转发
 @MainActor
 final class IslandViewModel: ObservableObject {

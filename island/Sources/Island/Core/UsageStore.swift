@@ -9,16 +9,9 @@ final class UsageStore: ObservableObject {
         case failed(String)
     }
 
-    /// 每个内容源一份快照；展示与刷新都跟随 activeKind
+    /// 每个内容源一份快照；卡片同屏展示所有已配置源
     @Published private(set) var snapshots: [ProviderKind: UsageSnapshot] = [:]
-    @Published var activeKind: ProviderKind {
-        didSet {
-            UserDefaults.standard.set(activeKind.rawValue, forKey: "activeProvider")
-            hasCredential = credentialKinds.contains(activeKind)
-        }
-    }
     @Published private(set) var status: Status = .idle
-    @Published private(set) var hasCredential: Bool = false
     /// 各源是否已配置凭证
     @Published private(set) var credentialKinds: Set<ProviderKind> = []
 
@@ -29,7 +22,6 @@ final class UsageStore: ObservableObject {
 
     init(settings: AppSettings) {
         self.settings = settings
-        self.activeKind = ProviderKind(rawValue: UserDefaults.standard.string(forKey: "activeProvider") ?? "") ?? .glm
         var caches: [ProviderKind: SnapshotCache] = [:]
         for kind in ProviderKind.allCases {
             caches[kind] = SnapshotCache(kind: kind)
@@ -42,11 +34,20 @@ final class UsageStore: ObservableObject {
         for kind in ProviderKind.allCases {
             snapshots[kind] = try? caches[kind]?.load()
         }
-        hasCredential = credentialKinds.contains(activeKind)
     }
 
-    var displaySnapshot: UsageSnapshot? {
-        snapshots[activeKind]
+    /// 同屏展示的全部明细行（GLM 两档 + MiMo 一档…按源顺序拼接）
+    var allRows: [QuotaRow] {
+        ProviderKind.allCases.flatMap { snapshots[$0]?.displayRows ?? [] }
+    }
+
+    var lastFetchedAt: Date? {
+        snapshots.values.map(\.fetchedAt).max()
+    }
+
+    /// 最近一次拉取的快照（诊断展示用）
+    var lastFetchedSnapshot: UsageSnapshot? {
+        snapshots.values.max { $0.fetchedAt < $1.fetchedAt }
     }
 
     var isDemoActive: Bool { settings.demoMode }
@@ -56,47 +57,52 @@ final class UsageStore: ObservableObject {
     }
 
     func start() async {
-        await refreshNow()
+        await refreshAll()
         scheduleNextRefresh()
     }
 
-    /// 切换内容源：立即呈现该源缓存并后台刷新
-    func switchProvider(_ kind: ProviderKind) {
-        guard kind != activeKind else { return }
-        activeKind = kind
-        status = snapshots[kind] != nil ? .loaded : .idle
-        Task { await refreshNow() }
-    }
-
-    /// 手动/定时刷新（当前激活源）。失败退避：连续失败按 2^n 拉长间隔，封顶 8 倍基准
-    func refreshNow() async {
-        let kind = activeKind
+    /// 刷新全部已配置源。失败退避：连续全失败按 2^n 拉长间隔，封顶 8 倍基准
+    func refreshAll() async {
+        let kinds = settings.demoMode ? Set(ProviderKind.allCases) : credentialKinds
+        guard !kinds.isEmpty else {
+            status = .failed("尚未配置任何内容源凭证")
+            return
+        }
         status = .loading
-        do {
-            let snap: UsageSnapshot
-            if settings.demoMode {
-                snap = try await DemoUsageProvider(kind: kind).fetchSnapshot()
-            } else {
-                let mode = settings.endpointMode
-                let preferred = UserDefaults.standard.string(forKey: "preferredEndpoint")
-                    .flatMap(EndpointMode.init(rawValue:))
-                snap = try await ProviderUsageFetcher(
-                    kind: kind,
-                    glmEndpointMode: mode,
-                    glmPreferredEndpoint: preferred
-                ).fetchSnapshot()
-                if kind == .glm, mode == .auto {
-                    let winner = EndpointMode.mode(forHost: snap.endpointHost)
-                    UserDefaults.standard.set(winner.rawValue, forKey: "preferredEndpoint")
+        var anyOK = false
+        var lastError: String?
+        for kind in kinds {
+            do {
+                let snap: UsageSnapshot
+                if settings.demoMode {
+                    snap = try await DemoUsageProvider(kind: kind).fetchSnapshot()
+                } else {
+                    let mode = settings.endpointMode
+                    let preferred = UserDefaults.standard.string(forKey: "preferredEndpoint")
+                        .flatMap(EndpointMode.init(rawValue:))
+                    snap = try await ProviderUsageFetcher(
+                        kind: kind,
+                        glmEndpointMode: mode,
+                        glmPreferredEndpoint: preferred
+                    ).fetchSnapshot()
+                    if kind == .glm, mode == .auto {
+                        let winner = EndpointMode.mode(forHost: snap.endpointHost)
+                        UserDefaults.standard.set(winner.rawValue, forKey: "preferredEndpoint")
+                    }
                 }
+                snapshots[kind] = snap
+                try? caches[kind]?.save(snap)
+                anyOK = true
+            } catch {
+                lastError = error.localizedDescription
             }
-            snapshots[kind] = snap
+        }
+        if anyOK {
             status = .loaded
             consecutiveFailures = 0
-            try? caches[kind]?.save(snap)
-        } catch {
+        } else {
             consecutiveFailures += 1
-            status = .failed(error.localizedDescription)
+            status = .failed(lastError ?? "刷新失败")
         }
     }
 
@@ -114,17 +120,19 @@ final class UsageStore: ObservableObject {
 
     func clearGLMKey() {
         KeychainStore.delete(account: KeychainAccount.glm)
-        clearCredential(kind: .glm)
+        credentialKinds.remove(.glm)
+        snapshots[.glm] = nil
     }
 
     func clearMimoCookie() {
         KeychainStore.delete(account: KeychainAccount.mimoCookie)
-        clearCredential(kind: .mimo)
+        credentialKinds.remove(.mimo)
+        snapshots[.mimo] = nil
     }
 
     func setDemoMode(_ enabled: Bool) {
         settings.demoMode = enabled
-        Task { await refreshNow() }
+        Task { await refreshAll() }
     }
 
     private func saveSecret(_ secret: String, kind: ProviderKind, account: String) {
@@ -137,17 +145,10 @@ final class UsageStore: ObservableObject {
             return
         }
         credentialKinds.insert(kind)
-        hasCredential = credentialKinds.contains(activeKind)
         if settings.demoMode {
             setDemoMode(false)
         }
-        Task { await refreshNow() }
-    }
-
-    private func clearCredential(kind: ProviderKind) {
-        credentialKinds.remove(kind)
-        hasCredential = credentialKinds.contains(activeKind)
-        status = .idle
+        Task { await refreshAll() }
     }
 
     // MARK: - 环境注入（调试/首装）
@@ -182,7 +183,7 @@ final class UsageStore: ObservableObject {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: base * backoff, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                await self.refreshNow()
+                await self.refreshAll()
                 self.scheduleNextRefresh()
             }
         }

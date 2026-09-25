@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 /// 灵岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
-/// hover/点击后从刘海向下延伸出内容卡片（内容源 chips + Apple 健康式同心环 + 明细）
+/// hover/点击后从刘海向下延伸出内容卡片（Apple 健康式三环 + 全部内容源明细）
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
@@ -21,8 +21,7 @@ struct IslandRootView: View {
         .contentShape(Rectangle())
         .onTapGesture { viewModel.requestTogglePin() }
         .animation(.spring(response: 0.32, dampingFraction: 0.9), value: viewModel.reveal)
-        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: store.activeKind)
-        .animation(.easeOut(duration: 0.45), value: store.displaySnapshot)
+        .animation(.easeOut(duration: 0.45), value: store.allRows)
     }
 
     /// 卡片以完整尺寸布局，可见区域由动画化圆角遮罩驱动：从刘海尺寸向下长到全高
@@ -60,15 +59,17 @@ struct IslandRootView: View {
     }
 
     /// 与 IslandWindowController.expandedSize 保持同一公式：
-    /// topInset + chips + 圆环簇 + 页脚（圆环簇定高 80）
+    /// topInset + 圆环簇(80) 与 图例块 取高者 + 页脚
     private var expandedHeight: CGFloat {
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
         let safeTop = max(screen?.safeAreaInsets.top ?? 24, 24)
-        return safeTop + 6 + 18 + 8 + 80 + 10 + 14 + 14
+        let n = CGFloat(max(1, store.allRows.count))
+        let legendBlock = n * 30 + max(0, n - 1) * 10
+        return safeTop + 6 + max(80, legendBlock) + 10 + 14 + 14
     }
 }
 
-// MARK: - 展开卡片：内容源 chips + 同心环 + 明细（颜色=档位身份色，环填充=剩余量）
+// MARK: - 展开卡片：Apple 健康式三环 + 全部内容源明细
 
 struct ExpandedIslandView: View {
     @ObservedObject var store: UsageStore
@@ -82,19 +83,18 @@ struct ExpandedIslandView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            providerChips
-            if let rows = displayRows, !rows.isEmpty {
-                HStack(spacing: 16) {
-                    ActivityRingsView(rows: rows, centerTitle: store.activeKind.title)
+            if store.allRows.isEmpty {
+                emptyState
+            } else {
+                HStack(alignment: .center, spacing: 16) {
+                    ActivityRingsView(rows: store.allRows)
                         .frame(width: 80, height: 80)
-                    VStack(spacing: 12) {
-                        ForEach(rows) { row in
+                    VStack(spacing: 10) {
+                        ForEach(store.allRows) { row in
                             RingStatRow(row: row, now: Date())
                         }
                     }
                 }
-            } else {
-                emptyState
             }
             HStack(spacing: 8) {
                 Text(statusText)
@@ -102,7 +102,7 @@ struct ExpandedIslandView: View {
                     .foregroundStyle(.white.opacity(0.45))
                 Spacer()
                 QuotaIconButton(systemName: "arrow.clockwise", spinning: store.status == .loading) {
-                    Task { await store.refreshNow() }
+                    Task { await store.refreshAll() }
                 }
                 QuotaIconButton(systemName: "gearshape") {
                     openSettings()
@@ -112,35 +112,6 @@ struct ExpandedIslandView: View {
         .padding(EdgeInsets(top: topInset, leading: 16, bottom: 14, trailing: 16))
     }
 
-    private var providerChips: some View {
-        HStack(spacing: 6) {
-            ForEach(ProviderKind.allCases) { kind in
-                let active = store.activeKind == kind
-                Button {
-                    store.switchProvider(kind)
-                } label: {
-                    Text(kind.title)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(active ? Color.white.opacity(0.95) : Color.white.opacity(0.45))
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 3)
-                        .background(
-                            Capsule().fill(Color.white.opacity(active ? 0.16 : 0.05))
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-            Spacer()
-        }
-    }
-
-    /// 最多展示 3 个环
-    private var displayRows: [QuotaRow]? {
-        let rows = store.displaySnapshot?.displayRows
-        guard rows?.isEmpty == false else { return nil }
-        return Array(rows!.prefix(3))
-    }
-
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 8) {
@@ -148,8 +119,8 @@ struct ExpandedIslandView: View {
                 ProgressView()
                     .controlSize(.small)
             }
-            if !store.isConfigured(store.activeKind) {
-                Text(store.activeKind == .glm ? "尚未配置 GLM API Key" : "尚未配置 MiMo Cookie")
+            if store.credentialKinds.isEmpty {
+                Text("尚未配置内容源凭证")
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.8))
                 Button("去设置") { openSettings() }
@@ -178,8 +149,8 @@ struct ExpandedIslandView: View {
         case .loading:
             return prefix + "刷新中…"
         case .loaded:
-            if let snapshot = store.displaySnapshot {
-                return prefix + ResetFormatter.relativeAge(snapshot.fetchedAt, now: Date()) + "已刷新"
+            if let fetchedAt = store.lastFetchedAt {
+                return prefix + ResetFormatter.relativeAge(fetchedAt, now: Date()) + "已刷新"
             }
             return prefix + "已加载"
         case .failed(let message):
@@ -188,11 +159,25 @@ struct ExpandedIslandView: View {
     }
 }
 
-// MARK: - Apple 健康式同心环（外环=第一档，填充比例=剩余量）
+// MARK: - 颜色语义：颜色=健康度（剩余 ≥50% 绿 / 20–50% 橙 / <20% 红）
+
+enum IslandTheme {
+    static func levelColor(_ remaining: Double?) -> Color {
+        guard let remaining else { return .white.opacity(0.25) }
+        if remaining >= 50 {
+            return Color(red: 48 / 255, green: 209 / 255, blue: 88 / 255)      // #30D158
+        }
+        if remaining >= 20 {
+            return Color(red: 255 / 255, green: 159 / 255, blue: 10 / 255)     // #FF9F0A
+        }
+        return Color(red: 255 / 255, green: 69 / 255, blue: 58 / 255)          // #FF453A
+    }
+}
+
+// MARK: - Apple 健康式同心环（外环=5 小时，中环=每周，内环=MiMo；填充=剩余量）
 
 struct ActivityRingsView: View {
     let rows: [QuotaRow]
-    var centerTitle: String = ""
 
     private var ringWidth: CGFloat { rows.count >= 3 ? 8 : 10 }
     private var gap: CGFloat { 4 }
@@ -203,10 +188,10 @@ struct ActivityRingsView: View {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 let diameter = clusterSize - ringWidth
                     - CGFloat(index) * 2 * (ringWidth + gap)
-                let fill = min(1, max(0.005, (row.remainingPercent ?? 0) / 100))
-                let color = IslandTheme.identityColor(row.kind)
+                let fill = min(1, max(0.008, (row.remainingPercent ?? 0) / 100))
+                let color = IslandTheme.levelColor(row.remainingPercent)
                 Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: ringWidth)
+                    .stroke(Color.white.opacity(0.10), lineWidth: ringWidth)
                     .frame(width: diameter, height: diameter)
                 Circle()
                     .trim(from: 0, to: fill)
@@ -221,50 +206,43 @@ struct ActivityRingsView: View {
                     )
                     .rotationEffect(.degrees(-90))
                     .frame(width: diameter, height: diameter)
+                    .shadow(color: color.opacity(0.35), radius: 3)
                     .animation(.easeOut(duration: 0.6), value: fill)
-            }
-            if !centerTitle.isEmpty {
-                Text(centerTitle)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.55))
             }
         }
         .frame(width: clusterSize, height: clusterSize)
     }
 }
 
-/// 环对应的图例行：色点 + 标签 + 重置时间 · 百分比
+/// 环对应的图例行：色点 + 标签/重置 + 百分比（色点与所在环同色）
 struct RingStatRow: View {
     let row: QuotaRow
     let now: Date
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Circle()
-                .fill(IslandTheme.identityColor(row.kind))
-                .frame(width: 6, height: 6)
-            Text(row.label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.85))
+                .fill(IslandTheme.levelColor(row.remainingPercent))
+                .frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.9))
+                if let reset = row.resetDate {
+                    Text(ResetFormatter.shortReset(reset, now: now) + " 重置")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
             Spacer(minLength: 0)
-            if let reset = row.resetDate {
-                Text(ResetFormatter.shortReset(reset, now: now))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.5))
-            }
-            if row.resetDate != nil, row.remainingPercent != nil {
-                Text("·")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.3))
-            }
             if let remaining = row.remainingPercent {
                 // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
                 Text("\(Int(remaining))%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             } else {
                 Text("--%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.4))
             }
         }
