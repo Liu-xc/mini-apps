@@ -240,15 +240,11 @@ final class IslandWindowController: NSObject {
         }
     }
 
-    /// 收起：窗口带着内容平滑缩回刘海矩形（顶边钉死，宽高一起收），全程无跳变；
-    /// 动画完成后再切换到隐藏态并同步模型帧
+    /// 收起：窗口全程不动（保持全尺寸），遮罩宽高一起对称缩回刘海；
+    /// 遮罩终态 = 刘海挖槽矩形（黑区融合，不可见），此刻再切隐藏态并归位窗口——零跳变
     private func collapseAnimated() {
-        guard !pinned, let panel else { return }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.34
-            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.3, 0.9, 0.3, 1.0)
-            panel.animator().setFrame(frame(for: .hidden), display: true)
-        }
+        guard !pinned else { return }
+        viewModel.reveal = false
         let snap = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned, self.viewModel.appearance == .expanded else { return }
@@ -258,6 +254,6 @@ final class IslandWindowController: NSObject {
             }
         }
         pendingHover = snap
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.38, execute: snap)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: snap)
     }
 }
