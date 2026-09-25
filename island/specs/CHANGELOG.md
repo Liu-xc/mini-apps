@@ -4,6 +4,15 @@
 
 ## 未发布
 
+### it-002 — 多内容源架构 + 小米 MiMo TOKEN Plan 接入
+- **多内容源**：`ProviderKind`（glm/mimo）+ 按源分发拉取、按源独立快照缓存与钥匙串账户
+  （glm-key/mimo-cookie，旧 api-key 自动迁移）；卡片顶部内容源切换 chips + 菜单栏「内容源」单选；
+  切换即时呈现该源缓存并后台刷新（ADR-008 落地第一步）。
+- **MiMo 接入**：`GET platform.xiaomimimo.com/api/v1/tokenPlan/usage`（仅浏览器 Cookie 认证，
+  tp- key 不被接受）；percent 为小数比例，剩余=(1−percent)×100，limit=0 条目跳过，无重置时间；
+  Cookie 过期页脚明示「请在设置更新」。设置页新增 MiMo Cookie 区。
+- 行高公式含 chips 行；identityColor 增加 MiMo 橙；swift-testing 17/17。
+
 ### it-001 — 灵岛（island）：刘海功能入口 + GLM Coding Plan TOKEN 监控 MVP
 - **更名与定位（Leo 反馈）**：「GLM 灵动岛」→**「灵岛 / island」**：定位为通用刘海功能入口容器，
   GLM TOKEN 只是首个内容源，未来扩展其它厂商与能力（ADR-008）；目录/BundleID/钥匙串 service 一并迁移。

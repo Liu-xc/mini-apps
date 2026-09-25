@@ -20,7 +20,11 @@ Provider      Provider     (磁盘快照)      (Security)      (UserDefaults)
 ```
 
 - UI 层（SwiftUI）只读 `UsageStore` @Published 状态；动作经闭包回控制器。
-- Provider 是值类型 struct，`UsageProviding` 协议隔离；演示/真实按 `AppSettings.demoMode` 切换。
+- Provider（ADR-008）：`ProviderKind`（glm/mimo）→ `ProviderUsageFetcher` 按源分发
+  （GLM=MonitorUsageProvider；MiMo=Cookie 请求 + MiMoQuotaParser）；
+  快照按源独立缓存（snapshot-<kind>.json），`UsageStore.activeKind` 决定展示与刷新目标；
+  新增厂商 = 新 RowKind/解析器 + fetcher 分支（it-002 起按 provider registry 演进）。
+- 演示/真实按 `AppSettings.demoMode` 切换。
 - 解析器是纯静态函数（Data in / Snapshot out），now 注入可测。
 
 ## 并发模型

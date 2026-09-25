@@ -27,6 +27,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(summaryItem())
         menu.addItem(.separator())
 
+        let sourceTitle = NSMenuItem(title: "内容源", action: nil, keyEquivalent: "")
+        sourceTitle.isEnabled = false
+        menu.addItem(sourceTitle)
+        for kind in ProviderKind.allCases {
+            let item = selfmenuItem(kind.title, action: #selector(providerTapped(_:)))
+            item.state = store.activeKind == kind ? .on : .off
+            item.indentationLevel = 1
+            item.representedObject = kind
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+
         menu.addItem(selfmenuItem("立即刷新", action: #selector(refreshTapped)))
         let demo = selfmenuItem("演示模式", action: #selector(demoTapped))
         demo.state = store.isDemoActive ? .on : .off
@@ -48,7 +60,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private func summaryItem() -> NSMenuItem {
         let title: String
-        if let snapshot = store.snapshot, !snapshot.rows.isEmpty {
+        if let snapshot = store.displaySnapshot, !snapshot.rows.isEmpty {
             title = snapshot.rows.map { row in
                 let value = row.remainingPercent.map { "\(Int($0))%" } ?? "--%"
                 return "\(row.label) \(value)"
@@ -68,6 +80,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func demoTapped() {
         store.setDemoMode(!store.isDemoActive)
+    }
+
+    @objc private func providerTapped(_ sender: NSMenuItem) {
+        guard let kind = sender.representedObject as? ProviderKind else { return }
+        store.switchProvider(kind)
     }
 
     @objc private func settingsTapped() {

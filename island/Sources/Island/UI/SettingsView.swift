@@ -5,7 +5,8 @@ struct SettingsView: View {
     @ObservedObject var store: UsageStore
     let onClose: () -> Void
 
-    @State private var apiKeyInput = ""
+    @State private var glmKeyInput = ""
+    @State private var mimoCookieInput = ""
     @State private var autoLaunch = AutoLauncher.isEnabled
     @State private var launchError: String?
 
@@ -13,31 +14,57 @@ struct SettingsView: View {
         Form {
             Section("GLM Coding Plan") {
                 HStack(spacing: 8) {
-                    SecureField("API Key", text: $apiKeyInput)
+                    SecureField("API Key", text: $glmKeyInput)
                         .textFieldStyle(.roundedBorder)
                     Button("保存") {
-                        store.saveAPIKey(apiKeyInput)
-                        apiKeyInput = ""
+                        store.saveGLMKey(glmKeyInput)
+                        glmKeyInput = ""
                     }
-                    .disabled(apiKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(glmKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-                if store.hasCredential {
+                if store.credentialKinds.contains(.glm) {
                     HStack {
                         Label("Key 已存入本机钥匙串", systemImage: "checkmark.seal.fill")
                             .font(.callout)
                             .foregroundStyle(.green)
                         Spacer()
                         Button("清除", role: .destructive) {
-                            store.clearAPIKey()
+                            store.clearGLMKey()
                         }
                     }
                 }
-                Text("官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；Key 只存本机钥匙串，不写入任何文件或日志。")
+                Text("官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；Key 只存本机钥匙串。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("端点") {
+            Section("小米 MiMo TOKEN Plan") {
+                HStack(spacing: 8) {
+                    SecureField("Cookie 字符串", text: $mimoCookieInput)
+                        .textFieldStyle(.roundedBorder)
+                    Button("保存") {
+                        store.saveMimoCookie(mimoCookieInput)
+                        mimoCookieInput = ""
+                    }
+                    .disabled(mimoCookieInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                if store.credentialKinds.contains(.mimo) {
+                    HStack {
+                        Label("Cookie 已存入本机钥匙串", systemImage: "checkmark.seal.fill")
+                            .font(.callout)
+                            .foregroundStyle(.green)
+                        Spacer()
+                        Button("清除", role: .destructive) {
+                            store.clearMimoCookie()
+                        }
+                    }
+                }
+                Text("该接口只认浏览器登录态：登录 platform.xiaomimimo.com 控制台后，从网络请求复制整段 Cookie 粘贴到这里；Cookie 过期时更新一次即可。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("端点（GLM）") {
                 Picker("平台", selection: $settings.endpointMode) {
                     ForEach(EndpointMode.allCases) { mode in
                         Text(mode.title).tag(mode)
@@ -75,9 +102,9 @@ struct SettingsView: View {
             }
 
             Section("诊断") {
-                DisclosureGroup("最近一次原始响应（spike 校准用）") {
+                DisclosureGroup("当前内容源最近一次原始响应") {
                     ScrollView {
-                        Text(store.snapshot?.debugRawJSON ?? "暂无 —— 保存 Key 后自动刷新一次即可")
+                        Text(store.displaySnapshot?.debugRawJSON ?? "暂无 —— 配置凭证后自动刷新一次即可")
                             .font(.system(size: 9, design: .monospaced))
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .textSelection(.enabled)
@@ -85,7 +112,7 @@ struct SettingsView: View {
                     .frame(maxHeight: 150)
                     HStack {
                         Button("拷贝响应") {
-                            if let raw = store.snapshot?.debugRawJSON {
+                            if let raw = store.displaySnapshot?.debugRawJSON {
                                 NSPasteboard.general.clearContents()
                                 NSPasteboard.general.setString(raw, forType: .string)
                             }
@@ -97,7 +124,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 560)
+        .frame(width: 460, height: 620)
         .onChange(of: settings.refreshMinutes) { _, _ in
             store.reschedule()
         }

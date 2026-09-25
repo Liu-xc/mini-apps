@@ -98,6 +98,7 @@ enum QuotaResponseParser {
         case .fiveHour: "5 小时"
         case .weekly: "每周"
         case .zcodeMcp: "ZCode MCP"
+        case .mimo: "MiMo"
         case .other: raw ?? "配额"
         }
     }

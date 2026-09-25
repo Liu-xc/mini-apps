@@ -1,8 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// 灵动岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
-/// hover/点击后从刘海向下延伸出明细卡片（顶边钉死，只向下生长）
+/// 灵岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
+/// hover/点击后从刘海向下延伸出内容卡片（当前内容源 + 明细）
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
@@ -21,16 +21,15 @@ struct IslandRootView: View {
         .contentShape(Rectangle())
         .onTapGesture { viewModel.requestTogglePin() }
         .animation(.spring(response: 0.32, dampingFraction: 0.9), value: viewModel.reveal)
-        .animation(.easeOut(duration: 0.45), value: store.snapshot)
+        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: store.activeKind)
+        .animation(.easeOut(duration: 0.45), value: store.displaySnapshot)
     }
 
-    /// 卡片以完整尺寸布局，可见区域由动画化圆角遮罩驱动：展开 = 从刘海尺寸(180×safeTop)
-    /// 长到全尺寸，收起 = 宽高一起对称缩回刘海（顶边钉死，左右向中心收拢、底边向上）
+    /// 卡片以完整尺寸布局，可见区域由动画化圆角遮罩驱动：从刘海尺寸向下长到全高
     private var card: some View {
         ExpandedIslandView(store: store, openSettings: openSettings)
             .frame(width: 352, height: expandedHeight, alignment: .top)
-            .background(Color.black)
-            .mask {
+            .background {
                 UnevenRoundedRectangle(
                     topLeadingRadius: 0,
                     bottomLeadingRadius: 16,
@@ -38,17 +37,11 @@ struct IslandRootView: View {
                     topTrailingRadius: 0,
                     style: .continuous
                 )
-                .frame(width: revealSize.width, height: revealSize.height)
-                .frame(maxWidth: 352, maxHeight: expandedHeight, alignment: .top)
+                .fill(Color.black)
             }
+            .frame(height: viewModel.reveal ? expandedHeight : notchTriggerSize.height, alignment: .top)
+            .clipped()
             .transition(.opacity)
-    }
-
-    /// reveal=false → 刘海挖槽尺寸；true → 卡片全尺寸
-    private var revealSize: CGSize {
-        viewModel.reveal
-            ? CGSize(width: 352, height: expandedHeight)
-            : CGSize(width: 180, height: notchTriggerSize.height)
     }
 
     private var contentSize: CGSize {
@@ -70,13 +63,13 @@ struct IslandRootView: View {
     private var expandedHeight: CGFloat {
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
         let safeTop = max(screen?.safeAreaInsets.top ?? 24, 24)
-        let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
-        let content: CGFloat = n * 24 + (n - 1) * 10 + 10 + 14
+        let n = CGFloat(max(1, store.displaySnapshot?.displayRows.count ?? 1))
+        let content: CGFloat = 18 + 8 + n * 24 + max(0, n - 1) * 10 + 10 + 14
         return safeTop + 6 + content + 14
     }
 }
 
-// MARK: - 展开卡片：极简两行明细（颜色只保留在进度条上）
+// MARK: - 展开卡片：内容源切换 chips + 极简明细（颜色只保留在进度条上）
 
 struct ExpandedIslandView: View {
     @ObservedObject var store: UsageStore
@@ -90,8 +83,15 @@ struct ExpandedIslandView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            ForEach(store.snapshot?.displayRows ?? []) { row in
-                SimpleQuotaRow(row: row, now: Date())
+            providerChips
+            if let snapshot = store.displaySnapshot, !snapshot.displayRows.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach(snapshot.displayRows) { row in
+                        SimpleQuotaRow(row: row, now: Date())
+                    }
+                }
+            } else {
+                emptyState
             }
             HStack(spacing: 8) {
                 Text(statusText)
@@ -109,6 +109,57 @@ struct ExpandedIslandView: View {
         .padding(EdgeInsets(top: topInset, leading: 16, bottom: 14, trailing: 16))
     }
 
+    private var providerChips: some View {
+        HStack(spacing: 6) {
+            ForEach(ProviderKind.allCases) { kind in
+                let active = store.activeKind == kind
+                Button {
+                    store.switchProvider(kind)
+                } label: {
+                    Text(kind.title)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(active ? Color.white.opacity(0.95) : Color.white.opacity(0.45))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule().fill(Color.white.opacity(active ? 0.16 : 0.05))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            if store.status == .loading {
+                ProgressView()
+                    .controlSize(.small)
+            }
+            if !store.isConfigured(store.activeKind) {
+                Text(store.activeKind == .glm ? "尚未配置 GLM API Key" : "尚未配置 MiMo Cookie")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.8))
+                Button("去设置") { openSettings() }
+                    .controlSize(.small)
+                    .buttonStyle(.borderedProminent)
+            } else if case .failed(let message) = store.status {
+                Text("获取失败：\(message)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color(red: 0xFB / 255, green: 0x92 / 255, blue: 0x3C / 255))
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("正在获取套餐用量…")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+    }
+
     private var statusText: String {
         let prefix = store.isDemoActive ? "演示 · " : ""
         switch store.status {
@@ -117,7 +168,7 @@ struct ExpandedIslandView: View {
         case .loading:
             return prefix + "刷新中…"
         case .loaded:
-            if let snapshot = store.snapshot {
+            if let snapshot = store.displaySnapshot {
                 return prefix + ResetFormatter.relativeAge(snapshot.fetchedAt, now: Date()) + "已刷新"
             }
             return prefix + "已加载"

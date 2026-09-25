@@ -1,21 +1,37 @@
 import Foundation
 
+/// 内容源：灵岛是通用入口，每个 ProviderKind 是一个可接入的 TOKEN 厂商/套餐（ADR-008）
+enum ProviderKind: String, Codable, CaseIterable, Identifiable {
+    case glm
+    case mimo
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .glm: "GLM"
+        case .mimo: "MiMo"
+        }
+    }
+}
+
 enum RowKind: String, Codable, CaseIterable {
     case fiveHour
     case weekly
     case zcodeMcp
+    case mimo
     case other
 }
 
 struct QuotaRow: Codable, Equatable, Identifiable {
-    /// 解析时赋的稳定 id（other 行按标签区分）
+    /// 解析时赋的稳定 id（同 kind 多行按来源 name 区分）
     var id: String
     var kind: RowKind
     var label: String
-    /// 剩余百分比 0...100；字段语义未 spike 校准前可能为 nil（UI 显示 --）
+    /// 剩余百分比 0...100；解析不出为 nil（UI 显示 --）
     var remainingPercent: Double?
     var resetDate: Date?
-    /// 百分比是由「已用」字段反推的标记，spike 后可去掉
+    /// 百分比是由「已用」字段反推的标记
     var percentInferred: Bool
 }
 

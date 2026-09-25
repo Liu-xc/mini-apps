@@ -8,6 +8,7 @@ enum IslandTheme {
         case .fiveHour: Color(red: 0x3B / 255, green: 0x82 / 255, blue: 0xF6 / 255)
         case .weekly: Color(red: 0x22 / 255, green: 0xC5 / 255, blue: 0x5E / 255)
         case .zcodeMcp: Color(red: 0xF5 / 255, green: 0x9E / 255, blue: 0x0B / 255)
+        case .mimo: Color(red: 0xFF / 255, green: 0x69 / 255, blue: 0x00 / 255)
         case .other: Color(red: 0x94 / 255, green: 0xA3 / 255, blue: 0xB8 / 255)
         }
     }

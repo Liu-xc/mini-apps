@@ -1,22 +1,30 @@
 import Foundation
 
-/// 最近一次快照落盘（Application Support/island/snapshot.json），
-/// 断网/重启后先展示陈旧数据；缓存里只有用量，没有 Key
+/// 每个内容源独立一份快照缓存（snapshot-<kind>.json），
+/// 断网/重启后先展示陈旧数据；缓存里只有用量，没有凭证
 struct SnapshotCache {
     private let directory: URL
+    private let fileName: String
 
-    init(directory: URL? = nil) {
-        if let directory {
-            self.directory = directory
-        } else {
-            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                ?? FileManager.default.temporaryDirectory
-            self.directory = base.appendingPathComponent("island", isDirectory: true)
-        }
+    init(kind: ProviderKind, directory: URL? = nil) {
+        self.directory = directory ?? Self.defaultDirectory()
+        self.fileName = "snapshot-\(kind.rawValue).json"
+    }
+
+    /// 测试用：自定义目录 + 文件名
+    init(directory: URL, fileName: String) {
+        self.directory = directory
+        self.fileName = fileName
+    }
+
+    private static func defaultDirectory() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return base.appendingPathComponent("island", isDirectory: true)
     }
 
     private var fileURL: URL {
-        directory.appendingPathComponent("snapshot.json")
+        directory.appendingPathComponent(fileName)
     }
 
     func save(_ snapshot: UsageSnapshot) throws {

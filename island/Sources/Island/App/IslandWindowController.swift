@@ -78,7 +78,7 @@ final class IslandWindowController: NSObject {
 
         // 首次未配置 Key：展开引导；调试钩子：GLM_ISLAND_EXPAND=1 启动即展开
         if ProcessInfo.processInfo.environment["GLM_ISLAND_EXPAND"] == "1"
-            || (!store.hasCredential && store.snapshot == nil) {
+            || (!store.isConfigured(.glm) && store.displaySnapshot == nil) {
             expand(pinned: true)
         }
 
@@ -212,12 +212,12 @@ final class IslandWindowController: NSObject {
         return (left + right) / 2
     }
 
-    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距），高度随档数走
+    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距），含内容源切换 chips 行
     private var expandedSize: CGSize {
         let screen = activeScreen
         let safeTop = max(screen.safeAreaInsets.top, 24)
-        let n = CGFloat(max(2, store.snapshot?.displayRows.count ?? 2))
-        let content: CGFloat = n * 24 + (n - 1) * 10 + 10 + 14   // 行 + 页脚
+        let n = CGFloat(max(1, store.displaySnapshot?.displayRows.count ?? 1))
+        let content: CGFloat = 18 + 8 + n * 24 + max(0, n - 1) * 10 + 10 + 14   // chips + 行 + 页脚
         return CGSize(width: 352, height: safeTop + 6 + content + 14)
     }
 

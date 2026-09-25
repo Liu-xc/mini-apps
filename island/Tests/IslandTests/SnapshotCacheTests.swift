@@ -8,7 +8,8 @@ struct SnapshotCacheTests {
     func roundTrip() throws {
         let cache = SnapshotCache(
             directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("island-tests-\(UUID().uuidString)")
+                .appendingPathComponent("island-tests-\(UUID().uuidString)"),
+            fileName: "snapshot-test.json"
         )
         let rows = [
             QuotaRow(
@@ -37,7 +38,8 @@ struct SnapshotCacheTests {
     func loadMissingThrows() {
         let cache = SnapshotCache(
             directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("island-tests-missing-\(UUID().uuidString)")
+                .appendingPathComponent("island-tests-missing-\(UUID().uuidString)"),
+            fileName: "snapshot-test.json"
         )
         #expect(throws: (any Error).self) {
             try cache.load()
