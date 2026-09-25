@@ -7,6 +7,7 @@
 ### it-043～044 — 新三面审美收口（走查 P1+P2 批）
 - **it-043（P1 批 O1–O4）**：W5 主 CTA 实心化+描述升主文本+状态带 hairline；W12 空态居中可点示例、reverseLayout 底部锚定、工具条中文折叠「查了衣橱 · n 次」、错误容器化紧贴失败轮次（Auth/网络直达设置）；W11 自检结果持久化状态行（时间戳）+ 版本行去 ADR 黑话 + 清除 Key 中性分色。
 - **it-044（P2 批 O5–O7）**：W11 下拉右缘与输入框同线、TagRow 行距统一 10dp、W12 回复动作行（复制/换个场合再推荐）、候选态「棋盘格=透明底」注记；字体声部/累计口径/图区内边距设计决定写入 05-design-system。
+- **两轮补遗（P2 清零）**：C1 弱文本五处升 ink、候选图点按 2× 放大核对、还原中性色；演示入口改 label/value 行、回复署名「穿搭顾问 · HH:mm」（Message.createdAt + runner 盖章）、「重新生成」chip 转正（app 侧尾删重建）。过程中修复 reverseLayout 插队不入视与动作行范围两真 bug。
 - 详情见 [it-043](iterations/it-043-newui-p1-fixes.md)、[it-044](iterations/it-044-newui-p2-polish.md)（走查来源 [reports/2026-09-25-wardrobe-newui-audit](../../../reports/2026-09-25-wardrobe-newui-audit/)）；specs/01/02/05 同步。
 
 ### it-040 — 已录入衣物补抠（W5 状态条）

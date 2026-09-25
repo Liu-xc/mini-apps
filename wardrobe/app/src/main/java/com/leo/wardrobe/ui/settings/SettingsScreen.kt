@@ -438,9 +438,25 @@ fun SettingsScreen(
                             TextButton(onClick = { exitDemoAsk = true }) { Text("退出演示模式") }
                         }
                     }
+                    // it-043 补遗（走查 02页 P2）：演示入口从「灰字长句」改为与
+                    // 「数据模式」同构的 label/value 行 + 独立短句提示——层级拆开、去掉重复前缀
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("演示模式", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                            Text(
+                                if (vm.isDemo) "已开启" else "未开启",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = ec.inkFaint,
+                            )
+                        }
+                    }
                     if (!vm.isDemo) {
                         Text(
-                            "演示模式入口：衣橱页标题 3 秒内连点 5 次。",
+                            "入口：衣橱页标题 3 秒内连点 5 次",
                             style = MaterialTheme.typography.bodySmall,
                             color = ec.inkFaint,
                         )

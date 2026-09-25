@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +63,7 @@ import com.leo.wardrobe.ui.theme.editorialColors
 /** W12 消息行（分组后的渲染单元） */
 private sealed interface RowUi {
     data class Me(val text: String) : RowUi
-    data class Ai(val text: String) : RowUi
+    data class Ai(val text: String, val stamp: Long) : RowUi
     data class Tools(val names: List<String>, val results: List<Pair<String, String>>) : RowUi
 }
 
@@ -83,7 +84,7 @@ private fun groupRows(messages: List<Message>): List<RowUi> = buildList {
                     add(RowUi.Tools(m.toolCalls.map { it.name }, results))
                     i = j
                 } else {
-                    if (m.text.isNotBlank()) add(RowUi.Ai(m.text))
+                    if (m.text.isNotBlank()) add(RowUi.Ai(m.text, m.createdAt))
                     i++
                 }
             }
@@ -120,6 +121,15 @@ fun ChatScreen(
     val rows = remember(messages) { groupRows(messages) }
     val display = remember(rows) { rows.asReversed() } // reverseLayout：index0=底部=最新
     val isEmpty = rows.isEmpty() && streaming.isEmpty() && notices.isEmpty() && error == null
+    // it-043 补遗：动作行条件提到外层作用域——状态读取若在 items 子项内，完成后
+    // 重组可能被跳过（走查实测：完成后 chip 不出现，须重进页面）；外层读取 + Boolean
+    // 参数变化能强制 items 内容重组
+    val showActions = !running && error == null && display.firstOrNull() is RowUi.Ai
+    // it-043 补遗（真因）：reverseLayout 下新消息插在 index0（视口锚定会把新项挤到可视区
+    // 下方），消息数变化后必须主动滚回 index0——否则最新回复不可见（走查实测：UI 停在旧内容）
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(0)
+    }
 
     fun sendCurrent() {
         input.takeIf { it.isNotBlank() }?.let { vm.send(it); input = "" }
@@ -207,8 +217,10 @@ fun ChatScreen(
                         is RowUi.Me -> MeBubble(row.text)
                         is RowUi.Ai -> AiBubble(
                             text = row.text,
-                            // it-044 O6（走查 C11）：最新一条完整回复下挂复制/追问动作
-                            actions = if (idx == 0 && !running && error == null) {
+                            // it-043 补遗（走查 06页 P2）：回复署名时间戳（旧会话 0 不显示）
+                            stamp = row.stamp.takeIf { it > 0L },
+                            // it-044 O6（走查 C11）：最新一条完整回复下挂复制/追问/重新生成动作
+                            actions = if (showActions && idx == 0) {
                                 {
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -219,6 +231,7 @@ fun ChatScreen(
                                             appVm?.toast("已复制回复")
                                         }
                                         ActionChipBtn("换个场合再推荐") { vm.send("换个场合再推荐一套") }
+                                        ActionChipBtn("重新生成") { vm.regenerate() }
                                     }
                                 }
                             } else null,
@@ -328,7 +341,7 @@ private fun MeBubble(text: String) {
 }
 
 @Composable
-private fun AiBubble(text: String, actions: (@Composable () -> Unit)? = null) {
+private fun AiBubble(text: String, stamp: Long? = null, actions: (@Composable () -> Unit)? = null) {
     val ec = editorialColors()
     Column {
         Row(Modifier.fillMaxWidth()) {
@@ -345,6 +358,19 @@ private fun AiBubble(text: String, actions: (@Composable () -> Unit)? = null) {
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 )
             }
+        }
+        // it-043 补遗：来源辨识——「穿搭顾问 · HH:mm」（旧会话 createdAt=0 不显示）
+        if (stamp != null) {
+            val time = remember(stamp) {
+                java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                    .format(java.util.Date(stamp))
+            }
+            Text(
+                "穿搭顾问 · $time",
+                style = MaterialTheme.typography.labelSmall,
+                color = ec.inkFaint,
+                modifier = Modifier.padding(start = 6.dp, top = 3.dp),
+            )
         }
         actions?.invoke()
     }

@@ -34,6 +34,11 @@ data class Message(
     val toolCalls: List<ToolCall> = emptyList(),
     /** role=tool 时对应的调用 id */
     val toolCallId: String? = null,
+    /**
+     * 消息时间戳（epochMs）。0 = 旧会话文件无此字段（缺字段反序列化默认值，向后兼容）。
+     * AgentRunner 落盘时对未盖章消息自动补 `now`；app 侧发用户消息时自行 `copy(createdAt = now)`。
+     */
+    val createdAt: Long = 0L,
 ) {
     /** 纯文本视图（拼接全部 Text 片段） */
     val text: String get() = parts.filterIsInstance<Part.Text>().joinToString("") { it.text }

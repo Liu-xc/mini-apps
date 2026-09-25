@@ -10,6 +10,7 @@ import com.leo.libs.agent.AgentRunner
 import com.leo.libs.agent.Message
 import com.leo.libs.agent.ProviderPreset
 import com.leo.libs.agent.Providers
+import com.leo.libs.agent.Role
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,7 +74,28 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         lastUserText = text
         _error.value = null
         viewModelScope.launch {
-            session.append(sessionId, Message.user(text))
+            // it-043 补遗：用户消息盖时间戳（回复侧由 AgentRunner 落盘时盖章）
+            session.append(sessionId, Message.user(text).copy(createdAt = System.currentTimeMillis()))
+            refresh()
+            runLoop()
+        }
+    }
+
+    /**
+     * it-043 补遗（走查 C11）：重新生成——保留最后一轮的用户提问，
+     * 丢弃其后的全部产出（assistant/tool），重建会话后续跑。
+     * 无需 SDK 尾删接口：clear + 重放保留段（app 侧幂等重建）。
+     */
+    fun regenerate() {
+        if (_running.value) return
+        viewModelScope.launch {
+            val msgs = session.messages(sessionId)
+            val lastUserIdx = msgs.indexOfLast { it.role == Role.User }
+            if (lastUserIdx < 0) return@launch
+            session.clear(sessionId)
+            msgs.subList(0, lastUserIdx + 1).forEach { session.append(sessionId, it) }
+            lastUserText = msgs[lastUserIdx].text
+            _error.value = null
             refresh()
             runLoop()
         }

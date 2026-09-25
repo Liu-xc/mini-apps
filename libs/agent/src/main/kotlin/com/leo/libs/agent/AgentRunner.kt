@@ -143,7 +143,9 @@ class AgentRunner(
     }
 
     private suspend fun persist(message: Message) {
-        session?.append(sessionId!!, message)
+        // it-043 补遗：落盘盖时间戳（旧字段缺省 0），会话重启后 UI 可显示消息时间
+        val stamped = if (message.createdAt == 0L) message.copy(createdAt = System.currentTimeMillis()) else message
+        session?.append(sessionId!!, stamped)
     }
 
     private companion object {
