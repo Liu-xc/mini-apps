@@ -4,6 +4,7 @@ package com.leo.wardrobe.ui.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,10 +50,13 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.leo.wardrobe.domain.model.NoteParent
 import com.leo.wardrobe.domain.model.Outfit
@@ -97,6 +101,9 @@ fun ItemDetailScreen(
     // alpha 检测决定文案（已抠→重新抠图 / 原图→去背景），入口常驻（决策 3）
     var recutCandidate by remember { mutableStateOf<String?>(null) }
     var recutRunning by remember { mutableStateOf(false) }
+    // it-043 C7 补遗：候选图放大核对（2× + 拖动平移）
+    var zoomOpen by remember { mutableStateOf(false) }
+    var zoomOffset by remember { mutableStateOf(Offset.Zero) }
     val haptics = rememberHaptics()
     val isCutout = remember(item.id, item.imageFile) { vm.looksCutoutPhoto(item.imageFile) }
 
@@ -182,11 +189,16 @@ fun ItemDetailScreen(
                                 y += cellPx
                                 row++
                             }
+                        }
+                        // it-043 C7：候选期点按放大核对边缘
+                        .clickable {
+                            zoomOffset = Offset.Zero
+                            zoomOpen = true
                         },
                 ) {
                     PhotoCard(
                         file = vm.imageFileOf(candidate),
-                        contentDescription = "新背景预览",
+                        contentDescription = "新背景预览（点按放大）",
                         corner = 0.dp,
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -235,7 +247,12 @@ fun ItemDetailScreen(
                             color = editorialColors().ink,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { discardCandidate() }) { Text("还原") }
+                        TextButton(
+                            onClick = { discardCandidate() },
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                contentColor = editorialColors().inkFaint,
+                            ),
+                        ) { Text("还原") }
                         Button(onClick = { keepCandidate() }) { Text("保留") }
                     }
                     }
@@ -308,6 +325,50 @@ fun ItemDetailScreen(
                     Text("去背景 · 一键透明底")
                 }
             }
+            // it-043 C7 补遗：候选图放大核对对话框（固定 2× + 拖动平移，点按/返回关闭）
+            if (zoomOpen && candidate != null) {
+                Dialog(onDismissRequest = { zoomOpen = false }) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = editorialColors().surface) {
+                        Column {
+                            Text(
+                                "放大核对边缘 · 拖动查看 · 点按关闭",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = editorialColors().inkFaint,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            )
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(560.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f))
+                                    .pointerInput(candidate) {
+                                        detectDragGestures { change, drag ->
+                                            change.consume()
+                                            zoomOffset += drag
+                                        }
+                                    },
+                            ) {
+                                AsyncImage(
+                                    model = vm.imageFileOf(candidate),
+                                    contentDescription = "放大预览",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer(
+                                            scaleX = 2f,
+                                            scaleY = 2f,
+                                            translationX = zoomOffset.x,
+                                            translationY = zoomOffset.y,
+                                        ),
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
+                    }
+                }
+            }
+
             Text(
                 item.name,
                 style = MaterialTheme.typography.displaySmall,

@@ -432,7 +432,7 @@ private fun ToolsRow(
                         Text(
                             detail,
                             style = MaterialTheme.typography.bodySmall,
-                            color = ec.inkFaint,
+                            color = ec.ink,
                             maxLines = 4,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 4.dp),

@@ -125,7 +125,7 @@ fun SettingsScreen(
                     Text(
                         "BYOK 直连模型厂商：Key 加密存于本机，导出数据不携带，界面只显示尾码。",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = ec.inkFaint,
+                        color = ec.ink,
                     )
 
                     // 厂商
@@ -260,7 +260,7 @@ fun SettingsScreen(
                             vm.resetCheck()
                             keyInput = it
                         },
-                        label = { Text("API Key") },
+                        label = { Text("API Key", color = ec.ink) },
                         singleLine = true,
                         enabled = !vm.isDemo,
                         visualTransformation = PasswordVisualTransformation(),
@@ -271,7 +271,7 @@ fun SettingsScreen(
                                     keyMask != null -> "已保存 $keyMask · 留空保持不变"
                                     else -> "未配置"
                                 },
-                                color = ec.inkFaint,
+                                color = ec.ink,
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),

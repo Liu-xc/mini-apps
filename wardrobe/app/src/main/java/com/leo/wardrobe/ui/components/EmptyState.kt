@@ -96,7 +96,7 @@ fun EmptyState(
             }
         }
         Text(title, style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
-        Text(hint, style = MaterialTheme.typography.bodySmall, color = editorialColors().inkFaint)
+        Text(hint, style = MaterialTheme.typography.bodySmall, color = editorialColors().ink)
         if (actionLabel != null && onAction != null) {
             Button(onClick = onAction) { Text(actionLabel) }
         }
