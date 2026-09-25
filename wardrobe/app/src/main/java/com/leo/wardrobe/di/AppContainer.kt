@@ -7,6 +7,7 @@ import com.leo.wardrobe.data.image.ImageFileStore
 import com.leo.wardrobe.data.mock.DemoMode
 import com.leo.wardrobe.data.mock.MockWardrobeData
 import com.leo.wardrobe.data.mock.MockWardrobeRepository
+import com.leo.wardrobe.data.prefs.KeystoreApiKeyStore
 import com.leo.wardrobe.data.prefs.PrefsStore
 import com.leo.wardrobe.data.repo.WardrobeRepositoryImpl
 import com.leo.wardrobe.domain.model.WardrobeData
@@ -62,6 +63,14 @@ class AppContainer(private val context: Context) {
     val cutoutEngine: com.leo.libs.cutout.CutoutEngine = com.leo.libs.cutout.OnnxCutoutEngine(
         modelBytes = { context.assets.open("u2netp.onnx").use { it.readBytes() } },
     )
+    /** it-041 US-41a：BYOK Key 存储——演示模式永不挂真 key（libs/agent 红线②，注入内存实现） */
+    val apiKeyStore: com.leo.libs.agent.ApiKeyStore =
+        if (demo) com.leo.libs.agent.InMemoryApiKeyStore() else KeystoreApiKeyStore(context)
+
+    /** it-041：模型传输实例工厂——构造零副作用（OkHttp 客户端惰性请求），不进启动路径 */
+    fun chatModel(preset: com.leo.libs.agent.ProviderPreset): com.leo.libs.agent.ChatModel =
+        com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore)
+
     val buildPrompt: BuildOutfitPrompt = BuildOutfitPrompt()
     val pickRandom: PickRandomOutfit = PickRandomOutfit()
     val imageComposer: OutfitImageComposer = OutfitImageComposer(imageStore)

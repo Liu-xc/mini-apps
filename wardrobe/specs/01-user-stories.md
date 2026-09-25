@@ -202,6 +202,34 @@
 - Given 打卡次数为 0，Then W9 不出现「闲置清单 N/N 件」冗余卡；有打卡数据后照常显示可进二级页
 - Given W1/W3 滚动内容还有下文，Then 视口底缘叠 28dp 渐隐；滚到底/一屏放下自动隐去
 
+## AI 模型接入（it-041）
+
+> 前置：libs/agent SDK（M0/M1/M2 已落地）。联网仅限本节功能（ADR-024 / 00-overview）。
+
+### US-41a 配置模型连接（W11 · 阶段 A 已落地）
+作为用户，我在设置页选择厂商（GLM / MiMo 双 host / 自定义）、粘贴 API Key、点「保存并自检」看到 ✓，即可使用；Key 加密存本机。
+- **UC**：W11（W3 标题行 ⚙ 入口）
+- Given 首次进入，Then 厂商列表来自 preset 数据（智谱 GLM / 小米 MiMo 按量 / Token 套餐 / 自定义），自定义项可填 Base URL + 模型名
+- Given 粘贴 Key 保存，Then Key 落盘为 Keystore AES-GCM 密文（重启仍在），界面只显示 mask（`1b0d***EW0f` 形如），留空再保存 = 保持原 Key
+- Given 点「保存并自检」，Then 1-token ping 厂商 API，成功显示「连通正常 · 模型名」+ 一次确认触感；失败按错误分类给可读文案（401=Key 无效 / 429=限流 / 网络=可达性），不清空已存 Key
+- Given 选择预设厂商，Then 可在模型档位中选择（空 = 默认档）；GLM plan 外档位会如实返回余额类错误
+- Given 演示模式，Then Key 输入禁用且永不落盘（内存实现，红线②）；「清除 Key」带二次确认（红线⑦）
+- Given 数据包导出，Then 产物不含 Key（PackageCodec 不读 agent_secrets，红线①）
+
+### US-41b 流式穿搭顾问（W12 · 阶段 B 待落地）
+作为用户，我在对话页问「配一套通勤装」，agent 流式回复，且先调工具查衣橱再回答。
+- **UC**：W12（W11 内「开始对话」入口）
+- Given 发送问题，Then 打字机输出 +「思考中」态；工具调用以可展开小条呈现（已查衣橱：品类=上装…）
+- Given 出错，Then 分类错误文案 + 重试按钮（从持久化会话续跑）；取消即停、半截消息不留脏状态
+
+### US-41c 会话持久（阶段 B 待落地）
+作为用户，杀掉 app 重开后对话还在、能继续聊。
+- Given 上次对话未完成，Then FileSessionStore 恢复全部消息；ContextPolicy 超窗裁最老轮次对用户无感
+
+### US-41d 用量可见（阶段 B 待落地）
+作为用户，我在设置页看到本机累计 token 用量（厂商×模型）。
+- Given 产生过对话，Then 用量按厂商×模型分列、count-up 过渡；无对话时显示 0
+
 ## 非功能需求
 
 - NFR-01 冷启动 < 2s；列表滑动 60fps

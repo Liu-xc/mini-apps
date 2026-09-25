@@ -34,3 +34,5 @@ includeBuild("../libs/store")
 includeBuild("../libs/carddeck")
 // 主体抠图 SDK（it-016 阶段 B；见 libs/cutout/specs/00-architecture.md）
 includeBuild("../libs/cutout")
+// BYOK Agent SDK（it-041 阶段 A；见 libs/agent/specs/00-architecture.md）
+includeBuild("../libs/agent")

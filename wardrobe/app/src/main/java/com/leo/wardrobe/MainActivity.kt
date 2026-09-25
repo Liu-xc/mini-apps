@@ -127,6 +127,7 @@ private object Routes {
     fun outfitDetail(id: String) = "outfitDetail/$id"
     const val RECAP = "recap"
     const val WISHLIST = "wishlist"
+    const val SETTINGS = "settings" // it-041：W11 设置页
 }
 
 private enum class Tab(val label: String) {
@@ -138,6 +139,7 @@ private enum class Tab(val label: String) {
 private fun WardrobeRoot() {
     val vm: AppViewModel = viewModel()
     val recapVm: com.leo.wardrobe.ui.recap.RecapViewModel = viewModel()
+    val settingsVm: com.leo.wardrobe.ui.settings.SettingsViewModel = viewModel()
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     var tab by rememberSaveable { mutableStateOf(Tab.OUTFIT) }
@@ -183,11 +185,12 @@ private fun WardrobeRoot() {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
-        // it-034 A：白底二级页（W4/W5/W7/W9）状态栏沉浸同色——这些路由去掉根 Scaffold
+        // it-034 A：白底二级页（W4/W5/W7/W9/W11）状态栏沉浸同色——这些路由去掉根 Scaffold
         // 顶部 inset，内容顶到窗口顶，由各页 TopAppBar 自行吸收状态栏（白顶栏铺进状态栏），
         // 顶栏标题上方只剩常规状态栏高度；搭配/记录/衣橱/W10 维持原浅绿状态栏表现
         contentWindowInsets = if (currentRoute in setOf(
                 Routes.ITEM_EDIT, Routes.ITEM_DETAIL, Routes.OUTFIT_DETAIL, Routes.RECAP,
+                Routes.SETTINGS,
             )
         ) {
             ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
@@ -296,6 +299,15 @@ private fun WardrobeRoot() {
                             )
                         }
                     }
+                    // it-041 阶段 A：W11 设置页（模型连接 + 模式状态）
+                    composable(Routes.SETTINGS) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            com.leo.wardrobe.ui.settings.SettingsScreen(
+                                vm = settingsVm,
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                    }
                     composable(Routes.OUTFIT_DETAIL) { entry ->
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             val id = entry.arguments?.getString("outfitId").orEmpty()
@@ -334,6 +346,7 @@ private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
                 onOpenItem = openItem,
                 onOpenRecap = { nav.navigate(Routes.RECAP) },
                 onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
             )
         }
     }

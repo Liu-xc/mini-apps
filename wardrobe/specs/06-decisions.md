@@ -126,3 +126,9 @@
 - **决策**（2026-09-21）：包格式 v1 = `manifest.json`（packageFormat/app/schemaVersion/exportedAt/generator/counts）+ 应用数据文件原样 + `images/`；编解码（zip 读写/manifest 校验/迁移链升级入口 `SnapshotStore.upgrade`）上收 libs/store 0.2.0 为 `PackageCodec`（零业务概念），按 id 合并语义留在各 app domain 纯函数（`mergeWardrobe`/`mergeEats`）。agent 产包放宽图片命名/格式，app 导入统一转码归一 uuid.webp 并重映射引用；导入必经「预检全过 → 预览确认 → 单事务落盘」，失败零改动；系统直达入口（ACTION_SEND/ACTION_VIEW + zip mime）与应用内 SAF 两条入口汇入同一流程。app 容忍悬空引用（cleaned 清洗），skill 校验器（`.agents/skills/data-package`）更严格——不对称是设计使然。
 - **理由**：codec 无业务概念天然可上收（store「按需再加」约定的兑现）；合并语义依赖实体结构归 app；实体级覆盖（不做字段级深合并）满足「AI 打标 = 实体新版本」语义且实现/心智最简。
 - **后果**：store 0.1.0→0.2.0（纯新增 API 不破坏既有面）；octet-stream 的 SEND 入口让应用出现在任意二进制分享面板（选错由跨 app 拒绝兜底）；重复导入同包幂等但图片全部重写一遍（个人级规模可接受）。
+
+## ADR-024 INTERNET 权限与 BYOK 模型直连：点对点调厂商、Key 本地密文、无服务端无遥测（it-041）
+- **背景**：应用此前零联网（纯离线是既有定位）。接入 AI（libs/agent BYOK）必须访问模型厂商 API；备选=自建代理后端（libs/agent ADR-003 已否决：无后端无运维是立身之本）或完全不做 AI。用户拍板先做本地自用版（2026-09-25 Leo：飞书同步搁置、接入模型能力）。
+- **决策**（2026-09-25）：Manifest 新增 `android.permission.INTERNET`，**唯一用途 = BYOK 模型直连**（W11 连通性自检 + W12 对话，US-41）；00-overview 定位句修订并明示该边界。三条红线沿用 libs/agent ADR-003：① 数据包导出永不带 Key（agent_secrets 独立 SharedPreferences，PackageCodec 不读）；② 演示模式永挂内存 KeyStore（AppContainer 注入 `InMemoryApiKeyStore`，UI 禁用输入）；③ 日志/界面只出 `maskApiKey` 尾码。Key 落盘 = AndroidKeyStore 主密钥 + AES-GCM（`KeystoreApiKeyStore`，SDK 只见 `ApiKeyStore` 接口——平台实现归 app 层，agent ADR-003 既定）。
+- **理由**：点对点直连不产生服务端/账号/遥测，与「个人自用、数据本机」不冲突——联网是能力开关而非架构转向；Keystore 不可导出密钥比 SharedPreferences 明文跨过泄露面；演示模式隔离保证走查零真实外呼。
+- **后果**：应用商店/用户可见的权限清单多一条 INTERNET（可与「关闭 AI 功能则零联网」表述一并理解）；对话内容会随上下文发给所选厂商（用户主动发起，与导出长图给生图 Agent 同性质）；厂商可用性取决于用户 Key 与网络（错误分类文案给可读兜底）。

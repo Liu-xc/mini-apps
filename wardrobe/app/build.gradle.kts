@@ -76,6 +76,8 @@ dependencies {
     // （版本须与 libs/cutout 的 compileOnly 桌面版对齐，见 libs/cutout/specs/06-decisions.md ADR-002）
     implementation(libs.leo.cutout)
     implementation(libs.onnxruntime.android)
+    // BYOK Agent SDK（it-041 阶段 A，composite build，libs/agent）
+    implementation(libs.leo.agent)
 
     implementation(libs.coil.compose)
     implementation(libs.lottie.compose)

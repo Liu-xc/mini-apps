@@ -4,6 +4,13 @@
 
 ## 未发布
 
+### it-041 — AI 模型接入（阶段 A：设置页与连通性自检）
+- 新增 W11 设置页（W3 标题行 ⚙ 入口）：厂商（智谱 GLM / MiMo 按量 / Token 套餐 / 自定义）与模型档选择、API Key Keystore AES-GCM 密文存取（界面只显 mask）、「保存并自检」1-token ping 按错误分类呈现，自检成功给确认触感；清除 Key 二次确认。
+- 接入 libs/agent SDK（includeBuild + `libs.leo.agent`），Manifest 新增 INTERNET 权限（唯一用途 BYOK 模型直连，ADR-024）；演示模式禁用 Key 输入并永不挂真 Key。
+- 设置页内「退出演示模式」获得真实落点（原 WardrobePackages 提示文案指向不存在页面的问题随之消除）；关于卡显示数据模式、版本与联网边界注记。
+- SDK 侧修复：`OkHttpChatModel.complete` 切 IO 调度器（NetworkOnMainThreadException，M1 遗留）。
+- 详情见 [it-041](iterations/it-041-ai-integration.md)；specs/00/01/02/04/06（ADR-024）同步更新。
+
 ### it-037～039 — 衣橱 UI 走查与交互优化
 - W3 浮动新增按钮改为不遮挡列表的固定全宽 CTA；底部 Tab 与 W2 当前角色精简选中线索。
 - 浅色强调色拆分图形色与文字/动作色，提升弱色文字对比；W1 槽位长名称单行省略并保留完整无障碍名称。

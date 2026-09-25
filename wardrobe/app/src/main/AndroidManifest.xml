@@ -4,6 +4,9 @@
     <!-- it-018 阶段C：好久没穿提醒（API 33+ 运行时请求；开机后周期任务恢复） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- it-041 / ADR-024：BYOK 模型直连——唯一联网场景（设置页自检与 AI 对话），
+         无账号无服务端无遥测；除模型 API 外不发起任何网络请求 -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name=".WardrobeApp"

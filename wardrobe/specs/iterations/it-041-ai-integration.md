@@ -1,6 +1,6 @@
 # it-041 · AI 模型接入（libs/agent M3）——设置页 + 穿搭顾问对话
 
-- **状态**：提案，待 Leo 确认后开工
+- **状态**：**阶段 A 已实现并验收（2026-09-25，/goal 批准实施）**——构建+单测绿、模拟器端到端自检通过，见文末验证记录；**阶段 B（W12 对话页）进行中**
 - **前置**：libs/agent **M2**（it-002 agent loop）已完成；**M0 spike**（真调校准）建议先行，不阻塞阶段 A
 - **关联**：新增 **US-41a~d**；新增线框 **W11（设置页）/ W12（对话页）**；新增 **ADR-024**（INTERNET 权限 + BYOK 接入定位修订）
 - **SDK 侧**：libs/agent it-001 影响范围原文「消费 app（M3 接入时）：settings includeBuild + 设置页/对话页，届时另开 app it-XXX，UI 走 DESIGN.md」——本迭代即该接棒点
@@ -122,4 +122,16 @@
 
 ## 验证记录
 
-（开工后回填：阶段 A/B 构建与模拟器走查、自检/工具调用实录、红线自查结果）
+### 阶段 A · 设置页与连通性自检（2026-09-25 完成）
+
+- **构建/测试**：`./gradlew assembleDebug testDebugUnitTest` BUILD SUCCESSFUL；libs/agent 侧 `./gradlew test` **63/63 绿**（含 it-002 M2 回归）。最新包已装 `emulator-5554`。
+- **模拟器端到端实录**（emulator-5554，AVD wardrobe_test）：
+  1. W3 标题行 ⚙（941,200 热区）→ W11 打开，白顶栏沉浸、卡片渲染符合 DESIGN.md（截图 [reports/2026-09-25-it041-stage-a/](../../../reports/2026-09-25-it041-stage-a/)）；
+  2. 演示模式下 Key 输入禁用 + 「演示模式不保存 Key」提示 ✓ → 页内「退出演示模式」→ 确认弹窗 → 进程重启 → 状态变「正常 · 本机真实数据」✓；
+  3. 厂商「智谱 GLM」、模型下拉切 `glm-4-flash`（M0 校准：plan 仅覆盖免费档）、粘贴 Key → 「保存并自检」→ **「✓ 连通正常 · glm-4-flash」** + 确认触感 ✓；
+  4. 重启进程后 Key mask 仍在（`已保存 1b0d***EW0f · 留空保持不变`）→ Keystore 密文持久化 ✓；「清除 Key」按钮按需出现 ✓；
+  5. 错误路径实测：网络断开时显示分类文案「网络不可达：Unable to resolve host …」（AgentError.Network → userMessage）✓。
+- **走查中发现并修复**：① `OkHttpChatModel.complete` 在 Main 线程同步 execute → `NetworkOnMainThreadException`（M1 遗留，`stream` 有 flowOn(IO) 而 `complete` 漏切）→ SDK 补 `withContext(Dispatchers.IO)`；② 环境侧：模拟器 default network 丢失（Active default: none、路由表缺省）→ 重启模拟器恢复，与应用无关。
+- **红线自查**：① agent_secrets 独立于数据包导出链路（PackageCodec 只读 wardrobe.json+images）✓ ② 演示模式 InMemoryApiKeyStore + UI 禁用 ✓ ③ UI 只显 mask、失败日志仅异常堆栈无 Key ✓（全仓 grep 无明文 Key）。
+- **specs 同步**：00（联网边界句）、01（US-41a~d）、02（W11 注记 + W1–W12 编号）、04（ui/settings、路由、composite、权限表）、06（ADR-024）、CHANGELOG。
+- 走查备注：模拟器 screencap 通道重启后短暂返回旧帧（连续两帧相同 + uiautomator 新鲜 dump 交叉验证后触摸刷新恢复），后续走查如遇截图不动先 touch 一下再截。

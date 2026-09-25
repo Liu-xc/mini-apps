@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -85,6 +86,7 @@ fun WardrobeScreen(
     onOpenItem: (String) -> Unit = {},
     onOpenRecap: () -> Unit = {},
     onOpenWishlist: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}, // it-041：W11 设置页入口
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
@@ -187,6 +189,31 @@ fun WardrobeScreen(
                         Icon(
                             Icons.Rounded.Star,
                             contentDescription = "心愿",
+                            tint = editorialColors().inkFaint,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                // it-041 阶段 A：设置入口（W11 模型连接/模式状态）；热区 48dp 同款
+                Box(
+                    Modifier
+                        .padding(start = 8.dp)
+                        .size(48.dp)
+                        .clickable { onOpenSettings() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                androidx.compose.foundation.shape.CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = "设置",
                             tint = editorialColors().inkFaint,
                             modifier = Modifier.size(18.dp),
                         )

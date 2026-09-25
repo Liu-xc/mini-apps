@@ -90,4 +90,35 @@ class PrefsStore(private val context: Context) {
     suspend fun markCoachSlotsShown() {
         context.store.edit { it[keyCoachSlots] = true }
     }
+
+    // it-041 US-41a：AI 模型连接偏好（Key 本体走 KeystoreApiKeyStore，不进 DataStore）
+
+    private val keyAiPreset = stringPreferencesKey("ai_preset")
+    private val keyAiModel = stringPreferencesKey("ai_model")
+    private val keyAiCustomBaseUrl = stringPreferencesKey("ai_custom_base_url")
+    private val keyAiCustomModel = stringPreferencesKey("ai_custom_model")
+
+    /** 选中的厂商 preset id（Providers.all 或 "custom"） */
+    val aiPresetId: Flow<String> = context.store.data.map { it[keyAiPreset] ?: "glm" }
+
+    /** 选中厂商下的模型名（空 = 用 preset 默认模型） */
+    val aiModel: Flow<String> = context.store.data.map { it[keyAiModel] ?: "" }
+
+    suspend fun setAiConnection(presetId: String, model: String) {
+        context.store.edit {
+            it[keyAiPreset] = presetId
+            it[keyAiModel] = model
+        }
+    }
+
+    /** 自定义厂商配置（baseUrl 形如 https://…/v1，模型名必填） */
+    val aiCustomBaseUrl: Flow<String> = context.store.data.map { it[keyAiCustomBaseUrl] ?: "" }
+    val aiCustomModel: Flow<String> = context.store.data.map { it[keyAiCustomModel] ?: "" }
+
+    suspend fun setAiCustom(baseUrl: String, model: String) {
+        context.store.edit {
+            it[keyAiCustomBaseUrl] = baseUrl
+            it[keyAiCustomModel] = model
+        }
+    }
 }

@@ -36,7 +36,7 @@ com.leo.wardrobe/
 ├─ data/
 │  ├─ repo/WardrobeRepositoryImpl.kt   # 继承 store SDK 的 SsotRepository（SSOT+原子落盘+广播；writeHook 预留同步登记）
 │  ├─ image/ImageFileStore.kt          # 实现 ImageStore + ImageEditStore 接口(it-021)；文件管理走 store SDK FileMediaStore
-│  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆）RecapPrefsStore（回忆提醒）
+│  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆/AI 连接偏好 it-041）RecapPrefsStore（回忆提醒）KeystoreApiKeyStore（BYOK Key 密文，ADR-024）
 │  └─ mock/                            # it-015 演示模式：MockWardrobeData（种子）/ MockWardrobeRepository（内存，级联语义与 Impl 锁定一致，it-020）/ DemoMode（开关）
 ├─ export/
 │  ├─ OutfitImageComposer.kt      # Bitmap 拼合成图（2列网格+品类标签）
@@ -53,7 +53,8 @@ com.leo.wardrobe/
    ├─ wardrobe/    WardrobeScreen(W3) ItemEditScreen(W4)
    ├─ detail/      ItemDetailScreen(W5)
    ├─ recap/       WardrobeRecapScreen RecapViewModel WardrobeRecapLongImage(W9，it-018/021)
-   └─ wishlist/    WishlistScreen(W10，it-019)
+   ├─ wishlist/    WishlistScreen(W10，it-019)
+   └─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域)
 ```
 
 ## 设计模式
@@ -71,7 +72,7 @@ com.leo.wardrobe/
 ## 状态与导航
 
 - 全局：`AppViewModel` 暴露 `currentPerson: StateFlow<Person?>` 与 `data: StateFlow<WardrobeData>`。
-- 页面导航：Compose Navigation。路由：`home`(三 Tab) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist`；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
+- 页面导航：Compose Navigation。路由：`home`(三 Tab) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（it-041 W11，白底二级页组）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
 - 组合记忆（US-06）：各品类选中 itemId 存 `DataStore<Preferences>`（PrefsStore），key 按 personId 隔离。
 - 回忆提醒开关存 DataStore（RecapPrefsStore），ReminderScheduler 对齐 WorkManager 任务。
 
@@ -88,5 +89,6 @@ com.leo.wardrobe/
 ## 构建配置
 
 - compileSdk 35 / targetSdk 35 / minSdk 26；AGP 8.7.x + Gradle 8.9 + Kotlin 2.1.x（compose 插件）
-- composite build：`includeBuild("../libs/store"、"../libs/carddeck"、"../libs/cutout")`，坐标 `com.leo.libs:{store,carddeck,cutout}`（ADR-012/013/016）
-- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、onnxruntime-android 1.20.0（cutout 运行时，版本须与 SDK 编译期对齐，ADR-016）、JUnit4 + kotlinx-coroutines-test；JitPack 仓（carddeck 传递依赖）
+- composite build：`includeBuild("../libs/store"、"../libs/carddeck"、"../libs/cutout"、"../libs/agent")`，坐标 `com.leo.libs:{store,carddeck,cutout,agent}`（ADR-012/013/016，agent 见 it-041/ADR-024）
+- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、onnxruntime-android 1.20.0（cutout 运行时，版本须与 SDK 编译期对齐，ADR-016）、leo-agent（BYOK 模型接入，okhttp 由 SDK 传递）、JUnit4 + kotlinx-coroutines-test；JitPack 仓（carddeck 传递依赖）
+- 权限：`POST_NOTIFICATIONS` + `RECEIVE_BOOT_COMPLETED`（it-018）+ **`INTERNET`（it-041/ADR-024，仅 BYOK 模型直连使用）**
