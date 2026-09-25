@@ -1,35 +1,70 @@
 # 05 — 设计系统（视觉 token 与动效清单）
 
+> it-003 改版收编：单环主锚 + 行式明细。尺寸推导**唯一来源是 `IslandLayout`**
+> （遮罩 / hitTest / 窗口帧 / 视图共用），本文表格是它的镜像，改布局两处同步。
+
 ## 硬 token
+
+### 几何
 
 | token | 值 | 用途 |
 |---|---|---|
-| island/hidden-size | 180×safeTop pt | 隐形触发区（= 刘海挖槽矩形，内容全透明） |
-| island/expanded-size | 352×178pt（出现第三档 other 时 222） | 展开卡片（顶边贴屏幕顶沿） |
-| island/radius | 顶部 0 / 底部 16（UnevenRoundedRectangle，continuous） | 顶部两角直角与顶边无缝衔接，只圆下方 |
-| island/surface | `#000000` | 卡片底（顶边贴屏幕顶沿） |
-| color/fiveHour | `#3B82F6` 蓝 | 5 小时档本色 |
-| color/weekly | `#22C55E` 绿 | 每周档本色 |
-| color/zcodeMcp | `#F59E0B` 橙 | MCP 档本色 |
-| color/other | `#94A3B8` 灰 | 未知档位 |
-颜色语义：**恒定身份色，只表达剩余量**（环填充比例=剩余%），不做预警变色（Leo 明确）。线性进度条已废弃，改同心环。
-| text-primary | 白（13 semibold 标题 / 14 bold rounded 数值） | |
-| text-secondary | 白 55%（重置时间 10pt）/ 白 45%（页脚 9.5pt） | |
+| island/notch | 180×safeTop pt（无刘海屏 safeTop 兜底 24） | 隐形触发区（= 刘海挖槽矩形，内容全透明） |
+| island/card-width | `max(352, 32 + 150n + 12(n−1))`，n=源数 | 展开卡片宽（≤2 源恒 352，第三源起自动加宽） |
+| island/card-height | `safeTop + 6 + panelHeight + 10 + 24 + 14` | 展开卡片高（顶边贴屏幕顶沿） |
+| island/panel-height | `20 + 14 + 6 + (环66 \| 提示44) + [6 + 行数×15 + (行数−1)×4]` | 单源面板高（面板行等高取最高者；= 实际渲染分支） |
+| island/radius | 顶部 0 / 卡片底部 16；面板 14（continuous） | 顶部两角直角与顶边无缝衔接 |
+| island/surface | `#000000` 卡片底；面板 `白 4%` 填充 + `白 5%` 0.5pt 描边 | 深色 HUD（§1 个性偏移声明） |
+| island/ring | 直径 66、环宽 8；底轨 `白 8%` | 每源主环（环心=剩余%+档名） |
+| island/hit-target | 图标按钮 24×24 pt（页脚行高同值），hover 白 10% 圆角 6 | DESIGN §2.5 命中区基线（macOS 指针场景） |
+| island/empty-glyph | 虚线圆 26pt、线宽 3、dash 3/3、`白 18%` | 未配置空态图形（§5.8） |
+| island/detail-row | 行高 15、行距 4；健康度色点 6 | 环下明细行 |
+
+### 色彩（颜色 = 健康度，阈值唯一定义于 `IslandTheme`）
+
+| token | 值 | 用途 |
+|---|---|---|
+| health/good | `#30D158` | 剩余 ≥ 50% |
+| health/warn | `#FF9F0A` | 剩余 20–50% |
+| health/bad | `#FF453A` | 剩余 < 20%（含刷新失败红字、页脚错误） |
+| health/unknown | `白 25%`（NSColor sRGB 白 30%） | 无数据（环/色点）/ 菜单无数据灰条 `系统灰 55%` |
+
+> it-001/002 的「档位身份色」（5h 蓝 / 每周绿 / MCP 橙）**已废止**（US-4 修正，
+> 与 it-002 增补 2 实况对齐）；菜单栏图标同用健康度语义，不再另搞一套身份色。
+
+### 排版（全部 SF Pro；辅助文字 ≥9.5pt 且 ≥55% 白，it-003 AC2）
+
+| 层级 | 规格 |
+|---|---|
+| 面板头源名 | 10.5 semibold，白 92% |
+| 面板头重置 / 错误 | 9.5 regular，白 55%（错误=health/bad） |
+| 环心百分比 | **15 bold rounded**，白，numericText 过渡 |
+| 环心档名 | 9.5 medium，白 55% |
+| 明细行标签 | 10 medium，白 88% |
+| 明细行辅助（重置/绝对量） | 9.5 regular，白 55%；分隔「·」白 30% |
+| 明细行百分比 | **12 bold rounded**，白，numericText 过渡（向下取整） |
+| 空态提示 | 10 regular，白 55%；按钮 10 medium 白 85%（底 白 8%） |
+| 页脚 | 9.5 regular，白 55%（错误=health/bad），单行截断 |
+| 演示前缀 | 「演示 · 」原样拼接 |
 
 ## 动效清单
 
 | 动效 | 参数 |
 |---|---|
-| 展开/收起（窗口 frame） | NSAnimationContext 0.36s cubic(0.16, 1, 0.3, 1) |
-| 展开/收起（SwiftUI 内容） | spring(response 0.36, dampingFraction 0.85) + opacity transition |
-| 进度条填充 | easeOut 0.45s（紧凑）/ 0.5s（展开） |
-| 刷新按钮 | loading 时 1s linear 无限旋转 |
+| 展开/收起（遮罩尺寸） | spring(response 0.32, dampingFraction 0.9)（动画只挂遮罩，窗口零运动） |
+| 环填充 | easeOut 0.6s（值=fill，改数据才动） |
+| 环心/明细百分比数字 | `.contentTransition(.numericText())` + snappy 0.3s / 0.25s（DESIGN §5.9） |
+| 刷新按钮 | 在途 1s linear 无限旋转；停止时 animation 置 nil 原地归零不倒转 |
+| hover 展开/收起防抖 | enter 60ms / exit 180ms（均可取消，光标仍在卡内不收） |
 | 触感 | **无**（Leo 明确不要震动，hover 展开不触发 NSHapticFeedbackManager） |
 
-## 字体
+## 空状态（DESIGN §5.8）
 
-系统字体：SF Pro（标题/正文）；百分比 `design: .rounded` 加粗，贴近 iOS 灵动岛数字感。
+未配置面板 = **虚线空环图形 + 「未配置 XX」+「去设置」按钮**（横排：环占主环同位视觉锚，
+文案与按钮右侧竖排），高度与 hintHeight（44）一致，面板高度公式分支 `hasRing=false`。
 
 ## 菜单栏图标
 
-18×14pt 三根圆角小彩条（systemBlue/systemGreen/systemOrange），非 template（保色）。
+18×14pt 三根圆角小彩条（x=index×7、4×10、圆角 1.5），**每源主档一根**，颜色 = 健康度
+（`IslandTheme.levelNSColor`，与卡片同一套阈值）；无数据补灰条占位（轮廓不塌缩）。
+非 template（保色）。摘要按源分组（源名头 + 缩进行 + 逐源错误/空态）。

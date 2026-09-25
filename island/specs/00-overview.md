@@ -3,9 +3,10 @@
 ## 定位
 
 **灵岛（island）= Mac 刘海处的功能入口容器**。默认完全隐形，hover 刘海即展开内容卡片。
-名字与任何厂商解耦：内容源是可插拔的（`UsageProviding` 协议缝），当前接入的第一个内容源是
-**GLM Coding Plan TOKEN 用量**，未来可扩展其它 TOKEN 厂商（Anthropic、OpenAI、MiniMax…）
-与其它能力卡片。
+名字与任何厂商解耦：内容源由 `ProviderRegistry` 单表注册、可插拔（`UsageProviding` 协议缝），
+当前已接入 **GLM Coding Plan TOKEN 用量** 与 **小米 MiMo TOKEN Plan**（多源同屏并排），
+未来可扩展其它 TOKEN 厂商（Anthropic、OpenAI、MiniMax…）与其它能力卡片
+（新增源 = `ProviderKind` case + 注册表一条 + 解析器）。
 
 ## 首个内容源：GLM Coding Plan
 
@@ -20,11 +21,11 @@ Leo 订阅了 GLM Coding Plan（个人版），控制台展示多档用量，每
 ## 核心价值流
 
 ```
-官方用量接口（monitor/usage/quota/limit）
-  → UsageProvider 拉取 + 宽松解析（Keychain 存 Key）
-  → UsageStore 快照（内存 + 磁盘缓存）
-  → 刘海胶囊两态展示（紧凑三迷你条 / 展开三行明细）
-  → 定时轮询 + 手动刷新 + 失败退避
+各源官方用量接口（GLM monitor / MiMo tokenPlan·usage）
+  → registry 注入的 UsageProviding 拉取 + 宽松解析（凭证存本机 0600 文件）
+  → UsageStore 按源状态（快照 + 错误 + 在途；内存 + 按源磁盘缓存）
+  → 刘海卡片（单环主锚 + 行式明细，每源一面板，健康度配色）
+  → 定时轮询 + 手动刷新 + 失败退避（逐源成败独立记录）
 ```
 
 ## 非目标（M1）
