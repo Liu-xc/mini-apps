@@ -112,7 +112,7 @@ private extension SettingsView {
             }
             if store.credentialKinds.contains(.glm) {
                 HStack {
-                    Label("Key 已存入本机钥匙串", systemImage: "checkmark.seal.fill")
+                    Label("Key 已存入本机（加密限制文件）", systemImage: "checkmark.seal.fill")
                         .font(.callout)
                         .foregroundStyle(.green)
                     Spacer()
@@ -121,7 +121,7 @@ private extension SettingsView {
                     }
                 }
             }
-            Text("官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；Key 只存本机钥匙串。")
+            Text("官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；Key 只存本机（0600 权限限制文件），不写入任何文件日志之外的地方。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -140,7 +140,7 @@ private extension SettingsView {
             }
             if store.credentialKinds.contains(.mimo) {
                 HStack {
-                    Label("Cookie 已存入本机钥匙串", systemImage: "checkmark.seal.fill")
+                    Label("Cookie 已存入本机（加密限制文件）", systemImage: "checkmark.seal.fill")
                         .font(.callout)
                         .foregroundStyle(.green)
                     Spacer()

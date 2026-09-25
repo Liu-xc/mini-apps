@@ -28,7 +28,7 @@ struct ProviderUsageFetcher: UsageProviding {
     }
 
     private func fetchMiMo() async throws -> UsageSnapshot {
-        let cookie = KeychainStore.load(account: KeychainAccount.mimoCookie)
+        let cookie = CredentialStore.load(account: KeychainAccount.mimoCookie)
         guard !cookie.isEmpty else {
             throw ProviderError(message: "未配置 MiMo Cookie")
         }
@@ -59,7 +59,7 @@ struct MonitorUsageProvider: UsageProviding {
     let preferredEndpoint: EndpointMode?
 
     func fetchSnapshot() async throws -> UsageSnapshot {
-        let key = KeychainStore.load(account: KeychainAccount.glm)
+        let key = CredentialStore.load(account: KeychainAccount.glm)
         guard !key.isEmpty else {
             throw ProviderError(message: "未配置 GLM API Key")
         }

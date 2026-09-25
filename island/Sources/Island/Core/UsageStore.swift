@@ -28,7 +28,7 @@ final class UsageStore: ObservableObject {
         }
         self.caches = caches
 
-        KeychainStore.migrateLegacyAPIKey()
+        CredentialStore.migrateFromKeychain()
         seedFromEnvironment()
         refreshCredentialKinds()
         for kind in ProviderKind.allCases {
@@ -119,13 +119,13 @@ final class UsageStore: ObservableObject {
     }
 
     func clearGLMKey() {
-        KeychainStore.delete(account: KeychainAccount.glm)
+        CredentialStore.delete(account: KeychainAccount.glm)
         credentialKinds.remove(.glm)
         snapshots[.glm] = nil
     }
 
     func clearMimoCookie() {
-        KeychainStore.delete(account: KeychainAccount.mimoCookie)
+        CredentialStore.delete(account: KeychainAccount.mimoCookie)
         credentialKinds.remove(.mimo)
         snapshots[.mimo] = nil
     }
@@ -138,12 +138,7 @@ final class UsageStore: ObservableObject {
     private func saveSecret(_ secret: String, kind: ProviderKind, account: String) {
         let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        do {
-            try KeychainStore.save(trimmed, account: account)
-        } catch {
-            status = .failed("钥匙串写入失败：\(error.localizedDescription)")
-            return
-        }
+        CredentialStore.save(trimmed, account: account)
         credentialKinds.insert(kind)
         if settings.demoMode {
             setDemoMode(false)
@@ -156,19 +151,19 @@ final class UsageStore: ObservableObject {
     private func seedFromEnvironment() {
         let env = ProcessInfo.processInfo.environment
         if let key = env["GLM_ISLAND_SEED_KEY"], !key.isEmpty,
-           KeychainStore.load(account: KeychainAccount.glm).isEmpty {
-            try? KeychainStore.save(key, account: KeychainAccount.glm)
+           CredentialStore.load(account: KeychainAccount.glm).isEmpty {
+            try? CredentialStore.save(key, account: KeychainAccount.glm)
         }
         if let cookie = env["GLM_ISLAND_SEED_MIMO_COOKIE"], !cookie.isEmpty,
-           KeychainStore.load(account: KeychainAccount.mimoCookie).isEmpty {
-            try? KeychainStore.save(cookie, account: KeychainAccount.mimoCookie)
+           CredentialStore.load(account: KeychainAccount.mimoCookie).isEmpty {
+            try? CredentialStore.save(cookie, account: KeychainAccount.mimoCookie)
         }
     }
 
     private func refreshCredentialKinds() {
         var kinds: Set<ProviderKind> = []
-        if !KeychainStore.load(account: KeychainAccount.glm).isEmpty { kinds.insert(.glm) }
-        if !KeychainStore.load(account: KeychainAccount.mimoCookie).isEmpty { kinds.insert(.mimo) }
+        if !CredentialStore.load(account: KeychainAccount.glm).isEmpty { kinds.insert(.glm) }
+        if !CredentialStore.load(account: KeychainAccount.mimoCookie).isEmpty { kinds.insert(.mimo) }
         credentialKinds = kinds
     }
 

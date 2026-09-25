@@ -30,6 +30,12 @@ enum ResetFormatter {
         return "\(seconds / 86400)天前"
     }
 
+    /// token 数 → billion 单位（5387634858 → "5.39B"）
+    static func billion(_ tokens: Double) -> String {
+        let b = tokens / 1_000_000_000
+        return b >= 100 ? String(format: "%.0fB", b) : String(format: "%.2fB", b)
+    }
+
     private static func clockString(_ date: Date) -> String {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)

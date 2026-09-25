@@ -166,11 +166,11 @@ struct ProviderPanel: View {
         .frame(height: IslandRootView.panelHeight)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.045))
+                .fill(Color.white.opacity(0.04))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
         )
     }
 }
@@ -192,17 +192,20 @@ struct ActivityRingsView: View {
                     - CGFloat(index) * 2 * (ringWidth + gap)
                 let fill = min(1, max(0.008, (row.remainingPercent ?? 0) / 100))
                 let color = IslandTheme.levelColor(row.remainingPercent)
+                // 小百分比时 round cap 会吞掉弧长，保证可见弧 ≥ 1.25 倍线宽
+                let circumference = .pi * diameter
+                let visibleFill = min(1, max(fill, ringWidth * 1.25 / circumference))
                 Circle()
-                    .stroke(Color.white.opacity(0.10), lineWidth: ringWidth)
+                    .stroke(Color.white.opacity(0.08), lineWidth: ringWidth)
                     .frame(width: diameter, height: diameter)
                 Circle()
-                    .trim(from: 0, to: fill)
+                    .trim(from: 0, to: visibleFill)
                     .stroke(
                         AngularGradient(
                             colors: [color.opacity(0.55), color],
                             center: .center,
                             startAngle: .degrees(-90),
-                            endAngle: .degrees(-90 + 360 * fill)
+                            endAngle: .degrees(-90 + 360 * visibleFill)
                         ),
                         style: StrokeStyle(lineWidth: ringWidth, lineCap: .round)
                     )
@@ -213,7 +216,7 @@ struct ActivityRingsView: View {
             }
             if rows.isEmpty {
                 Circle()
-                    .stroke(Color.white.opacity(0.10), lineWidth: ringWidth)
+                    .stroke(Color.white.opacity(0.08), lineWidth: ringWidth)
                     .frame(width: clusterSize - ringWidth, height: clusterSize - ringWidth)
             }
             if !centerTitle.isEmpty {
@@ -238,10 +241,15 @@ struct RingStatRow: View {
                 .frame(width: 5, height: 5)
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.label)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.92))
                 if let reset = row.resetDate {
                     Text(ResetFormatter.shortReset(reset, now: now) + " 重置")
+                        .font(.system(size: 8.5))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                if let used = row.usedTokens, let limit = row.limitTokens, limit >= 1_000_000_000 {
+                    Text("已用 \(ResetFormatter.billion(used)) / \(ResetFormatter.billion(limit))")
                         .font(.system(size: 8.5))
                         .foregroundStyle(.white.opacity(0.4))
                 }
@@ -250,7 +258,7 @@ struct RingStatRow: View {
             if let remaining = row.remainingPercent {
                 // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
                 Text("\(Int(remaining))%")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             } else {
                 Text("--%")

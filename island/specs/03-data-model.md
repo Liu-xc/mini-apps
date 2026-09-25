@@ -46,6 +46,7 @@ struct UsageSnapshot: Codable, Equatable {
   随新用量增长而下降——0% 只代表此刻窗口占满，并非数据错误
 - **`percentage` = 已用百分比**，剩余 = 100 − percentage；`usage` / `currentValue` / `remaining`
   是**绝对 token 数**，不能当百分比读（percentage 缺失时可用 1 − currentValue/usage 反推）
+- **MiMo 已用展示**：`已用 5.58B / 456B tokens`（billion 单位，≥100B 不带小数）
 - **显示口径**：优先精确比值 (usage−currentValue)/usage×100，**向下取整**显示
   （99.88% → 99%，与控制台一致；`percentage` 整数近似有截断误差，只做兜底）
 - `nextResetTime` = 毫秒时间戳
@@ -56,7 +57,8 @@ struct UsageSnapshot: Codable, Equatable {
 
 | 数据 | 位置 | 内容 |
 |---|---|---|
-| API Key | Keychain：service `com.spartapps.island` / account `api-key` | 仅 Key，绝不落文件 |
+| GLM Key | 本地文件 `~/Library/Application Support/island/credentials.json`（chmod 0600）account `glm-key` | 不入仓库/日志 |
+| MiMo Cookie | 同上，account `mimo-cookie`（**会过期**，设置里更新） | 同上 |
 | 快照缓存 | `~/Library/Application Support/island/snapshot.json` | UsageSnapshot（无 Key） |
 | 偏好 | UserDefaults | `endpointMode` / `refreshMinutes` / `demoMode` / `consoleURLString` / `preferredEndpoint` |
 

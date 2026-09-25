@@ -31,7 +31,9 @@ enum MiMoQuotaParser {
                     label: displayLabel(for: name),
                     remainingPercent: remaining,
                     resetDate: nil,
-                    percentInferred: false
+                    percentInferred: false,
+                    usedTokens: double(item["used"]),
+                    limitTokens: limit
                 ))
                 break   // 每个块取主档一条
             }

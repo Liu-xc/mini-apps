@@ -33,6 +33,9 @@ struct QuotaRow: Codable, Equatable, Identifiable {
     var resetDate: Date?
     /// 百分比是由「已用」字段反推的标记
     var percentInferred: Bool
+    /// 已用 / 额度的绝对 token 数（MiMo 展示 billion 用；nil=不展示）
+    var usedTokens: Double? = nil
+    var limitTokens: Double? = nil
 }
 
 struct UsageSnapshot: Codable, Equatable {
