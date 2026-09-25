@@ -153,6 +153,14 @@ fun RecordsScreen(
                                 stackedCardsOffset = 14.dp,
                                 padding = 6.dp,
                             ),
+                            // it-046：库默认 spring(0.6,100) 飞出 ≈1s 且 9% 过冲晃尾——
+                            // 换 0.9/500：≈0.32s 到位、<0.5% 过冲、≈0.5s 落定
+                            animations = com.spartapps.swipeablecards.ui.animation.SwipeableCardsAnimations(
+                                cardsAnimationSpec = androidx.compose.animation.core.spring(
+                                    dampingRatio = 0.9f,
+                                    stiffness = 500f,
+                                ),
+                            ),
                         ) { outfit ->
                             OutfitDeckCard(vm, outfit) { onOpenOutfit(outfit.id) }
                         }

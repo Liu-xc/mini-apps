@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -174,11 +175,18 @@ fun SlotCell(
                                 )
                             }
                         } else {
+                            // it-046 分档撑满：常规格（0.6/0.78/0.85）Crop 满格无留边——
+                            // 深色模式下旧衬纸(surfaceVariant 半透明)即 Leo 所见黑边距；
+                            // 帽(1.0)/鞋(2.6) 极端比例裁切会剪帽檐/鞋底（内容包围盒实测），
+                            // 保留 Fit 但衬纸固定浅色 #F2F3F5，主题无关不再变黑
+                            val fitPaper = aspect >= 0.95f
                             PhotoCard(
                                 file = imageFileOf(item.imageFile),
                                 contentDescription = item.name,
                                 corner = 12.dp,
-                                mat = true,
+                                mat = fitPaper,
+                                matColor = if (fitPaper) Color(0xFFF2F3F5) else null,
+                                contentScale = if (fitPaper) ContentScale.Fit else ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -255,9 +263,14 @@ fun SlotCell(
                                     .clickable {
                                         if (items.size > 1) {
                                             flipScope.launch {
-                                                pagerState.animateScrollToPage(
-                                                    (pagerState.currentPage + 1) % items.size,
-                                                )
+                                                // it-046：末页回卷即时落位——反向 animateScrollToPage
+                                                // 会扫过全部页，观感断裂
+                                                val next = (pagerState.currentPage + 1) % items.size
+                                                if (next == 0) {
+                                                    pagerState.scrollToPage(0)
+                                                } else {
+                                                    pagerState.animateScrollToPage(next)
+                                                }
                                             }
                                         }
                                     }

@@ -11,6 +11,7 @@ import com.spartapps.swipeablecards.state.SwipeableCardsState
 import com.spartapps.swipeablecards.state.rememberSwipeableCardsState
 import com.spartapps.swipeablecards.ui.SwipeableCardDirection
 import com.spartapps.swipeablecards.ui.SwipeableCardsProperties
+import com.spartapps.swipeablecards.ui.animation.SwipeableCardsAnimations
 import com.spartapps.swipeablecards.ui.lazy.LazySwipeableCards
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -63,27 +64,34 @@ class CardDeckController<T> internal constructor(
     /**
      * 纯随机抽取：随机步数保证落点均匀分布；卡组按「加速—减速」节奏用库自带
      * 飞出动画翻张（老虎机式），落定后返回顶部卡片。抽取期间 [isDrawing] 为真。
+     *
+     * it-046 节奏修订（库 1.1.4 反编译实证）：
+     * - 库 `swipe()` 自带 `moveNext()`，但末张 moveNext 不推进索引、也不会触发手势
+     *   路径的回卷回调——末张必须「真实甩出 + 立即 setCurrentIndex(0)」组合步：
+     *   飞行照常进行，复位只是揭示下一张（等价手势路径的甩出+揭示），不再瞬移断帧；
+     * - 步距地板 420ms ≈ 新弹簧 spring(0.9, 500) 的落定量级：上一步飞完再走下一步，
+     *   不再出现旧版 55ms 连发时「卡片半空被 moveNext 摘除/多张叠飞」的撕裂感；
+     * - 步数 4 + rand(n)：对 n 取模落点仍均匀，单轮 4~n+3 步（n=1 直接返回不甩）。
      */
     suspend fun drawRandom(onStep: (T) -> Unit = {}): T? {
         val list = itemsProvider()
         if (list.isEmpty() || isDrawing) return null
+        if (list.size == 1) return current
         isDrawing = true
         try {
-            val steps = 12 + Random.nextInt(list.size)
-            var delayMs = 55L
+            val steps = 4 + Random.nextInt(list.size)
+            var delayMs = 420L
             repeat(steps) {
                 val n = itemsProvider().size
                 if (n == 0) return@repeat
-                if (state.currentCardIndex >= n - 1) {
-                    state.setCurrentIndex(0)
-                } else {
-                    state.swipe(SwipeableCardDirection.Left)
-                }
+                val atLast = state.currentCardIndex >= n - 1
+                state.swipe(SwipeableCardDirection.Left)
+                if (atLast) state.setCurrentIndex(0)
                 current?.let(onStep)
                 delay(delayMs)
-                delayMs = (delayMs * 1.24).toLong().coerceAtMost(340)
+                delayMs = (delayMs * 1.18).toLong().coerceAtMost(560L)
             }
-            delay(260) // 等最后一张的飞出/晋升动画收尾
+            delay(560) // 等最后一张的飞出/晋升动画落定
             return current
         } finally {
             isDrawing = false
@@ -107,6 +115,8 @@ fun <T> CardDeck(
     items: List<T>,
     modifier: Modifier = Modifier,
     properties: SwipeableCardsProperties = SwipeableCardsProperties(),
+    /** it-046：飞卡动画注入（库默认 spring(0.6,100) 偏软偏弹，调用方可传更利落的规格） */
+    animations: SwipeableCardsAnimations? = null,
     circular: Boolean = true,
     onSwipe: ((item: T, toRight: Boolean) -> Unit)? = null,
     cardContent: @Composable (T) -> Unit,
@@ -117,6 +127,7 @@ fun <T> CardDeck(
         modifier = modifier,
         state = state,
         properties = properties,
+        animations = animations ?: SwipeableCardsAnimations(),
         onSwipe = { item, direction ->
             // 循环：末张被手势滑走后回到第一张，卡组永不枯竭（it-003 遗留修复）
             if (circular && items.isNotEmpty() && state.currentCardIndex >= items.lastIndex) {

@@ -4,6 +4,8 @@
 
 ## 2026-09-26
 
+- **fix(wardrobe)**: it-046 槽位卡撑满去黑边距——深色下旧衬纸（surfaceVariant@55%）+Fit 留边即 Leo 所见黑边距；改分档呈现：常规格（0.6/0.78/0.85）Crop 满格无留边，帽(1.0)/鞋(2.6) 极端比例保 Fit + 固定浅纸 #F2F3F5（主题无关；裁切伤害以内容包围盒实测证否）；W1 序号 n/m 末页回卷改即时落位。
+- **fix(wardrobe+libs/carddeck)**: it-046 穿搭卡组动画丝滑化——库 1.1.4 反编译实证飞卡默认 `spring(0.6,100)`（落定≈1s、9% 过冲晃尾）且 drawRandom 55ms 连发远短于飞行时长（多张叠飞/moveNext 半空摘除）+ 末张纯瞬移；`CardDeck` 增 `animations` 参数透传（wardrobe 注入 `spring(0.9,500)`≈0.32s 落定），drawRandom 改步距 420→560ms、步数 4+rand(n)、末张「甩出+复位」组合步；specs 01(US-46)/05（槽位呈现+动效表#12+衬纸表）/it-046/carddeck 00 同步；模拟器像素探针+连拍+回卷实测全过，eats 编译兼容。
 - **feat(island)**: it-003 卡片改版 + 可扩展架构——UI 走查 P0/P1/P2 全修：**单环主锚+行式明细**（面板头=源名+主档重置/失败红字、环心=剩余%+档名、环下副档/绝对量行、空态虚线环+去设置），**ProviderRegistry 单表驱动**（凭证/面板/设置/菜单遍历注册表，新增源=case+一条+解析器），**按源状态 `SourceState`**（逐源成败不吞，修 it-002 AC4；清凭证删缓存），**`IslandLayout` 布局单一真源**（遮罩/hitTest/窗口帧同源、面板高度=渲染分支），页脚 TimelineView 真实时间，健康度配色收编 `IslandTheme`（US-4 修正、菜单图标同语义），numericText 数字过渡（§5.9），设置清除二次确认+逐源诊断+620 高度，菜单分组摘要；ADR-009/010/011 补录，specs 00–06 + README + DESIGN §1 全同步；swift test 37/37 绿，DebugShot 五状态截图走查回填验证记录。
 
 ## 2026-09-25
