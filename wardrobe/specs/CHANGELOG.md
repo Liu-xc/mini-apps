@@ -10,8 +10,10 @@
 - 阶段 A spike 放行：WebP q82 往返透明区 RGB 零清黑、alpha 代际 IoU=1.0、u2netp 二次分割 IoU ≥0.945（[报告](../../reports/2026-09-25-cutout-recut-spike/)）。
 - 详情见 [it-040](iterations/it-040-backfill-cutout.md)；specs/01（US-40 + US-15 AC 修订）/02/06（ADR-023）同步更新。
 
-### it-041 — AI 模型接入（阶段 A：设置页与连通性自检）
-- 新增 W11 设置页（W3 标题行 ⚙ 入口）：厂商（智谱 GLM / MiMo 按量 / Token 套餐 / 自定义）与模型档选择、API Key Keystore AES-GCM 密文存取（界面只显 mask）、「保存并自检」1-token ping 按错误分类呈现，自检成功给确认触感；清除 Key 二次确认。
+### it-041 — AI 模型接入（阶段 A 设置页 + 阶段 B 对话页）
+- **阶段 B**：W12 对话页（穿搭顾问）——流式打字机 +「已查衣橱」工具条 + 分类错误重试 + 停止即停；4 个只读工具（search_items / search_outfits / wear_stats / current_person）真查衣橱再回答；FileSessionStore 杀进程续聊（调用方契约：用户消息发送即入会话）；W11 用量卡（厂商×模型 count-up）；演示模式挂离线 FakeChatModel（工具仍真查演示数据，零外呼）。
+- 阶段 B 修复：Wire 层 `tools[].type` / `tool_calls[].type` 在 encodeDefaults=false 下被省略（GLM 1214 实测拒绝）→ `@EncodeDefault` 强制编码 + 契约回归测试。
+- **阶段 A**：新增 W11 设置页（W3 标题行 ⚙ 入口）：厂商（智谱 GLM / MiMo 按量 / Token 套餐 / 自定义）与模型档选择、API Key Keystore AES-GCM 密文存取（界面只显 mask）、「保存并自检」1-token ping 按错误分类呈现，自检成功给确认触感；清除 Key 二次确认。
 - 接入 libs/agent SDK（includeBuild + `libs.leo.agent`），Manifest 新增 INTERNET 权限（唯一用途 BYOK 模型直连，ADR-024）；演示模式禁用 Key 输入并永不挂真 Key。
 - 设置页内「退出演示模式」获得真实落点（原 WardrobePackages 提示文案指向不存在页面的问题随之消除）；关于卡显示数据模式、版本与联网边界注记。
 - SDK 侧修复：`OkHttpChatModel.complete` 切 IO 调度器（NetworkOnMainThreadException，M1 遗留）。

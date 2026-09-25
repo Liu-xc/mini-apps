@@ -128,6 +128,7 @@ private object Routes {
     const val RECAP = "recap"
     const val WISHLIST = "wishlist"
     const val SETTINGS = "settings" // it-041：W11 设置页
+    const val CHAT = "chat" // it-041 阶段 B：W12 对话页
 }
 
 private enum class Tab(val label: String) {
@@ -140,6 +141,7 @@ private fun WardrobeRoot() {
     val vm: AppViewModel = viewModel()
     val recapVm: com.leo.wardrobe.ui.recap.RecapViewModel = viewModel()
     val settingsVm: com.leo.wardrobe.ui.settings.SettingsViewModel = viewModel()
+    val chatVm: com.leo.wardrobe.ui.chat.ChatViewModel = viewModel()
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     var tab by rememberSaveable { mutableStateOf(Tab.OUTFIT) }
@@ -190,7 +192,7 @@ private fun WardrobeRoot() {
         // 顶栏标题上方只剩常规状态栏高度；搭配/记录/衣橱/W10 维持原浅绿状态栏表现
         contentWindowInsets = if (currentRoute in setOf(
                 Routes.ITEM_EDIT, Routes.ITEM_DETAIL, Routes.OUTFIT_DETAIL, Routes.RECAP,
-                Routes.SETTINGS,
+                Routes.SETTINGS, Routes.CHAT,
             )
         ) {
             ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
@@ -304,6 +306,16 @@ private fun WardrobeRoot() {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             com.leo.wardrobe.ui.settings.SettingsScreen(
                                 vm = settingsVm,
+                                onBack = { nav.popBackStack() },
+                                onOpenChat = { nav.navigate(Routes.CHAT) },
+                            )
+                        }
+                    }
+                    // it-041 阶段 B：W12 对话页（穿搭顾问）
+                    composable(Routes.CHAT) {
+                        CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
+                            com.leo.wardrobe.ui.chat.ChatScreen(
+                                vm = chatVm,
                                 onBack = { nav.popBackStack() },
                             )
                         }

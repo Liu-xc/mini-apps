@@ -1,6 +1,6 @@
 # it-041 · AI 模型接入（libs/agent M3）——设置页 + 穿搭顾问对话
 
-- **状态**：**阶段 A 已实现并验收（2026-09-25，/goal 批准实施）**——构建+单测绿、模拟器端到端自检通过，见文末验证记录；**阶段 B（W12 对话页）进行中**
+- **状态**：**已实现并验收（2026-09-25，/goal 批准实施）**——阶段 A（设置页+自检）与阶段 B（对话页+工具+会话+用量）均落地，见文末验证记录
 - **前置**：libs/agent **M2**（it-002 agent loop）已完成；**M0 spike**（真调校准）建议先行，不阻塞阶段 A
 - **关联**：新增 **US-41a~d**；新增线框 **W11（设置页）/ W12（对话页）**；新增 **ADR-024**（INTERNET 权限 + BYOK 接入定位修订）
 - **SDK 侧**：libs/agent it-001 影响范围原文「消费 app（M3 接入时）：settings includeBuild + 设置页/对话页，届时另开 app it-XXX，UI 走 DESIGN.md」——本迭代即该接棒点
@@ -135,3 +135,18 @@
 - **红线自查**：① agent_secrets 独立于数据包导出链路（PackageCodec 只读 wardrobe.json+images）✓ ② 演示模式 InMemoryApiKeyStore + UI 禁用 ✓ ③ UI 只显 mask、失败日志仅异常堆栈无 Key ✓（全仓 grep 无明文 Key）。
 - **specs 同步**：00（联网边界句）、01（US-41a~d）、02（W11 注记 + W1–W12 编号）、04（ui/settings、路由、composite、权限表）、06（ADR-024）、CHANGELOG。
 - 走查备注：模拟器 screencap 通道重启后短暂返回旧帧（连续两帧相同 + uiautomator 新鲜 dump 交叉验证后触摸刷新恢复），后续走查如遇截图不动先 touch 一下再截。
+
+### 阶段 B · 对话页与工具（2026-09-25 完成）
+
+- **构建/测试**：`./gradlew assembleDebug testDebugUnitTest` BUILD SUCCESSFUL；libs/agent `./gradlew test` **64/64 绿**（新增 wire `type` 契约回归，63→64）。
+- **实现**：`ui/chat/{ChatScreen(W12), ChatViewModel, WardrobeTools}` + `data/mock/DemoChatModel`（演示离线模型）+ AppContainer `agentSession`(FileSessionStore)/`agentUsage`(FileUsageLedger) + W11「开始对话」与用量卡（CountUpText）+ 路由 `chat`（白底二级页组）。
+- **走查实录**（emulator-5554，正常模式 · 真实 GLM glm-4-flash · 真人衣橱数据）：
+  1. W11「开始对话」→ W12 空态（「问问你的衣橱」+ 示例 hint）✓；
+  2. 发送「suggest outfit for work」→ **agent loop 4 轮 search_items**（高领衫→下装→外套→再查落空）→ 最终回复「根据你的衣橱，我为你推荐以下三套通勤穿搭…」**引用真实单品名**（米色打褶长裤/黑色西装短裤/藏蓝色防雨派克外套），工具条「已查衣橱：search_items」×N、结果小字完整渲染 ✓（截图 [reports/2026-09-25-it041-stage-b/](../../../reports/2026-09-25-it041-stage-b/)）；
+  3. **US-41c** `am force-stop` → 重开 → 回对话页，全部历史在（会话文件 11 条消息核对）✓；
+  4. **US-41d** W11 用量卡「智谱 GLM · glm-4-flash 3508 tokens」（输入/输出分列 + count-up）✓；
+  5. 空闲/运行态切换：发送键↔停止键、错误横幅（含首测失败时的分类文案）✓。
+- **走查中发现并修复**：Wire `encodeDefaults=false` 把 `tools[].type`/`tool_calls[].type`（=默认值 "function"）省略 → GLM 1214「type cannot be empty」拒绝 → `@EncodeDefault` 强制编码 + `OkHttpChatModelTest` 契约回归断言（M1 MockWebServer 测试未覆盖该字段，实调才暴露）。
+- **已知小瑕疵**：长回复流式结束后的自动滚动可能停在倒数第二项（key 竞态），手动轻滑即达——记为观察项，不阻塞验收。
+- **specs 同步**：01（US-41b/c/d 落地标注）、02（W12 终稿注记）、04（ui/chat 目录 + chat 路由）、CHANGELOG（阶段 B 并入 it-041 条目）。
+- 红线复核：工具全部只读（零写路径）✓；演示模式 FakeChatModel 零外呼且工具真查演示数据 ✓；Key 全程 mask ✓。

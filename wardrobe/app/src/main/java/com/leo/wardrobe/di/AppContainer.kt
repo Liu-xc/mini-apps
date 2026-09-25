@@ -67,9 +67,18 @@ class AppContainer(private val context: Context) {
     val apiKeyStore: com.leo.libs.agent.ApiKeyStore =
         if (demo) com.leo.libs.agent.InMemoryApiKeyStore() else KeystoreApiKeyStore(context)
 
-    /** it-041：模型传输实例工厂——构造零副作用（OkHttp 客户端惰性请求），不进启动路径 */
+    /** it-041：模型传输实例工厂——构造零副作用（OkHttp 客户端惰性请求），不进启动路径；
+     *  演示模式挂离线 FakeChatModel（红线②：零外呼，工具仍真查演示数据） */
     fun chatModel(preset: com.leo.libs.agent.ProviderPreset): com.leo.libs.agent.ChatModel =
-        com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore)
+        if (demo) com.leo.wardrobe.data.mock.demoChatModel()
+        else com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore)
+
+    /** it-041 阶段 B：AI 对话会话（tmp→rename 原子写，杀进程可续）与用量记账 */
+    val agentSession: com.leo.libs.agent.session.FileSessionStore =
+        com.leo.libs.agent.session.FileSessionStore(File(context.filesDir, "agent-sessions"))
+
+    val agentUsage: com.leo.libs.agent.usage.FileUsageLedger =
+        com.leo.libs.agent.usage.FileUsageLedger(File(context.filesDir, "agent-usage.json"))
 
     val buildPrompt: BuildOutfitPrompt = BuildOutfitPrompt()
     val pickRandom: PickRandomOutfit = PickRandomOutfit()

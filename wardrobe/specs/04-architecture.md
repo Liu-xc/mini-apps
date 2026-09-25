@@ -54,7 +54,8 @@ com.leo.wardrobe/
    ├─ detail/      ItemDetailScreen(W5)
    ├─ recap/       WardrobeRecapScreen RecapViewModel WardrobeRecapLongImage(W9，it-018/021)
    ├─ wishlist/    WishlistScreen(W10，it-019)
-   └─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域)
+   ├─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域)
+   └─ chat/        ChatScreen(W12) ChatViewModel WardrobeTools(it-041 阶段B，只读衣橱工具)
 ```
 
 ## 设计模式
@@ -72,7 +73,7 @@ com.leo.wardrobe/
 ## 状态与导航
 
 - 全局：`AppViewModel` 暴露 `currentPerson: StateFlow<Person?>` 与 `data: StateFlow<WardrobeData>`。
-- 页面导航：Compose Navigation。路由：`home`(三 Tab) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（it-041 W11，白底二级页组）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
+- 页面导航：Compose Navigation。路由：`home`(三 Tab) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（it-041 W11）/ `chat`（it-041 阶段 B W12；settings/chat 均为白底二级页组）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
 - 组合记忆（US-06）：各品类选中 itemId 存 `DataStore<Preferences>`（PrefsStore），key 按 personId 隔离。
 - 回忆提醒开关存 DataStore（RecapPrefsStore），ReminderScheduler 对齐 WorkManager 任务。
 

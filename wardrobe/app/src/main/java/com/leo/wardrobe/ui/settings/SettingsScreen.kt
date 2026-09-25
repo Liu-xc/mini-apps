@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,8 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.BuildConfig
 import com.leo.wardrobe.data.mock.DemoMode
+import com.leo.wardrobe.ui.components.CountUpText
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.settings.SettingsViewModel.CheckState
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -58,6 +62,7 @@ import com.leo.wardrobe.ui.theme.editorialColors
 fun SettingsScreen(
     vm: SettingsViewModel,
     onBack: () -> Unit,
+    onOpenChat: () -> Unit = {},
 ) {
     val ec = editorialColors()
     val context = LocalContext.current
@@ -79,6 +84,8 @@ fun SettingsScreen(
         if (check is CheckState.Success && prevCheck is CheckState.Running) haptics.confirm()
         prevCheck = check
     }
+    // 每次进入刷新用量（对话后返回设置页即新值）
+    LaunchedEffect(Unit) { vm.refreshUsage() }
 
     val preset = vm.presetOptions.find { it.id == connection.presetId }
     val isCustom = connection.presetId == SettingsViewModel.CUSTOM_ID
@@ -299,6 +306,68 @@ fun SettingsScreen(
                         if (keyMask != null && !vm.isDemo) {
                             TextButton(onClick = { clearAsk = true }) { Text("清除 Key") }
                         }
+                    }
+
+                    // it-041 阶段 B：对话入口（W12）
+                    OutlinedButton(
+                        onClick = onOpenChat,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("开始对话")
+                    }
+                }
+            }
+
+            // ---------- 用量卡（US-41d） ----------
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = ec.surface,
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("用量", style = MaterialTheme.typography.titleLarge, color = ec.ink)
+                    val totals by vm.usage.collectAsState()
+                    if (totals.isEmpty()) {
+                        Text("暂无对话用量", style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint)
+                    } else {
+                        totals.entries
+                            .sortedBy { it.key.first + it.key.second }
+                            .forEach { entry ->
+                                val (presetId, model) = entry.key
+                                val usage = entry.value
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            "${vm.presetLabel(presetId)} · $model",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = ec.ink,
+                                        )
+                                        Text(
+                                            "输入 ${usage.promptTokens} · 输出 ${usage.completionTokens}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = ec.inkFaint,
+                                        )
+                                    }
+                                    // 数字 count-up（DESIGN.md 红线⑨）
+                                    CountUpText(
+                                        target = usage.totalTokens,
+                                        format = { "$it tokens" },
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = ec.ink,
+                                    )
+                                }
+                            }
                     }
                 }
             }

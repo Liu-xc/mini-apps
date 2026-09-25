@@ -67,6 +67,18 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     private val _check = MutableStateFlow<CheckState>(CheckState.Idle)
     val check: StateFlow<CheckState> = _check.asStateFlow()
 
+    /** US-41d：累计用量（厂商×模型），进入设置页与每次对话后刷新 */
+    private val _usage = MutableStateFlow<Map<Pair<String, String>, com.leo.libs.agent.Usage>>(emptyMap())
+    val usage: StateFlow<Map<Pair<String, String>, com.leo.libs.agent.Usage>> = _usage.asStateFlow()
+
+    init {
+        refreshUsage()
+    }
+
+    fun refreshUsage() {
+        viewModelScope.launch { _usage.value = container.agentUsage.totals() }
+    }
+
     val isDemo: Boolean get() = container.isDemo
 
     /** 解析选中厂商为可实例化的 preset（自定义项就地构造；空 baseUrl 由调用方先拦） */
@@ -82,6 +94,11 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun effectiveModel(ui: ConnectionUi): String? =
         if (ui.presetId == CUSTOM_ID) ui.customModel.ifBlank { null }?.trim()
         else resolvePreset(ui)?.let { ui.model.ifBlank { it.defaultModel } }
+
+    /** 用量卡的厂商显示名 */
+    fun presetLabel(presetId: String): String =
+        if (presetId == CUSTOM_ID) "自定义"
+        else presetOptions.find { it.id == presetId }?.displayName ?: presetId
 
     /**
      * 保存连接偏好（+ 可选新 Key）并跑连通性自检（1-token ping，US-A1）。
