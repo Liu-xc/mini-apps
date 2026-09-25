@@ -59,7 +59,7 @@ struct IslandRootView: View {
         return safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14
     }
 
-    static let panelHeight: CGFloat = 126
+    static let panelHeight: CGFloat = 132
 }
 
 // MARK: - 展开卡片：并排双源环形面板
@@ -130,33 +130,17 @@ struct ProviderPanel: View {
     let now: Date
     let openSettings: () -> Void
 
+    /// 统一间距节奏：10 边距 / 环 / 10 / 图例（行高 18、行距 6），内容垂直居中
     var body: some View {
-        VStack(spacing: 6) {
-            ActivityRingsView(rows: rows, centerTitle: kind.title)
-                .frame(width: 64, height: 64)
-                .padding(.top, 2)
-            if rows.isEmpty {
-                VStack(spacing: 4) {
-                    Text(kind == .glm ? "未配置 API Key" : "未配置 Cookie")
-                        .font(.system(size: 9.5))
-                        .foregroundStyle(.white.opacity(0.5))
-                    Button("去设置") { openSettings() }
-                        .font(.system(size: 9))
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.white.opacity(0.7))
-                }
-                .padding(.bottom, 2)
+        Group {
+            if rows.count <= 1 {
+                singleContent
             } else {
-                VStack(spacing: 7) {
-                    ForEach(rows) { row in
-                        RingStatRow(row: row, now: now)
-                    }
-                }
+                multiContent
             }
         }
-        .padding(EdgeInsets(top: 8, leading: 10, bottom: 8, trailing: 10))
         .frame(maxWidth: .infinity)
-        .frame(height: 126, alignment: .top)
+        .frame(height: IslandRootView.panelHeight, alignment: .center)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.white.opacity(0.04))
@@ -166,6 +150,42 @@ struct ProviderPanel: View {
                 .stroke(Color.white.opacity(0.05), lineWidth: 0.5)
         )
     }
+
+    /// 单档：大环居中 + 单行图例
+    private var singleContent: some View {
+        VStack(spacing: 12) {
+            ActivityRingsView(rows: rows, centerTitle: kind.title, clusterSize: 68, ringWidth: 8)
+            if let row = rows.first {
+                RingStatRow(row: row, now: now)
+            } else {
+                unconfiguredHint
+            }
+        }
+    }
+
+    /// 多档：双环 + 图例
+    private var multiContent: some View {
+        VStack(spacing: 12) {
+            ActivityRingsView(rows: rows, centerTitle: "", clusterSize: 60, ringWidth: 7)
+            VStack(spacing: 6) {
+                ForEach(rows) { row in
+                    RingStatRow(row: row, now: now)
+                }
+            }
+        }
+    }
+
+    private var unconfiguredHint: some View {
+        VStack(spacing: 4) {
+            Text(kind == .glm ? "未配置 API Key" : "未配置 Cookie")
+                .font(.system(size: 9.5))
+                .foregroundStyle(.white.opacity(0.5))
+            Button("去设置") { openSettings() }
+                .font(.system(size: 9))
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.7))
+        }
+    }
 }
 
 // MARK: - 同心环（每个环=一档，填充=剩余量，颜色=健康度）
@@ -173,32 +193,29 @@ struct ProviderPanel: View {
 struct ActivityRingsView: View {
     let rows: [QuotaRow]
     var centerTitle: String = ""
+    var clusterSize: CGFloat = 72
+    var ringWidth: CGFloat = 8
 
-    private var ringWidth: CGFloat { rows.count >= 2 ? 7 : 8 }
-    private var gap: CGFloat { 3 }
-    private var clusterSize: CGFloat { 64 }
+    private var gap: CGFloat { 4 }
 
     var body: some View {
         ZStack {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 let diameter = clusterSize - ringWidth
                     - CGFloat(index) * 2 * (ringWidth + gap)
-                let fill = min(1, max(0.008, (row.remainingPercent ?? 0) / 100))
+                let fill = min(1, max(0, (row.remainingPercent ?? 0) / 100))
                 let color = IslandTheme.levelColor(row.remainingPercent)
-                // 小百分比时 round cap 会吞掉弧长，保证可见弧 ≥ 1.25 倍线宽
-                let circumference = .pi * diameter
-                let visibleFill = min(1, max(fill, ringWidth * 1.25 / circumference))
                 Circle()
                     .stroke(Color.white.opacity(0.08), lineWidth: ringWidth)
                     .frame(width: diameter, height: diameter)
                 Circle()
-                    .trim(from: 0, to: visibleFill)
+                    .trim(from: 0, to: fill)
                     .stroke(
                         AngularGradient(
                             colors: [color.opacity(0.55), color],
                             center: .center,
                             startAngle: .degrees(-90),
-                            endAngle: .degrees(-90 + 360 * visibleFill)
+                            endAngle: .degrees(-90 + 360 * fill)
                         ),
                         style: StrokeStyle(lineWidth: ringWidth, lineCap: .round)
                     )

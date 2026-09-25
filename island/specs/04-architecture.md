@@ -42,14 +42,16 @@ Provider      Provider     (磁盘快照)      (Security)      (UserDefaults)
 - hover：NSHostingView 子类借 `mouseEntered/Exited` + `NSTrackingArea(.activeAlways, .inVisibleRect)`
   ——别的 App 前台也生效（本 App 常驻 accessory 不持焦点）。
 - 点击外部收起：全局 + 本地 NSEvent monitor，`panel.frame.contains(NSEvent.mouseLocation)` 判定。
-- 定位（**默认隐藏 + 刘海触发**，ADR-005 定稿）：隐藏态窗口 = 刘海挖槽矩形
-  （180×safeTop，内容全透明，不可见但收 hover）；展开态从刘海中心向下生长、
-  **顶边贴屏幕顶沿**（y=0，顶部两角直角——与顶边无缝，不与刘海之间留缝缺角），
-  352×178（第三档 other 时 222）。无刘海屏隐藏态取菜单栏矩形同理。监听
-  `didChangeScreenParametersNotification` 重定位。
+- 定位与显隐（**终极架构**，ADR-005/007 演进定稿）：**窗口永久固定为展开尺寸、永不改变大小**
+  ——显隐/动画 100% 由 SwiftUI 圆角遮罩驱动（hidden = 刘海挖槽尺寸 180×safeTop，与黑区融合
+  不可见；expanded = 全尺寸）。窗口几何零变化 = 零闪现、零位移、零结尾跳变。
+  悬停 = 30Hz 光标位置轮询（`NSEvent.mouseLocation` 与可见矩形求交，不依赖事件路由）；
+  点击 = contentView `hitTest` 返回 nil 实现可见区域外穿透（菜单图标照常可点）；
+  收/展 = 遮罩宽高 spring（先渲染起始帧再延迟 50ms 触发，防初插不补间）。
+  监听 `didChangeScreenParametersNotification` 重定位窗口。
 - hover 防抖状态机：enter 60ms 延迟展开、exit 180ms 延迟收起（均可取消）；
-  「exit 时光标仍在面板 frame 内」= 窗口变形动画补发的假离开，直接忽略。
-  CGEvent 模拟悬停实测：一次展开→稳定→真离开后一次收起，零振荡。
+  「光标仍在可见卡片矩形内」= 假离开或过渡区，直接忽略。
+  CGEvent 模拟悬停 + CGWindowList 采样实测：一次展开→稳定→真离开后一次收起，零振荡。
 
 ## 已知怪癖
 
