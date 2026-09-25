@@ -149,10 +149,13 @@ fun ChatScreen(
             state = listState,
             reverseLayout = true, // it-043 O2：底部锚定，新内容永远贴输入栏
             verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.Bottom),
+            // it-045：顶栏下缘→内容 20dp 全站节奏——reverseLayout 下 contentPadding.top
+            // 属滚动内衬（长历史时初始即顶格、衬垫永远看不到），改容器级固定内衬恒定生效
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+                .fillMaxWidth()
+                .padding(top = 20.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 12.dp),
         ) {
             if (isEmpty) {
                 item(key = "empty") {

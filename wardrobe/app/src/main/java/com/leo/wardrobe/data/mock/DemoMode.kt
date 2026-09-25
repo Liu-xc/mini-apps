@@ -15,7 +15,10 @@ object DemoMode {
     private const val KEY = "enabled"
 
     fun isEnabled(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+        // it-045：缺省值由构建注入——-PdemoDefault=true 的体验包新装即演示；
+        // 显式开关过的偏好永远优先，常规包缺省仍为 false
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY, com.leo.wardrobe.BuildConfig.DEMO_DEFAULT)
 
     /** 保存开关并重启进程使其生效（commit 同步落盘——exitProcess 前必须写完） */
     fun setAndRestart(context: Context, enabled: Boolean) {

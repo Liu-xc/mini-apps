@@ -154,7 +154,8 @@ fun ItemDetailScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                // it-045：顶栏下缘→内容 20dp 全站节奏
+                .padding(top = 20.dp, start = 20.dp, end = 20.dp),
         ) {
             // it-011 C5：统一浅底衬纸容器——固定比例/圆角/淡底，无论原图背景如何；
             // it-040：补抠候选期垫棋盘格提示透明底（与 W4 同款视觉语言），共享元素仅在稳定态挂

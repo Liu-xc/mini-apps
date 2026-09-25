@@ -217,7 +217,8 @@ fun ItemEditScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                // it-045：顶栏下缘→内容 20dp 全站节奏
+                .padding(top = 20.dp, start = 20.dp, end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             // it-012 O7'：无照片时给大虚线预览占位——进页面即知第一步

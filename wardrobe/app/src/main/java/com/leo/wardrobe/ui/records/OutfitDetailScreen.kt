@@ -127,7 +127,8 @@ fun OutfitDetailScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                // it-045：顶栏下缘→内容 20dp 全站节奏
+                .padding(top = 20.dp, start = 20.dp, end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // 主视觉（it-011 O7）：成品图横滑优先；无成品图时人体叙事拼贴兜底，

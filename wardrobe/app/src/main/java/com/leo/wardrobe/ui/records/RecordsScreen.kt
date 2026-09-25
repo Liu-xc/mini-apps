@@ -113,7 +113,8 @@ fun RecordsScreen(
                 options = tags,
                 selected = filterTag,
                 onSelect = { filterTag = it },
-                modifier = Modifier.padding(horizontal = 20.dp),
+                // it-045：顶栏下缘→内容 20dp 全站节奏（标题行底 6 + 14）
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp),
             )
         }
 
@@ -134,7 +135,8 @@ fun RecordsScreen(
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                        // it-045：无标签行时 6+14=20 直接落顶栏节奏；有标签时保持 14 的段间距
+                        .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
                 ) {
                     Box(
                         Modifier

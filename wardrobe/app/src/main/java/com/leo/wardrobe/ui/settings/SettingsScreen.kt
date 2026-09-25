@@ -110,7 +110,8 @@ fun SettingsScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                // it-045：顶栏下缘→内容 20dp 全站节奏
+                .padding(top = 20.dp, start = 20.dp, end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ---------- 模型连接卡 ----------

@@ -197,7 +197,8 @@ fun WardrobeRecapScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp),
                 ) {
-                    Spacer(Modifier.height(4.dp))
+                    // it-045：顶栏下缘→内容 20dp 全站节奏
+                    Spacer(Modifier.height(20.dp))
                     HeroBand(stats)
                     Spacer(Modifier.height(20.dp))
 

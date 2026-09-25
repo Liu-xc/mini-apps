@@ -16,6 +16,13 @@ android {
         versionCode = 5
         versionName = "0.5.0"
         vectorDrawables { useSupportLibrary = true }
+        // it-045：-PdemoDefault=true 出「演示数据体验包」——新装即进演示模式；
+        // 常规构建恒为 false，行为与 it-015 完全一致（设置页/5 连点仍可双向切换）
+        buildConfigField(
+            "boolean",
+            "DEMO_DEFAULT",
+            (providers.gradleProperty("demoDefault").orNull == "true").toString(),
+        )
     }
 
     buildTypes {

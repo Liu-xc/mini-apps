@@ -201,7 +201,8 @@ fun OutfitScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+                // it-045：三 Tab 标题行距状态栏统一 12dp（W3/W8 同值）
+                .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -298,7 +299,8 @@ fun OutfitScreen(
                     .verticalScroll(slotScroll)
                     // it-042 C8：行卡视口底缘渐隐（缓解拦腰裁切，下方还有内容的提示）
                     .fadingBottomEdge(active = { slotScroll.value < slotScroll.maxValue })
-                    .padding(start = 12.dp, end = 12.dp, top = 6.dp),
+                    // it-045：顶栏下缘→内容 20dp 全站节奏（行底 4 + 16）
+                    .padding(start = 12.dp, end = 12.dp, top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (activeCategories.isEmpty()) {

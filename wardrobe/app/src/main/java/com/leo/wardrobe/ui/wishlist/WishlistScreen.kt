@@ -171,7 +171,8 @@ fun WishlistScreen(
                 count = 2,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                    // it-045：顶栏下缘→内容 20dp 全站节奏
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 6.dp),
             ) { i ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // it-030：emoji → Material 图标（DESIGN.md §5.2）

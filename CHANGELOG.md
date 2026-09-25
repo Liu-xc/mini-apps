@@ -4,6 +4,8 @@
 
 ## 2026-09-25
 
+- **fix(wardrobe)**: it-045 顶栏↔内容间距全站统一 20dp——盘点实证 0/4/6/8/10/20dp 六种取值并存（W4/W5/W7/W11 内容贴死顶栏 0dp、W9 4dp、W10 6dp、W12 8dp、三 Tab 页 6/10dp 且标题行 top 8/12 不一），12 处逐屏改齐（W12 reverseLayout 下 contentPadding 属滚动内衬不可见，改容器级 padding 恒定生效），spec 05 补「顶栏↔内容节奏」条目、01 补 US-45；模拟器 dump 逐屏量化 19.8–20.2dp 全过、单测绿。
+- **feat(wardrobe)**: it-045 演示体验包构建开关 `-PdemoDefault=true` → `BuildConfig.DEMO_DEFAULT` 注入 DemoMode 缺省值（显式偏好仍优先、常规包恒 false），出 mock 数据默认开的体验包，退出通道（设置/5 连点）不变。
 - **fix(wardrobe)**: it-042 第五轮走查修复 C1–C8（P1×2/P2×6，C5 挂账）——W2「使用中」补 8dp 分读、W8 卡组 hero 成品图改衬纸 Fit 修裁头（05「成品图一律 Crop」条款作废）、OutfitThumb 日期并入 yyyy/MM/dd、W1 槽位长按 toast 读全名、W9 打卡 0 隐藏闲置冗余卡、W10 域名字距归零、W1/W3 滚动底缘 28dp 渐隐（共享 `fadingBottomEdge`）；specs 01/02/05 同步，编译+单测绿，模拟器复验回填验证记录。来源=2026-09-25 r5 走查（P0×0/P1×2/P2×6）。
 
 - **docs(xiangqi)**: it-003 过夜双局结果——Flash 档 mimo-v2.6-flash 将死胜 glm-5.3-flash（76手/105分），Pro 档 glm-5.3 将死胜 mimo-v2.6-pro（53手/109分），四模型 1:1；报告+双局快照/棋谱入库 `reports/2026-09-24-xiangqi-showdown/`，it-003 验证记录回填（含无限等待 Promise.race 假判负坑）。

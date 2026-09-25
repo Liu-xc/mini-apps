@@ -223,10 +223,11 @@ fun WardrobeScreen(
         }
 
         // it-012 O4'：品类图标 Tab（横滑）+「筛选」固定行尾不再被挤出屏外
+        // it-045：顶栏下缘→内容 20dp 全站节奏（标题行底 6 + 14）
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 2.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
