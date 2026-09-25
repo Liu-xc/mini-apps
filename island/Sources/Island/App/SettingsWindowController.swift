@@ -12,10 +12,13 @@ final class SettingsWindowController {
         self.store = store
     }
 
+    /// 设置窗宿主视图（DebugShot 自截图用）
+    var hostedView: NSView? { window?.contentView }
+
     func show() {
         if window == nil {
             let win = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 460, height: 560),
+                contentRect: NSRect(x: 0, y: 0, width: 460, height: 620),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false

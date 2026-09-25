@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// NSHostingView 子类：可见卡片矩形之外的事件全部穿透（hitTest 返回 nil，
@@ -25,9 +26,12 @@ final class IslandWindowController: NSObject {
     private var hoverTimer: Timer?
     private var pendingHover: DispatchWorkItem?
     private var lastInside = false
+    private var cancellables = Set<AnyCancellable>()
 
     var onOpenSettings: (() -> Void)?
     var onOpenConsole: (() -> Void)?
+    /// 岛卡宿主视图（DebugShot 自截图用）
+    var hostedView: NSView? { contentView }
 
     init(store: UsageStore) {
         self.store = store
@@ -36,7 +40,7 @@ final class IslandWindowController: NSObject {
     func install() {
         // 窗口永久固定为展开尺寸、永不改变大小——显隐/动画全部由遮罩驱动，零窗口跳动
         let panel = NSPanel(
-            contentRect: NSRect(origin: frame(for: .hidden).origin, size: expandedSize),
+            contentRect: expandedFrame,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -107,6 +111,14 @@ final class IslandWindowController: NSObject {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+
+        // 数据状态变化（明细行数/配置态改变高度）→ 窗口帧跟随 IslandLayout。
+        // objectWillChange 先于变更提交，Task 推迟到提交后再解析。
+        store.objectWillChange
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in self?.syncLayout() }
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - hover 状态机（轮询 + 防抖）
@@ -163,22 +175,24 @@ final class IslandWindowController: NSObject {
 
     @objc private func screenChanged() {
         // 显示器/刘海参数变化：窗口（永久全尺寸）重新对位
-        guard let panel else { return }
-        panel.setFrame(frame(for: .expanded), display: false)
+        syncLayout()
     }
 
     func reposition() {
-        // 显示器/刘海参数变化：窗口（永久全尺寸）重新对位
-        guard let panel else { return }
-        panel.setFrame(frame(for: .expanded), display: false)
+        // 外部调用（设置页移动等）的统一重对位入口
+        syncLayout()
     }
 
-    // MARK: - 布局（刘海下沿锚点，遮罩驱动）
+    // MARK: - 布局（IslandLayout 单一真源：视图遮罩 / hitTest / 窗口帧同源）
 
     private var activeScreen: NSScreen {
         NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
             ?? NSScreen.main
             ?? NSScreen.screens[0]
+    }
+
+    private var layout: IslandLayout {
+        IslandLayout.resolve(store: store, screen: activeScreen)
     }
 
     private func frameCenter(on screen: NSScreen) -> CGFloat {
@@ -190,31 +204,30 @@ final class IslandWindowController: NSObject {
         return (left + right) / 2
     }
 
-    private func frame(for appearance: IslandViewModel.Appearance) -> NSRect {
+    /// 永久全尺寸窗口帧（左下原点，刘海下沿锚定）
+    private var expandedFrame: NSRect {
         let screen = activeScreen
-        let top = screen.frame.maxY
-        let center = frameCenter(on: screen)
-        let size = expandedSize
-        return NSRect(x: center - size.width / 2, y: top - size.height, width: size.width, height: size.height)
+        return layout.cardRect(centerX: frameCenter(on: screen), screenTop: screen.frame.maxY)
     }
 
-    /// 展开卡片尺寸：内容顶边避开刘海挖槽（safeTop + 边距）
-    private var expandedSize: CGSize {
-        let screen = activeScreen
-        let safeTop = max(screen.safeAreaInsets.top, 24)
-        return CGSize(width: 352, height: safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14)
+    /// 数据/屏幕变化后同步窗口帧；帧不变则不动（窗口仍「常驻」，只在高度公式变化时 setSize）
+    private func syncLayout() {
+        guard let panel else { return }
+        let target = expandedFrame
+        if panel.frame != target {
+            panel.setFrame(target, display: false)
+        }
     }
 
-    /// 当前可见卡片矩形（全局坐标，左下原点；随显隐变化，与视图遮罩同尺寸）
+    /// 当前可见卡片矩形（全局坐标，左下原点）：隐藏 = 刘海挖槽、展开 = 全卡片，与视图遮罩同尺寸
     private var visibleCardRect: NSRect {
+        let current = layout
         let screen = activeScreen
-        let safeTop = max(screen.safeAreaInsets.top, 24)
-        let hidden = viewModel.appearance == .hidden
-        let w: CGFloat = hidden ? 180 : 352
-        let h: CGFloat = hidden ? safeTop : safeTop + 6 + IslandRootView.panelHeight + 10 + 14 + 14
         let center = frameCenter(on: screen)
         let top = screen.frame.maxY
-        return NSRect(x: center - w / 2, y: top - h, width: w, height: h)
+        return viewModel.appearance == .hidden
+            ? current.notchRect(centerX: center, screenTop: top)
+            : current.cardRect(centerX: center, screenTop: top)
     }
 
     private func applyAppearance(_ appearance: IslandViewModel.Appearance) {

@@ -42,6 +42,13 @@ enum ResetFormatter {
         return b >= 100 ? String(format: "%.0fB", b) : String(format: "%.2fB", b)
     }
 
+    /// 档位行的紧凑重置文本（卡片面板头/明细行共用）：
+    /// 5 小时档恒显 HH:mm（滚动窗口跨天不带日期），其余今日 HH:mm、跨天 M月d日；无重置为 nil
+    static func rowReset(_ row: QuotaRow, now: Date = Date()) -> String? {
+        guard let reset = row.resetDate else { return nil }
+        return row.kind == .fiveHour ? clock(reset) : shortReset(reset, now: now)
+    }
+
     private static func clockString(_ date: Date) -> String {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)

@@ -35,6 +35,11 @@ struct SnapshotCache {
         try encoder.encode(snapshot).write(to: fileURL, options: .atomic)
     }
 
+    /// 删除缓存（清凭证时一并清理，防重启后幽灵数据；it-003）
+    func remove() {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
     func load() throws -> UsageSnapshot {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             throw ProviderError(message: "暂无缓存")

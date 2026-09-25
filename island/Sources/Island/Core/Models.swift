@@ -38,6 +38,16 @@ struct QuotaRow: Codable, Equatable, Identifiable {
     var limitTokens: Double? = nil
 }
 
+/// 每内容源的运行时状态（it-003 按源状态；仅内存，不落盘——快照另有磁盘缓存）
+struct SourceState: Equatable {
+    /// 最近一次成功快照（失败时保留旧值 = 陈旧数据继续展示）
+    var snapshot: UsageSnapshot?
+    /// 最近一次失败原因（成功即清除；非 nil 时面板/页脚明示）
+    var lastError: String?
+    /// 该源是否在途（页脚 spinner / 状态推导）
+    var isFetching: Bool = false
+}
+
 struct UsageSnapshot: Codable, Equatable {
     var rows: [QuotaRow]
     var fetchedAt: Date

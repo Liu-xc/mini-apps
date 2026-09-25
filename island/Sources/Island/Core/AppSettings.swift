@@ -58,6 +58,12 @@ final class AppSettings: ObservableObject {
         didSet { UserDefaults.standard.set(consoleURLString, forKey: "consoleURLString") }
     }
 
+    /// auto 探测记忆的偏好端点（ADR-003；it-003 收编进 settings，不再散布 UserDefaults 直读写）
+    var preferredEndpoint: EndpointMode? {
+        get { UserDefaults.standard.string(forKey: "preferredEndpoint").flatMap(EndpointMode.init(rawValue:)) }
+        set { UserDefaults.standard.set(newValue?.rawValue, forKey: "preferredEndpoint") }
+    }
+
     init() {
         let forceDemo = ProcessInfo.processInfo.environment["GLM_ISLAND_DEMO"] == "1"
         endpointMode = EndpointMode(rawValue: UserDefaults.standard.string(forKey: "endpointMode") ?? "") ?? .auto

@@ -37,6 +37,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
 
         Task { await store.start() }
+
+        // 调试自截图：GLM_ISLAND_SHOT=<目录>（可选 GLM_ISLAND_SHOT_SETTINGS=1），拍完即退
+        if let directory = ProcessInfo.processInfo.environment["GLM_ISLAND_SHOT"] {
+            DebugShot.schedule(directory: directory, islandView: island.hostedView, settingsWindow: settingsWindow)
+        }
     }
 
     private func openConsole() {

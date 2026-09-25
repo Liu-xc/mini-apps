@@ -2,16 +2,8 @@ import Foundation
 
 @MainActor
 final class UsageStore: ObservableObject {
-    enum Status: Equatable {
-        case idle
-        case loading
-        case loaded
-        case failed(String)
-    }
-
-    /// 每个内容源一份快照；卡片同屏展示所有已配置源
-    @Published private(set) var snapshots: [ProviderKind: UsageSnapshot] = [:]
-    @Published private(set) var status: Status = .idle
+    /// 每内容源一份状态（快照 / 最近错误 / 在途）；卡片同屏展示所有已配置源
+    @Published private(set) var states: [ProviderKind: SourceState] = [:]
     /// 各源是否已配置凭证
     @Published private(set) var credentialKinds: Set<ProviderKind> = []
 
@@ -23,22 +15,36 @@ final class UsageStore: ObservableObject {
     init(settings: AppSettings) {
         self.settings = settings
         var caches: [ProviderKind: SnapshotCache] = [:]
-        for kind in ProviderKind.allCases {
-            caches[kind] = SnapshotCache(kind: kind)
+        for desc in ProviderRegistry.all {
+            caches[desc.kind] = SnapshotCache(kind: desc.kind)
         }
         self.caches = caches
 
         CredentialStore.migrateFromKeychain()
-        seedFromEnvironment()
-        refreshCredentialKinds()
-        for kind in ProviderKind.allCases {
-            snapshots[kind] = try? caches[kind]?.load()
+        // 走查钩子：GLM_ISLAND_BLANK=1 视作全未配置（空态截图用，与 GLM_ISLAND_SHOT 搭配）
+        if ProcessInfo.processInfo.environment["GLM_ISLAND_BLANK"] != "1" {
+            seedFromEnvironment()
+            refreshCredentialKinds()
+            // 只为已配置源恢复快照：清凭证即清展示（缓存文件由 clearCredential 删除）
+            for desc in ProviderRegistry.all where credentialKinds.contains(desc.kind) {
+                states[desc.kind] = SourceState(snapshot: try? caches[desc.kind]?.load())
+            }
         }
     }
 
-    /// 同屏展示的全部明细行（GLM 两档 + MiMo 一档…按源顺序拼接）
+    // MARK: - 读取
+
+    func state(_ kind: ProviderKind) -> SourceState {
+        states[kind] ?? SourceState()
+    }
+
+    var snapshots: [ProviderKind: UsageSnapshot] {
+        states.compactMapValues(\.snapshot)
+    }
+
+    /// registry 顺序的全部明细行（菜单摘要 / 首启判定）
     var allRows: [QuotaRow] {
-        ProviderKind.allCases.flatMap { snapshots[$0]?.displayRows ?? [] }
+        ProviderRegistry.all.flatMap { states[$0.kind]?.snapshot?.displayRows ?? [] }
     }
 
     var lastFetchedAt: Date? {
@@ -52,57 +58,63 @@ final class UsageStore: ObservableObject {
 
     var isDemoActive: Bool { settings.demoMode }
 
+    /// 任一源在途（页脚刷新指示）
+    var isFetchingAny: Bool { states.values.contains(where: \.isFetching) }
+
     func isConfigured(_ kind: ProviderKind) -> Bool {
         credentialKinds.contains(kind)
     }
+
+    // MARK: - 刷新
 
     func start() async {
         await refreshAll()
         scheduleNextRefresh()
     }
 
-    /// 刷新全部已配置源。失败退避：连续全失败按 2^n 拉长间隔，封顶 8 倍基准
+    /// 刷新全部已配置源，**逐源记录成败**：失败落在对应源状态（他源照常展示，不吞错误），
+    /// 成功即清除该源错误。连续全失败按 2^n 拉长间隔，封顶 8 倍基准。
     func refreshAll() async {
-        let kinds = settings.demoMode ? Set(ProviderKind.allCases) : credentialKinds
-        guard !kinds.isEmpty else {
-            status = .failed("尚未配置任何内容源凭证")
-            return
-        }
-        status = .loading
-        var anyOK = false
-        var lastError: String?
+        let kinds = ProviderRegistry.all
+            .map(\.kind)
+            .filter { settings.demoMode || credentialKinds.contains($0) }
+        guard !kinds.isEmpty else { return }
+
         for kind in kinds {
+            var state = self.state(kind)
+            state.isFetching = true
+            states[kind] = state
+        }
+
+        var anyOK = false
+        for kind in kinds {
+            let descriptor = ProviderRegistry.descriptor(kind)
             do {
                 let snap: UsageSnapshot
                 if settings.demoMode {
-                    snap = try await DemoUsageProvider(kind: kind).fetchSnapshot()
+                    snap = try await StaticDemoProvider(kind: kind, rows: descriptor.demoRows(Date()))
+                        .fetchSnapshot()
                 } else {
-                    let mode = settings.endpointMode
-                    let preferred = UserDefaults.standard.string(forKey: "preferredEndpoint")
-                        .flatMap(EndpointMode.init(rawValue:))
-                    snap = try await ProviderUsageFetcher(
-                        kind: kind,
-                        glmEndpointMode: mode,
-                        glmPreferredEndpoint: preferred
-                    ).fetchSnapshot()
-                    if kind == .glm, mode == .auto {
-                        let winner = EndpointMode.mode(forHost: snap.endpointHost)
-                        UserDefaults.standard.set(winner.rawValue, forKey: "preferredEndpoint")
+                    snap = try await descriptor.makeProvider(settings).fetchSnapshot()
+                    if kind == .glm, settings.endpointMode == .auto {
+                        // auto 探测赢家记忆（ADR-003），偏好收编进 settings
+                        settings.preferredEndpoint = EndpointMode.mode(forHost: snap.endpointHost)
                     }
                 }
-                snapshots[kind] = snap
+                states[kind] = SourceState(snapshot: snap, lastError: nil, isFetching: false)
                 try? caches[kind]?.save(snap)
                 anyOK = true
             } catch {
-                lastError = error.localizedDescription
+                var state = self.state(kind)
+                state.lastError = error.localizedDescription
+                state.isFetching = false
+                states[kind] = state   // 保留旧快照：陈旧数据继续展示 + 错误明示
             }
         }
         if anyOK {
-            status = .loaded
             consecutiveFailures = 0
         } else {
             consecutiveFailures += 1
-            status = .failed(lastError ?? "刷新失败")
         }
     }
 
@@ -110,39 +122,26 @@ final class UsageStore: ObservableObject {
         scheduleNextRefresh()
     }
 
-    func saveGLMKey(_ key: String) {
-        saveSecret(key, kind: .glm, account: KeychainAccount.glm)
+    // MARK: - 凭证（registry 驱动，不按源硬编码）
+
+    func saveSecret(_ kind: ProviderKind, _ value: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        CredentialStore.save(trimmed, account: ProviderRegistry.descriptor(kind).credentialAccount)
+        credentialKinds.insert(kind)
+        if settings.demoMode { settings.demoMode = false }
+        Task { await refreshAll() }
     }
 
-    func saveMimoCookie(_ cookie: String) {
-        saveSecret(cookie, kind: .mimo, account: KeychainAccount.mimoCookie)
-    }
-
-    func clearGLMKey() {
-        CredentialStore.delete(account: KeychainAccount.glm)
-        credentialKinds.remove(.glm)
-        snapshots[.glm] = nil
-    }
-
-    func clearMimoCookie() {
-        CredentialStore.delete(account: KeychainAccount.mimoCookie)
-        credentialKinds.remove(.mimo)
-        snapshots[.mimo] = nil
+    func clearCredential(_ kind: ProviderKind) {
+        CredentialStore.delete(account: ProviderRegistry.descriptor(kind).credentialAccount)
+        credentialKinds.remove(kind)
+        states[kind] = SourceState()   // 清快照与错误
+        try? caches[kind]?.remove()    // 磁盘缓存一并删除（防重启后幽灵数据）
     }
 
     func setDemoMode(_ enabled: Bool) {
         settings.demoMode = enabled
-        Task { await refreshAll() }
-    }
-
-    private func saveSecret(_ secret: String, kind: ProviderKind, account: String) {
-        let trimmed = secret.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        CredentialStore.save(trimmed, account: account)
-        credentialKinds.insert(kind)
-        if settings.demoMode {
-            setDemoMode(false)
-        }
         Task { await refreshAll() }
     }
 
@@ -161,10 +160,9 @@ final class UsageStore: ObservableObject {
     }
 
     private func refreshCredentialKinds() {
-        var kinds: Set<ProviderKind> = []
-        if !CredentialStore.load(account: KeychainAccount.glm).isEmpty { kinds.insert(.glm) }
-        if !CredentialStore.load(account: KeychainAccount.mimoCookie).isEmpty { kinds.insert(.mimo) }
-        credentialKinds = kinds
+        credentialKinds = Set(ProviderRegistry.all.compactMap { descriptor in
+            CredentialStore.load(account: descriptor.credentialAccount).isEmpty ? nil : descriptor.kind
+        })
     }
 
     // MARK: - 定时器

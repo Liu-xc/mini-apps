@@ -22,7 +22,7 @@ struct MiMoQuotaParserTests {
 
         let row = try #require(snapshot.rows.first)
         #expect(row.kind == .mimo)
-        #expect(row.label == "MiMo")
+        #expect(row.label == "套餐", "it-003：面板头已标源名，主档不再重复厂商名")
         // percent 0.01 已用 → 剩余 99%
         #expect(abs((row.remainingPercent ?? -1) - 99) < 0.5)
         #expect(row.resetDate == nil, "MiMo 接口无重置时间字段")

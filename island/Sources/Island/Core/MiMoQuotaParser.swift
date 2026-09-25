@@ -49,27 +49,21 @@ enum MiMoQuotaParser {
         )
     }
 
+    /// it-003：主档改叫「套餐」——面板头已标源名（MiMo），环心/菜单不再重复厂商名
     static func displayLabel(for name: String) -> String {
         switch name {
-        case "plan_total_token": "MiMo"
+        case "plan_total_token": "套餐"
         case "month_total_token": "MiMo 当月"
         case "compensation_total_token": "MiMo 补偿包"
-        default: "MiMo"
+        default: "套餐"
         }
     }
 
     private static func double(_ value: Any?) -> Double? {
-        switch value {
-        case let number as NSNumber: number.doubleValue
-        case let string as String: Double(string)
-        default: nil
-        }
+        JSONLoose.double(value)
     }
 
     private static func pretty(_ data: Data) -> String? {
-        guard let obj = try? JSONSerialization.jsonObject(with: data),
-              let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-              let text = String(data: prettyData, encoding: .utf8) else { return nil }
-        return text.count > 8000 ? text.prefix(8000) + "\n…(截断)" : String(text)
+        JSONLoose.pretty(data)
     }
 }

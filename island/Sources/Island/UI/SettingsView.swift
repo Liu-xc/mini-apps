@@ -5,15 +5,15 @@ struct SettingsView: View {
     @ObservedObject var store: UsageStore
     let onClose: () -> Void
 
-    @State private var glmKeyInput = ""
-    @State private var mimoCookieInput = ""
     @State private var autoLaunch = AutoLauncher.isEnabled
     @State private var launchError: String?
 
     var body: some View {
         Form {
-            glmSection
-            mimoSection
+            // 凭证分区按注册表渲染（ADR-009：新增源无需改此文件）
+            ForEach(ProviderRegistry.all) { descriptor in
+                CredentialSection(descriptor: descriptor, store: store)
+            }
             endpointSection
             refreshSection
             systemSection
@@ -72,84 +72,90 @@ struct SettingsView: View {
         }
     }
 
+    /// 诊断：逐源查看最近一次原始响应（并列源各自独立，不再只展示「最近的那一个」）
     private var diagnosticsSection: some View {
         Section("诊断") {
-            DisclosureGroup("最近一次原始响应（当前内容源）") {
-                ScrollView {
-                    Text(store.lastFetchedSnapshot?.debugRawJSON ?? "暂无 —— 配置凭证后自动刷新一次即可")
-                        .font(.system(size: 9, design: .monospaced))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-                .frame(maxHeight: 150)
-                HStack {
-                    Button("拷贝响应") {
-                        if let raw = store.lastFetchedSnapshot?.debugRawJSON {
+            ForEach(ProviderRegistry.all) { descriptor in
+                let snapshot = store.state(descriptor.kind).snapshot
+                DisclosureGroup(descriptor.title) {
+                    ScrollView {
+                        Text(rawText(for: descriptor, snapshot: snapshot))
+                            .font(.system(size: 9, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 130)
+                    HStack {
+                        Button("拷贝响应") {
+                            guard let raw = snapshot?.debugRawJSON else { return }
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(raw, forType: .string)
                         }
+                        .disabled(snapshot == nil)
+                        Spacer()
                     }
-                    Spacer()
-                    Button("关闭") { onClose() }
                 }
+            }
+            HStack {
+                Spacer()
+                Button("关闭") { onClose() }
             }
         }
     }
 
+    private func rawText(for descriptor: ProviderDescriptor, snapshot: UsageSnapshot?) -> String {
+        if let raw = snapshot?.debugRawJSON { return raw }
+        if store.isConfigured(descriptor.kind) { return "暂无 —— 配置凭证后自动刷新一次即可" }
+        return "未配置凭证，未发起请求"
+    }
 }
 
-private extension SettingsView {
-    var glmSection: some View {
-        Section("GLM Coding Plan") {
-            HStack(spacing: 8) {
-                SecureField("API Key", text: $glmKeyInput)
-                    .textFieldStyle(.roundedBorder)
-                Button("保存") {
-                    store.saveGLMKey(glmKeyInput)
-                    glmKeyInput = ""
-                }
-                .disabled(glmKeyInput.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            if store.credentialKinds.contains(.glm) {
-                HStack {
-                    Label("Key 已存入本机（加密限制文件）", systemImage: "checkmark.seal.fill")
-                        .font(.callout)
-                        .foregroundStyle(.green)
-                    Spacer()
-                    Button("清除", role: .destructive) {
-                        store.clearGLMKey()
-                    }
-                }
-            }
-            Text("官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；Key 只存本机（0600 权限限制文件），不写入任何文件日志之外的地方。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
+// MARK: - 单源凭证分区（注册表驱动）
 
-    var mimoSection: some View {
-        Section("小米 MiMo TOKEN Plan") {
+private struct CredentialSection: View {
+    let descriptor: ProviderDescriptor
+    @ObservedObject var store: UsageStore
+
+    @State private var input = ""
+    @State private var confirmClear = false
+
+    private var configured: Bool { store.credentialKinds.contains(descriptor.kind) }
+
+    var body: some View {
+        Section(descriptor.sectionTitle) {
             HStack(spacing: 8) {
-                SecureField("Cookie 字符串", text: $mimoCookieInput)
+                SecureField(descriptor.credentialLabel, text: $input)
                     .textFieldStyle(.roundedBorder)
                 Button("保存") {
-                    store.saveMimoCookie(mimoCookieInput)
-                    mimoCookieInput = ""
+                    store.saveSecret(descriptor.kind, input)
+                    input = ""
                 }
-                .disabled(mimoCookieInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            if store.credentialKinds.contains(.mimo) {
+            if configured {
                 HStack {
-                    Label("Cookie 已存入本机（加密限制文件）", systemImage: "checkmark.seal.fill")
+                    Label("\(descriptor.credentialNoun) 已存入本机（0600 加密限制文件）",
+                          systemImage: "checkmark.seal.fill")
                         .font(.callout)
                         .foregroundStyle(.green)
                     Spacer()
                     Button("清除", role: .destructive) {
-                        store.clearMimoCookie()
+                        confirmClear = true
+                    }
+                    .confirmationDialog(
+                        "清除 \(descriptor.title) 的 \(descriptor.credentialNoun)？",
+                        isPresented: $confirmClear
+                    ) {
+                        Button("清除 \(descriptor.credentialNoun)", role: .destructive) {
+                            store.clearCredential(descriptor.kind)
+                        }
+                        Button("取消", role: .cancel) {}
+                    } message: {
+                        Text("凭证与本机缓存的用量快照将一并删除，卡片上的该源回到未配置状态。")
                     }
                 }
             }
-            Text("该接口只认浏览器登录态：登录 platform.xiaomimimo.com 控制台后，从网络请求复制整段 Cookie 粘贴到这里；Cookie 过期时更新一次即可。")
+            Text(descriptor.credentialHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

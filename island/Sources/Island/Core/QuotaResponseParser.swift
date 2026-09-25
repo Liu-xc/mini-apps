@@ -159,28 +159,18 @@ enum QuotaResponseParser {
         return nil
     }
 
-    // MARK: - 私有工具
+    // MARK: - 私有工具（取值走 JSONLoose，it-003 与 MiMo 解析器去重）
 
     private static func firstString(_ dict: [String: Any], keys: [String]) -> String? {
-        for key in keys where dict[key] is String {
-            return dict[key] as? String
-        }
-        return nil
+        JSONLoose.firstString(dict, keys: keys)
     }
 
     private static func double(_ value: Any?) -> Double? {
-        switch value {
-        case let number as NSNumber: number.doubleValue
-        case let string as String: Double(string)
-        default: nil
-        }
+        JSONLoose.double(value)
     }
 
     private static func pretty(_ data: Data) -> String? {
-        guard let obj = try? JSONSerialization.jsonObject(with: data),
-              let prettyData = try? JSONSerialization.data(withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]),
-              let text = String(data: prettyData, encoding: .utf8) else { return nil }
-        return text.count > 8000 ? text.prefix(8000) + "\n…(截断)" : String(text)
+        JSONLoose.pretty(data)
     }
 
     private static var isoFormatters: [ISO8601DateFormatter] {
