@@ -34,7 +34,7 @@ echo "== 1. SSE 流式（前 30 行原始 event-stream，重点看 reasoning_con
 $CURL -N "$BASE/chat/completions" \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d "{\"model\":\"$MODEL\",\"stream\":true,\"max_tokens\":64,\"messages\":[{\"role\":\"user\",\"content\":\"9.11 和 9.9 谁大？简答\"}]}" \
-  | head -30
+  | head -30 || true   # head 截管会让 curl 报 56，pipefail 下不放行会中断脚本（M0 实测踩过）
 
 echo
 echo "== 2. 工具调用（非流式）：看 tool_calls 结构与 finish_reason =="
@@ -52,7 +52,8 @@ echo "$TOOL_RESP" | pretty
 echo
 echo "== 3. 工具结果回喂：role=tool + tool_call_id 是否被接受 =="
 CALL_ID=$(echo "$TOOL_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["choices"][0]["message"]["tool_calls"][0]["id"])' 2>/dev/null || echo "")
-FN_ARGS=$(echo "$TOOL_RESP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"])' 2>/dev/null || echo "{}")
+# arguments 必须作为 JSON 字符串回喂（OpenAI 契约；GLM M0 实证裸嵌对象报 1210）
+FN_ARGS=$(echo "$TOOL_RESP" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]))' 2>/dev/null || echo '"{}"')
 if [ -n "$CALL_ID" ]; then
   $CURL "$BASE/chat/completions" \
     -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
@@ -66,7 +67,7 @@ if [ -n "$CALL_ID" ]; then
       \"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_canteen_menus\",
         \"description\":\"查询指定食堂今日菜单\",
         \"parameters\":{\"type\":\"object\",\"properties\":{\"canteen\":{\"type\":\"string\",\"description\":\"食堂名\"}},\"required\":[\"canteen\"]}}}]
-    }" | pretty | head -30
+    }" | pretty | head -30 || true
 else
   echo "（上一步未产生 tool_calls，跳过回喂测试）"
 fi

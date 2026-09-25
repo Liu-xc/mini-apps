@@ -4,6 +4,6 @@
 
 - 设计与调研：[specs/00-architecture.md](specs/00-architecture.md)
 - 决策记录：[specs/06-decisions.md](specs/06-decisions.md)
-- 当前迭代：[specs/iterations/it-001-agent-sdk-mvp.md](specs/iterations/it-001-agent-sdk-mvp.md)（**提案，待确认，未写码**）
+- 当前进度：M0 spike（2026-09-25 校准完成）+ M1 传输层（32 单测绿）已落地，见 [it-001](specs/iterations/it-001-agent-sdk-mvp.md)；M2 agent loop 提案 [it-002](specs/iterations/it-002-agent-loop-m2.md)（待 Leo 确认）
 
 接入方式与 libs/store 同（composite includeBuild）；agent 与其他 libs 互不依赖，组合发生在 app。

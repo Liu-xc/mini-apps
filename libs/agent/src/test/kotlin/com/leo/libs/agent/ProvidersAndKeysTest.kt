@@ -16,14 +16,19 @@ class ProvidersAndKeysTest {
     }
 
     @Test
-    fun `mimo 预设 baseUrl 留空待 M0 校准`() {
-        assertTrue(Providers.mimo.baseUrl.isEmpty())
+    fun `mimo 预设 baseUrl M0 已回填且两 host 不可混用`() {
+        // 按量付费（sk- key）
+        assertTrue(Providers.mimo.baseUrl.endsWith("/v1"))
+        assertEquals("https://api.xiaomimimo.com/v1", Providers.mimo.baseUrl)
+        // Token 套餐（tp-/ttp- key 专属 host，M0 实证按量 host 对 tp- key 返回 401）
+        assertEquals("https://token-plan-cn.xiaomimimo.com/v1", Providers.mimoTokenPlan.baseUrl)
         assertTrue(Providers.mimo.quirks.reasoningField)
+        assertTrue(Providers.mimoTokenPlan.quirks.reasoningField)
     }
 
     @Test
     fun `一等公民 id 唯一`() {
-        val ids = listOf(Providers.glm, Providers.mimo).map { it.id }
+        val ids = Providers.all.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
     }
 

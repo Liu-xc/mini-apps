@@ -1,6 +1,6 @@
 # it-001 · agent SDK MVP（BYOK 传输层 + Agent Loop）
 
-- **状态**：**进行中——M1 传输层已完成（2026-09-23，32 单测全绿）；M0 spike 顺延（key 授权被拒 / MiMo 未注册），不阻塞 M2**。设计见 [../00-architecture.md](../00-architecture.md)，决策见 [../06-decisions.md](../06-decisions.md)。
+- **状态**：**进行中——M0 spike 完成（2026-09-25，GLM/MiMo 真调四步全过，preset 已回填）；M1 传输层已完成（2026-09-23，32 单测全绿）；M2 提案见 [it-002-agent-loop-m2.md](it-002-agent-loop-m2.md)（待 Leo 确认）**。设计见 [../00-architecture.md](../00-architecture.md)，决策见 [../06-decisions.md](../06-decisions.md)。
 - **类型**：新公共 SDK（libs/agent），跨 app（wardrobe / eats / clips 皆可消费）；**本迭代不含任何 app 接入**（M3 归消费方 app 的 it-XXX）。
 
 ## 背景与动机
@@ -55,7 +55,7 @@
 - [ ] core 为纯 Kotlin（无 `android.*` import），桌面 JVM 全量单测
 - [ ] MockWebServer 契约测试：SSE delta 聚合 / tool_calls 分片累积 / `[DONE]` / usage / 错误体 / GLM 无 /v1 路径风格
 - [ ] FakeChatModel loop 测试：工具回喂 / maxSteps 熔断 / 错误恢复 / 取消
-- [ ] M0 spike 完成：GLM+MiMo 真调各一发（非流式/流式/工具调用），baseUrl/模型名/quirks 回填 spec，脚本入 `tools/`
+- [x] M0 spike 完成：GLM+MiMo 真调各一发（非流式/流式/工具调用），baseUrl/模型名/quirks 回填 spec，脚本入 `tools/`（2026-09-25，见验证记录）
 - [ ] key 红线断言：导出与日志路径不含明文 key（接口级测试）
 
 ## 影响范围
@@ -77,3 +77,13 @@ M0 spike（半会话）→ M1 传输层 → M2 agent loop →（M3 归消费方 
 - 构建：独立 composite 构建（store 同款接线）；根版本表新增 `okhttp-mockwebserver` 与 `leo-agent` 坐标；构建用 `JAVA_HOME=homebrew openjdk@17`
 - 实现与设计的偏差：单模块落地未拆 android/（ApiKeyStore 平台实现归 app 层）；SSE 自解析未引 okhttp-sse——均已注记 ADR-003/004
 - **M0 spike 顺延**：GLM 脚本就绪（`tools/spike-glm.sh`，key 在 island 钥匙串，`security` 读取授权被拒后不再自动尝试，待手动跑）；MiMo 待注册开放平台（`tools/spike-mimo.sh`）。preset「待校准」字段不阻塞 M2
+
+### M0 spike（2026-09-25 完成）
+
+- **输入**：Leo 提供 GLM plan key + MiMo Token 套餐 key（tp-）；均仅经环境变量传入，**未写入任何文件/仓库**（key 红线③：日志只出 mask）
+- **GLM**（`tools/spike-glm.sh`，`GLM_API_KEY` 环境变量）：glm-4.6 / 4.5-air / 5 / 5.3 全部 1113「余额不足或无可用资源包」→ **glm-4-flash 四步全过**（非流式 ✓、SSE 流式含 usage 尾块 ✓、tool_calls 结构标准 finish_reason=tool_calls ✓、role=tool 回喂 ✓）
+- **MiMo**（`tools/spike-mimo.sh` + 手动 python 复刻，`MIMO_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1`）：官方文档（mimo.mi.com llms.txt → static/docs）确认 **tp- key 专属 host `token-plan-cn.xiaomimimo.com/v1`**（走按量 host `api.xiaomimimo.com/v1` 实证 401 Invalid API Key）；mimo-v2.6-flash / pro 可用，pro-ultraspeed 此 host 400 Not supported；非流式含 `reasoning_content` ✓、SSE `delta.reasoning_content` 增量 ✓、tool_calls ✓、回喂 ✓、`thinking={"type":"disabled"}` 下 tool_calls 仍 ✓（官方建议调工具关 thinking，实测开着也稳定——暂不加传输层参数，演进候选）
+- **发现并修复的脚本 bug 两处**：① GLM step3 把 `arguments` 裸嵌为 JSON 对象回喂 → GLM 1210 参数有误，必须 `json.dumps` 成字符串（OpenAI 契约）；② `curl | head -30` 在 pipefail 下 curl 56 断管中断脚本（MiMo 流式行数多必踩）→ 补 `|| true`
+- **回填**：`Providers` preset（glm 档位注释去「待校准」、mimo 按量 host、新增 mimo-tp Token 套餐 preset + `Providers.all` 列表、contextTokens=1M）、`ProvidersAndKeysTest` 断言更新、00-architecture §0/§5/§11/§12
+- **测试**：回填后 `./gradlew test` **32/32 绿**（JAVA_HOME=homebrew openjdk@17 libexec 路径）
+- **遗留**：`response_format` json 支持度未校验（非阻塞）；GLM contextTokens 未回填；按量 host 无 sk- key 未实调

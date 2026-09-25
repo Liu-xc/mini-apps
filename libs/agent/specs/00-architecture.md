@@ -1,6 +1,6 @@
 # 00 · agent 架构设计（BYOK 直连 + Agent Loop SDK）
 
-- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）；**M1 传输层已落地**（2026-09-23，32 个 JVM 单测全绿，见 §0）。M0 spike 顺延：钥匙串授权被拒、MiMo key 未注册，preset 中「待校准」字段不阻塞 M2，spike 脚本（tools/）就绪随时手动可跑。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
+- **状态**：**已确认，自研路线拍板**（2026-09-23 Leo 定）；**M0 spike 完成**（2026-09-25，GLM/MiMo 真调四步全过，baseUrl/模型名/quirks 已回填 §5 与 Providers，详见 [it-001 验证记录](iterations/it-001-agent-sdk-mvp.md)）；**M1 传输层已落地**（2026-09-23，32 个 JVM 单测全绿，见 §0）。选型调研见 §1，理由见 [06-decisions.md](06-decisions.md)。
 
 ## 0. 实现状态（M1 传输层，2026-09-23）
 
@@ -8,7 +8,7 @@
 
 已交付：Message/Part（含 image_url 视觉位）/ToolCall 模型、ChatModel 接口（complete + `Flow<ChatEvent>` 流式）、AgentError 六分类与 HTTP 映射、ProviderPreset/Quirks/Providers、SseDecoder/StreamAssembler（tool_calls 分片聚合、reasoning_content→ThinkingDelta、未知载荷容错）、OkHttpChatModel、FakeChatModel（testing 包——「CI 永不打真 API」的关键件，亦可作 app 演示模式离线模型）。
 
-待 M0 校准回填：GLM/MiMo 确切模型可用性与名称、MiMo baseUrl（现留空占位）、tool_call_id 回喂稳定性、response_format 支持度、免费档是否存在。
+M0 校准回填（2026-09-25 实调）：MiMo **双 host**（按量 `api.xiaomimimo.com/v1` / Token 套餐 `token-plan-cn.xiaomimimo.com/v1`，key 类型不可混用——tp- 走按量 host 实证 401）；GLM 免费档 **glm-4-flash 四步全过**、旗舰档视账户资源包（plan 外 1113 余额不足）；**tool_call_id 回喂两厂均接受**（arguments 必须 JSON 字符串，裸嵌对象 GLM 报 1210）；MiMo `delta.reasoning_content` 流式确认（quirks.reasoningField=true 实证）。仍待校验：`response_format` json 支持度、GLM 各档 contextTokens。
 - **一句话**：各 app 内嵌 AI Agent 的公共底座——用户自带 API Key（BYOK）直连模型厂商，单一 OpenAI 兼容传输层打天下，内置 agent loop（工具调用）、流式事件流、会话持久化、用量记账；零业务概念。
 
 ## 1. 调研结论：为什么自研薄核（2026-09 盘点）
@@ -128,10 +128,11 @@ interface ApiKeyStore { suspend fun get(preset: String): String?; suspend fun pu
 
 ## 5. 一等公民预设：GLM 与 MiMo（M0 校准项加粗）
 
-| 预设 | baseUrl（**待 M0 钉死**） | 模型档位（以控制台为准） | 已知 quirks |
+| 预设 | baseUrl（M0 校准） | 模型档位（以控制台为准） | 已知 quirks |
 |---|---|---|---|
-| **glm** | `https://open.bigmodel.cn/api/paas/v4`（路径**无 /v1**） | 旗舰 glm-5 系（官网已见 GLM-5.3，1M 上下文）、轻量 glm-4.5-air 系、视觉 GLM-4.6V / GLM-5V-Turbo、**免费档是否存在待校准** | 第三方 OpenAI 客户端强拼 `/v1` 得 404 是知名坑——自研传输不受影响；`response_format` json 支持度待校验 |
-| **mimo** | MiMo 开放平台 mimo.mi.com（2025-12 上线），`…/v1/chat/completions` 风格 | mimo-v2.6-flash（MoE，309B 总参/15B 激活）、mimo-v2.6-pro、mimo-v2.6-pro-ultraspeed、mimo-v2.5-pro；**注册免费额度待校准** | 推理内容走 `reasoning_content` delta → 透传 ThinkingDelta；图片/音视频理解与 ASR 后置 |
+| **glm** | `https://open.bigmodel.cn/api/paas/v4`（路径**无 /v1**，M0 实调 ✓） | 免费档 **glm-4-flash（M0 四步全过）**、轻量 glm-4.5-air、旗舰 glm-4.6 / glm-5 / glm-5.3（**可用性视账户资源包**：plan 外 1113 余额不足） | 第三方 OpenAI 客户端强拼 `/v1` 得 404 是知名坑——自研传输不受影响；`response_format` json 支持度待校验 |
+| **mimo**（按量付费，sk- key） | `https://api.xiaomimimo.com/v1`（官方文档确认，**未实调**——手头无 sk- key） | mimo-v2.6-flash / mimo-v2.6-pro（1M 上下文 / 128K 输出）；v2.5 系 2026-10-21 下线不列 | 推理内容走 `reasoning_content` delta → 透传 ThinkingDelta；tp- key 走此 host 实证 401 |
+| **mimo-tp**（Token 套餐，tp-/ttp- key） | `https://token-plan-cn.xiaomimimo.com/v1`（**M0 实调 ✓**） | flash / pro 实调可用；pro-ultraspeed 此 host 400 Not supported 未列 | thinking 默认 enabled、**官方建议调工具时关闭**（实测开启仍能稳定出 tool_calls，暂不加传输层 thinking 参数，列为演进候选）；SSE reasoning_content 增量实证 |
 
 两厂官方口径均为 OpenAI Chat Completions 兼容；因此 DeepSeek / OpenRouter / 硅基流动等厂商 = 新增 preset 数据条目，零代码分支。若 MiMo 官方平台注册/计费不顺手，走第三方托管同样是换 preset 数据。
 
@@ -169,7 +170,7 @@ App 设置页：选厂商 → 贴 key → 「连通性自检」（列模型或 1
 
 | 里程碑 | 内容 | 验证门槛 |
 |---|---|---|
-| **M0 spike**（半会话） | 真调 GLM+MiMo 各一发：非流式/流式/工具调用；脚本入 `tools/` | preset 的 baseUrl/模型名/quirks 回填本 spec |
+| **M0 spike**（✅ 完成 2026-09-25） | 真调 GLM+MiMo 各一发：非流式/流式/工具调用；脚本入 `tools/` | preset 的 baseUrl/模型名/quirks 回填本 spec |
 | **M1 传输层** | ChatModel + preset + SSE 流式 + 错误分类 + ApiKeyStore（+android 实现） | MockWebServer 契约测试绿 |
 | **M2 agent loop** | ToolRegistry DSL + 多步循环 + 会话/上下文 + 用量 | FakeChatModel loop 测试绿 |
 | **M3 消费方接入** | 首个 app 挂设置页+对话入口（UI 归 app it-XXX，走 DESIGN.md） | 实机走查 |
@@ -177,6 +178,6 @@ App 设置页：选厂商 → 贴 key → 「连通性自检」（列模型或 1
 ## 12. 开放问题（待 Leo 定）
 
 1. **首个消费方**：eats「吃啥参谋」（数据面小、闭环快）vs wardrobe「穿搭顾问」（价值大、工具重）vs clips（剪贴板摘要整理）。
-2. **MiMo 官方平台**（mimo.mi.com）注册门槛/计费是否顺手；不顺手则走第三方托管（仅换 preset 数据）。spike 脚本 `tools/spike-mimo.sh` 就绪：`MIMO_API_KEY` + `MIMO_BASE_URL` 两个环境变量即可跑。
+2. ~~**MiMo 官方平台**（mimo.mi.com）注册门槛/计费是否顺手~~ **已解决**（2026-09-25）：tp- Token 套餐 key 到手并 M0 实调通过；按量 host 待 sk- key 才能实调。spike 脚本 `tools/spike-mimo.sh`：`MIMO_API_KEY` + `MIMO_BASE_URL=https://token-plan-cn.xiaomimimo.com/v1`。
 3. **视觉输入**：MVP 只保留 content parts 结构（OpenAI 格式自带 image_url），识衣/识菜后置到消费方迭代——是否同意。
 4. **目录惯例**：libs 首次出现 `specs/iterations/`（本 SDK 跨 app、无单一归属迭代）——是否认可。
