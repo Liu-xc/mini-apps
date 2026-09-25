@@ -64,5 +64,7 @@ ProviderKind 枚举 + 按源快照缓存（snapshot-<kind>.json）+ 按源钥匙
   MiMo 源 99%（Cookie 拉取平台真实数据，剩余=(1−percent)×100）；两源快照独立、互不覆盖。
 - **测试**：swift-testing **17/17**（新增 MiMo 解析 fixture：percent 小数比例、补偿包 limit=0 跳过、
   envelope 401/缺 data 报错）。
+- **展示形态增补（Leo 反馈）**：明细改 Apple 健康式同心环（环填充=剩余量，环心=内容源名，
+  图例行右侧），线性进度条废弃；GLM 双环（蓝外/绿内）与 MiMo 单橙环均实机截图验证。
 - **凭证安全**：Cookie/Key 只入钥匙串；tp- plan key 经 Bearer/裸/x-api-key/query 实测均 401
   （它是模型调用 key，控制台接口只认登录态），故 MiMo 采用 Cookie 方案并在 UI 注明过期需更新。

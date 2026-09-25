@@ -12,9 +12,7 @@
 | color/weekly | `#22C55E` 绿 | 每周档本色 |
 | color/zcodeMcp | `#F59E0B` 橙 | MCP 档本色 |
 | color/other | `#94A3B8` 灰 | 未知档位 |
-| track | 白 13%（展开 6pt） | 进度条底轨 |
-
-颜色语义：**恒定身份色，只表达剩余量**（填充比例=剩余%），不做预警变色（Leo 明确）。
+颜色语义：**恒定身份色，只表达剩余量**（环填充比例=剩余%），不做预警变色（Leo 明确）。线性进度条已废弃，改同心环。
 | text-primary | 白（13 semibold 标题 / 14 bold rounded 数值） | |
 | text-secondary | 白 55%（重置时间 10pt）/ 白 45%（页脚 9.5pt） | |
 

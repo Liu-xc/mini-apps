@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 /// 灵岛根视图：默认完全隐藏（窗口即刘海挖槽区的隐形触发区），
-/// hover/点击后从刘海向下延伸出内容卡片（当前内容源 + 明细）
+/// hover/点击后从刘海向下延伸出内容卡片（内容源 chips + Apple 健康式同心环 + 明细）
 struct IslandRootView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var viewModel: IslandViewModel
@@ -59,17 +59,16 @@ struct IslandRootView: View {
         return CGSize(width: 180, height: max(screen?.safeAreaInsets.top ?? 24, 24))
     }
 
-    /// 与 IslandWindowController.expandedSize 保持同一公式
+    /// 与 IslandWindowController.expandedSize 保持同一公式：
+    /// topInset + chips + 圆环簇 + 页脚（圆环簇定高 80）
     private var expandedHeight: CGFloat {
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main
         let safeTop = max(screen?.safeAreaInsets.top ?? 24, 24)
-        let n = CGFloat(max(1, store.displaySnapshot?.displayRows.count ?? 1))
-        let content: CGFloat = 18 + 8 + n * 24 + max(0, n - 1) * 10 + 10 + 14
-        return safeTop + 6 + content + 14
+        return safeTop + 6 + 18 + 8 + 80 + 10 + 14 + 14
     }
 }
 
-// MARK: - 展开卡片：内容源切换 chips + 极简明细（颜色只保留在进度条上）
+// MARK: - 展开卡片：内容源 chips + 同心环 + 明细（颜色=档位身份色，环填充=剩余量）
 
 struct ExpandedIslandView: View {
     @ObservedObject var store: UsageStore
@@ -84,10 +83,14 @@ struct ExpandedIslandView: View {
     var body: some View {
         VStack(spacing: 10) {
             providerChips
-            if let snapshot = store.displaySnapshot, !snapshot.displayRows.isEmpty {
-                VStack(spacing: 10) {
-                    ForEach(snapshot.displayRows) { row in
-                        SimpleQuotaRow(row: row, now: Date())
+            if let rows = displayRows, !rows.isEmpty {
+                HStack(spacing: 16) {
+                    ActivityRingsView(rows: rows, centerTitle: store.activeKind.title)
+                        .frame(width: 80, height: 80)
+                    VStack(spacing: 12) {
+                        ForEach(rows) { row in
+                            RingStatRow(row: row, now: Date())
+                        }
                     }
                 }
             } else {
@@ -129,6 +132,13 @@ struct ExpandedIslandView: View {
             }
             Spacer()
         }
+    }
+
+    /// 最多展示 3 个环
+    private var displayRows: [QuotaRow]? {
+        let rows = store.displaySnapshot?.displayRows
+        guard rows?.isEmpty == false else { return nil }
+        return Array(rows!.prefix(3))
     }
 
     @ViewBuilder
@@ -178,61 +188,86 @@ struct ExpandedIslandView: View {
     }
 }
 
-/// 单档一行：标签 + 重置时间 · 百分比，下方进度条（恒定身份色，填充=剩余量）
-struct SimpleQuotaRow: View {
+// MARK: - Apple 健康式同心环（外环=第一档，填充比例=剩余量）
+
+struct ActivityRingsView: View {
+    let rows: [QuotaRow]
+    var centerTitle: String = ""
+
+    private var ringWidth: CGFloat { rows.count >= 3 ? 8 : 10 }
+    private var gap: CGFloat { 4 }
+    private var clusterSize: CGFloat { 80 }
+
+    var body: some View {
+        ZStack {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                let diameter = clusterSize - ringWidth
+                    - CGFloat(index) * 2 * (ringWidth + gap)
+                let fill = min(1, max(0.005, (row.remainingPercent ?? 0) / 100))
+                let color = IslandTheme.identityColor(row.kind)
+                Circle()
+                    .stroke(Color.white.opacity(0.12), lineWidth: ringWidth)
+                    .frame(width: diameter, height: diameter)
+                Circle()
+                    .trim(from: 0, to: fill)
+                    .stroke(
+                        AngularGradient(
+                            colors: [color.opacity(0.55), color],
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(-90 + 360 * fill)
+                        ),
+                        style: StrokeStyle(lineWidth: ringWidth, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: diameter, height: diameter)
+                    .animation(.easeOut(duration: 0.6), value: fill)
+            }
+            if !centerTitle.isEmpty {
+                Text(centerTitle)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+        }
+        .frame(width: clusterSize, height: clusterSize)
+    }
+}
+
+/// 环对应的图例行：色点 + 标签 + 重置时间 · 百分比
+struct RingStatRow: View {
     let row: QuotaRow
     let now: Date
 
     var body: some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 6) {
-                Text(row.label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                Spacer(minLength: 0)
-                if let reset = row.resetDate {
-                    Text(ResetFormatter.shortReset(reset, now: now))
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-                if row.resetDate != nil, row.remainingPercent != nil {
-                    Text("·")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.3))
-                }
-                if let remaining = row.remainingPercent {
-                    // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
-                    Text("\(Int(remaining))%")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                } else {
-                    Text("--%")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.4))
-                }
+        HStack(spacing: 6) {
+            Circle()
+                .fill(IslandTheme.identityColor(row.kind))
+                .frame(width: 6, height: 6)
+            Text(row.label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.85))
+            Spacer(minLength: 0)
+            if let reset = row.resetDate {
+                Text(ResetFormatter.shortReset(reset, now: now))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.5))
             }
-            QuotaBarTrack(color: IslandTheme.identityColor(row.kind), fill: (row.remainingPercent ?? 0) / 100)
-        }
-    }
-}
-
-struct QuotaBarTrack: View {
-    let color: Color
-    let fill: Double
-    var height: CGFloat = 6
-
-    var body: some View {
-        ZStack(alignment: .leading) {
-            Capsule()
-                .fill(Color.white.opacity(0.13))
-            GeometryReader { proxy in
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(3, proxy.size.width * min(1, max(0, fill))))
-                    .animation(.easeOut(duration: 0.5), value: fill)
+            if row.resetDate != nil, row.remainingPercent != nil {
+                Text("·")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.3))
+            }
+            if let remaining = row.remainingPercent {
+                // 向下取整对齐控制台口径（99.88% 显示 99%，不进位成 100%）
+                Text("\(Int(remaining))%")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            } else {
+                Text("--%")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.4))
             }
         }
-        .frame(height: height)
     }
 }
 
