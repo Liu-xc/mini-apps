@@ -24,13 +24,13 @@ enum IslandTheme {
         }
     }
 
-    /// 菜单栏图标用等价 NSColor（同阈值同色值，不复制语义）
+    /// 菜单栏图标用等价 NSColor（同阈值同色值，不复制语义；unknown 与 SwiftUI 侧同为白 25%，修审计 P2 两档灰）
     static func levelNSColor(_ remaining: Double?) -> NSColor {
         switch level(of: remaining) {
         case .good: NSColor(srgbRed: 48 / 255, green: 209 / 255, blue: 88 / 255, alpha: 1)
         case .warn: NSColor(srgbRed: 255 / 255, green: 159 / 255, blue: 10 / 255, alpha: 1)
         case .bad:  NSColor(srgbRed: 255 / 255, green: 69 / 255, blue: 58 / 255, alpha: 1)
-        case .unknown: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.3)
+        case .unknown: NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.25)
         }
     }
 }

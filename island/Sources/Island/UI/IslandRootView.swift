@@ -151,7 +151,7 @@ struct ProviderPanel: View {
 
     /// 面板头：源名 + 主档重置（失败时右侧改示「刷新失败」红字，错误全文见页脚）
     private var header: some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(descriptor.title)
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.92))
@@ -166,6 +166,8 @@ struct ProviderPanel: View {
                     .font(.system(size: 9.5))
                     .foregroundStyle(.white.opacity(0.55))
                     .lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(.snappy(duration: 0.25), value: reset)
             }
         }
         .frame(height: IslandLayout.headerHeight)
@@ -176,7 +178,8 @@ struct ProviderPanel: View {
         if !configured && rows.isEmpty {
             unconfiguredHint
         } else {
-            VStack(alignment: .leading, spacing: 0) {
+            // alignment .center：主环在面板内水平居中（02 线框 W2 画法；修审计 P2「环左贴右侧留白 65pt」）
+            VStack(alignment: .center, spacing: 0) {
                 HeroRing(remaining: primary?.remainingPercent, caption: primary?.label ?? "")
                     .padding(.top, IslandLayout.sectionGap)
                 if IslandLayout.detailLineCount(rows: rows, hasRing: true) > 0 {
@@ -197,14 +200,15 @@ struct ProviderPanel: View {
                 }
             }
         } else if let primary, primary.usedTokens != nil, primary.limitTokens != nil {
-            // 单档源：绝对量明细行（无副档时的唯一环下行）
-            HStack(spacing: 5) {
-                Text("\(ResetFormatter.billion(primary.usedTokens!)) / \(ResetFormatter.billion(primary.limitTokens!))")
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.55))
-                Spacer(minLength: 0)
-            }
-            .frame(height: IslandLayout.detailRowHeight)
+            // 单档源：绝对量明细行（无副档时的唯一环下行）——与主环同轴居中 + 数字过渡（P0-B，DESIGN §5.9）
+            let quantity = "\(ResetFormatter.billion(primary.usedTokens!)) / \(ResetFormatter.billion(primary.limitTokens!))"
+            Text(quantity)
+                .font(.system(size: 9.5))
+                .foregroundStyle(.white.opacity(0.55))
+                .contentTransition(.numericText())
+                .animation(.snappy(duration: 0.25), value: quantity)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .frame(height: IslandLayout.detailRowHeight)
         }
     }
 
@@ -225,15 +229,16 @@ struct ProviderPanel: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.85))
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
+                    .frame(minHeight: 24)   // 命中区 ≥24pt（审计 P1-E：原 50×21pt 连本应用自定 24 都不达）
                     .background(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(Color.white.opacity(0.08))
                     )
             }
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // 整体居中：与数据态主环同轴（修审计 P1-C 空态↔数据态锚点跳变）
+        .frame(maxWidth: .infinity, alignment: .center)
         .frame(height: IslandLayout.hintHeight)
         .padding(.top, IslandLayout.sectionGap)
     }
@@ -249,31 +254,45 @@ struct HeroRing: View {
 
     private var fill: Double { min(1, max(0, (remaining ?? 0) / 100)) }
     private var color: Color { IslandTheme.levelColor(remaining) }
+    /// stroke 以路径为中心向两侧各溢 ringWidth/2——路径取「外径−环宽」，墨迹外缘才等于 diameter（修审计 P1-C 外溢 4pt）
+    private var pathDiameter: CGFloat { diameter - ringWidth }
+    /// 无数据：整圈底轨用 health/unknown 白 25%（与色点/菜单同值，修审计 P1-D「spec 承诺的 unknown 环色永不出现」）；
+    /// 有数据：白 8% 底轨 + 健康色弧。纯函数，可单测。
+    static func trackOpacity(remaining: Double?) -> Double { remaining == nil ? 0.25 : 0.08 }
+
+    private var trackOpacity: Double { Self.trackOpacity(remaining: remaining) }
+    /// round cap 两端共伸出 ringWidth（切向），从 trim 扣除后视觉弧长 = fill 比例
+    /// （否则 ≥96% 时帽交叠盖死缝隙，99% 与 100% 无视觉差——修审计 P2）。纯函数，可单测。
+    static func arcTrimEnd(fill: Double, ringWidth: CGFloat, pathDiameter: CGFloat) -> Double {
+        guard pathDiameter > 0 else { return 0.005 }
+        let cap = Double(ringWidth / (CGFloat.pi * pathDiameter))
+        return max(fill - cap, 0.005)
+    }
+
+    private var trimEnd: Double {
+        Self.arcTrimEnd(fill: fill, ringWidth: ringWidth, pathDiameter: pathDiameter)
+    }
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: ringWidth)
-                .frame(width: diameter, height: diameter)
-            Circle()
-                .trim(from: 0, to: fill > 0 ? max(fill, 0.005) : 0)
-                .stroke(
-                    AngularGradient(
-                        colors: [color.opacity(0.55), color],
-                        center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(-90 + 360 * fill)
-                    ),
-                    style: StrokeStyle(lineWidth: ringWidth, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .frame(width: diameter, height: diameter)
-                .shadow(color: color.opacity(0.25), radius: 2)
-                .animation(.easeOut(duration: 0.6), value: fill)
+                .stroke(Color.white.opacity(trackOpacity), lineWidth: ringWidth)
+                .frame(width: pathDiameter, height: pathDiameter)
+            if remaining != nil {
+                // 实色弧：一环一色一义（健康度），渐变/辉光会让单环读出「两种状态」（Leo 反馈 2026-09-26）。
+                // 有数据（含 0%）始终绘弧——0% 保最小红弧，不再与「无数据」同渲染（修审计 P1-D）
+                Circle()
+                    .trim(from: 0, to: trimEnd)
+                    .stroke(color, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: pathDiameter, height: pathDiameter)
+                    .animation(.easeOut(duration: 0.6), value: fill)
+            }
             VStack(spacing: 1) {
                 Text(remaining.map { "\(Int($0))%" } ?? "--%")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    // 占位「--%」与明细行同为 55% 白（修审计 P2：环心 100% / 明细 40% 两档不一致且破 AC2）
+                    .foregroundStyle(remaining == nil ? Color.white.opacity(0.55) : Color.white)
                     .contentTransition(.numericText())
                     .animation(.snappy(duration: 0.3), value: remaining)
                 if !caption.isEmpty {
@@ -304,10 +323,13 @@ struct DetailRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 5) {
+        // firstTextBaseline：12pt 百分比与 9.5pt 辅助文共基线（修审计 P2「三种字号基线不齐，差 1.5pt」）
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
             Circle()
                 .fill(IslandTheme.levelColor(row.remainingPercent))
                 .frame(width: 6, height: 6)
+                // 色点无基线：让点底 ≈ 文本基线（点心落在 10pt 字面光学中心）
+                .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] + 3 }
             Text(row.label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(0.88))
@@ -318,28 +340,32 @@ struct DetailRow: View {
                     .font(.system(size: 9.5))
                     .foregroundStyle(.white.opacity(0.55))
                     .lineLimit(1)
+                    .contentTransition(.numericText())   // P0-B：绝对量/重置数字跳变（DESIGN §5.9）
+                    .animation(.snappy(duration: 0.25), value: aux)
             }
             if row.remainingPercent != nil, auxText != nil {
                 Text("·")
                     .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.white.opacity(0.55))   // 30% → 55%：对比 2.6:1 < §2.2 3:1，且与 AC2「≥55% 白」自洽（审计 P2）
             }
             percentText
         }
         .frame(height: IslandLayout.detailRowHeight)
     }
 
-    /// 百分比：向下取整对齐控制台口径（99.88% 显示 99%），数字变化滚动过渡（DESIGN §5.9）
+    /// 百分比：向下取整对齐控制台口径（99.88% 显示 99%），数字变化滚动过渡（DESIGN §5.9）。
+    /// 占位「--%」= 55% 白，与环心占位同值（修审计 P2：原 40% 破 AC2、且与环心 100% 两档不一致）
     private var percentText: some View {
         Group {
             if let remaining = row.remainingPercent {
                 Text("\(Int(remaining))%")
+                    .foregroundStyle(.white)
             } else {
-                Text("--%").foregroundStyle(.white.opacity(0.4))
+                Text("--%")
+                    .foregroundStyle(.white.opacity(0.55))
             }
         }
         .font(.system(size: 12, weight: .bold, design: .rounded))
-        .foregroundStyle(.white)
         .contentTransition(.numericText())
         .animation(.snappy(duration: 0.25), value: row.remainingPercent)
     }

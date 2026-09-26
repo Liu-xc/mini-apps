@@ -5,11 +5,22 @@ import SwiftUI
 /// NSHostingView 子类：可见卡片矩形之外的事件全部穿透（hitTest 返回 nil，
 /// 事件落到下层窗口——菜单栏图标照常可点）
 final class IslandContentView: NSHostingView<IslandRootView> {
-    /// point（contentView 坐标，左下原点）是否落在当前可见卡片内
+    /// **屏幕全局坐标**（左下原点）是否落在当前可见卡片内。
+    /// hitTest 收到的 point 是窗口基坐标系，判定前必须经 `screenPoint(forWindowPoint:windowFrame:)` 换算
+    /// （两套坐标系直接比较恒 false → 展开态点击全死，it-003 审计 P0-A）。
     var visibleCardChecker: ((NSPoint) -> Bool)?
 
+    /// 窗口基坐标点 → 屏幕全局坐标点（纯函数，可单测）。
+    static func screenPoint(forWindowPoint point: NSPoint, windowFrame: NSRect?) -> NSPoint {
+        guard let frame = windowFrame else { return point }
+        return NSPoint(x: frame.minX + point.x, y: frame.minY + point.y)
+    }
+
     override func hitTest(_ point: NSPoint) -> NSView? {
-        if let checker = visibleCardChecker, !checker(point) { return nil }
+        if let checker = visibleCardChecker {
+            let screenPoint = Self.screenPoint(forWindowPoint: point, windowFrame: window?.frame)
+            if !checker(screenPoint) { return nil }
+        }
         return super.hitTest(point)
     }
 }
@@ -22,6 +33,11 @@ final class IslandWindowController: NSObject {
     private var contentView: IslandContentView?
     private var pinned = false
     private var monitors: [Any] = []
+    /// 判定矩形的 appearance 切换插值（修 it-003 审计 P2：判定瞬时切换 vs 遮罩 0.32s 动画不同步——
+    /// 收起期可见卡片点击穿透、展开期未画出区域吞点击、收起途中移回不中止）
+    private var rectAnimFrom: NSRect?
+    private var rectAnimStart: TimeInterval = 0
+    private static let rectAnimDuration: TimeInterval = 0.45
     /// 悬停轮询 + 防抖
     private var hoverTimer: Timer?
     private var pendingHover: DispatchWorkItem?
@@ -69,7 +85,7 @@ final class IslandWindowController: NSObject {
         viewModel.onTogglePin = { [weak self] in self?.togglePin() }
         self.panel = panel
 
-        // 点击穿透判定：仅当前可见卡片矩形内响应（随 reveal 动画实时更新）
+        // 点击穿透判定：仅当前可见卡片矩形内响应（point 已换算为屏幕全局坐标，见 IslandContentView）
         content.visibleCardChecker = { [weak self] point in
             self?.visibleCardRect.contains(point) ?? false
         }
@@ -219,8 +235,8 @@ final class IslandWindowController: NSObject {
         }
     }
 
-    /// 当前可见卡片矩形（全局坐标，左下原点）：隐藏 = 刘海挖槽、展开 = 全卡片，与视图遮罩同尺寸
-    private var visibleCardRect: NSRect {
+    /// 目标可见卡片矩形（全局坐标，左下原点）：隐藏 = 刘海挖槽、展开 = 全卡片，与视图遮罩同尺寸
+    private var targetCardRect: NSRect {
         let current = layout
         let screen = activeScreen
         let center = frameCenter(on: screen)
@@ -230,8 +246,28 @@ final class IslandWindowController: NSObject {
             : current.cardRect(centerX: center, screenTop: top)
     }
 
+    /// 当前判定矩形：appearance 切换后 0.45s 内从旧矩形平滑插值到目标（smoothstep ≈ 遮罩 spring 前慢中快后收）。
+    /// 修 it-003 审计 P2：判定瞬时切换 vs 遮罩 0.32s 动画不同步——收起期可见卡片点击穿透、
+    /// 展开期未画出区域吞点击、收起途中移回可见区不中止（插值后光标进入可见区即可 hover 重展开）。
+    private var visibleCardRect: NSRect {
+        let target = targetCardRect
+        guard let from = rectAnimFrom else { return target }
+        let t = (ProcessInfo.processInfo.systemUptime - rectAnimStart) / Self.rectAnimDuration
+        guard t < 1 else { return target }
+        let p = t * t * (3 - 2 * t)   // smoothstep
+        return NSRect(
+            x: from.origin.x + (target.origin.x - from.origin.x) * p,
+            y: from.origin.y + (target.origin.y - from.origin.y) * p,
+            width: from.width + (target.width - from.width) * p,
+            height: from.height + (target.height - from.height) * p
+        )
+    }
+
     private func applyAppearance(_ appearance: IslandViewModel.Appearance) {
-        // 窗口永不改变大小；显隐完全由 SwiftUI 遮罩尺寸驱动（从刘海长出/缩回）
+        // 窗口永不改变大小；显隐完全由 SwiftUI 遮罩尺寸驱动（从刘海长出/缩回）。
+        // 判定矩形同步起插值（从当前值出发，支持动画中途改向）
+        rectAnimFrom = visibleCardRect
+        rectAnimStart = ProcessInfo.processInfo.systemUptime
         viewModel.appearance = appearance
     }
 }
