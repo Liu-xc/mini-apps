@@ -62,6 +62,10 @@ FooterStatus（页脚状态纯函数）· IslandTheme（健康度阈值/色值�
   同一实例；面板高度公式 = 实际渲染分支（`detailLineCount` 与视图渲染严格一致）。
 - 悬停 = 30Hz 光标位置轮询（`NSEvent.mouseLocation` 与可见矩形求交，不依赖事件路由）；
   点击 = contentView `hitTest` 返回 nil 实现可见区域外穿透（菜单图标照常可点）；
+  **`hitTest` 收到的 point 是窗口基坐标，判定前经 `IslandContentView.screenPoint` 换算为
+  屏幕全局坐标**（与 `visibleCardRect` 同系——坐标系错配曾致展开态点击全死，it-003 审计 P0 修复，
+  `AuditRegressionTests` 锁定）；**判定矩形随 appearance 切换 0.45s smoothstep 插值**
+  （与遮罩 spring 同步，消除收起期点击穿透/展开期吞点击）；
   收/展 = 遮罩宽高 spring(response 0.32, damping 0.9)（动画只挂遮罩尺寸，窗口不动）。
   监听 `didChangeScreenParametersNotification` 重定位窗口。
 - hover 防抖状态机：enter 60ms 延迟展开、exit 180ms 延迟收起（均可取消）；

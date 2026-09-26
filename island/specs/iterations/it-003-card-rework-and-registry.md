@@ -138,11 +138,61 @@
   §5.5 纯黑底已在 DESIGN §1 island 行作**偏移声明**（刘海 HUD 与硬件融合，非纸感应用）；
   触控 44dp 为 Android 基线，macOS 指针场景 24pt 命中区已在 05 声明。
 
+### 用户反馈修复（2026-09-26 二轮）
+
+Leo 实机反馈两点，逐一核实：
+
+1. **「绿色环里面为什么有两种绿色」——属实，已修**：`HeroRing` 弧线原用
+   `AngularGradient(0.55→本色)` 沿弧渐变 + 辉光阴影，单环上读出深浅两种绿、
+   像两种状态。改为**实色弧**（一环一色一义，只有健康度一种颜色语义），
+   辉光一并去除；像素级验证新截图弧上 24 点采样仅 1 种色值 `#30D158`。
+   spec 05/ring 条款与 specs/CHANGELOG 同步。
+2. **「两个环形图都没对齐」——旧包所致，非新代码缺陷**：实机跑的
+   `dist/island.app` 是 25 日 23:37 打包（早于 it-003 全部代码），即 it-002
+   旧双环 UI（60/68 错位 = it-003 已修的 P1-7）。新单环截图实测两环圆心
+   y 完全一致（201.5px@2x）、面板等宽等高。dist 已重建，需退出旧实例重开。
+
+### 对抗审计修复（2026-09-26 三轮：四镜头工作流 + 双反驳者核实）
+
+四镜头（像素几何/色彩语义/布局代码/spec 对表）并行审查产出 16 条原始发现，
+去重后严重度最高的 5 条各经 **2 名独立反驳者**核实：**5/5 CONFIRMED、0 REFUTED**；
+其余 11 条 P2 一并修复。
+
+| 级别 | 发现（根因） | 修复 | 验证 |
+|---|---|---|---|
+| **P0-A** | hitTest 穿透判定坐标系错配——point 是窗口基坐标、`visibleCardRect` 是屏幕全局，恒不相交 → **展开态整卡点击全死**（固定/刷新/设置/去设置全无响应，且点击穿透下层窗口；引入于 663f7e0，hover 走全局坐标所以正常，掩盖了问题） | `IslandContentView.screenPoint(forWindowPoint:windowFrame:)` 换算后再判定 | `AuditRegressionTests` 换算+包含关系；本地探针两份独立复现 |
+| **P0-B** | 绝对量明细行「6.20B / 456B」裸 Text 无过渡，违 DESIGN §5.9（it-003 P0-1 只修了环心/明细百分比） | 绝对量行 + `DetailRow.auxText` + 面板头重置时刻补 `.contentTransition(.numericText())` | 44 测试全绿；05 动效表扩写覆盖 |
+| **P1-C** | 环 stroke 以路径为中心向框外各溢 4pt——墨迹外径 74pt ≠ token 66，头↔环段距只剩 2pt、空态↔数据态环左跳 8px | 路径直径 = 外径 − 环宽（58+8=66） | 截图实测环墨迹 **66.0×66.0pt**、与面板中心 cx 重合 |
+| **P1-D** | 0% 与「无数据」渲染成同一个无色环——最需要红色的 0% 没有健康色，spec 承诺的 unknown 白 25% 环色永不出现 | 有数据（含 0%）恒绘最小健康色弧；无数据整圈底轨升白 25%（与色点/菜单同值） | `arcTrimEnd`/`trackOpacity` 单测；`levelNSColor` unknown 改 0.25 |
+| **P1-E** | 命中区 24pt（空态按钮实测 50×21pt 连 24 都不达）低于 DESIGN §2.5 ≥44dp，05 误称「§2.5 基线」且 DESIGN.md 未登记偏移 | DESIGN.md §2.5 增补 **it-003 指针场景例外 ≥24pt**；05 改「指针例外（已登记）」；去设置按钮 `minHeight: 24` | 空态截图按钮实测 **25pt**；`iconHitTargetMeets24pt` 单测 |
+| P2 | 判定瞬时切换 vs 遮罩 0.32s 动画不同步（收起期可见卡点击穿透/展开期吞点击/收起途中移回不中止） | `visibleCardRect` 随 appearance 0.45s smoothstep 插值 | 04 动效表登记；实现于 WindowController |
+| P2 | round cap 帽宽交叠盖死缝隙，99% 与 100% 无视觉差 | `arcTrimEnd` 从 trim 扣除帽宽占位 | `arcTrimCompensatesRoundCapOverlap`（99% 留 1% 缝、100% 闭合） |
+| P2 | 主环左贴（右侧留白 65pt）与 W2 居中画法不一致 | 面板内容 `VStack(.center)`，环/单档绝对量行居中 | 截图 cx = 面板中心 185.5/517.5 |
+| P2 | 明细行 12pt/9.5pt/10pt 三字号基线不齐（差 1.5pt） | `HStack(alignment: .firstTextBaseline)` + 色点 alignmentGuide | 像素行扫描：百分比与辅助文底同 y=303 |
+| P2 | 「·」白 30% 对比 2.6:1 < §2.2 ≥3:1，且与 05 表头 ≥55% 矛盾 | 改白 55% | 05 排版表同步 |
+| P2 | 「--%」占位两档亮度（环心 100% / 明细 40%）且明细破 AC2 | 统一白 55% | 05 排版表增补占位行 |
+| P2 | 无数据灰两档（卡片 白25% vs 菜单 NSColor 白30%），与「同色值」自述矛盾 | `levelNSColor(.unknown)` → 0.25 | `unknownNSColorMatchesSwiftUIWhite25` 单测 |
+| P2 | 双源同败时第二个源错误全文卡上不可见，与 US-2「错误全文见页脚」冲突 | US-2 措辞修正：页脚=注册表序**首个**错误全文，第二个见面板红字与菜单摘要 | 01 同步（US-7 本就规定单行首个，spec 自洽） |
+
+**三轮回归验证**：`swift build` 0 error；`swift test` **48/48 绿**（+7 纯函数：坐标换算、
+环 trim/底轨、命中区、unknown 同值、阈值；+4 渲染级 `RenderRegressionTests`：ImageRenderer
+离屏渲染真实视图钉住 HeroRing body 守卫、0% 红弧、墨迹外径、按钮命中高度）；
+截图三态（真实/演示/空态）像素断言——环 66.0pt ✓ 双环 cy=201.5 同轴 ✓ cx=面板中心 ✓
+明细基线 y=303 对齐 ✓ 空态按钮 25pt ✓ 弧色采样全 `(48,209,88)` 单色 ✓。
+
+**独立对抗核实**（工作流：5 项修复 × 2 独立反驳者 + diff 扫描）：**5/5 CONFIRMED、
+10/10 verdicts real=true、0 REFUTED**——核实者各自用真实 NSPanel 探针端到端复测坐标换算
+（hitTest 实收 (824,887)）、ImageRenderer 复现 0%/nil 双态、连通域复测按钮 25.0pt、
+像素复测环墨迹 65.96×65.96pt；核实附带的测试覆盖建议（body 守卫/按钮高度无渲染级断言）
+已落为 `RenderRegressionTests` 四测（48/48）。
+
 ### 已知限制（如实）
 
 - 菜单栏图标与系统 UI 不在 DebugShot 覆盖内，需人工目检（逻辑与卡片共用 `IslandTheme`，
   阈值已单测）；
 - 「刷新失败」面板头/页脚错误态未做截图样张（无破坏真实凭证的途径），
   由 `FooterStatusTests` + 纯色取值代码路径覆盖；
-- hover 展开/收起/固定/穿透（US-1 终极架构）本次未改代码路径，未重复人工悬停实测；
-  截图流程验证了展开态渲染与布局同源（遮罩/hitTest/窗口帧同吃 `IslandLayout`）。
+- hover 展开/收起/固定（US-1 轮询+防抖状态机）未改判定逻辑，未重复 CGEvent 人工悬停实测；
+  **点击路径三轮已改**（坐标换算 + 判定插值），由 `AuditRegressionTests` 与本地探针覆盖，
+  真机点击（固定/刷新/设置）建议下次实机使用时顺手确认；
+- 截图流程验证了展开态渲染与布局同源（遮罩/hitTest/窗口帧同吃 `IslandLayout`）。
