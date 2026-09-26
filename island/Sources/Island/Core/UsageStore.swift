@@ -78,7 +78,10 @@ final class UsageStore: ObservableObject {
         let kinds = ProviderRegistry.all
             .map(\.kind)
             .filter { settings.demoMode || credentialKinds.contains($0) }
-        guard !kinds.isEmpty else { return }
+        guard !kinds.isEmpty else {
+            NSLog("[island][refresh] 跳过：无已配置源（demo=\(settings.demoMode) credentialKinds=\(credentialKinds.map(\.rawValue).sorted())）")
+            return
+        }
 
         for kind in kinds {
             var state = self.state(kind)
@@ -103,12 +106,14 @@ final class UsageStore: ObservableObject {
                 }
                 states[kind] = SourceState(snapshot: snap, lastError: nil, isFetching: false)
                 try? caches[kind]?.save(snap)
+                NSLog("[island][refresh] \(kind) 成功 rows=\(snap.displayRows.count) at=\(snap.fetchedAt)")
                 anyOK = true
             } catch {
                 var state = self.state(kind)
                 state.lastError = error.localizedDescription
                 state.isFetching = false
                 states[kind] = state   // 保留旧快照：陈旧数据继续展示 + 错误明示
+                NSLog("[island][refresh] \(kind) 失败: \(error.localizedDescription)")
             }
         }
         if anyOK {

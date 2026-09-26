@@ -94,4 +94,17 @@ struct AuditRegressionTests {
         #expect(IslandTheme.level(of: 20) == .warn)
         #expect(IslandTheme.level(of: 19.9) == .bad)
     }
+
+    // MARK: 实机日志诊断（2026-09-26 三轮）——MiMo Cookie 失效时服务器回 HTTP 401 状态，
+    // 状态守卫先于 body 检查，文案必须在状态分支映射（否则永远显示 "HTTP 401"，US-8 AC 违例）
+
+    @Test
+    func mimoHTTP401MapsToCookieExpiredMessage() {
+        #expect(MiMoUsageProvider.errorMessage(forHTTPStatus: 401)
+                == "MiMo Cookie 已过期，请在设置更新")
+        #expect(MiMoUsageProvider.errorMessage(forHTTPStatus: 403)
+                == "MiMo Cookie 已过期，请在设置更新")
+        #expect(MiMoUsageProvider.errorMessage(forHTTPStatus: 500) == "HTTP 500")
+        #expect(MiMoUsageProvider.errorMessage(forHTTPStatus: 429) == "HTTP 429")
+    }
 }

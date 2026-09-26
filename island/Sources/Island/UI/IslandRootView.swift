@@ -18,7 +18,10 @@ struct IslandRootView: View {
         card
             .frame(width: layout.width, height: layout.expandedHeight, alignment: .top)
             .contentShape(Rectangle())
-            .onTapGesture { viewModel.requestTogglePin() }
+            .onTapGesture {
+                NSLog("[island][tap] 卡片 onTapGesture 触发（请求固定/收起）")
+                viewModel.requestTogglePin()
+            }
     }
 
     /// 卡片可见区域 = 动画化圆角遮罩（动画只挂在遮罩尺寸上：显隐与数据驱动的高度变化同一弹簧）
@@ -107,9 +110,11 @@ struct ExpandedIslandView: View {
             }
             Spacer(minLength: 0)
             QuotaIconButton(systemName: "arrow.clockwise", spinning: store.isFetchingAny) {
+                NSLog("[island][tap] ⟳ 刷新按钮")
                 Task { await store.refreshAll() }
             }
             QuotaIconButton(systemName: "gearshape") {
+                NSLog("[island][tap] ⚙ 设置按钮（卡片页脚）")
                 openSettings()
             }
         }
@@ -224,7 +229,10 @@ struct ProviderPanel: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.55))
                     .lineLimit(1)
-                Button("去设置") { openSettings() }
+                Button("去设置") {
+                    NSLog("[island][tap] 「去设置」按钮（空态）")
+                    openSettings()
+                }
                     .font(.system(size: 10, weight: .medium))
                     .buttonStyle(.plain)
                     .foregroundStyle(.white.opacity(0.85))
@@ -393,16 +401,24 @@ struct QuotaIconButton: View {
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(Color.white.opacity(hovering ? 0.10 : 0))
                 )
-                .animation(
-                    spinning ? .linear(duration: 1.0).repeatForever(autoreverses: false) : nil,
-                    value: spin
-                )
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .onAppear { spin = spinning }
-        .onChange(of: spinning) { _, newValue in
-            spin = newValue   // 停止时 animation 为 nil → 原地归零，不倒转
+        .onAppear { setSpinning(spinning) }
+        .onChange(of: spinning) { _, now in setSpinning(now) }
+    }
+
+    /// 旋转启停（it-003 审计三轮修复）：停不下来的根因是 **离散写入无法打断 in-flight repeatForever**——
+    /// 旧写法 `.animation(nil, value:)` 如此，实测 `withTransaction(disablesAnimations)` 也如此
+    /// （模型 spin=false 后模板匹配仍测到 67.5°/255°/105°/300° 持续变化，对照实验匹配器 SAD=0 可信）。
+    /// 唯一可靠打断 = **有限动画覆盖同 keypath 的无限动画**；0.01s 视觉即「原地归零不倒转」
+    /// （规范 05 动效表），验证停转后角度恒 0°。
+    private func setSpinning(_ on: Bool) {
+        NSLog("[island][spin] setSpinning(\(on)) 旧值=\(spin)")
+        if on {
+            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) { spin = true }
+        } else {
+            withAnimation(.linear(duration: 0.01)) { spin = false }
         }
     }
 }

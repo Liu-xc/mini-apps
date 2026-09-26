@@ -79,12 +79,22 @@ struct MiMoUsageProvider: UsageProviding {
             throw ProviderError(message: "无效响应")
         }
         guard (200..<300).contains(http.statusCode) else {
-            throw ProviderError(message: "HTTP \(http.statusCode)")
+            // Cookie 失效时服务器直接回 HTTP 401 状态码（而非 200+body code）——
+            // 状态守卫先于 body 检查，必须在此映射友好文案，否则永远显示 "HTTP 401"（US-8 AC）
+            throw ProviderError(message: Self.errorMessage(forHTTPStatus: http.statusCode))
         }
         if let text = String(data: data, encoding: .utf8), text.contains("\"code\":401") {
             throw ProviderError(message: "MiMo Cookie 已过期，请在设置更新")
         }
         return try MiMoQuotaParser.parse(data)
+    }
+
+    /// HTTP 状态 → 用户文案（纯函数可单测）。2xx 不适用（不会抛错）。
+    static func errorMessage(forHTTPStatus status: Int) -> String {
+        switch status {
+        case 401, 403: "MiMo Cookie 已过期，请在设置更新"
+        default: "HTTP \(status)"
+        }
     }
 }
 

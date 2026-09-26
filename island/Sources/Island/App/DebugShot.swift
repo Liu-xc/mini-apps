@@ -11,10 +11,12 @@ import AppKit
 enum DebugShot {
     static func schedule(directory: String, islandView: NSView?, settingsWindow: SettingsWindowController) {
         let showSettings = ProcessInfo.processInfo.environment["GLM_ISLAND_SHOT_SETTINGS"] == "1"
+        // 抓图延迟可配（诊断用：验证 loading 图标停转需在 fetch 完成后任意时刻抓）
+        let delay = TimeInterval(ProcessInfo.processInfo.environment["GLM_ISLAND_SHOT_DELAY"].flatMap(Double.init) ?? 2.2)
         if showSettings {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { settingsWindow.show() }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
             if let islandView, let image = render(islandView) {
                 write(image, directory + "/island-card.png")

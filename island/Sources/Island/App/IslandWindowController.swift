@@ -33,6 +33,9 @@ final class IslandWindowController: NSObject {
     private var contentView: IslandContentView?
     private var pinned = false
     private var monitors: [Any] = []
+    /// 点击链路日志状态（it-003 实机诊断探针）
+    private var hitCount = 0
+    private var lastCheckerInside: Bool?
     /// 判定矩形的 appearance 切换插值（修 it-003 审计 P2：判定瞬时切换 vs 遮罩 0.32s 动画不同步——
     /// 收起期可见卡片点击穿透、展开期未画出区域吞点击、收起途中移回不中止）
     private var rectAnimFrom: NSRect?
@@ -85,9 +88,20 @@ final class IslandWindowController: NSObject {
         viewModel.onTogglePin = { [weak self] in self?.togglePin() }
         self.panel = panel
 
-        // 点击穿透判定：仅当前可见卡片矩形内响应（point 已换算为屏幕全局坐标，见 IslandContentView）
+        // 点击穿透判定：仅当前可见卡片矩形内响应（point 已换算为屏幕全局坐标，见 IslandContentView）。
+        // 日志：首次调用 + 结果翻转（hitTest 在窗口 bounds 内事件才触发，翻转节流防刷屏）
         content.visibleCardChecker = { [weak self] point in
-            self?.visibleCardRect.contains(point) ?? false
+            guard let self else { return false }
+            let inside = self.visibleCardRect.contains(point)
+            self.hitCount += 1
+            if self.hitCount == 1 {
+                NSLog("[island][hit] hitTest 首次调用 screen=(\(Int(point.x)),\(Int(point.y))) inside=\(inside)")
+            }
+            if inside != self.lastCheckerInside {
+                self.lastCheckerInside = inside
+                NSLog("[island][hit] 判定翻转 inside=\(inside) screen=(\(Int(point.x)),\(Int(point.y))) rect=(\(Int(self.visibleCardRect.minX)),\(Int(self.visibleCardRect.minY)),\(Int(self.visibleCardRect.width)),\(Int(self.visibleCardRect.height)))")
+            }
+            return inside
         }
 
         panel.orderFrontRegardless()
@@ -143,12 +157,16 @@ final class IslandWindowController: NSObject {
         let inside = visibleCardRect.contains(NSEvent.mouseLocation)
         guard inside != lastInside else { return }
         lastInside = inside
+        NSLog("[island][hover] 光标\(inside ? "进入" : "离开")可见区 loc=(\(Int(NSEvent.mouseLocation.x)),\(Int(NSEvent.mouseLocation.y))) appearance=\(viewModel.appearance) pinned=\(pinned)")
         inside ? handleEnter() : handleExit()
     }
 
     private func handleEnter() {
         pendingHover?.cancel()
-        guard !pinned, viewModel.appearance == .hidden else { return }
+        guard !pinned, viewModel.appearance == .hidden else {
+            NSLog("[island][hover] enter 被守卫挡下 pinned=\(pinned) appearance=\(viewModel.appearance)")
+            return
+        }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
@@ -161,13 +179,17 @@ final class IslandWindowController: NSObject {
 
     private func handleExit() {
         pendingHover?.cancel()
-        guard !pinned, viewModel.appearance == .expanded else { return }
+        guard !pinned, viewModel.appearance == .expanded else {
+            NSLog("[island][hover] exit 被守卫挡下 pinned=\(pinned) appearance=\(viewModel.appearance)")
+            return
+        }
         // 光标仍在可见卡片内就不收
         if visibleCardRect.contains(NSEvent.mouseLocation) { return }
         let work = DispatchWorkItem { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, !self.pinned else { return }
                 if self.visibleCardRect.contains(NSEvent.mouseLocation) { return }
+                NSLog("[island][hover] 180ms 防抖到期 → 收起")
                 self.applyAppearance(.hidden)
             }
         }
@@ -176,6 +198,7 @@ final class IslandWindowController: NSObject {
     }
 
     private func togglePin() {
+        NSLog("[island][tap] togglePin 旧 pinned=\(pinned) appearance=\(viewModel.appearance)")
         pendingHover?.cancel()
         pinned.toggle()
         applyAppearance(pinned ? .expanded : .hidden)
@@ -184,6 +207,7 @@ final class IslandWindowController: NSObject {
     private func handleOutsideClick(at screenPoint: NSPoint) {
         guard pinned else { return }
         if !visibleCardRect.contains(screenPoint) {
+            NSLog("[island][tap] 卡片外点击 (\(Int(screenPoint.x)),\(Int(screenPoint.y))) → 取消固定")
             pinned = false
             applyAppearance(.hidden)
         }
@@ -266,6 +290,7 @@ final class IslandWindowController: NSObject {
     private func applyAppearance(_ appearance: IslandViewModel.Appearance) {
         // 窗口永不改变大小；显隐完全由 SwiftUI 遮罩尺寸驱动（从刘海长出/缩回）。
         // 判定矩形同步起插值（从当前值出发，支持动画中途改向）
+        NSLog("[island][mask] appearance \(viewModel.appearance) → \(appearance)")
         rectAnimFrom = visibleCardRect
         rectAnimStart = ProcessInfo.processInfo.systemUptime
         viewModel.appearance = appearance

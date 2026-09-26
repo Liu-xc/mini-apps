@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in island?.reposition() }
         })
 
+        NSLog("[island][boot] 启动完成 credentialKinds=\(store.credentialKinds.map(\.rawValue).sorted()) demo=\(settings.demoMode) refresh=\(settings.refreshMinutes)min")
         Task { await store.start() }
 
         // 调试自截图：GLM_ISLAND_SHOT=<目录>（可选 GLM_ISLAND_SHOT_SETTINGS=1），拍完即退
