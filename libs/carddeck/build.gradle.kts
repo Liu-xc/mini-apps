@@ -26,7 +26,6 @@ dependencies {
     api(libs.compose.foundation)
     api(libs.compose.runtime)
 
-    // 卡组手势与动画全部来自该库（Apache-2.0，API 见 specs/00-overview.md）；
-    // 本 SDK 只做封装与抽取编排，不自研手势动画
-    api(libs.swipeable.cards)
+    // it-047：卡组手势/动画为本 SDK 自研内核（官方 AnchoredDraggable + spring），
+    // 不再依赖三方 swipeable-cards（选型依据见 wardrobe specs/06-decisions）
 }

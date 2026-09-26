@@ -91,5 +91,5 @@ com.leo.wardrobe/
 
 - compileSdk 35 / targetSdk 35 / minSdk 26；AGP 8.7.x + Gradle 8.9 + Kotlin 2.1.x（compose 插件）
 - composite build：`includeBuild("../libs/store"、"../libs/carddeck"、"../libs/cutout"、"../libs/agent")`，坐标 `com.leo.libs:{store,carddeck,cutout,agent}`（ADR-012/013/016，agent 见 it-041/ADR-024）
-- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、onnxruntime-android 1.20.0（cutout 运行时，版本须与 SDK 编译期对齐，ADR-016）、leo-agent（BYOK 模型接入，okhttp 由 SDK 传递）、JUnit4 + kotlinx-coroutines-test；JitPack 仓（carddeck 传递依赖）
+- 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、onnxruntime-android 1.20.0（cutout 运行时，版本须与 SDK 编译期对齐，ADR-016）、leo-agent（BYOK 模型接入，okhttp 由 SDK 传递）、JUnit4 + kotlinx-coroutines-test；carddeck 自研内核（it-047）无三方卡组依赖，JitPack 仓已从 settings.gradle.kts 移除
 - 权限：`POST_NOTIFICATIONS` + `RECEIVE_BOOT_COMPLETED`（it-018）+ **`INTERNET`（it-041/ADR-024，仅 BYOK 模型直连使用）**

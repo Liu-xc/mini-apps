@@ -49,8 +49,8 @@
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
-| 1 | 槽位轮播 | ~~HorizontalPager + graphicsLayer 缩放形变~~ → it-003 起为 3×3 迷你格内 HorizontalPager（吸附换衣保留；迷你尺寸下取消缩放/透明形变） | W1 |
-| 2 | 🎲 老虎机 | 逐槽位 `animateScrollToPage` 随机目标，槽间 100ms stagger，落定 spring 轻弹（scale 1→1.03→1） | W1 |
+| 1 | 槽位轮播 | ~~HorizontalPager + graphicsLayer 缩放形变~~ → it-003 起为 3×3 迷你格内 HorizontalPager（吸附换衣保留；迷你尺寸下取消缩放/透明形变）；it-047 参数收敛：2 处 `HorizontalPager`（`SlotGrid.kt` 槽位、`OutfitDetailScreen.kt` W7 轮播）显式 `PagerDefaults.flingBehavior(snapAnimationSpec = EditorialMotion.smooth())`、`beyondViewportPageCount = 1`（1.7.0+ 参数名），`SlotGrid.kt` 序号跳页 `animateScrollToPage` 同传 `animationSpec = EditorialMotion.smooth()` | W1、W7 |
+| 2 | 🎲 老虎机 | 逐槽位 `animateScrollToPage` 随机目标（it-047 显式 `animationSpec = EditorialMotion.smooth()`），槽间 100ms stagger；落定轻弹 scale 1→1.03→1 已落地（it-047：`snapshotFlow { settledPage }` 触发，`tween(80)` 上行、`EditorialMotion.pop()` 回落；启动 1.5s 内不弹，入场恢复不产生动效） | W1 |
 | 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图、穿搭格→W7 成品图，无缝放大 | W1→W5、W8→W7 |
 | 4 | 复制成功 | 按钮内容 AnimatedContent morph 成 ✓，同时 Canvas 自绘彩屑粒子（15-20 粒，砖红/墨黑/米白三色，重力下落 600ms） | W6 |
 | 5 | 滑动删除 | Material3 `SwipeToDismissBox`，背景显现删除图标，删除后 `animateItem` 淡出回落 | W3 |
@@ -60,11 +60,14 @@
 | 9 | 收藏 ☆→★ | scale 心跳 1→1.2→1 + accent 着色 | W6/W7 |
 | 10 | 底部弹层 | ModalBottomSheet（M3 弹簧），导出面板内容 staggered 淡入 | W2/W6 |
 | 11 | 统计数字 count-up（it-027） | `CountUpText`：Animatable 首进 0→N 起数、档位切换旧值过渡，`EditorialMotion.smooth()`，三格 60ms 错峰 | W9 三大数字 |
-| 12 | 卡组飞出/随机抽取（it-046） | 库飞卡注入 `spring(0.9, 500)`（≈0.32s 到位、<0.5% 过冲，替代库默认 spring(0.6,100) 的 1s 晃尾）；`drawRandom` 步距 420→560ms 与飞行同量级（旧 55ms 连发=多张叠飞撕裂）、末张「甩出+复位」组合步不再瞬移；W1 序号 n/m 末页回卷即时落位 | W8 卡组、W1 槽位序号 |
+| 12 | 卡组飞出/随机抽取（it-047 自研内核，弹簧承 it-046 基准） | `libs/carddeck` 换官方 `AnchoredDraggable` 自研内核（三方 compose-swipeable-cards 依赖与 JitPack 仓库已删）：**单一弹簧源** `DeckStyle.flyOutSpec = spring(0.9, 500)`（≈0.32s 到位、<0.5% 过冲，替代旧库默认 spring(0.6,100) 的 1s 晃尾）——手势落定/程序化 `animateTo`/回中共用，旋转=位移/50 派生无第二弹簧；甩出判定 = 速度 ≥125dp/s 或 100dp 位置阈值（自研 `flingTarget`，官方 computeTarget 在 v=0 只取最近锚点、位置阈值不参与）；`drawRandom` 步距 420→560ms 与飞行同量级（旧 55ms 连发=多张叠飞撕裂；实测 483–607ms 含提交开销）、飞出 300–360ms 首达截停、末张回卷甩出+揭示不再瞬移；‹n/m› 精确 ±1（`committedTarget` 幂等提交门）；W1 序号 n/m 末页回卷即时落位保持 | W8 卡组、W1 槽位序号 |
+| 13 | 减弱动态降级（it-047） | 读 `Settings.Global.ANIMATOR_DURATION_SCALE == 0`（ContentObserver 实时感知，切换无需重启）→ 事实源唯一、分层双入口：carddeck `rememberDeckReduceMotion()`（W8 卡组，`CardDeck` 默认参数接线）与 `EditorialMotion.reduceMotion()`（W1/W7 pager），调用点不散写。W8：手势/程序化落定 `snap(0)` 即时、`drawRandom` 每步即时落位 + 每步一次 Confirm 震（保留步距节奏，最终落定震仍归 app 层）、拖拽保持 1:1（输入非动画）。W1/W7：`EditorialMotion.pagerFling` 降级返回自实现瞬时吸附（就近整页直接落位）——官方 `SnapFlingBehavior` 的 decay+snap 被钉死在 scale=1 的 withContext（foundation 1.8.3 字节码实证），不吃系统缩放，仅改 snapAnimationSpec 不够；`animateScrollToPage`/轻弹 Animatable 走框架 MotionDurationScale 自动降级；对应 DESIGN.md §3「跟随系统『移除动画/减弱动态』无障碍设置整体降级」 | 系统动画缩放=0 时的 W8 卡组 + W1 槽位/序号 + W7 轮播 |
 
 ## 触感反馈（it-027 · DESIGN.md §4 基线）
 
 `ui/components/Haptics.kt`：`confirm()`（API 30+ CONFIRM，低版本回退 LONG_PRESS）/ `error()`（REJECT / VIRTUAL_KEY）/ `tick()`（CLOCK_TICK），无声音。接线：复制长图 ✓、存相册 ✓、☆保存这套、🌟存为心愿、穿搭打卡（含再记一次）、去背景成功、角色编辑/新建保存、心愿「收进想买/保存」、心愿购入转正、心愿穿搭升级 = **confirm**（it-027 + it-028）；评论发送、撤销今日打卡、还原原图 = **tick**；未就绪点保存的 toast = **error**。滚动/导航/输入不加触感。
+
+卡组甩卡触感（it-047 登记，DESIGN.md §4 口径）：拖拽越过 100dp 阈值（`DeckStyle.swipeThreshold`）给一次 `GestureThresholdActivate`——仅真实按压期有效、越过一次即解除武装（位移回落到阈值内再 re-arm），`DeckStyle.enableHapticOnThreshold` 默认开；抽中落定一次 **Confirm** 由 app 层接线（kernel 不在正常模式重复触发）——wardrobe 随机一套抽完 `haptics.confirm()`（it-047 新增）、eats 沿用 it-015「随机抽中落定」既有接线；helper `HapticFeedback.performConfirm()` 内置在 carddeck（API 30+ Confirm / 低版本 LongPress 兜底），减弱动态下 `drawRandom` 每步的 Confirm 由 kernel 触发（见动效清单 #13）。滚动/导航不加触感的基线不变，卡组路径与既有接线不叠双震。
 
 ## 参考实现（写代码时对照）
 

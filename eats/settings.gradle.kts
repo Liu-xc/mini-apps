@@ -20,8 +20,7 @@ dependencyResolutionManagement {
         maven("https://maven.aliyun.com/repository/public")
         google()
         mavenCentral()
-        // carddeck SDK 依赖的三方卡组库经 JitPack 分发（composite build 传递依赖在此解析）
-        maven("https://jitpack.io")
+        // it-047：carddeck 自研内核后仓库不再有 JitPack 构件（原三方卡组库已删）
     }
 }
 

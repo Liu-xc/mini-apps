@@ -19,7 +19,7 @@
 |---|---|---|---|
 | 本地存储 SDK | [`libs/store/`](libs/store/) | 快照原子存储（tmp→rename + .bak + 三级恢复 + 迁移链）、SSOT 仓库基类（writeHook）、媒体文件管理 | 0.1.0 已实现，wardrobe / eats 均已接入 |
 | 轻同步 SDK | [`libs/sync/`](libs/sync/) | 后端中立契约（SyncValue 七值 / 引擎 / 待推队列 / 错误折叠）+ feishu-bitable 适配器（自动建表、UI 行收编、串行写 + 429 退避） | 0.1.0 已实现，暂未接入应用 |
-| 卡组 SDK | [`libs/carddeck/`](libs/carddeck/) | 对 compose-swipeable-cards 的薄封装（CardDeck + CardDeckController.drawRandom 纯随机节奏编排），转盘/穿搭记录翻卡共用 | 0.1.0 已实现，eats / wardrobe 均已接入 |
+| 卡组 SDK | [`libs/carddeck/`](libs/carddeck/) | 自研卡组内核（官方 AnchoredDraggable，it-047；CardDeck + CardDeckController.drawRandom 纯随机节奏编排），转盘/穿搭记录翻卡共用 | 0.1.0 已实现，eats / wardrobe 均已接入 |
 | 离线抠图 SDK | [`libs/cutout/`](libs/cutout/) | u2netp + ONNX Runtime 端侧抠图（RGBA bytes 进出、纯 JVM 双 runtime、会话惰性 + 空闲释放） | 0.1.0 已实现，wardrobe 已接入（it-016） |
 
 ## 仓库约定

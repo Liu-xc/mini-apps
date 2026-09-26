@@ -82,7 +82,7 @@ com.leo.eats/
 ## 抽取引擎（W1 卡组，it-003）
 
 1. `BuildCandidates`：category 集合过滤 → kind 集合过滤 → 「只抽愿望」（wishlistedAt != null）→ 剔除含排除标签的 → 「排除最近 N 天吃过」按 lastVisitAt 剔除（it-008）。
-2. 浏览与抽取：libs/carddeck 卡组侧滑浏览；「随机抽一张」= 随机步数 + 库自带飞出动画按拍播放，落点均匀无权重。
+2. 浏览与抽取：libs/carddeck 卡组侧滑浏览；「随机抽一张」= 随机步数 + carddeck 自研内核飞出动画按拍播放（it-047），落点均匀无权重。
 3. 落定：结果条（就吃这个 → W6 预填 / 再抽）+ 彩屑；原 SpinWheel 权重抽取已随 it-003 移除（ADR-006 作废）。
 
 ## 错误处理
@@ -98,5 +98,5 @@ com.leo.eats/
 ## 构建配置
 
 - compileSdk / targetSdk 35 / minSdk 26；AGP 8.7.x + Gradle 8.9 + Kotlin 2.1.x（与 wardrobe 同基线）
-- composite build：`includeBuild("../libs/carddeck"、"../libs/store")`，坐标 `com.leo.libs:{carddeck,store}`（ADR-011/010）；JitPack 仓（carddeck 传递依赖）
+- composite build：`includeBuild("../libs/carddeck"、"../libs/store")`，坐标 `com.leo.libs:{carddeck,store}`（ADR-011/010）；it-047 起 carddeck 为官方 AnchoredDraggable 自研内核，无三方依赖，无 JitPack 仓
 - 依赖：Compose BOM、material3 1.4.0、navigation-compose、coil-compose、kotlinx-serialization-json、osmdroid-android 6.1.x、DataStore preferences、JUnit4 + kotlinx-coroutines-test

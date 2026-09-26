@@ -72,6 +72,7 @@
 ## ADR-013 穿搭记录采用 carddeck 卡组（it-007）
 - **决策**：W8 顶部用 `libs/carddeck` 侧滑卡组浏览已保存穿搭 + 「随机一套」纯随机抽取，下方保留全量网格；与 eats it-003 共用同一 SDK（includeBuild 复用）。
 - **后果**：与 eats 共享三方库依赖链（JitPack，见 libs/carddeck/specs）；交互升级由 SDK 层统一演进。
+- **修订**（2026-09-26 it-047 / ADR-025）：carddeck 三方依赖链与 JitPack 仓（三处 settings.gradle.kts）已删除，改为官方 AnchoredDraggable 自研内核、零三方卡组依赖（见 ADR-025）；「经 carddeck SDK 接入、交互由 SDK 层统一演进」维持有效。
 
 ## ADR-014 衣橱列表滑动删除改长按删除（it-011）
 - **背景**：W3 列表改两列网格（C6），网格内横向滑动手势与纵向滚动/横滑切卡冲突，SwipeToDismissBox 不再适用。
@@ -138,3 +139,9 @@
 - **决策**（2026-09-25）：**方案 C**——W5 点补抠 → 推理产出**候选新文件**（当前图全程不动）→ 棋盘格候选预览 →「保留」才 `item.imageFile` 换新并删旧、「还原」直接弃候选（无需显式备份，比提案原案的「先复制备份」更简且零风险）。保留后跨会话不可撤销（如实呈现于 US-40 AC 与状态条文案）；不设补抠次数上限，代际损失以 spike 曲线为据。
 - **理由**：候选图模式把「不可逆」边界推到用户按下保留那一刻，会话内天然可反悔；不动数据模型（不加 `cutoutApplied` 字段、不 bump schemaVersion——alpha 检测替代状态字段）；双图存储违背 it-016 已定的即弃原则。
 - **后果**：每次补抠产生一个新 uuid 文件（旧文件保留至「保留」才删，候选被弃即删，稳态无冗余）；无状态字段意味着「是否抠过」永远靠运行时 alpha 检测（阈值 5%，采样 ≤128px，误判时状态条文案不符但功能自愈——两种态的按钮都能用）。
+
+## ADR-025 卡组内核改为官方 API 自研：推翻「不自研手势动画」（it-047）
+- **背景**：it-047 调研（2026-09-26，13-agent 生态扫描，数据全部 `gh api`/字节码实测）结论——Compose 卡组库生态**不存在高口碑可直接接入的选项**：≥500★ 的 Compose 卡组库不存在（高星全是 View 系老库）；现库 `com.github.smartword-app:compose-swipeable-cards`（104★）已停更 15.7 个月，缺陷是结构性的（手势路径疑似滑出瞬间无飞出动画、双动画体系、松手判定纯位置阈值无速度参与），it-046 参数注入修不掉；其动画改进上游 PR #5 挂 11.4 个月无人合，继续用等于暗中自养 fork。
+- **决策**（2026-09-26 已采纳，it-047）：`libs/carddeck` 内用官方 `AnchoredDraggable` 自研卡组内核（`CardDeck.kt` 重写：锚点模型 `DeckAnchor`、settledValue 提交管线、自研 `flingTarget`、单帧截尾 `flyForwardQuick`），删除三方 `compose-swipeable-cards` 依赖（`gradle/libs.versions.toml`、`libs/carddeck/build.gradle.kts`）与 JitPack 仓库（wardrobe/eats/carddeck 三处 `settings.gradle.kts`）；正式推翻「不自研手势动画」旧决策。
+- **理由**：foundation 1.8.3 的 `AnchoredDraggable` 零 experimental、@Stable、无需 OptIn，速度驱动 fling 与动画注入原生可用；**单一 spec 源**（手势 settle、程序化 `animateTo`、回中全走 `DeckStyle.flyOutSpec`）消灭现库双动画体系；官方 `computeTarget` 在 v=0 时只取最近锚点（位置阈值不参与，实测 v=0.0 丢甩出），自研 `flingTarget`（速度 ≥125dp/s 按方向甩、否则 100dp 位置阈值）补官方缺口；**爆炸半径小**——`CardDeckController` 契约（next/previous/restart/drawRandom/onSwipe…）不变，wardrobe `RecordsScreen`/eats `SpinScreen` 各 1 个调用点近零改动。
+- **后果**：代价 = 3–5 天自研（含双端回归，非 1–2 天）+ 自养内核（手感无上游可参考，5 个结构性缺陷在测试中才发现并修复）；真机 60fps 量化为遗留项（模拟器 gfxinfo 基线失真，与 it-046 同结论）；RTL 未处理记为已知差异（应用中文 LTR，旧库有 reverseX）。连带：eats ADR-011「W1 随机交互采用三方卡组库封装（不自研手势动画）」被本 ADR 取代，需在 eats `06-decisions.md` 注记。

@@ -64,6 +64,7 @@ import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.outfit.ExportSheet
+import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -139,6 +140,13 @@ fun OutfitDetailScreen(
                     HorizontalPager(
                         state = pagerState,
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                        // it-047 #9/#11：吸附收敛进 EditorialMotion.pagerFling（含「移除动画」瞬时降级）
+                        // + 预取防入屏白块（W7）
+                        flingBehavior = EditorialMotion.pagerFling(
+                            state = pagerState,
+                            reduce = EditorialMotion.reduceMotion(),
+                        ),
+                        beyondViewportPageCount = 1,
                     ) { page ->
                         val img = outfit.effectImages[page]
                         PhotoCard(

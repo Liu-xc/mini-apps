@@ -78,6 +78,7 @@ import com.leo.eats.ui.theme.menuColors
 import com.leo.eats.ui.visit.LogVisitSheet
 import com.leo.libs.carddeck.CardDeck
 import com.leo.libs.carddeck.CardDeckController
+import com.leo.libs.carddeck.DeckStyle
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -324,16 +325,18 @@ fun SpinScreen(
                             scaleX = 0.82f + 0.18f * deckRecede
                             scaleY = 0.82f + 0.18f * deckRecede
                         },
-                    properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
-                        stackedCardsOffset = 18.dp,
-                        padding = 6.dp,
-                    ),
+                    // it-047：样式走 DeckStyle（18dp 层叠复刻旧观感；flyOutSpec 默认
+                    // spring(0.9,500)——eats 首次获得可注入动画，不再吃库默认 0.6/100）
+                    style = DeckStyle(stackedCardsOffset = 18.dp),
                     onSwipe = { _, _ -> winner = null },
                 ) { s ->
                     PlaceCard(
                         s = s,
                         fileOf = { vm.imageFileOf(it) },
-                        onOpenDetail = { onOpenDetail(s.place.id) },
+                        onOpenDetail = {
+                            // it-047 #8③：抽取进行中卡面点击忽略
+                            if (deck?.isDrawing != true) onOpenDetail(s.place.id)
+                        },
                         onLog = { logTarget = s },
                         onOpenLink = { url -> vm.linkOpener.open(url) { vm.toast("没有可打开该链接的应用") } },
                     )

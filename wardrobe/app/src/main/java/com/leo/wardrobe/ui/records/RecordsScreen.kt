@@ -50,6 +50,7 @@ import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.detail.OutfitThumb
 import com.leo.wardrobe.ui.theme.editorialColors
 import com.leo.libs.carddeck.CardDeck
@@ -68,8 +69,8 @@ fun RecordsScreen(
     val data by vm.data.collectAsState()
     var filterTag by remember { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
-    var drawing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val haptics = rememberHaptics()
 
     val personId = person?.id
     val outfits = remember(personId, data) { if (personId != null) data.outfitsOf(personId) else emptyList() }
@@ -95,17 +96,20 @@ fun RecordsScreen(
                 color = editorialColors().ink,
                 modifier = Modifier.weight(1f),
             )
-            Button(
+            RandomButton(
+                deck = deck,
+                hasItems = filtered.isNotEmpty(),
                 onClick = {
-                    val c = deck ?: return@Button
-                    scope.launch { c.drawRandom() }
+                    val c = deck ?: return@RandomButton
+                    if (c.isDrawing) return@RandomButton // 双击窗口内第二次点击：不再起新抽取
+                    scope.launch {
+                        val drew = c.drawRandom()
+                        // it-047 #5：真实抽取后才 Confirm（size≤1 直接返回不算抽中落定；
+                        // null=并发幂等门拦截，避免双震）
+                        if (drew != null && c.size > 1) haptics.confirm()
+                    }
                 },
-                enabled = deck != null && !drawing && filtered.isNotEmpty(),
-            ) {
-                Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                // it-036 C12：文案与 W1 统一为「随机一套」（it-011 R3-P1 的两套文案废止），图标沿用
-                Text("随机一套")
-            }
+            )
         }
 
         if (tags.isNotEmpty()) {
@@ -149,23 +153,15 @@ fun RecordsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(380.dp),
-                            properties = com.spartapps.swipeablecards.ui.SwipeableCardsProperties(
-                                stackedCardsOffset = 14.dp,
-                                padding = 6.dp,
-                            ),
-                            // it-046：库默认 spring(0.6,100) 飞出 ≈1s 且 9% 过冲晃尾——
-                            // 换 0.9/500：≈0.32s 到位、<0.5% 过冲、≈0.5s 落定
-                            animations = com.spartapps.swipeablecards.ui.animation.SwipeableCardsAnimations(
-                                cardsAnimationSpec = androidx.compose.animation.core.spring(
-                                    dampingRatio = 0.9f,
-                                    stiffness = 500f,
-                                ),
-                            ),
+                            // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
+                            // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
                         ) { outfit ->
-                            OutfitDeckCard(vm, outfit) { onOpenOutfit(outfit.id) }
+                            OutfitDeckCard(vm, outfit) {
+                                // it-047 #8③：抽取进行中卡面点击忽略
+                                if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
+                            }
                         }
                         deck = controller
-                        drawing = controller.isDrawing
                     }
                     Row(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -191,10 +187,9 @@ fun RecordsScreen(
                                         color = editorialColors().ink,
                                     )
                                 }
-                                Text(
-                                    "${(deck?.currentIndex ?: 0).coerceIn(0, filtered.lastIndex) + 1}/${filtered.size}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = editorialColors().ink,
+                                DeckCounter(
+                                    deck = deck,
+                                    total = filtered.size,
                                     modifier = Modifier.padding(horizontal = 2.dp),
                                 )
                                 // it-033：右半边 = 下一张（48×48dp 热区）
@@ -256,6 +251,46 @@ fun RecordsScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/**
+ * ‹ n/m › 计数（it-047 #10 白名单：currentIndex 读取下沉到本独立组合——
+ * 重组只波及胶囊自身，不回流 RecordsScreen 体级/网格）。
+ */
+@Composable
+private fun DeckCounter(
+    deck: CardDeckController<Outfit>?,
+    total: Int,
+    modifier: Modifier = Modifier,
+) {
+    val idx = (deck?.currentIndex ?: 0).coerceIn(0, (total - 1).coerceAtLeast(0))
+    Text(
+        "${idx + 1}/$total",
+        style = MaterialTheme.typography.labelLarge,
+        color = editorialColors().ink,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 「随机一套」按钮（it-047 #9：抽取状态读取收口在本组件内——
+ * drawRandom 全程不触发 RecordsScreen 体级重组，只重绘按钮自身）。
+ */
+@Composable
+private fun RandomButton(
+    deck: CardDeckController<Outfit>?,
+    hasItems: Boolean,
+    onClick: () -> Unit,
+) {
+    val drawing = deck?.isDrawing == true
+    Button(
+        onClick = onClick,
+        enabled = deck != null && !drawing && hasItems,
+    ) {
+        Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+        // it-036 C12：文案与 W1 统一为「随机一套」（it-011 R3-P1 的两套文案废止），图标沿用
+        Text("随机一套")
     }
 }
 

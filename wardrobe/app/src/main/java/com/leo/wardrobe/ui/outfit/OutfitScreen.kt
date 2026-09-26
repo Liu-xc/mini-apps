@@ -61,6 +61,7 @@ import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.SlotCell
 import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.rememberHaptics
+import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -244,7 +245,11 @@ fun OutfitScreen(
                             .forEachIndexed { index, (_, state) ->
                                 launch {
                                     delay(index * 100L)
-                                    state.animateScrollToPage(Random.nextInt(state.pageCount))
+                                    // it-047 #9：跳页弹簧显式收敛进 EditorialMotion（05 #2 老虎机）
+                                    state.animateScrollToPage(
+                                        Random.nextInt(state.pageCount),
+                                        animationSpec = EditorialMotion.smooth(),
+                                    )
                                 }
                             }
                     }

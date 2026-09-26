@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.isWishSlot
+import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.launch
 import java.io.File
@@ -84,6 +86,24 @@ fun SlotCell(
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
     val flipScope = rememberCoroutineScope()  // it-031：名称条计数可点翻页
+
+    // it-047 #9（05 #2）：落定轻弹 scale 1→1.03→1——任何落定（手动换衣/序号翻页/老虎机）触发；
+    // 启动 1.5s 内不弹（入场恢复选中位不产生动效，DESIGN §3 二次进入走快路径）。
+    // 随 pagerState 身份重建：effect 中途被取消时不会把 1~1.03 的中间值冻结到下一次落定。
+    val settlePulse = remember(pagerState) { Animatable(1f) }
+    val pulseArmedAt = remember { android.os.SystemClock.uptimeMillis() + 1500 }
+    LaunchedEffect(pagerState) {
+        var first = true
+        snapshotFlow { pagerState.settledPage }.collect {
+            if (first) {
+                first = false
+                return@collect
+            }
+            if (android.os.SystemClock.uptimeMillis() < pulseArmedAt) return@collect
+            EditorialMotion.runSettlePulse(settlePulse)
+        }
+    }
+
     LaunchedEffect(coach) {
         if (coach && items.size > 1) {
             repeat(2) {
@@ -105,7 +125,12 @@ fun SlotCell(
         Box(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(aspect),
+                .aspectRatio(aspect)
+                // it-047 #9：落定轻弹位姿（draw 阶段读 Animatable，不触发重组）
+                .graphicsLayer {
+                    scaleX = settlePulse.value
+                    scaleY = settlePulse.value
+                },
         ) {
             if (items.isEmpty()) {
                 Surface(
@@ -132,6 +157,14 @@ fun SlotCell(
                     state = pagerState,
                     contentPadding = PaddingValues(0.dp),
                     pageSpacing = 0.dp,
+                    // it-047 #9/#11：吸附收敛进 EditorialMotion.pagerFling——常态官方 snap=smooth，
+                    // 系统「移除动画」时自实现瞬时落位（官方 SnapFlingBehavior 不吃系统缩放）；
+                    // 预取防入屏白块（参数名 1.7.0 起为 beyondViewport）
+                    flingBehavior = EditorialMotion.pagerFling(
+                        state = pagerState,
+                        reduce = EditorialMotion.reduceMotion(),
+                    ),
+                    beyondViewportPageCount = 1,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer { translationX = coachOffset.value.dp.toPx() }
@@ -269,7 +302,10 @@ fun SlotCell(
                                                 if (next == 0) {
                                                     pagerState.scrollToPage(0)
                                                 } else {
-                                                    pagerState.animateScrollToPage(next)
+                                                    pagerState.animateScrollToPage(
+                                                        next,
+                                                        animationSpec = EditorialMotion.smooth(),
+                                                    )
                                                 }
                                             }
                                         }

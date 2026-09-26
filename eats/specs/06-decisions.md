@@ -63,6 +63,7 @@
 - **决策**：新建 `libs/carddeck` SDK 薄封装 [compose-swipeable-cards](https://github.com/smartword-app/compose-swipeable-cards)（Apache-2.0，JitPack 分发），暴露 `CardDeck` + `CardDeckController(drawRandom 纯随机)`；eats 与 wardrobe 经 includeBuild 复用。
 - **理由**：该库提供左右滑/堆叠/弹簧动画与程序化 `swipe()/moveNext()`（抽取编排必需）；备选 makzimi/SwipingCards 因 minSdk 33 高于基线 26 且无程序化接口被否。抽取动画 = 按拍调用库自带飞出动画，SDK 零自研手势。
 - **后果**：JitPack 仓库进入两应用与 SDK 的解析链（国内实测可达）；三方库维护偏冷，若失效可按同契约替换实现（SDK 层隔离）。
+- **修订**（2026-09-26 it-047）：底层三方库 compose-swipeable-cards 及其 JitPack 解析链已删除，carddeck 改为官方 AnchoredDraggable 自研内核（见 wardrobe specs/06-decisions ADR-025）；本 ADR「不自研手势动画」决策与「JitPack 仓进入解析链」后果随之废止，「经 carddeck 薄封装接入」维持有效，SDK 现为零直接依赖三方卡组（it-047 新状态）。
 
 ## ADR-012 统计回顾与长图在 eats 内自实现，不抽 libs（it-007）
 - **背景**：年度食光长图需要「渲染 → 存相册 → 分享」管线；wardrobe it-002/014 已有同思路实现在 App 内。两 App 版式完全不同（年报 vs 人体拼贴），可共享的只有 Composable/Canvas 渲染 + MediaStore 存图约百行薄层。

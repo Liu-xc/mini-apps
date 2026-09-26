@@ -19,8 +19,7 @@ dependencyResolutionManagement {
         maven("https://maven.aliyun.com/repository/public")
         maven("https://maven.aliyun.com/repository/google")
         mavenCentral()
-        // 三方卡组动画库经 JitPack 分发（选型见 specs/00-overview.md）
-        maven("https://jitpack.io")
+        // it-047：自研内核（AnchoredDraggable 官方 API），无 JitPack 依赖（选型见 specs/00-overview.md）
     }
 }
 

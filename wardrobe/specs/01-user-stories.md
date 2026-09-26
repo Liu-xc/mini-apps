@@ -281,6 +281,15 @@
 - Given 卡组甩出/随机抽取，Then 飞卡 ≈0.32s 到位无过冲晃尾、步距与飞行同量级不叠飞不闪跳
 - Given 序号 n/m 在末页再点，Then 即时回卷首位、不反向扫过全部页
 
+### US-47 卡组自研内核与切换丝滑（W1/W7/W8 · it-047）
+作为用户，W8 卡组的手势甩出与回看是跟手的真实动画（甩出判定含速度分量），随机抽取保持老虎机节奏与回卷；W1/W7 的 pager 切换与落定有统一弹簧节奏，系统开启减弱动态时整体降级为即时落位。
+- **UC**：W8 卡组（wardrobe RecordsScreen / eats SpinScreen）；W1 槽位换衣与序号翻页；W7 效果图轮播
+- Given W8 顶卡拖拽甩出/回看，When 速度 ≥125dp/s 或拖过 100dp 松手，Then 飞出与回中为真实动画（≥200ms，无瞬移分支，含末张回卷），拖拽 1:1 跟手、未过阈值干净回中，越阈值给一次 GestureThresholdActivate
+- Given 任意落定路径（手势 settle、‹n/m› 程序化 animateTo、回中），Then 共用单一弹簧源 `DeckStyle.flyOutSpec = spring(0.9f, 500f)`，旋转由位移派生、不叠第二弹簧
+- Given 点随机抽取，Then 步数 4+rand(n)、步距 420–560ms 的老虎机节奏，每步真实甩出、含末张回卷，抽中落定一次 Confirm 震（API<30 LongPress 兜底）
+- Given W1 槽位横滑/序号跳页与 W7 效果图轮播，Then 吸附与程序化跳页显式注入 `EditorialMotion.smooth()`、`beyondViewportPageCount = 1`，老虎机落定轻弹 scale 1→1.03→1（启动 1.5s 内不弹）
+- Given 系统开启「减弱动态」，Then 手势落定、W1 pager 吸附与抽取每步即时落位（保留步距节奏与 Confirm 震），拖拽仍 1:1；wardrobe 与 eats SpinScreen 双端构建/测试回归全绿
+
 ## 非功能需求
 
 - NFR-01 冷启动 < 2s；列表滑动 60fps
