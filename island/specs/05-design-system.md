@@ -55,7 +55,7 @@
 | 环填充 | easeOut 0.6s（值=fill，改数据才动） |
 | 环心/明细百分比、**绝对量、aux 辅助文、面板头重置**数字 | `.contentTransition(.numericText())` + snappy 0.3s / 0.25s（DESIGN §5.9；it-003 审计补齐绝对量等遗漏处） |
 | 判定矩形（点击穿透/hover） | appearance 切换后 0.45s smoothstep 插值，与遮罩 spring 同步（判定不瞬时跳变——审计 P2 修复） |
-| 刷新按钮 | 在途 1s linear 无限旋转；停止时 animation 置 nil 原地归零不倒转 |
+| 刷新按钮 | 在途 1s linear 无限旋转；停止用 **0.01s 有限动画覆盖**同 keypath（视觉=原地归零不倒转）。**禁用** `.animation(nil)`/关动画事务停转——离散写入打不断 in-flight repeatForever（it-003 审计三轮：模板匹配实测停转后角度必须恒 0°） |
 | hover 展开/收起防抖 | enter 60ms / exit 180ms（均可取消，光标仍在卡内不收） |
 | 触感 | **无**（Leo 明确不要震动，hover 展开不触发 NSHapticFeedbackManager） |
 

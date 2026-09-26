@@ -2,8 +2,13 @@
 
 > AGENTS.md 迭代流程第⑤步要求的变更流水；本文件于 it-001 建立（此前仓库未落地该约定）。
 
+## 2026-09-27
+
+- **fix(island)**: it-003 loading 图标永转+抖——埋探针日志证明状态机健康（fetch 0.3s/轮 准时停）→ 根因在动画层：`.animation(nil)` 与 `withTransaction(disablesAnimations)` **离散写入均打不断 in-flight `repeatForever`**（模板匹配 48 角度×对照实验 SAD=0 实证：修复前停转后 67.5°/255°/105°/300° 持续变）；终修 = **0.01s 有限动画覆盖同 keypath**（视觉=原地归零不倒转）；「不中心对称/抖」= 字形 ink 74×90 非方质心画 0.63pt 偏心圆（慢转被读成抖，停转即消）；验证在途 82.5° 在转、停后 6s/7.5s/9s 恒 0°；锚点实测正确（0°/180° bbox 重合，偏差 0.06pt 亚像素）；05 动效表同步禁用 nil 停转；swift test 49/49 绿。
+
 ## 2026-09-26
 
+- **feat(wardrobe+libs/carddeck+eats)**: it-047 卡组换官方 API 自研内核（AnchoredDraggable，foundation 1.8.3 零 experimental）——甩卡/回看全路径动画+速度判定（自研 `flingTarget`：速度 ≥125dp/s 或 100dp 位置阈值，修官方 computeTarget v=0 丢甩出）、单一弹簧源 `spring(0.9,500)` 全路径收口 + `committedTarget` 幂等提交管线、drawRandom 首达截停保 420–560ms 步距、抽中落定 Confirm 震接线；删 `compose-swipeable-cards` 三方依赖与三处 JitPack 仓库声明；W1/W7 pager 参数收敛（snap/fling spec 显式注入 + `beyondViewportPageCount=1` + `animateScrollToPage` 传 spec）+ SlotGrid 落定轻弹 1→1.03→1；减弱动态单一入口降级（snap 即时落位、拖拽保 1:1）；eats SpinScreen 迁移连带修复（首次获得可注入动画）；双端 assembleDebug+test 绿、模拟器全路径实测，真机 60fps 量化遗留。
 - **fix(wardrobe)**: it-046 槽位卡撑满去黑边距——深色下旧衬纸（surfaceVariant@55%）+Fit 留边即 Leo 所见黑边距；改分档呈现：常规格（0.6/0.78/0.85）Crop 满格无留边，帽(1.0)/鞋(2.6) 极端比例保 Fit + 固定浅纸 #F2F3F5（主题无关；裁切伤害以内容包围盒实测证否）；W1 序号 n/m 末页回卷改即时落位。
 - **fix(wardrobe+libs/carddeck)**: it-046 穿搭卡组动画丝滑化——库 1.1.4 反编译实证飞卡默认 `spring(0.6,100)`（落定≈1s、9% 过冲晃尾）且 drawRandom 55ms 连发远短于飞行时长（多张叠飞/moveNext 半空摘除）+ 末张纯瞬移；`CardDeck` 增 `animations` 参数透传（wardrobe 注入 `spring(0.9,500)`≈0.32s 落定），drawRandom 改步距 420→560ms、步数 4+rand(n)、末张「甩出+复位」组合步；specs 01(US-46)/05（槽位呈现+动效表#12+衬纸表）/it-046/carddeck 00 同步；模拟器像素探针+连拍+回卷实测全过，eats 编译兼容。
 - **fix(island)**: it-003 对抗审计 5 CONFIRMED + 11 P2 全修——**P0-A hitTest 坐标系错配**（point 窗口基坐标 vs rect 屏幕全局恒不相交 → 展开态点击全死+穿透下层，`screenPoint` 换算修复）；**P0-B** 绝对量/aux/重置数字补 numericText（§5.9 残留）；**P1-C** 环 stroke 外溢 4pt（路径=外径−环宽，墨迹精确 66.0pt）；**P1-D** 0% 绘最小健康色弧、无数据整圈白 25%（与色点/菜单同值）；**P1-E** DESIGN §2.5 登记指针例外 ≥24pt + 空态按钮实测 25pt；P2 批：判定矩形随遮罩 0.45s 插值、圆帽交叠补偿（99% 留缝/100% 闭合）、环居中 W2 对齐、明细行 firstTextBaseline、`·`/`--%` 统一 55% 白、US-2 双源错误措辞自洽；swift test 48/48 绿（+7 纯函数回归 +4 渲染级 ImageRenderer 回归），三态截图像素断言全过，独立对抗核实 5/5 CONFIRMED（10/10 verdicts）。
