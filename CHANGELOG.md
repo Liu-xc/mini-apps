@@ -4,6 +4,12 @@
 
 ## 2026-09-27
 
+- **fix(darkroom)**: it-003 功能收口与成片页信息架构——速度档即选即生效（原 `clock` 固定 STANDARD，慢洗/快显仅改标签：startSession 按所选档重建，斜率实测 8.0/12.5/27 %·s⁻¹ 三档对表；SLOW 导出 MP4 `mvhd`=13.999s 与 ExportPlan 精确一致）；成片页进度条上贴 CTA、无滚动 dump 到「冲洗中」、存图/存视频 y2148–2197 入首屏（追加成片卡高上限 360dp + 编辑卡/段间距压缩，对齐改版线框）、分享×2 与再洗一张收为一行；W1 移除重复「设置」chip（dump 实测入口 1 处）、footer 常驻视口底；33 单测 0 失败，验证记录回填 it-003（详 specs/iterations/it-003-result-ia-speed.md）。
+
+- **fix(darkroom)**: it-002 稳定性与卡面几何——新增 `ui/PageInsets.kt` 四页统一让出状态栏+手势条（顶行控件中心 y111 死区→239 可点，⚙/← 中心 tap 实测双向通过）；`CardLayout.solve(width, maxH)` 按可用高度反解卡宽 + 签名域互斥 0.52/0.54w + 日期章超域缩字（Compose/native 双端），像素断言 W2/W3 签名区溢出 0px（原 +32/+100px）、长标题间距 45px 无重叠（原撞 ~140px）；`ManifestGuardTest` 锁 VIBRATE 权限防 P0 回归；CardLayoutTest 9 测试（含 maxH 反解/无界等价/任意宽度互斥）、`testDebugUnitTest` 33 绿；01/02/04 常青 spec 同步，验证记录回填 it-002。
+
+- **fix(darkroom)**: it-001 首轮 UI 审查 hotfix——P0 定影落定必崩（manifest 缺 `VIBRATE`，`Haptics.confirm` 抛 SecurityException，logcat 复现 3 次）补 normal 权限即修、全流程回归通过；同轮完成 4 页走查 + 11 项功能自测（药水条 seek/甩一甩注入/双导出落盘/三入口全通），遗留 5×P1（速度档只改标签、页头无 insets 触摸死区、卡面溢出与重叠、首屏 CTA 裁切）与 5×P2，含 4 张改版线框与证据链，详 `reports/darkroom-ui-audit/` 与 it-001 验证记录。
+
 - **feat(posthouse)**: it-001 驿站首次落地——macOS 菜单栏「烽火台 + 自动哨兵 + 邸报」全量实施（M1/M2/M3）：三态图标（全绿/狼烟 flame+计数/熄火）逐仓明细与对账级探测（status.json 与 `git status`/`rev-list` 逐值相等，实拍菜单栏火焰+1）；手动/CLI 推送注入 `http.version=HTTP/1.1` + `postBuffer=512MB` 并落日志；自动补推双闸门**默认全关**，硬规则「永不 force、永不自动 pull/rebase/merge、远端不通不推」全部落 `PushDecision` 纯函数单测——沙盒 e2e 断网→恢复 **4 秒自动补推**、白名单外仓库零触碰、non-FF 被拒只通知不动手、分叉每仓一次提醒、网络失败指数退避 30s→600s + 疑似代理故障提醒；22:30 邸报定时（改钟实测 16:06:05 自动产出）Markdown 战报与 git 真值逐项对账（6 提交/fix2 feat1 docs3/积压 1 仓/连续活跃 9 天）+ 成就规则引擎 6 枚纯函数可回放（首日点亮/连修三坑/深夜修罗/大部队/清仓大吉/千军一发，档案去重）；SwiftPM+build-app.sh 组装 .app 零 Xcode 工程，swift-testing **39 测试全绿**；实测踩坑四连入库档：子目录 `.git` 判定（rev-parse 会把 dist/gradle 误判成仓）、engine 串行队列自死锁、未 resume timer 释放 SIGTRAP（CLI exit=133）、TCC 文稿授权挂起 + 15s 扫描超时兜底；附 CLI 三旗标 `--probe/--push/--gazette` 脚本化入口与 network-rescue 一键诊断入口、M3 可选 LLM 润色开关（默认关，llm.key 0600，失败回退规则版；详 posthouse/specs/iterations/it-001 验证记录）。
 
 - **fix(wardrobe+libs/carddeck+eats)**: it-048 卡组 hotfix——W8 甩卡被容器 `clipToBounds` 截断（it-031 旧库时代遗留，it-047 真实飞行后暴露）wardrobe/eats 两处已删并留防回归注释；连续快滑「滑不动」根因 = it-047 提交管线以 settledValue 翻转为信号（同向二次落锚不翻转即吞提交 + 排队 snapTo 抢锁拉回手中卡片），改**到达帧提交**（offset 精确到锚 + pointerDown/isAnimationRunning/flingInProgress 三重落定门——fling 的 spring animate 不在官方动画跟踪内，缺独立门实测一次甩卡连环推进 4 张）+ 按下快进结算 `onDeckDown`；实测单甩 +1、250ms 间隔连滑 +2、回卷/抽取/eats 连甩全过，双端单测绿（详 it-048-hotfix-deck-clip-continuity.md）。
