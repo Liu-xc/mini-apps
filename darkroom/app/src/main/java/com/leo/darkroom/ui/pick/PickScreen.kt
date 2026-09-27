@@ -4,8 +4,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,19 +25,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,22 +49,17 @@ import com.leo.darkroom.card.SampleArt
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.editorialColors
 
-/**
- * W1 选图页：无权限入口（相册 Photo Picker / 拍照 intent / 三张内置示例）。
- * 空态插画由示例图充当（DESIGN.md §5.8：空态必须有图形 + 行动按钮）。
- */
+/** W1: a quiet, photo-led entrance to the local darkroom. */
 @Composable
 fun PickScreen(vm: DarkroomViewModel, state: UiState) {
     val colors = editorialColors()
-
+    val context = LocalContext.current
     val pickLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri: Uri? -> vm.onPhotoPicked(uri) }
-
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture(),
     ) { ok -> vm.onCameraResult(ok) }
-
     val cameraUri = remember { { vm.prepareCamera() } }
 
     Column(
@@ -71,117 +68,119 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
             .pageInsets()
             .padding(20.dp),
     ) {
-        // it-003 O6：内容可滚，footer 常驻视口底（weight 仅在有界父级可用）
         Column(
             Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
-        // 顶行：品牌 + 设置入口
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "DARKROOM",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.inkFaint,
-            )
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = vm::openSettings, modifier = Modifier.size(44.dp)) {
-                Icon(Icons.Outlined.Tune, contentDescription = "设置", tint = colors.inkFaint)
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Display 大标题（衬线）
-        Text(
-            "显影",
-            style = MaterialTheme.typography.displayLarge,
-            color = colors.ink,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "把回忆洗出来——传一张图，看它像拍立得相纸一样慢慢显影。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.inkFaint,
-        )
-
-        Spacer(Modifier.height(28.dp))
-
-        // 主行动
-        Button(
-            onClick = {
-                pickLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(14.dp),
-        ) {
-            Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("从相册选一张")
-        }
-
-        Spacer(Modifier.height(10.dp))
-
-        OutlinedButton(
-            onClick = { cameraLauncher.launch(cameraUri()) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(14.dp),
-        ) {
-            Text("拍一张")
-        }
-
-        Spacer(Modifier.height(28.dp))
-
-        Text(
-            "或者，先拿示例图试试手感",
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.inkFaint,
-        )
-        Spacer(Modifier.height(10.dp))
-
-        // 示例图行（内置程序化风景，零权限即体验全流程）
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            itemsIndexed(SampleArt.titles) { index, title ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(104.dp)
-                        .clickable { vm.onSamplePicked(index) },
-                ) {
-                    SampleThumb(index) {
-                        Image(
-                            bitmap = it,
-                            contentDescription = title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(104.dp)
-                                .clip(RoundedCornerShape(14.dp)),
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.inkFaint,
-                    )
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text("DARKROOM", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+                    Text("私人暗房", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = vm::openSettings, modifier = Modifier.size(44.dp)) {
+                    Icon(Icons.Outlined.Tune, contentDescription = "设置", tint = colors.inkFaint)
                 }
             }
+
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "显影",
+                style = MaterialTheme.typography.displayLarge,
+                color = colors.ink,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(7.dp))
+            Text(
+                "把这一刻，慢慢洗成一张可以带走的相纸。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.inkFaint,
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = {
+                    pickLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    )
+                },
+                enabled = !state.loadingPhoto,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.ink,
+                    contentColor = colors.paper,
+                ),
+            ) {
+                Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (state.loadingPhoto) "正在读取照片…" else "从相册挑一张")
+            }
+
+            TextButton(
+                onClick = { cameraLauncher.launch(cameraUri()) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                colors = ButtonDefaults.textButtonColors(contentColor = colors.ink),
+            ) {
+                Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("现在拍一张")
+            }
+
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("先从一张样片开始", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+                Spacer(Modifier.weight(1f))
+                Text("离线可试", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+            }
+            Spacer(Modifier.height(12.dp))
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                itemsIndexed(SampleArt.titles) { index, title ->
+                    val bitmap = remember(context, index) { SampleArt.load(context, index, 512) }
+                    Surface(
+                        onClick = { vm.onSamplePicked(index) },
+                        modifier = Modifier.width(112.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = colors.cardPaper,
+                        border = BorderStroke(1.dp, colors.cardHairline),
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(7.dp),
+                        ) {
+                            Image(
+                                bitmap = remember(bitmap) { bitmap.asImageBitmap() },
+                                contentDescription = title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(98.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                            )
+                            Spacer(Modifier.height(7.dp))
+                            Text(
+                                title,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.cardInk,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
         }
 
-        Spacer(Modifier.height(24.dp))
-        } // end scroll content
-
-        // footer：贴视口底（it-003 O6 / US-10）
         Spacer(Modifier.height(16.dp))
         Text(
             "全程离线 · 照片不上传",
@@ -189,11 +188,4 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
             color = colors.inkFaint,
         )
     }
-}
-
-/** 示例缩略图：512px 轻量版（会话用的全尺寸图由 PhotoRepository 另行缓存） */
-@Composable
-private fun SampleThumb(index: Int, content: @Composable (ImageBitmap) -> Unit) {
-    val bmp = remember(index) { SampleArt.render(index, 512) }
-    content(bmp.asImageBitmap())
 }

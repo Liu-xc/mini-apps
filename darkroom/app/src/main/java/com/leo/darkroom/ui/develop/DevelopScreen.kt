@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Waves
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,9 +51,11 @@ import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
 import kotlin.math.roundToInt
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
- * W2 显影台：出纸动画 → 三阶段显影 → 定影定格。
+ * W2 显影台：有重量的出纸 → 三阶段显影 → 定影定格。
  * 彩蛋：药水条拖动重看、甩一甩推进（真陀螺仪加速度计）。
  */
 @Composable
@@ -72,7 +73,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
             vm.onEjectDone()
             vm.skipDevelop()
         } else {
-            eject.animateTo(0f, EditorialMotion.smooth())
+            eject.animateTo(0f, EditorialMotion.pop())
             vm.onEjectDone()
         }
     }
@@ -145,6 +146,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
                 Box(
                     Modifier.graphicsLayer {
                         translationY = eject.value * cardHeightPx
+                        rotationZ = sin((1f - eject.value) * PI.toFloat()) * 1.15f
                         scaleX = settle.value
                         scaleY = settle.value
                     },
@@ -221,40 +223,30 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
             ),
         )
 
-        // 提示行
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Spacer(Modifier.height(2.dp))
+        Text(
+            when {
+                state.progress < DevelopSpec.LATENT_END -> "先让这一刻安静一会儿"
+                state.progress < DevelopSpec.EMERGING_END -> "让回忆慢慢浮出来"
+                state.progress < 1f -> "光影正在慢慢定住"
+                else -> "这一刻，已经好好留下"
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.ink,
+            fontWeight = FontWeight.Medium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
             if (state.shakeHint && state.shakeEnabled && !reduceMotion) {
-                Icon(
-                    Icons.Outlined.Waves,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = colors.inkFaint,
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "甩一甩手机，推进显影",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.inkFaint,
-                )
-            } else if (state.progress >= 1f) {
-                Text(
-                    "定影完成",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.accent,
-                    fontWeight = FontWeight.Medium,
-                )
+                "轻轻晃动，亲手唤醒这张相纸"
             } else {
-                Text(
-                    "拖动药水条可倒放重看",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.inkFaint,
-                )
-            }
-        }
+                "拖动药水条，可正放或倒放重看"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.inkFaint,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
 
         Spacer(Modifier.weight(1f))
     }

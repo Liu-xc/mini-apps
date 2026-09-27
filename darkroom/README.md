@@ -7,11 +7,11 @@
 
 ## 界面速览
 
-（待 it-001 验证记录回填时补图）
-
-| W1 选图 | W2 显影台 | W3 成片 | W4 设置 |
+| [W1 选图](specs/iterations/assets-it-004/w1-pick.png) | [W2 显影台](specs/iterations/assets-it-004/w2-developing.png) | [W3 成片](specs/iterations/assets-it-004/w3-feed-preview.png) | [W4 设置](specs/iterations/assets-it-004/w4-settings.png) |
 |---|---|---|---|
-| 相册/拍照/示例三入口 | 三阶段显影+药水条+甩一甩 | 卡面编辑+图/视频双导出 | 速度/甩一甩/水印 |
+| 相册/拍照/离线照片样片 | 药膜扩散+阶段文案+药水条 | 卡面编辑+1:1/4:5/9:16 图与视频分享 | 速度/甩一甩/水印 |
+
+显影关键帧和竖屏故事预览也收在 `specs/iterations/assets-it-004/`；W3 同一预览构图同步到图片、视频导出。
 
 ## 构建
 
@@ -28,10 +28,12 @@ cd darkroom
 ## 架构一句话
 
 `DevelopClock`（唯一进度真源）→ `DevelopSpec.visualAt`（确定性画面映射）→
-三渲染端共用：预览 `DevelopCard`（Compose）/ 位图 `PhotoCardPainter` /
-视频 `VideoExporter`（EGL+MediaCodec 逐帧 + SfxSynth 声轨）。详见 [specs/04-architecture.md](specs/04-architecture.md)。
+`ChemicalDiffusion`（稳定药膜遮罩）→ 预览 `DevelopCard`（Compose）/ 位图与分享预览 `PhotoCardPainter` /
+视频 `VideoExporter`（EGL+MediaCodec 逐帧 + SfxSynth 声轨）。`ShareLayout` 统一三种画幅的卡片位置与安全区。
+详见 [specs/04-architecture.md](specs/04-architecture.md)。
 
 ## 关键决策
 
 ADR-001 minSdk 31 · ADR-002 App 内零音效、声轨只入视频 · ADR-003 EGL 输入面编码 ·
-ADR-004 模糊近似（native 端缩小放大）· ADR-005 确定性优先。详见 [specs/06-decisions.md](specs/06-decisions.md)。
+ADR-004 模糊近似（native 端缩小放大）· ADR-005 确定性优先 · ADR-006 药膜扩散与分享构图共用纯函数。
+详见 [specs/06-decisions.md](specs/06-decisions.md)。

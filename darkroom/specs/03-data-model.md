@@ -11,7 +11,7 @@
 | playing/ejecting/shakeHint | Boolean | 显影台动画状态 |
 | speed | DevelopSpeed | SLOW/STANDARD/FAST（12s/8s/4s） |
 | exporting/exportProgress | Boolean/Float | 导出进度 |
-| exportFormat | SQUARE/PORTRAIT | 1080×1080 / 1080×1350 |
+| exportFormat | `ShareFormat` | `SQUARE` 1080×1080 / `FEED` 1080×1350 / `STORY` 1080×1920；默认 `FEED`，仅当前会话状态 |
 | savedImageUri/savedVideoUri/lastSavedKind | Uri?/枚举 | 已落库结果（分享入口） |
 
 ## CardSpec（成片卡面，结构化单一真源）
@@ -42,6 +42,6 @@ reveal / grain / vignette —— 全部由 `DevelopSpec.visualAt(progress)` 确�
 
 ## 落库产物
 
-- 图片：`Pictures/显影/显影_<yyyy-MM-dd>.jpg`（JPEG 95）
-- 视频：`Movies/显影/显影_<yyyy-MM-dd>.mp4`（H.264+AAC MP4）
+- 图片：`Pictures/显影/显影_<yyyy-MM-dd>.jpg`（JPEG 95；画幅由 `ShareFormat` 决定）
+- 视频：`Movies/显影/显影_<yyyy-MM-dd>.mp4`（H.264+AAC MP4；与图片共用 `ShareFormat`）
 - 均 IS_PENDING 两段式写入；分享走 content:// URI。

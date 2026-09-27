@@ -1,7 +1,12 @@
 package com.leo.darkroom.ui.result
 
-import androidx.compose.animation.core.Animatable
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -21,45 +27,75 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
-import com.leo.darkroom.ui.develop.DevelopCard
+import com.leo.darkroom.card.CardPalette
+import com.leo.darkroom.card.PhotoCardPainter
+import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.ui.pageInsets
-import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/**
- * W3 成片页：结构化卡面（可编辑字段）+ 图/视频双导出 + 分享。
- */
+/** W3: a share-first print preview with understated controls. */
 @Composable
 fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     val colors = editorialColors()
-    // 落定轻弹入场
-    val settle = remember { Animatable(0.96f) }
-    LaunchedEffect(Unit) { settle.animateTo(1f, EditorialMotion.pop()) }
+    val photo = state.photo
+    val previewHeight = 300.dp
+    val previewWidth = previewHeight * (state.exportFormat.width.toFloat() / state.exportFormat.height)
+    val density = LocalDensity.current
+    val previewWidthPx = with(density) { previewWidth.roundToPx() }.coerceAtLeast(180)
+    val previewHeightPx = with(density) { previewHeight.roundToPx() }.coerceAtLeast(180)
+    val artwork = produceState<ImageBitmap?>(null, photo, state.spec, state.exportFormat) {
+        if (photo != null) {
+            val bitmap = withContext(Dispatchers.Default) {
+                Bitmap.createBitmap(previewWidthPx, previewHeightPx, Bitmap.Config.ARGB_8888).also { preview ->
+                    PhotoCardPainter.paintShareFrame(
+                        canvas = Canvas(preview),
+                        widthPx = previewWidthPx.toFloat(),
+                        heightPx = previewHeightPx.toFloat(),
+                        photo = photo,
+                        spec = state.spec,
+                        visual = com.leo.darkroom.develop.DevelopSpec.visualAt(1f),
+                        palette = CardPalette.Default,
+                        grain = vm.grain,
+                        format = state.exportFormat,
+                    )
+                }
+            }
+            value = bitmap.asImageBitmap()
+        }
+    }
 
     Column(
         Modifier
@@ -68,76 +104,76 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
-        // 顶行
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = vm::backToPick, modifier = Modifier.size(44.dp)) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = colors.ink)
             }
             Spacer(Modifier.width(4.dp))
-            Text("成片", style = MaterialTheme.typography.titleLarge, color = colors.ink)
+            Column {
+                Text("成片", style = MaterialTheme.typography.titleLarge, color = colors.ink)
+                Text("一张可以带走的回忆", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+            }
             Spacer(Modifier.weight(1f))
-            Text(
-                "PRINTED",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.inkFaint,
-            )
+            Text("PRINTED", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
         }
 
-        Spacer(Modifier.height(12.dp))
-
-        // 卡片（定影完成态）——it-003 O5：卡高设上限，CTA/进度留在首屏
+        Spacer(Modifier.height(10.dp))
         BoxWithConstraints(
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .height(310.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val density = LocalDensity.current
-            val layout = com.leo.darkroom.card.CardLayout.solve(
-                with(density) { maxWidth.toPx() },
-                with(density) { 360.dp.toPx() },
-            )
-            DevelopCard(
-                photo = state.photo,
-                spec = state.spec,
-                progress = 1f,
-                cardWidthPx = layout.width,
-                grain = vm.grain,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = settle.value
-                    scaleY = settle.value
-                },
-            )
+            if (artwork.value != null) {
+                Image(
+                    bitmap = artwork.value!!,
+                    contentDescription = "${state.exportFormat.label}成片预览",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .width(previewWidth.coerceAtMost(maxWidth))
+                        .height(previewHeight)
+                        .clip(RoundedCornerShape(4.dp)),
+                )
+            } else {
+                Box(
+                    Modifier
+                        .width(previewWidth.coerceAtMost(maxWidth))
+                        .height(previewHeight)
+                        .background(colors.surface, RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("正在整理相纸…", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+                }
+            }
         }
 
-        Spacer(Modifier.height(14.dp))
-
-        // —— 卡面编辑 ——
+        Spacer(Modifier.height(4.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("卡面", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Spacer(Modifier.weight(1f))
+            Text("编辑会同步到图片与视频", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+        }
+        Spacer(Modifier.height(8.dp))
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = colors.surface,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = colors.surface,
+            border = BorderStroke(1.dp, colors.hairline),
         ) {
-            Column(Modifier.padding(14.dp)) {
-                OutlinedTextField(
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                CardEditLine(
+                    label = "标题",
                     value = state.spec.title,
+                    placeholder = "给这一刻起个名字",
                     onValueChange = vm::setTitle,
-                    label = { Text("手写标题（可空）") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
                 )
-                Spacer(Modifier.height(6.dp))
-                OutlinedTextField(
+                HorizontalDivider(color = colors.hairline)
+                CardEditLine(
+                    label = "日期章",
                     value = state.spec.dateText,
+                    placeholder = "1988 07 21",
                     onValueChange = vm::setDate,
-                    label = { Text("日期章 · 如 1988 07 21") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
                 )
-                Spacer(Modifier.height(4.dp))
                 HorizontalDivider(color = colors.hairline)
                 Row(
                     Modifier
@@ -147,11 +183,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text("卡脚水印", style = MaterialTheme.typography.bodyMedium, color = colors.ink)
-                        Text(
-                            "显影 DARKROOM",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.inkFaint,
-                        )
+                        Text("显影 DARKROOM", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
                     }
                     Switch(
                         checked = state.spec.showWatermark,
@@ -167,56 +199,62 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             }
         }
 
-        Spacer(Modifier.height(10.dp))
-
-        // —— 视频规格 ——
-        Text(
-            "视频规格",
-            style = MaterialTheme.typography.labelSmall,
-            color = colors.inkFaint,
-        )
-        Spacer(Modifier.height(4.dp))
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = state.exportFormat == DarkroomViewModel.ExportFormat.SQUARE,
-                onClick = { vm.setExportFormat(DarkroomViewModel.ExportFormat.SQUARE) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) { Text("方形 1080×1080") }
-            SegmentedButton(
-                selected = state.exportFormat == DarkroomViewModel.ExportFormat.PORTRAIT,
-                onClick = { vm.setExportFormat(DarkroomViewModel.ExportFormat.PORTRAIT) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) { Text("竖版 1080×1350") }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("分享画幅", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Spacer(Modifier.weight(1f))
+            Text(state.exportFormat.ratioLabel, style = MaterialTheme.typography.bodySmall, color = colors.accent)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            ShareFormat.entries.forEach { format ->
+                val selected = state.exportFormat == format
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .height(58.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) colors.ink else colors.surface)
+                        .clickable { vm.setExportFormat(format) }
+                        .padding(horizontal = 4.dp, vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        format.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (selected) colors.paper else colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        format.ratioLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selected) colors.paper.copy(alpha = 0.72f) else colors.inkFaint,
+                    )
+                }
+            }
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        // —— 导出（it-003 O5：进度条贴 CTA 上方，导出反馈进首屏）——
+        Spacer(Modifier.height(12.dp))
         if (state.exporting) {
             LinearProgressIndicator(
                 progress = { state.exportProgress },
                 modifier = Modifier.fillMaxWidth(),
+                color = colors.accent,
+                trackColor = colors.hairline,
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                "冲洗中 ${(state.exportProgress * 100).toInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.inkFaint,
-            )
+            Text("正在冲洗 ${(state.exportProgress * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
             Spacer(Modifier.height(8.dp))
         }
-
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
                 onClick = { vm.exportImage(share = false) },
                 enabled = !state.exporting,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
+                modifier = Modifier.weight(1f).height(50.dp),
                 shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.ink, contentColor = colors.paper),
             ) {
                 Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
@@ -225,10 +263,9 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             Button(
                 onClick = vm::exportVideo,
                 enabled = !state.exporting,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
+                modifier = Modifier.weight(1f).height(50.dp),
                 shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = colors.ink, contentColor = colors.paper),
             ) {
                 Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
@@ -236,58 +273,64 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             }
         }
 
-        Spacer(Modifier.height(10.dp))
-
-        // 分享入口（已存过才有）+ 再洗一张：收为一行次级操作（it-003 O5）
+        Spacer(Modifier.height(8.dp))
         val hasImage = state.savedImageUri != null
         val hasVideo = state.savedVideoUri != null
         if (hasImage || hasVideo) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (hasImage) {
-                    OutlinedButton(
-                        onClick = vm::shareSavedImage,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
-                    ) {
+                    OutlinedButton(onClick = vm::shareSavedImage, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text("分享图片")
                     }
                 }
                 if (hasVideo) {
-                    OutlinedButton(
-                        onClick = vm::shareSavedVideo,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f),
-                    ) {
+                    OutlinedButton(onClick = vm::shareSavedVideo, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text("分享视频")
                     }
                 }
-                OutlinedButton(
-                    onClick = vm::backToPick,
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("再洗一张", fontWeight = FontWeight.Medium)
-                }
+                TextButton(onClick = vm::backToPick, modifier = Modifier.weight(1f)) { Text("再洗一张") }
             }
         } else {
-            OutlinedButton(
-                onClick = vm::backToPick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) {
-                Text("再洗一张", fontWeight = FontWeight.Medium)
-            }
+            TextButton(onClick = vm::backToPick, modifier = Modifier.fillMaxWidth()) { Text("再洗一张") }
         }
+        Spacer(Modifier.height(20.dp))
+    }
+}
 
-        Spacer(Modifier.height(24.dp))
+@Composable
+private fun CardEditLine(
+    label: String,
+    value: String,
+    placeholder: String,
+    onValueChange: (String) -> Unit,
+) {
+    val colors = editorialColors()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(58.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = colors.inkFaint, modifier = Modifier.width(62.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            textStyle = TextStyle(color = colors.ink, fontSize = 15.sp, lineHeight = 22.sp),
+            cursorBrush = SolidColor(colors.accent),
+            decorationBox = { innerTextField ->
+                Box {
+                    if (value.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = colors.inkFaint.copy(alpha = 0.72f))
+                    }
+                    innerTextField()
+                }
+            },
+        )
     }
 }

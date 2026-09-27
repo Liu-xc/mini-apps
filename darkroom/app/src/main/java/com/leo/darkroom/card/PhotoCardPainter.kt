@@ -2,6 +2,7 @@ package com.leo.darkroom.card
 
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorMatrix
@@ -15,6 +16,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.text.TextPaint
 import android.text.TextUtils
+import java.util.WeakHashMap
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
 import kotlin.math.hypot
@@ -47,11 +49,7 @@ data class CardPalette(
  */
 object PhotoCardPainter {
 
-    /** 潜影遮罩色：未显影区域的灰绿相纸底 */
-    private const val MASK_COLOR = 0xFF262B22.toInt()
-
-    /** 视频底（暗房桌面）：相纸白卡在其上有实体感 */
-    const val VIDEO_BG = 0xFF201F19.toInt()
+    private val backdropCache = WeakHashMap<Bitmap, Bitmap>()
 
     fun paint(
         canvas: Canvas,
@@ -73,6 +71,98 @@ object PhotoCardPainter {
             drawDevelopPhoto(canvas, photo, photoRect, visual, grain)
         }
         drawTexts(canvas, layout, spec, palette)
+    }
+
+    /** Social-ready frame; still and video exports share this exact composition. */
+    fun paintShareFrame(
+        canvas: Canvas,
+        widthPx: Float,
+        heightPx: Float,
+        photo: Bitmap,
+        spec: CardSpec,
+        visual: DevelopVisual,
+        palette: CardPalette,
+        grain: Bitmap?,
+        format: ShareFormat,
+    ) {
+        val layout = ShareLayout.solve(widthPx, heightPx, format)
+        canvas.drawColor(0xFF11140F.toInt())
+
+        // A muted, enlarged echo of the selected photo gives the paper card a physical setting.
+        val backdrop = synchronized(backdropCache) {
+            backdropCache[photo] ?: downscaleBlurred(photo, 0.015f).also { backdropCache[photo] = it }
+        }
+        val backdropPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { alpha = 88 }
+        drawCenterCrop(canvas, backdrop, RectF(0f, 0f, widthPx, heightPx), backdropPaint)
+        canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA811140F.toInt() })
+        val vignetteRadius = hypot(widthPx, heightPx) * 0.72f
+        canvas.drawRect(
+            0f,
+            0f,
+            widthPx,
+            heightPx,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = RadialGradient(
+                    widthPx / 2f,
+                    heightPx / 2f,
+                    vignetteRadius,
+                    intArrayOf(0x00000000, 0x66060907),
+                    floatArrayOf(0.38f, 1f),
+                    Shader.TileMode.CLAMP,
+                )
+            },
+        )
+        if (grain != null) drawGrain(canvas, RectF(0f, 0f, widthPx, heightPx), grain, 0.09f)
+
+        val cardRect = RectF(layout.card.left, layout.card.top, layout.card.right, layout.card.bottom)
+        canvas.drawRect(
+            cardRect,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0x39000000
+                maskFilter = BlurMaskFilter(layout.card.width * 0.025f, BlurMaskFilter.Blur.NORMAL)
+            },
+        )
+        canvas.save()
+        canvas.translate(layout.card.left, layout.card.top)
+        paint(canvas, layout.card.width, photo, spec, visual, palette, grain)
+        canvas.restore()
+
+        if (spec.showWatermark && format == ShareFormat.STORY) {
+            val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = 0xD9FDFCF6.toInt()
+                textSize = widthPx * 0.025f
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("DARKROOM", layout.wordmark.centerX, layout.wordmark.centerY, brandPaint)
+            brandPaint.color = 0xBDFDFCF6.toInt()
+            brandPaint.textSize = widthPx * 0.022f
+            brandPaint.typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+            canvas.drawText("把回忆洗出来", layout.caption.centerX, layout.caption.centerY, brandPaint)
+        }
+    }
+
+    fun renderShareFrame(
+        photo: Bitmap,
+        spec: CardSpec,
+        palette: CardPalette,
+        grain: Bitmap?,
+        format: ShareFormat,
+        visual: DevelopVisual = DevelopSpec.visualAt(1f),
+    ): Bitmap {
+        val bitmap = Bitmap.createBitmap(format.width, format.height, Bitmap.Config.ARGB_8888)
+        paintShareFrame(
+            Canvas(bitmap),
+            format.width.toFloat(),
+            format.height.toFloat(),
+            photo,
+            spec,
+            visual,
+            palette,
+            grain,
+            format,
+        )
+        return bitmap
     }
 
     /** 一张含完整卡面的成片位图（导出/分享用） */
@@ -111,7 +201,15 @@ object PhotoCardPainter {
         }
         drawCenterCrop(canvas, src, rect, paint)
 
-        drawReveal(canvas, rect, visual)
+        if (visual.reveal < 0.999f) {
+            val mask = ChemicalMaskBitmap.forPhoto(photo, visual.reveal)
+            canvas.drawBitmap(
+                mask,
+                null,
+                rect,
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+            )
+        }
         drawVignette(canvas, rect, visual)
         if (grain != null && visual.grain > 0.02f) {
             drawGrain(canvas, rect, grain, visual.grain)
@@ -138,23 +236,6 @@ object PhotoCardPainter {
         val left = rect.centerX() - dw / 2f
         val top = rect.centerY() - dh / 2f
         canvas.drawBitmap(src, null, RectF(left, top, left + dw, top + dh), paint)
-    }
-
-    /** 中心向外晕开：潜影遮罩上挖一个柔边圆孔（中心透明→边缘收到潜影遮罩色，radius 外 clamp 遮罩） */
-    private fun drawReveal(canvas: Canvas, rect: RectF, visual: DevelopVisual) {
-        val reveal = visual.reveal.coerceIn(0.03f, 1f)
-        if (reveal >= 0.999f) return
-        val radius = hypot(rect.width(), rect.height()) / 2f * reveal
-        val edgeStart = (reveal * 0.70f).coerceIn(0f, 0.92f)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = RadialGradient(
-                rect.centerX(), rect.centerY(), radius,
-                intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, MASK_COLOR),
-                floatArrayOf(0f, edgeStart, 1f),
-                Shader.TileMode.CLAMP,
-            )
-        }
-        canvas.drawRect(rect, paint)
     }
 
     private fun drawVignette(canvas: Canvas, rect: RectF, visual: DevelopVisual) {

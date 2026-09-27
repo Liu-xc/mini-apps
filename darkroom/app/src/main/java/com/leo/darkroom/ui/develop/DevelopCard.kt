@@ -16,11 +16,11 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -35,10 +35,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.card.CardLayout
+import com.leo.darkroom.card.ChemicalMaskBitmap
 import com.leo.darkroom.card.CardSpec
+import com.leo.darkroom.develop.ChemicalDiffusion
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
 import com.leo.darkroom.ui.theme.editorialColors
@@ -65,6 +68,10 @@ fun DevelopCard(
     val layout = remember(cardWidthPx) { CardLayout.solve(cardWidthPx) }
     val colors = editorialColors()
     val textMeasurer = rememberTextMeasurer()
+    val revealMask = remember(photo, ChemicalDiffusion.bucket(visual.reveal)) {
+        photo?.let { ChemicalMaskBitmap.forPhoto(it, visual.reveal) }
+    }
+    val revealMaskImage = remember(revealMask) { revealMask?.asImageBitmap() }
 
     // px→dp 显式换算（布局 scope 不提供 Density receiver）
     val density = LocalDensity.current.density
@@ -98,7 +105,13 @@ fun DevelopCard(
             ) {
                 PhotoImage(photo, visual, layout.photo.width, Modifier.fillMaxSize())
                 Canvas(Modifier.fillMaxSize()) {
-                    drawReveal(visual)
+                    revealMaskImage?.let { mask ->
+                        drawImage(
+                            image = mask,
+                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                            filterQuality = FilterQuality.Medium,
+                        )
+                    }
                     drawVignette(visual)
                     grainBrush?.let { drawGrain(it, visual) }
                 }
@@ -139,28 +152,6 @@ private fun PhotoImage(photo: Bitmap, visual: DevelopVisual, photoShortSidePx: F
             renderEffect = effect
         },
     )
-}
-
-/** 中心向外晕开：潜影遮罩上挖柔边圆孔（局部坐标 = 照片区坐标系）
- *  渐变自中心：0..edgeStart 全透明（照片显出）→ 边缘收到潜影遮罩色；radius 外 clamp 遮罩 */
-private fun DrawScope.drawReveal(visual: DevelopVisual) {
-    if (visual.reveal >= 0.999f) return
-    val reveal = visual.reveal.coerceIn(0.03f, 1f)
-    val radius = (kotlin.math.hypot(size.width, size.height) / 2f) * reveal
-    val edgeStart = (reveal * 0.70f).coerceIn(0f, 0.92f)
-    val brush = ShaderBrush(
-        android.graphics.RadialGradient(
-            size.width / 2f, size.height / 2f, radius,
-            intArrayOf(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT,
-                0xFF262B22.toInt(),
-            ),
-            floatArrayOf(0f, edgeStart, 1f),
-            android.graphics.Shader.TileMode.CLAMP,
-        ),
-    )
-    drawRect(brush)
 }
 
 private fun DrawScope.drawVignette(visual: DevelopVisual) {

@@ -2,6 +2,10 @@
 
 > AGENTS.md 迭代流程第⑤步要求的变更流水；本文件于 it-001 建立（此前仓库未落地该约定）。
 
+## 2026-09-28
+
+- **feat(darkroom)**: it-004 暗房仪式与社交成片——W1 换成本地照片样片，W2 改为照片种子驱动的确定性药膜扩散并加入阶段短句与有重量的出纸回正，W3 将卡片预览提升为主视觉并新增 1:1/4:5/9:16 图片与视频统一构图（含故事安全区）；增加 `ShareLayout` 与 ADR-006，不引入依赖。Android 14 AVD 验证三画幅图片/视频均落库为 1080×1080、1080×1350、1080×1920，系统分享面板可打开；浅色/深色 W3 检查通过；`testDebugUnitTest` 38 项全绿，详 [it-004](darkroom/specs/iterations/it-004-emotional-darkroom-share.md)。
+
 ## 2026-09-27
 
 - **fix(darkroom)**: it-003 功能收口与成片页信息架构——速度档即选即生效（原 `clock` 固定 STANDARD，慢洗/快显仅改标签：startSession 按所选档重建，斜率实测 8.0/12.5/27 %·s⁻¹ 三档对表；SLOW 导出 MP4 `mvhd`=13.999s 与 ExportPlan 精确一致）；成片页进度条上贴 CTA、无滚动 dump 到「冲洗中」、存图/存视频 y2148–2197 入首屏（追加成片卡高上限 360dp + 编辑卡/段间距压缩，对齐改版线框）、分享×2 与再洗一张收为一行；W1 移除重复「设置」chip（dump 实测入口 1 处）、footer 常驻视口底；33 单测 0 失败，验证记录回填 it-003（详 specs/iterations/it-003-result-ia-speed.md）。

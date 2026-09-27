@@ -54,12 +54,12 @@ class PhotoRepository(private val context: Context) {
         return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
     }
 
-    /** 内置示例图（轻量缓存，避免重复程序化绘制） */
+    /** 内置照片样片（轻量缓存，资源随 APK 打包，可离线使用） */
     private val sampleCache = arrayOfNulls<Bitmap>(SampleArt.titles.size)
 
     fun sample(index: Int): Bitmap {
         sampleCache[index]?.let { return it }
-        val bmp = SampleArt.render(index)
+        val bmp = SampleArt.load(context, index)
         sampleCache[index] = bmp
         return bmp
     }

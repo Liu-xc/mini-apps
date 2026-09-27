@@ -15,11 +15,11 @@ import android.opengl.EGLExt
 import android.opengl.GLES20
 import android.opengl.GLUtils
 import android.view.Surface
-import com.leo.darkroom.card.CardLayout
 import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
+import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.develop.DevelopSpec
 import java.io.File
 import java.nio.ByteBuffer
@@ -41,8 +41,7 @@ class VideoExporter {
         val spec: CardSpec,
         val palette: CardPalette = CardPalette.Default,
         val plan: ExportPlan,
-        val videoWidth: Int,
-        val videoHeight: Int,
+        val format: ShareFormat,
         val outFile: File,
         /** null = 无声视频 */
         val withAudio: Boolean = true,
@@ -54,11 +53,12 @@ class VideoExporter {
         const val TIMEOUT_US = 10_000L
         const val VIDEO_BITRATE = 8_000_000
         const val IFRAME_INTERVAL = 1
-        const val VIDEO_BG = 0xFF201F19.toInt()
     }
 
     fun export(params: Params, onProgress: (Float) -> Unit = {}): File {
         val plan = params.plan
+        val videoWidth = params.format.width
+        val videoHeight = params.format.height
         // 1) 音轨离线合成 + AAC 编码
         val audio = if (params.withAudio) encodeAudio(plan) else null
 
@@ -68,7 +68,7 @@ class VideoExporter {
         try {
             codec = MediaCodec.createEncoderByType(MIME).apply {
                 configure(
-                    MediaFormat.createVideoFormat(MIME, params.videoWidth, params.videoHeight).apply {
+                    MediaFormat.createVideoFormat(MIME, videoWidth, videoHeight).apply {
                         setInteger(
                             MediaFormat.KEY_COLOR_FORMAT,
                             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
@@ -85,17 +85,8 @@ class VideoExporter {
             egl = EglCore(inputSurface)
 
             val grain = GrainNoise.bitmap()
-            val frameBmp = Bitmap.createBitmap(params.videoWidth, params.videoHeight, Bitmap.Config.ARGB_8888)
+            val frameBmp = Bitmap.createBitmap(videoWidth, videoHeight, Bitmap.Config.ARGB_8888)
             val frameCanvas = Canvas(frameBmp)
-
-            // 卡片在画面中的几何（contain + 7% 留白，居中）
-            val layout1 = CardLayout.solve(1f)
-            val cardAspect = 1f / layout1.aspect // 宽/高
-            val cardH = minOf(
-                params.videoHeight * 0.86f,
-                (params.videoWidth * 0.86f / cardAspect),
-            )
-            val cardW = cardH * cardAspect
 
             var videoTrackIndex = -1
             var muxerStarted = false
@@ -110,16 +101,17 @@ class VideoExporter {
                     if (framesDone < total) {
                         val timing = plan.frameAt(framesDone)
                         val visual = DevelopSpec.visualAt(timing.developProgress)
-                        frameCanvas.drawColor(VIDEO_BG)
-                        frameCanvas.save()
-                        frameCanvas.translate(
-                            (params.videoWidth - cardW) / 2f,
-                            (params.videoHeight - cardH) / 2f,
+                        PhotoCardPainter.paintShareFrame(
+                            canvas = frameCanvas,
+                            widthPx = videoWidth.toFloat(),
+                            heightPx = videoHeight.toFloat(),
+                            photo = params.photo,
+                            spec = params.spec,
+                            visual = visual,
+                            palette = params.palette,
+                            grain = grain,
+                            format = params.format,
                         )
-                        PhotoCardPainter.paint(
-                            frameCanvas, cardW, params.photo, params.spec, visual, params.palette, grain,
-                        )
-                        frameCanvas.restore()
 
                         egl.drawFrame(frameBmp)
                         EGLExt.eglPresentationTimeANDROID(
