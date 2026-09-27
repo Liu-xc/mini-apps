@@ -4,6 +4,8 @@
 
 ## 2026-09-27
 
+- **feat(posthouse)**: it-001 驿站首次落地——macOS 菜单栏「烽火台 + 自动哨兵 + 邸报」全量实施（M1/M2/M3）：三态图标（全绿/狼烟 flame+计数/熄火）逐仓明细与对账级探测（status.json 与 `git status`/`rev-list` 逐值相等，实拍菜单栏火焰+1）；手动/CLI 推送注入 `http.version=HTTP/1.1` + `postBuffer=512MB` 并落日志；自动补推双闸门**默认全关**，硬规则「永不 force、永不自动 pull/rebase/merge、远端不通不推」全部落 `PushDecision` 纯函数单测——沙盒 e2e 断网→恢复 **4 秒自动补推**、白名单外仓库零触碰、non-FF 被拒只通知不动手、分叉每仓一次提醒、网络失败指数退避 30s→600s + 疑似代理故障提醒；22:30 邸报定时（改钟实测 16:06:05 自动产出）Markdown 战报与 git 真值逐项对账（6 提交/fix2 feat1 docs3/积压 1 仓/连续活跃 9 天）+ 成就规则引擎 6 枚纯函数可回放（首日点亮/连修三坑/深夜修罗/大部队/清仓大吉/千军一发，档案去重）；SwiftPM+build-app.sh 组装 .app 零 Xcode 工程，swift-testing **39 测试全绿**；实测踩坑四连入库档：子目录 `.git` 判定（rev-parse 会把 dist/gradle 误判成仓）、engine 串行队列自死锁、未 resume timer 释放 SIGTRAP（CLI exit=133）、TCC 文稿授权挂起 + 15s 扫描超时兜底；附 CLI 三旗标 `--probe/--push/--gazette` 脚本化入口（详 posthouse/specs/iterations/it-001 验证记录）。
+
 - **fix(wardrobe+libs/carddeck+eats)**: it-048 卡组 hotfix——W8 甩卡被容器 `clipToBounds` 截断（it-031 旧库时代遗留，it-047 真实飞行后暴露）wardrobe/eats 两处已删并留防回归注释；连续快滑「滑不动」根因 = it-047 提交管线以 settledValue 翻转为信号（同向二次落锚不翻转即吞提交 + 排队 snapTo 抢锁拉回手中卡片），改**到达帧提交**（offset 精确到锚 + pointerDown/isAnimationRunning/flingInProgress 三重落定门——fling 的 spring animate 不在官方动画跟踪内，缺独立门实测一次甩卡连环推进 4 张）+ 按下快进结算 `onDeckDown`；实测单甩 +1、250ms 间隔连滑 +2、回卷/抽取/eats 连甩全过，双端单测绿（详 it-048-hotfix-deck-clip-continuity.md）。
 - **docs(readme×5)**: 全仓应用说明文档配图——各 README 新增「界面速览」图集（图片入各应用 `docs/img/`，共 20 张 JPEG/PNG ≈4.6MB）：wardrobe 7 屏 + eats 6 屏（模拟器演示模式逐屏实拍，W 编号与线框对应）、travel-rpg 三站 4 场景（dev5199 + `__game.tp` 摆机位，乌兰布统用 sunset 时段）、xiangqi 终局对局全景（含着法表/胜率曲线）、island DebugShot 卡片（演示数据，GLM 橙环展示健康度配色）+ 设置窗；顺带修正 eats README 过期状态行与 wardrobe 构建注记；clips 无 UI 不配图。
 
