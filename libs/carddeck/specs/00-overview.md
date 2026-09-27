@@ -21,8 +21,20 @@ wardrobe `specs/06-decisions.md` ADR-025）。
   无第二套动画。
 - **自研 `flingTarget()`**：速度 ≥125dp/s 按方向甩，否则按 100dp 位置阈值——官方 computeTarget 在 v=0 时
   只取最近锚点（位置阈值不参与，实测丢甩出）是自研的直接动因。
-- **提交管线**：settledValue 观察者 + 幂等门 `committedTarget`（观察者与程序化路径对同一次落定至多提交一次）；
-  提交 = 索引推进 + `dispatchRawDelta(-offset)` 同步复位 + `applyAnchors()`（全部同步无挂起点）+ 同步 `snapTo(Rest)` 归位。
+- **提交管线**（it-048 修订为**到达帧模型**）：提交信号 = `offset` 精确到达非 Rest 锚点
+  （±0.5px，所有落定路径——自研 performFling 残差补足 / `animateTo` / `snapTo` / 抽取 overload
+  收尾——都有精确落锚帧）且三重落定门全开（`!pointerDown` 手势未按住、`!isAnimationRunning`
+  程序化动画不在途、`!flingInProgress` 自研 fling 在途）。幂等门 `committedTarget` 挡同一落定重放；
+  提交 = 索引推进 + `dispatchRawDelta(-offset)` 同步复位 + `applyAnchors()`（全部同步无挂起点）+
+  挂起 `snapTo(Rest)` 兜底归位。~~settledValue 翻转观察~~已废：连滑同向落锚 settled 不翻转
+  （Forward→Forward），旧模型把第二次甩出整单吞掉（实测「连续滑动滑不动」的直接根因）；
+  `flingInProgress` 门必须独立存在——fling 的 spring animate 不在官方动画跟踪内
+  （drag block 执行中 dragStatus=Dragging），缺它则飞越锚点即提交、复位被动画拉回、连环推进
+  （实测一次甩卡 1/5→5/5）。
+- **按下快进结算** `onDeckDown(target)`（it-048）：手势按下瞬间若 `flingTarget()` 决策出甩出/归入
+  （fling 飞行中按下取其决策目标；停在锚上的落定窗口按位置阈值），立即同级 `anchoredDrag`
+  拿锁原子提交并复位——新手势从干净 Rest 起步拖「新顶卡」，连滑间隔小于飞行动画时长也逐张推进。
+  launch 内复查挡竞态（offset 已被其他路径改动则放弃，不抢用户的手）。
 - **`drawRandom` 快速飞出** `flyForwardQuick()`：spring 动画**首达锚点即 cancel**（飞出目标在屏外，截尾无损）。
 - **减弱动态** `rememberDeckReduceMotion()` 读 `Settings.Global.ANIMATOR_DURATION_SCALE`（单一入口）：
   落定 `snap(0)`、drawRandom 每步即时落位（保留步距节奏与每步 Confirm 震）、拖拽保持 1:1（输入非动画）。
@@ -94,3 +106,21 @@ it-046 时对原三方库 1.1.4 反编译实证：飞卡默认 `spring(dampingRa
   （it-047 `flyForwardQuick` 首达锚点截停，无半空摘除、无瞬移）；`size==1` 直接返回不甩；
   收尾自末步起算 560ms 等落定。
 - 落点均匀性不变（步数对 size 取模覆盖全剩余系）；wardrobe/eats 同步受益（同一 SDK 行为）。
+
+## 修订（2026-09-27，it-048 连滑提交与甩出裁剪 hotfix）
+
+消费方（wardrobe W8 穿搭记录页）报障两交互问题，根因都在 SDK 提交管线与宿主容器：
+
+1. **连滑吞提交/滑不动**：it-047 提交管线以「settledValue 翻转」为信号——快速连滑时第二次
+   甩出落锚 Forward→Forward 不翻转、观察者不发射，提交整单丢失；滞留的 Forward settled 还会让
+   `tryCommit` 尾部排队的 `snapTo(Rest)` 在用户下一次拖拽/甩出中抢锁，把手中卡片强拉回中位。
+   修法：提交信号改**到达帧观察**（offset 精确到锚 + 三重落定门，详见「提交管线」条），并新增
+   **按下快进结算** `onDeckDown`——按下瞬间未落定的飞出立即原子提交，新手势从 Rest 干净起步。
+2. **甩卡被容器边距截断**：宿主（wardrobe RecordsScreen / eats SpinScreen）沿用 it-031 旧库时代
+   的 `clipToBounds()` 包裹卡组——it-047 全路径甩卡是真实飞行（-1.5W 出屏），飞越容器边距即被
+   裁成两截。修法：两处宿主删 `clipToBounds()`，并留「不得加回」注释。**SDK 契约补充：卡组容器
+   不得裁剪（不 clip），甩出动画需要溢出边界的空间。**
+
+验证（emulator-5554 实测）：单甩恰好 +1（1/5→2/5）；间隔 250ms 连滑两次恰好 +2（2/5→4/5）；
+`previous()` 回卷正常；`drawRandom` 抽取/按钮态/落点无回归；eats 连甩逐张推进；飞行帧卡片完整
+飞出屏幕无裁剪；双端单测绿、全程无崩溃。

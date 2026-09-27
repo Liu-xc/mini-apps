@@ -4,6 +4,7 @@
 
 ## 2026-09-27
 
+- **fix(wardrobe+libs/carddeck+eats)**: it-048 卡组 hotfix——W8 甩卡被容器 `clipToBounds` 截断（it-031 旧库时代遗留，it-047 真实飞行后暴露）wardrobe/eats 两处已删并留防回归注释；连续快滑「滑不动」根因 = it-047 提交管线以 settledValue 翻转为信号（同向二次落锚不翻转即吞提交 + 排队 snapTo 抢锁拉回手中卡片），改**到达帧提交**（offset 精确到锚 + pointerDown/isAnimationRunning/flingInProgress 三重落定门——fling 的 spring animate 不在官方动画跟踪内，缺独立门实测一次甩卡连环推进 4 张）+ 按下快进结算 `onDeckDown`；实测单甩 +1、250ms 间隔连滑 +2、回卷/抽取/eats 连甩全过，双端单测绿（详 it-048-hotfix-deck-clip-continuity.md）。
 - **docs(readme×5)**: 全仓应用说明文档配图——各 README 新增「界面速览」图集（图片入各应用 `docs/img/`，共 20 张 JPEG/PNG ≈4.6MB）：wardrobe 7 屏 + eats 6 屏（模拟器演示模式逐屏实拍，W 编号与线框对应）、travel-rpg 三站 4 场景（dev5199 + `__game.tp` 摆机位，乌兰布统用 sunset 时段）、xiangqi 终局对局全景（含着法表/胜率曲线）、island DebugShot 卡片（演示数据，GLM 橙环展示健康度配色）+ 设置窗；顺带修正 eats README 过期状态行与 wardrobe 构建注记；clips 无 UI 不配图。
 
 - **docs(readme)**: 赤峰环线/象棋竞技场标记**已归档**——做游戏的预期下调，经确认选「代码原地保留」方案：两目录与 specs 完整保留可随时复启，仅 README 状态列收口（travel-rpg 过期的「it-001 开发中」修至实况 it-012，xiangqi 修至 it-001~003 MVP 完成）；不拆仓不打 tag 不删代码。

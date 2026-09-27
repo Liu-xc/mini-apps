@@ -50,7 +50,7 @@
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
-| 1 | 卡组抽取（it-003；it-016 庆祝单一化；it-047 自研内核） | libs/carddeck 自研内核（官方 AnchoredDraggable，it-047）：侧滑飞出/堆叠晋升，手势落定、程序化 animateTo、回中共用**单一弹簧源** `DeckStyle.flyOutSpec = spring(0.9, 500)`；eats 首次获得注入动画，不再吃库默认 spring(0.6,100)；「随机抽一张」按拍加速—减速翻张落定，步距 420→560ms 基准 + **落定单份彩屑**（原双发已修）+ 结果条 + 抽中落定 Confirm 震（it-015 接线沿用） | W1 |
+| 1 | 卡组抽取（it-003；it-016 庆祝单一化；it-047 自研内核） | libs/carddeck 自研内核（官方 AnchoredDraggable，it-047）：侧滑飞出/堆叠晋升，手势落定、程序化 animateTo、回中共用**单一弹簧源** `DeckStyle.flyOutSpec = spring(0.9, 500)`；eats 首次获得注入动画，不再吃库默认 spring(0.6,100)；「随机抽一张」按拍加速—减速翻张落定，步距 420→560ms 基准 + **落定单份彩屑**（原双发已修）+ 结果条 + 抽中落定 Confirm 震（it-015 接线沿用）。**it-048**：W1 卡组容器不得 clipToBounds（甩卡真实飞行需溢出空间，旧包裹已删）；连滑逐张推进（到达帧提交，SDK 侧机制见 carddeck specs） | W1 |
 | 2 | 结果卡弹入 | spring pop：scale 0.9→1 + fade，accent 描边 | W1 |
 | 3 | 记一笔成功 | 弹层收起 + snackbar「落账 ✓」，详情统计数字变化高亮 | W6→W5 |
 | 4 | 地图摘要卡 | ModalBottomSheet slide-up；marker 点击轻微 bounce | W2 |

@@ -37,7 +37,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -142,10 +141,10 @@ fun RecordsScreen(
                         // it-045：无标签行时 6+14=20 直接落顶栏节奏；有标签时保持 14 的段间距
                         .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
                 ) {
+                    // it-048：不得加 clipToBounds——甩卡是真实飞行（it-047 全路径），裁剪会把
+                    // 卡片在容器边距处切掉（it-031 旧库时代的包裹已随自研内核删除）
                     Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .clipToBounds(),
+                        Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
                         val controller = CardDeck(

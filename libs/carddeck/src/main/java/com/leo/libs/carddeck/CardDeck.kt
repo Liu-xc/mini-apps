@@ -79,6 +79,9 @@ internal enum class DeckAnchor { Rest, Forward, Backward }
 /** 顶卡「归入牌堆」的拖拽行程占卡宽比例——行程终点顶卡恰好落在堆叠第 1 层，提交零跳变。 */
 private const val TUCK_FRACTION = 0.45f
 
+/** 到达判定容差（px）：所有落定路径（fling 残差补足 / animateTo / snapTo / 抽取收尾）都有精确落锚帧。 */
+internal const val ARRIVE_TOLERANCE_PX = 0.5f
+
 /** 读取系统「移除动画」状态（ANIMATOR_DURATION_SCALE ≤ 0）。 */
 private fun readReduceMotion(context: android.content.Context): Boolean = try {
     Settings.Global.getFloat(
@@ -138,6 +141,8 @@ internal data class DeckPlacement(
  * - **速度参与判定**：甩出由官方 fling 行为按 125dp/s 速度阈值 + 100dp 位置阈值决定目标锚点。
  * - **全路径真实动画**：提交在锚点落定后同步完成（`dispatchRawDelta` 原子复位 + 索引推进），
  *   无 `setCurrentIndex` 式瞬移分支；中断（动画中再按住）由 AnchoredDraggable 原生接管。
+ *   it-048：提交信号 = offset 精确到达锚点（到达帧观察），且按下瞬间快进结算未落定的飞出
+ *   （[onDeckDown]）——连滑间隔小于飞行动画时长也逐张推进，不吞不弹回。
  */
 @Stable
 class CardDeckController<T> internal constructor(
@@ -171,6 +176,27 @@ class CardDeckController<T> internal constructor(
     /** settled 归位 Rest 时由观察者调用，解除幂等门。 */
     internal fun onSettledRest() {
         committedTarget = null
+    }
+
+    /**
+     * flingBehavior 的 spring 动画在途标志与其决策目标（it-048）。fling 的 animate 循环
+     * 不在官方动画跟踪内（drag block 执行中 dragStatus=Dragging，isAnimationRunning 恒
+     * false），到达帧提交以 [flingInProgress] 挡飞越帧；快进结算（onDeckDown）以
+     * [pendingFlingTarget] 获知飞行方向，不依赖未公开的 velocity API。
+     */
+    internal var flingInProgress: Boolean = false
+        private set
+    internal var pendingFlingTarget: DeckAnchor = DeckAnchor.Rest
+        private set
+    internal suspend fun setFlingActive(target: DeckAnchor, block: suspend () -> Unit) {
+        pendingFlingTarget = target
+        flingInProgress = true
+        try {
+            block()
+        } finally {
+            flingInProgress = false
+            pendingFlingTarget = DeckAnchor.Rest
+        }
     }
 
     var index: Int by mutableIntStateOf(0)
@@ -323,13 +349,33 @@ class CardDeckController<T> internal constructor(
     // ---------------------------------------------------------------- 提交
 
     /**
-     * 锚点落定后的**原子提交**：索引推进 + `dispatchRawDelta` 同步复位 + 重建锚点（同步链，
-     * 中间无挂起点，不会渲染到半提交状态）。[drag.settledValue] 经 updateAnchors 的
-     * trySnapTo 同步归位 Rest；仅当拖拽互斥被占用时补一次挂起 snapTo 兜底。
+     * 锚点落定后的**原子提交**（挂起版，供动画完成路径 / 到达帧观察者调用）：
+     * [commitCore] 同步段 + settled 残留时挂起 snapTo 兜底。
+     * it-048 起不再以 `settledValue == target` 为前置——连滑同向落锚 settled 不翻转
+     * （Forward→Forward），旧前置会把第二次甩出整单拒掉（提交丢失 + 排队 snapTo 反手
+     * 把用户新甩出的卡强拉回中位，实测即「连续滑动滑不动」）。
      */
     internal suspend fun tryCommit(target: DeckAnchor): Boolean {
-        if (target == DeckAnchor.Rest || drag.settledValue != target) return false
-        if (committedTarget == target) return false
+        val committed = commitCore(target)
+        if (committed && drag.settledValue != DeckAnchor.Rest) {
+            // 同步归位（suspend）：本路径（程序化 animateTo 刚返回 / 到达帧观察者）互斥空闲时瞬时完成；
+            // 若被 settle 拆锁占用则排队等待。**不得改为高优先级异步 launch**——
+            // 后到的 PreventUserInput 会取消正在进行的下一步 Default animateTo，
+            // 使 drawRandom 静默死在步间（CancellationException 不崩 app，实测坑）
+            runCatching { drag.snapTo(DeckAnchor.Rest) }
+            if (drag.settledValue == DeckAnchor.Rest) committedTarget = null
+        }
+        return committed
+    }
+
+    /**
+     * [tryCommit] 的**同步段**（可锁内调用）：幂等门 + 索引推进 + `dispatchRawDelta` 复位 +
+     * 重建锚点，中间无挂起点，不会渲染到半提交状态。settledValue 经 updateAnchors 的
+     * trySnapTo 同步归位 Rest（互斥被占时归位失败，由调用方挂起 snapTo 兜底）。
+     * 幂等门 [committedTarget] 挡同一落定的重放（spring 微过冲时到达帧可能连发）。
+     */
+    internal fun commitCore(target: DeckAnchor): Boolean {
+        if (target == DeckAnchor.Rest || committedTarget == target) return false
         val n = size
         if (n <= 0) return false
         if (target == DeckAnchor.Forward && index >= n - 1 && !circular) return false
@@ -343,17 +389,33 @@ class CardDeckController<T> internal constructor(
         val u = drag.offset
         if (u != 0f && !u.isNaN()) drag.dispatchRawDelta(-u)
         applyAnchors()
-        if (drag.settledValue != DeckAnchor.Rest) {
-            // 同步归位（suspend）：本路径（程序化 animateTo 刚返回 / 观察者落定后）互斥空闲时瞬时完成；
-            // 若被 settle 拆锁占用则排队等待。**不得改为高优先级异步 launch**——
-            // 后到的 PreventUserInput 会取消正在进行的下一步 Default animateTo，
-            // 使 drawRandom 静默死在步间（CancellationException 不崩 app，实测坑）
-            runCatching { drag.snapTo(DeckAnchor.Rest) }
-        }
         if (drag.settledValue == DeckAnchor.Rest) committedTarget = null
         // 甩出回调：提交时同步触发（供上层状态接线；方向 = 顶卡飞出方向）
         if (swiped != null) onSwipe?.invoke(swiped, target == DeckAnchor.Backward)
         return true
+    }
+
+    /**
+     * 手势按下瞬间的**接管结算**（it-048）：调用方用 [flingTarget]（与松手 fling 同款决策）
+     * 算出本次按下载获的目标（飞行中按下 velocity>0 决策甩出方向；停在锚上按位置阈值），
+     * 仅当决策非 Rest 时进入本执行器——立即原子提交并复位，新手势从干净 Rest 起步拖「新顶卡」，
+     * 连滑间隔小于飞行动画时长也能逐张推进。拿锁用同级 anchoredDrag（cancel 在途动画/等待锁，
+     * 不抬优先级）；launch 内复查挡竞态：offset 已被其他路径改动（如手势已在拖、别处已提交复位）
+     * 则放弃，不抢用户的手。anchoredDrag 被抢锁 cancel 时按协程取消语义静默结束，接管方负责提交。
+     */
+    internal fun onDeckDown(target: DeckAnchor) {
+        val uAtDecision = drag.offset
+        if (uAtDecision.isNaN()) return
+        scope.launch {
+            val u = drag.offset
+            if (u.isNaN()) return@launch
+            if (abs(u - uAtDecision) > 1f) return@launch
+            if (!drag.anchors.hasPositionFor(target)) return@launch
+            drag.anchoredDrag { commitCore(target) }
+            if (drag.settledValue != DeckAnchor.Rest) {
+                runCatching { drag.snapTo(DeckAnchor.Rest) }
+            }
+        }
     }
 
     /**
@@ -530,9 +592,9 @@ fun <T> CardDeck(
         controller.applyAnchors()
     }
 
-    // 手势落定提交：fling/snap 落到 Forward/Backward 锚点后原子推进索引并复位。
-    // tryCommit 有 committedTarget 幂等门，程序化路径直接调用与此观察者对同一次落定至多提交一次；
-    // settled 归 Rest 时解除幂等门。
+    // settled 归 Rest 时解除提交幂等门 + dragTarget 残留清理兜底。
+    // it-048：非 Rest 的提交不再走这里——连滑同向落锚 settled 不翻转（Forward→Forward），
+    // 旧「翻转即提交」模型会整单吞掉第二次甩出；提交信号下沉到下方「到达帧」观察。
     LaunchedEffect(controller) {
         snapshotFlow { controller.drag.settledValue }.collect { v ->
             if (v == DeckAnchor.Rest) {
@@ -548,8 +610,6 @@ fun <T> CardDeck(
                 ) {
                     runCatching { controller.drag.snapTo(DeckAnchor.Rest) }
                 }
-            } else {
-                controller.tryCommit(v)
             }
         }
     }
@@ -577,11 +637,36 @@ fun <T> CardDeck(
         }
     }
 
+    // it-048 到达帧提交：offset 精确到达非 Rest 锚点且已落定才原子提交。三重门：
+    // pointerDown=手势按住拖经锚点（目标未定，等松手 fling 决策）；
+    // isAnimationRunning=程序化 animateTo/snapTo 在途；
+    // flingInProgress=fling spring 动画在途（不在官方跟踪内，must 单独挡）——
+    // 实测缺它：飞越锚点即提交、复位又被动画拉回、连环提交 4 张（1/5→5/5）。
+    LaunchedEffect(controller) {
+        snapshotFlow { controller.drag.offset }.collect { u ->
+            if (u.isNaN() || pointerDown || controller.drag.isAnimationRunning ||
+                controller.flingInProgress
+            ) {
+                return@collect
+            }
+            val fw = controller.drag.anchors.positionOf(DeckAnchor.Forward)
+            if (!fw.isNaN() && abs(u - fw) <= ARRIVE_TOLERANCE_PX) {
+                controller.tryCommit(DeckAnchor.Forward)
+            } else {
+                val bw = controller.drag.anchors.positionOf(DeckAnchor.Backward)
+                if (!bw.isNaN() && abs(u - bw) <= ARRIVE_TOLERANCE_PX) {
+                    controller.tryCommit(DeckAnchor.Backward)
+                }
+            }
+        }
+    }
+
     // 自研 fling 决策 + 落定动画（单一 spec 源）：官方 computeTarget 在 v=0 时只看最近锚点、
     // 位置阈值不参与（实测 v=0.0 直接回 Rest），慢速抬手/注入手势下会吞掉已过阈值的甩出——
     // 本实现：速度 ≥125dp/s 按方向甩出，否则按 100dp 位置阈值判定，目标缺失（非循环端点）回中。
     val flingSpec: AnimationSpec<Float> = if (reduceMotion) snap(0) else style.flyOutSpec
-    val fling = remember(controller, thresholdPx, flingSpec) {
+    val velocityThresholdPx = remember(density) { with(density) { 125.dp.toPx() } }
+    val fling = remember(controller, thresholdPx, velocityThresholdPx, flingSpec) {
         object : androidx.compose.foundation.gestures.TargetedFlingBehavior {
             override suspend fun androidx.compose.foundation.gestures.ScrollScope.performFling(
                 initialVelocity: Float,
@@ -591,27 +676,29 @@ fun <T> CardDeck(
                     offsetPx = controller.drag.offset,
                     velocity = initialVelocity,
                     thresholdPx = thresholdPx,
-                    velocityThresholdPx = with(density) { 125.dp.toPx() },
+                    velocityThresholdPx = velocityThresholdPx,
                 )
-                val targetOffset = controller.drag.anchors.positionOf(target)
-                if (!targetOffset.isNaN() && targetOffset != controller.drag.offset) {
-                    var prev = controller.drag.offset
-                    androidx.compose.animation.core.animate(
-                        initialValue = prev,
-                        targetValue = targetOffset,
-                        initialVelocity = initialVelocity,
-                        animationSpec = flingSpec,
-                    ) { value, _ ->
-                        scrollBy(value - prev)
-                        // prev 取 state 实值：spring 过冲会被锚点边界钳位，若 prev 跟随未钳的
-                        // 动画值，后续 delta 基准错位会使 state 反向漂移（实测漂 1.33px 导致
-                        // |offset-anchor|<0.5px 落定检查不过、settledValue 不翻、提交丢失）
-                        prev = controller.drag.offset
+                controller.setFlingActive(target) {
+                    val targetOffset = controller.drag.anchors.positionOf(target)
+                    if (!targetOffset.isNaN() && targetOffset != controller.drag.offset) {
+                        var prev = controller.drag.offset
+                        androidx.compose.animation.core.animate(
+                            initialValue = prev,
+                            targetValue = targetOffset,
+                            initialVelocity = initialVelocity,
+                            animationSpec = flingSpec,
+                        ) { value, _ ->
+                            scrollBy(value - prev)
+                            // prev 取 state 实值：spring 过冲会被锚点边界钳位，若 prev 跟随未钳的
+                            // 动画值，后续 delta 基准错位会使 state 反向漂移（实测漂 1.33px 导致
+                            // |offset-anchor|<0.5px 落定检查不过、settledValue 不翻、提交丢失）
+                            prev = controller.drag.offset
+                        }
+                        // 残差补足（含 spring 结束容差），保证精确落锚
+                        if (prev != targetOffset) scrollBy(targetOffset - prev)
                     }
-                    // 残差补足（含 spring 结束容差），保证精确落锚
-                    if (prev != targetOffset) scrollBy(targetOffset - prev)
+                    onRemainingScrollOffset(0f)
                 }
-                onRemainingScrollOffset(0f)
                 return 0f
             }
         }
@@ -620,7 +707,28 @@ fun <T> CardDeck(
     Box(
         modifier = modifier
             .onSizeChanged { size -> controller.onSizeChanged(size.width) }
-            .pointerInputGate(controller) { down -> pointerDown = down }
+            .pointerInputGate(controller) { down ->
+                pointerDown = down
+                // it-048：按下瞬间快进结算上一次未落定的飞出——fling 飞行中按下直接结算其
+                // 决策目标；非飞行态（如已停在锚上的落定窗口）按位置阈值决策。决策 Rest
+                // （未过阈、无在途飞行）不打扰自然接管
+                if (down && !controller.isDrawing) {
+                    val u = controller.drag.offset
+                    if (!u.isNaN()) {
+                        val target = if (controller.flingInProgress) {
+                            controller.pendingFlingTarget
+                        } else {
+                            controller.flingTarget(
+                                offsetPx = u,
+                                velocity = 0f,
+                                thresholdPx = thresholdPx,
+                                velocityThresholdPx = velocityThresholdPx,
+                            )
+                        }
+                        if (target != DeckAnchor.Rest) controller.onDeckDown(target)
+                    }
+                }
+            }
             .anchoredDraggable(
                 state = controller.drag,
                 orientation = Orientation.Horizontal,

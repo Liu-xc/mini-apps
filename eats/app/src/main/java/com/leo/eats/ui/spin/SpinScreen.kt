@@ -52,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -308,11 +307,11 @@ fun SpinScreen(
                 animationSpec = EatsMotion.smooth(),
                 label = "deckRecede",
             )
+            // it-048：不得加 clipToBounds——甩卡是真实飞行（it-047），裁剪会把卡片在容器边切掉
             Box(
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .clipToBounds(),
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
                 CardDeck(
