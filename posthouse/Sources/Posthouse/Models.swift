@@ -105,6 +105,7 @@ struct DailyGazette: Codable {
     var date: String                 // yyyy-MM-dd
     var generatedAt: Date
     var repoSummaries: [RepoDaySummary]
+    var todayCommits: [CommitEntry]  // 当日全部提交（渲染逐条首行）
     var totalCommits: Int
     var pushEvents: [PushEvent]
     var backlogAtClose: Int          // 收官时全仓积压仓库数

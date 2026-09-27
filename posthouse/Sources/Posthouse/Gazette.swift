@@ -52,7 +52,8 @@ enum GazetteEngine {
 
         var gazette = DailyGazette(
             date: dayString, generatedAt: now, repoSummaries: summaries,
-            totalCommits: commits.count, pushEvents: pushEvents.filter(\.success),
+            todayCommits: commits, totalCommits: commits.count,
+            pushEvents: pushEvents.filter(\.success),
             backlogAtClose: backlogRepos.count,
             unlocked: [], activeStreak: activeStreak
         )
@@ -184,6 +185,19 @@ enum GazetteStore {
             lines.append("|---|---:|---:|---:|---:|---|")
             for s in g.repoSummaries {
                 lines.append("| \(s.repoName) | \(s.commits) | \(s.fixes) | \(s.feats) | \(s.docsSpec) | \(s.backlogCleared ? "✅" : "—") |")
+            }
+            lines.append("")
+        }
+
+        if !g.todayCommits.isEmpty {
+            lines.append("## 今日提交")
+            lines.append("")
+            for c in g.todayCommits.prefix(50) {
+                let t = Self.timeFormatter.string(from: c.committedAt)
+                lines.append("- \(t) · **\(c.repoName)** \(c.subject)")
+            }
+            if g.todayCommits.count > 50 {
+                lines.append("- …共 \(g.todayCommits.count) 条")
             }
             lines.append("")
         }

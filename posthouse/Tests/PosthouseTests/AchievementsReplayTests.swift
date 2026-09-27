@@ -173,6 +173,8 @@ struct AchievementsReplayTests {
         #expect(md.contains("fix"))
         #expect(md.contains("自动补推"))
         #expect(md.contains("首日点亮"))
+        #expect(md.contains("## 今日提交"), "逐条提交列表（提案 M3 内容项）")
+        #expect(md.contains("fix(wardrobe): 修坑"), "提交首行一句话必须出现")
 
         let result = GazetteStore.write(gazette: g, outputDir: dir)
         #expect(result != nil)

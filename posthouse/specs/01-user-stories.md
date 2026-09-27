@@ -43,7 +43,7 @@
 **以便** 快速知道今天干了什么、积压收没收干净。
 
 - UC-04-1 定时（默认 22:30，可配）扫描监控仓当日 `git log`，产出 Markdown 到 `gazetteOutputDir`（默认 `~/Documents/daily-gazette/`，不入公开仓库）。
-- UC-04-2 内容：提交合计与分仓分类（feat/fix/docs/spec）、推送事件（自动/手动、提交数）、收官积压、连续活跃天数。
+- UC-04-2 内容：提交合计与分仓分类（feat/fix/docs/spec）、**逐条提交首行一句话**（每条带时刻与所属仓）、推送事件（自动/手动、提交数）、收官积压、连续活跃天数。
 - UC-04-3 同日只生成一次（gazette-dates.json 去重），生成后通知中心报路径。
 - UC-04-4 成就规则引擎首发 6 枚（纯规则可回放）：首日点亮/连修三坑/深夜修罗/大部队/清仓大吉/千军一发；档案落 achievements.json，一次性成就不重复发放。
 - UC-04-5 可选 LLM 润色（默认关）：`gazetteLLMPolish` 开且 `llm.key`（0600，不入 config）有密钥才调 GLM；

@@ -167,3 +167,6 @@ temp 仓库真实集成 6（含 non-FF 拒绝+绝不强推）+ 成就规则回�
 2. **M2 network-rescue 一键入口**（原文「附一键执行诊断脚本的入口」）：
    菜单「烽火台 → 网络诊断（network-rescue）…」生成 .command 交终端跑
    `~/.agents/skills/network-rescue/scripts/network_doctor.sh`；疑似代理故障通知文案挂上该入口。
+3. **M3 战报「每个提交取首行一句话」**（提案内容项首轮遗漏）：DailyGazette 增 `todayCommits`，
+   渲染「## 今日提交」逐条（时刻 · 仓 · 首行，>50 条截断计数）；实跑 8 条全列出，UC-04-2 措辞同步。
+   注：M1「ls-remote 带缓存」以轮询节拍实现——远端探测随轮询每 60s 一次，无额外高频调用。
