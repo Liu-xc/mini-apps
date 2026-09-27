@@ -10,6 +10,7 @@
 | achievements.json | 同上 | 成就档案 `{ achievementId: "解锁日" }` |
 | gazette-dates.json | 同上 | 已生成邸报的日期数组（同日去重） |
 | posthouse.log | 同上 | 文件日志（证据链） |
+| llm.key | 同上（chmod 600） | LLM 润色密钥，不入 config.json |
 | gazette-yyyy-MM-dd.md | `gazetteOutputDir`（默认 `~/Documents/daily-gazette/`） | 每日战报 |
 
 JSON 日期编码：默认 `deferredToDate`（2001 epoch 秒）——仅内部消费；日志时间戳为本地可读格式。
@@ -27,7 +28,10 @@ JSON 日期编码：默认 `deferredToDate`（2001 epoch 秒）——仅内部�
   "autoPushWhitelist": { "/path/repo": true },    // 仓库白名单，默认全关
   "gazetteHour": 22, "gazetteMinute": 30,
   "gazetteOutputDir": "/Users/leo/Documents/daily-gazette",
-  "notificationsEnabled": true
+  "notificationsEnabled": true,
+  "gazetteLLMPolish": false,                        // M3 可选润色，默认关
+  "gazetteLLMBaseUrl": "https://open.bigmodel.cn/api/paas/v4",
+  "gazetteLLMModel": "glm-4-flash"
 }
 ```
 

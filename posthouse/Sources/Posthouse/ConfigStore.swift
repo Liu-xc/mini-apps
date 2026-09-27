@@ -15,6 +15,11 @@ struct PosthouseConfig: Codable {
     var gazetteOutputDir: String = "/Users/leo/Documents/daily-gazette"
     var notificationsEnabled: Bool = true
 
+    // M3 可选 LLM 润色（默认关；密钥在同目录 llm.key，不入 config）
+    var gazetteLLMPolish: Bool = false
+    var gazetteLLMBaseUrl: String = "https://open.bigmodel.cn/api/paas/v4"
+    var gazetteLLMModel: String = "glm-4-flash"
+
     func isWhitelisted(_ repoPath: String) -> Bool {
         autoPushEnabled && (autoPushWhitelist[repoPath] == true)
     }

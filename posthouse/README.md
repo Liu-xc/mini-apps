@@ -33,6 +33,8 @@ $BIN --gazette              # 立即生成今日邸报
 - `scanRoots` 扫描根（根自身 + 一层内子仓库），默认 `~/Documents/mini-apps`、`~/Documents/mini-games`
 - `autoPushEnabled` / `autoPushWhitelist` 自动推送**双闸门，默认全关**
 - `gazetteHour/Minute` 每日战报定时（默认 22:30），`gazetteOutputDir`（默认 `~/Documents/daily-gazette/`）
+- `gazetteLLMPolish` 战报 LLM 润色（默认关）：开了才调 GLM，密钥放同目录 `llm.key`（0600），失败自动回退规则版
+- 菜单「烽火台 → 网络诊断（network-rescue）…」一键在终端跑 network_doctor.sh
 - `pushArgs` 推送注入参数（默认 HTTP/1.1 + postBuffer=512MB）
 
 数据与日志同目录：`status.json` / `push-events.json` / `achievements.json` / `posthouse.log`。

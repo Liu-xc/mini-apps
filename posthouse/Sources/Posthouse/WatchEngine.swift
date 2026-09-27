@@ -242,7 +242,7 @@ final class WatchEngine {
 
         if proxySuspect && !proxyAlertActive {
             proxyAlertActive = true
-            notifier.notify(title: "疑似代理故障", body: "多个仓库连续网络失败。可运行 network-rescue 诊断，恢复后我会自动补推。")
+            notifier.notify(title: "疑似代理故障", body: "多个仓库连续网络失败。菜单「烽火台 → 网络诊断…」一键跑 network-rescue，恢复后我会自动补推。")
         } else if !proxySuspect {
             proxyAlertActive = false
         }
@@ -351,7 +351,13 @@ final class WatchEngine {
             streak: streak
         )
 
-        let result = GazetteStore.write(gazette: gazette, outputDir: config.gazetteOutputDir)
+        let result: GazetteStore.WriteResult?
+        let markdown = GazetteStore.render(gazette)
+        if let polished = GazettePolisher.polish(markdown: markdown, cfg: config) {
+            result = GazetteStore.writeRaw(markdown: polished, date: gazette.date, outputDir: config.gazetteOutputDir)
+        } else {
+            result = GazetteStore.writeRaw(markdown: markdown, date: gazette.date, outputDir: config.gazetteOutputDir)
+        }
         lastGazetteDate = today
         GazetteStore.appendGazetteDate(today)
         GazetteStore.saveUnlocks(gazette.unlocked, on: today)

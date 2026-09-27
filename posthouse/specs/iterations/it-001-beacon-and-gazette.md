@@ -155,3 +155,15 @@ temp 仓库真实集成 6（含 non-FF 拒绝+绝不强推）+ 成就规则回�
 
 **收尾状态**：验收后已恢复默认配置（真实扫描根/轮询 60s/白名单空/邸报 22:30）、
 清除验收态成就与邸报文件（今晚 22:30 为干净的首日运行）、沙盒 /tmp/ph-sbx 已删。
+
+## 完成性审计补漏（同日二轮，/goal 完成审计触发）
+
+对照提案逐条查漏，补上两处首轮遗漏的 M2/M3 扫尾项：
+
+1. **M3 可选 LLM 润色开关**（提案原文「默认关，开了才调 GLM」）：
+   `gazetteLLMPolish`（默认 false）+ `gazetteLLMBaseUrl/Model`；密钥走 `llm.key`（0600，不入 config，
+   同 island 凭证模式）；实现为 curl 调 OpenAI 兼容 chat/completions，**任何失败静默回退规则版**，
+   门禁单测（默认关不调网/无密钥回退）计入 41 测试。
+2. **M2 network-rescue 一键入口**（原文「附一键执行诊断脚本的入口」）：
+   菜单「烽火台 → 网络诊断（network-rescue）…」生成 .command 交终端跑
+   `~/.agents/skills/network-rescue/scripts/network_doctor.sh`；疑似代理故障通知文案挂上该入口。

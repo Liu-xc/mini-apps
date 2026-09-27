@@ -145,6 +145,19 @@ struct AchievementsReplayTests {
         #expect(g.activeStreak == 9)
     }
 
+    @Test func polish_defaultOffNeverCalls() {
+        var cfg = PosthouseConfig.defaultConfig()
+        #expect(!cfg.gazetteLLMPolish, "LLM 润色默认必须关闭")
+        // 默认关：即使给了密钥也直接回退
+        #expect(GazettePolisher.polish(markdown: "# t", cfg: cfg, key: "sk-x") == nil)
+    }
+
+    @Test func polish_enabledButNoKey_fallsBack() {
+        var cfg = PosthouseConfig.defaultConfig()
+        cfg.gazetteLLMPolish = true
+        #expect(GazettePolisher.polish(markdown: "# t", cfg: cfg, key: "") == nil)
+    }
+
     @Test func gazetteMarkdown_rendersAndWrites() throws {
         let dir = NSTemporaryDirectory() + "posthouse-gazette-\(UUID().uuidString)"
         defer { try? FileManager.default.removeItem(atPath: dir) }

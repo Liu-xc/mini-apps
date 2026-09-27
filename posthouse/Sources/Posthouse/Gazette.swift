@@ -144,14 +144,18 @@ enum GazetteStore {
 
     @discardableResult
     static func write(gazette: DailyGazette, outputDir: String) -> WriteResult? {
+        writeRaw(markdown: render(gazette), date: gazette.date, outputDir: outputDir)
+    }
+
+    /// 直接写入已渲染/润色过的 Markdown
+    @discardableResult
+    static func writeRaw(markdown: String, date: String, outputDir: String) -> WriteResult? {
         let fm = FileManager.default
         let dirURL = URL(fileURLWithPath: outputDir, isDirectory: true)
         try? fm.createDirectory(at: dirURL, withIntermediateDirectories: true)
-        let fileURL = dirURL.appendingPathComponent("gazette-\(gazette.date).md")
-
-        let md = render(gazette)
+        let fileURL = dirURL.appendingPathComponent("gazette-\(date).md")
         do {
-            try md.data(using: .utf8)?.write(to: fileURL)
+            try markdown.data(using: .utf8)?.write(to: fileURL)
             return WriteResult(path: fileURL.path)
         } catch {
             PLog.error("邸报写入失败: \(error)")

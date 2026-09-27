@@ -56,6 +56,23 @@ final class AppModel: ObservableObject {
 
     func openConfigFile() { NSWorkspace.shared.open(DirSupport.configFileURL) }
     func openLogFile() { NSWorkspace.shared.open(PLog.logFileURL) }
+
+    /// M2 一键网络诊断：生成 .command 交给终端跑 network-rescue 的诊断脚本
+    func openNetworkDoctor() {
+        let script = """
+        #!/bin/zsh
+        echo "=== 驿站 · 网络诊断（network-rescue） ==="
+        bash "$HOME/.agents/skills/network-rescue/scripts/network_doctor.sh"
+        echo
+        read -k1 -s -r -p "按任意键关闭..."
+        """
+        let url = DirSupport.appSupport.appendingPathComponent("network-doctor.command")
+        try? script.data(using: .utf8)?.write(to: url)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+        NSWorkspace.shared.open(url)
+        PLog.info("已打开网络诊断终端窗口")
+    }
+
     func openGazetteDir() {
         let url = URL(fileURLWithPath: config.gazetteOutputDir, isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -130,6 +147,7 @@ struct MenuContentView: View {
 
         Section("烽火台") {
             Button("立即探测全部") { model.probeNow() }
+            Button("网络诊断（network-rescue）…") { model.openNetworkDoctor() }
             Toggle("自动推送总开关", isOn: Binding(
                 get: { model.config.autoPushEnabled },
                 set: { _ in model.toggleAutoPush() }
