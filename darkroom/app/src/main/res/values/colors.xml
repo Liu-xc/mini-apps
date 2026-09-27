@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 相纸米白 / 暗房墨绿纸（与 ui/theme/DesignTokens.kt 保持一致） -->
+    <color name="window_background">#F6F4EB</color>
+    <color name="ic_launcher_background">#1E1F1A</color>
+</resources>
