@@ -2,6 +2,13 @@
 
 Mac 刘海处的**功能入口容器**：默认完全隐形，鼠标移到刘海即动画展开内容卡片。
 
+## 界面速览
+
+| 内容卡片（双源并排） | 设置窗（凭证 0600 本机文件化） |
+|---|---|
+| ![内容卡片](docs/img/card.png) | ![设置窗](docs/img/settings.jpg) |
+| *GLM 与 MiMo 各一个主环：环心=剩余%+档名，颜色=健康度（绿/橙/红），环下明细行；按源状态独立* | *API Key / Cookie 只存本机 0600 限制文件，不入仓库/日志；刷新间隔与演示模式在此切换* |
+
 当前接入的内容源（`ProviderRegistry` 单表驱动，可插拔扩展）：
 
 - **GLM Coding Plan TOKEN 用量**——每源一个面板：单主环（环心=剩余%+档名、颜色=健康度），
@@ -43,6 +50,8 @@ open /path/to/dist/island.app
 | `GLM_ISLAND_SHOT=<目录>` | DebugShot 自截图：~2.2s 渲染岛卡 PNG 后退出（ADR-011） |
 | `GLM_ISLAND_SHOT_SETTINGS=1` | 连设置窗一起截图 |
 | `GLM_ISLAND_BLANK=1` | 视作全未配置（空态走查） |
+
+> 本 README 顶部的界面截图即由上表钩子产出（`GLM_ISLAND_EXPAND=1` + `GLM_ISLAND_SHOT`）。
 
 走查截图一行复现（演示数据 + 展开 + 设置窗）：
 

@@ -4,6 +4,20 @@
 PC web + mobile web 一套代码。specs 先行（AGENTS.md），当前进度见
 [`specs/iterations/`](specs/iterations/)。
 
+> **状态：已归档（it-001~012 后暂停开发）**——代码与 specs 完整保留，随时可复启。
+
+## 场景速览
+
+| 达里湖 · 湖湾营地 | 达里湖 · 岸线 |
+|---|---|
+| ![营地](docs/img/dali-camp.jpg) | ![湖岸](docs/img/dali-lake.jpg) |
+| *篝火/帐篷营地 + 风动草场；篝火为程序化粒子（火舌/烟/火星）* | *单 Mesh 水面着色器：水深混色、岸沫、波光；芦苇带与石径通向湖湾* |
+
+| 阿斯哈图石林 | 乌兰布统 · 黄昏 |
+|---|---|
+| ![石林](docs/img/shilin.jpg) | ![乌兰布统](docs/img/wulan-sunset.jpg) |
+| *Poly Haven 巨石群 + 秋色植被；路牌写实地名（Canvas 面片叠字）* | *三时段系统（day/dawn/sunset）：HDRI 换装 + 雾/日光/草地联动* |
+
 ## 构建与运行
 
 ```bash
@@ -40,6 +54,8 @@ npm run preview    # 预览生产构建
   浅滩涉水减速）、营地→湖 RockPath 石径、岸线芦苇、程序化篝火（火舌/烟/火星/闪烁光）、
   蝴蝶×8+鸟群×6、脚步尘土/落地尘雾/涉水涟漪；地面反平铺双尺度采样。
   全部程序化或激活已入库 CC0 资产（ADR-005）。
+- **湖面反射（it-012）**：Reflector 管线 512RT 倒映远山/树/天空，菲涅尔×水深权重融合，
+  波纹法线扰动反射 UV。
 - 三站色板/构图参考自平面气氛稿 `reports/2026-09-24-travel-rpg-scenes/`（ADR-003）。
 
 ## 场景编排（it-003）
@@ -61,4 +77,5 @@ npm run preview    # 预览生产构建
   （注：calls/tris 反映 composer 末尾全屏 pass，恒为 1，非场景统计）。
 - `window.__game.probe()`：阴影/描边/散布/草场/背景/IBL 就绪状态与 fps。
 - `window.__game.setOutline(bool)`：运行时开关描边（对照实验）。
+- `window.__game.tp(x, z, yawDeg, pitchDeg)`：瞬移摆机位（截图评审用）。
 - `errors` 同时捕获 `console.error`（shader 编译失败只走 console）。

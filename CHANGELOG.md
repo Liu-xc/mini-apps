@@ -4,6 +4,8 @@
 
 ## 2026-09-27
 
+- **docs(readme×5)**: 全仓应用说明文档配图——各 README 新增「界面速览」图集（图片入各应用 `docs/img/`，共 20 张 JPEG/PNG ≈4.6MB）：wardrobe 7 屏 + eats 6 屏（模拟器演示模式逐屏实拍，W 编号与线框对应）、travel-rpg 三站 4 场景（dev5199 + `__game.tp` 摆机位，乌兰布统用 sunset 时段）、xiangqi 终局对局全景（含着法表/胜率曲线）、island DebugShot 卡片（演示数据，GLM 橙环展示健康度配色）+ 设置窗；顺带修正 eats README 过期状态行与 wardrobe 构建注记；clips 无 UI 不配图。
+
 - **docs(readme)**: 赤峰环线/象棋竞技场标记**已归档**——做游戏的预期下调，经确认选「代码原地保留」方案：两目录与 specs 完整保留可随时复启，仅 README 状态列收口（travel-rpg 过期的「it-001 开发中」修至实况 it-012，xiangqi 修至 it-001~003 MVP 完成）；不拆仓不打 tag 不删代码。
 
 - **fix(island)**: it-003 loading 图标永转+抖——埋探针日志证明状态机健康（fetch 0.3s/轮 准时停）→ 根因在动画层：`.animation(nil)` 与 `withTransaction(disablesAnimations)` **离散写入均打不断 in-flight `repeatForever`**（模板匹配 48 角度×对照实验 SAD=0 实证：修复前停转后 67.5°/255°/105°/300° 持续变）；终修 = **0.01s 有限动画覆盖同 keypath**（视觉=原地归零不倒转）；「不中心对称/抖」= 字形 ink 74×90 非方质心画 0.63pt 偏心圆（慢转被读成抖，停转即消）；验证在途 82.5° 在转、停后 6s/7.5s/9s 恒 0°；锚点实测正确（0°/180° bbox 重合，偏差 0.06pt 亚像素）；05 动效表同步禁用 nil 停转；swift test 49/49 绿。
