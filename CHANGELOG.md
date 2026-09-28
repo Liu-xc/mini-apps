@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(wardrobe)**: it-056 导出面板携带顾问场景——对话推荐卡「复制长图」打开 W6 面板时，标题/说明命中的五维预设选项（场景·办公室、季节·早秋 等）自动预选、一键可改，不再要求用户把 Agent 刚说过的场景重选一遍；提取走 `extractRecommendationSelections` 纯函数（长词优先包含匹配，半截词不命中），`ExportSheet` 新增 `presetSelections` 参数以记忆为底覆盖同 key，四处既有调用零变化；81 测全绿 + AVD 端到端走查，详 [it-056](wardrobe/specs/iterations/it-056-chat-export-scene-preset.md)。
+
 - **feat(wardrobe)**: it-055 顾问卡片可点可导——W13 推荐卡已匹配单品 tile 点击进 W5 单品详情（未匹配不可点、中性提示保留），卡片底部「复制长图」与 W5 顶下新导出入口均复用 W6 导出面板（`existingOutfit=null`，搭配页/心愿同先例），整套与单件都能出「照片拼版+五维提示词」长图拿去外部生图；匹配逻辑抽 `matchRecommendationItems` 纯函数 +2 JVM 单测，77 测全绿；浅/深色走查 P0/P1=0，详 [it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md)。
 
 - **docs(repo)**: 建立 Agent 经验自进化闭环（仓库级元迭代 it-001）——新增根 `LESSONS.md` 经验库（头部读写/晋级/淘汰/容量规则 + 回填 8 条种子教训）；AGENTS.md 迭代流程新增第⑤步「经验沉淀」（原 CHANGELOG 步顺延为⑥）、上下文恢复新增必读 `LESSONS.md`；仓库级元迭代提案落档 `specs/iterations/it-001-agent-lessons-loop.md`，README 仓库约定补经验库一行。

@@ -228,7 +228,8 @@ fun AssistantReply(
     imageFileOf: (String) -> File?,
     modifier: Modifier = Modifier,
     onOpenItem: (String) -> Unit = {},
-    onExport: ((List<Item>) -> Unit)? = null,
+    // it-056：连同推荐一起上抛，供导出面板预选场景等五维参数
+    onExport: ((OutfitRecommendation, List<Item>) -> Unit)? = null,
 ) {
     val parsed = remember(text, wardrobeItems) { parseAssistantReply(text) }
     Column(
@@ -256,7 +257,7 @@ private fun OutfitRecommendationCard(
     wardrobeItems: List<Item>,
     imageFileOf: (String) -> File?,
     onOpenItem: (String) -> Unit,
-    onExport: ((List<Item>) -> Unit)?,
+    onExport: ((OutfitRecommendation, List<Item>) -> Unit)?,
 ) {
     val ec = editorialColors()
     // it-055：匹配逻辑与测试共用同一纯函数（matchRecommendationItems）
@@ -326,7 +327,7 @@ private fun OutfitRecommendationCard(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    OutlinedButton(onClick = { onExport(matchedItems) }) {
+                    OutlinedButton(onClick = { onExport(recommendation, matchedItems) }) {
                         Icon(
                             Icons.Rounded.ContentCopy,
                             contentDescription = null,

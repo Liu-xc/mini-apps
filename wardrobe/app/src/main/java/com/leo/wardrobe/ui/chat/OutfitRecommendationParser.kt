@@ -2,6 +2,7 @@ package com.leo.wardrobe.ui.chat
 
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
+import com.leo.wardrobe.domain.usecase.PromptPresets
 
 /**
  * 顾问回复里的「可视化穿搭协议」（it-054）。
@@ -135,3 +136,18 @@ fun matchRecommendationItems(
 private fun normalizeName(value: String): String = value
     .replace(Regex("\\s+"), "")
     .trim()
+
+/**
+ * it-056：从推荐标题与说明提取导出面板「画面设定」五维的预选值。
+ *
+ * system prompt 要求每套方案以「## 第 X 套 · 场景」开头，场景信息天然在标题里，
+ * 「适合/理由」里还常写场合与季节；对 PromptPresets 各维选项做包含匹配，
+ * 每维取首个命中（选项序已长词在前：早春先于春、全身+环境远景先于全身照）。
+ * 预选只是面板初值，用户可一键改掉或取消，故不做否定句等语义级甄别。
+ */
+fun extractRecommendationSelections(recommendation: OutfitRecommendation): Map<String, String> {
+    val text = "${recommendation.title}\n${recommendation.detailMarkdown}"
+    return PromptPresets.dimensions.mapNotNull { dim ->
+        dim.options.firstOrNull { text.contains(it) }?.let { dim.key to it }
+    }.toMap()
+}

@@ -122,12 +122,20 @@ fun ChatScreen(
 
     var input by remember { mutableStateOf("") }
     // it-055 US-58：推荐卡「复制长图」→ W6 导出面板（items=该套已匹配单品）
-    var exportItems by remember { mutableStateOf<List<com.leo.wardrobe.domain.model.Item>?>(null) }
+    // it-056：同时携带从推荐文本提取的五维预选（场景等），面板打开即带上顾问语境
+    var exportRequest by remember {
+        mutableStateOf<Pair<List<com.leo.wardrobe.domain.model.Item>, Map<String, String>>?>(null)
+    }
     val exportVm = appVm
     // 面板需要 AppViewModel；未注入时卡片不显示导出按钮（避免死按钮）
-    val onExportRecommendation: ((List<com.leo.wardrobe.domain.model.Item>) -> Unit)? =
+    val onExportRecommendation: ((
+        com.leo.wardrobe.ui.chat.OutfitRecommendation,
+        List<com.leo.wardrobe.domain.model.Item>,
+    ) -> Unit)? =
         if (exportVm != null) {
-            { items -> exportItems = items }
+            { recommendation, items ->
+                exportRequest = items to extractRecommendationSelections(recommendation)
+            }
         } else {
             null
         }
@@ -339,14 +347,16 @@ fun ChatScreen(
     }
 
     // it-055 US-58：推荐卡长图导出——复用 W6 面板（existingOutfit=null，与搭配页/心愿同先例）
+    // it-056：presetSelections=顾问场景预选，面板内以记忆为底、预选覆盖同 key
     exportVm?.let { vmRef ->
-        exportItems?.let { items ->
+        exportRequest?.let { (items, presetSelections) ->
             com.leo.wardrobe.ui.outfit.ExportSheet(
                 vm = vmRef,
                 items = items,
                 existingOutfit = null,
                 refPhotoFile = vmRef.currentPerson.value?.refImageFile,
-                onDismiss = { exportItems = null },
+                presetSelections = presetSelections,
+                onDismiss = { exportRequest = null },
             )
         }
     }
@@ -418,7 +428,11 @@ private fun AiBubble(
     stamp: Long? = null,
     actions: (@Composable () -> Unit)? = null,
     onOpenItem: (String) -> Unit = {},
-    onExport: ((List<com.leo.wardrobe.domain.model.Item>) -> Unit)? = null,
+    // it-056：连同推荐上抛，导出面板据此预选五维
+    onExport: ((
+        com.leo.wardrobe.ui.chat.OutfitRecommendation,
+        List<com.leo.wardrobe.domain.model.Item>,
+    ) -> Unit)? = null,
 ) {
     val ec = editorialColors()
     Column {

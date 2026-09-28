@@ -4,6 +4,11 @@
 
 ## 未发布
 
+### it-056 — 导出面板携带顾问场景参数
+- W13 推荐卡「复制长图」打开 W6 面板时，标题/说明命中的五维预设选项（场景·办公室、季节·早秋 等）自动预选，一键可改；未命中维度沿用上次记忆。
+- 提取逻辑抽为 `extractRecommendationSelections` 纯函数（长词优先包含匹配，半截词不命中）并补 4 例单测；`ExportSheet` 新增 `presetSelections` 参数，四处既有调用零变化。
+- 详见 [it-056](iterations/it-056-chat-export-scene-preset.md)。
+
 ### it-055 — 顾问卡片点进详情与长图导出
 - W13 推荐卡已匹配单品 tile 可点击进入 W5 单品详情，未匹配 tile 不可点；卡片底部新增「复制长图」打开 W6 导出面板（`existingOutfit=null`，items=已匹配单品）。
 - W5 单品详情新增全宽「复制长图」入口，单件导出与心愿单件导出同先例；匹配逻辑抽为 `matchRecommendationItems` 纯函数并补单测。

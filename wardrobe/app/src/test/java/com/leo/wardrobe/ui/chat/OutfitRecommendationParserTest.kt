@@ -121,5 +121,67 @@ class OutfitRecommendationParserTest {
         assertEquals("t1", matched[0].second?.id)
         assertEquals("b1", matched[1].second?.id)
     }
+
+    // ---- it-056：导出面板五维预选提取 ----
+
+    @Test
+    fun `标题与理由中的场景词预选五维且不取半截选项`() {
+        val parsed = parseAssistantReply(
+            """
+            ## 第一套 · 通勤
+
+            - 上装：牛津纺衬衫
+
+            **适合**：办公室 / 早秋
+            """.trimIndent(),
+        )
+        val recommendation = parsed.recommendations.single()
+
+        val selections = extractRecommendationSelections(recommendation)
+
+        assertEquals("办公室", selections["scene"])
+        assertEquals("早秋", selections["season"])
+        // 「通勤」只是 mood 选项「通勤简约」的半截，不构成命中
+        assertNull(selections["mood"])
+    }
+
+    @Test
+    fun `季节最长选项优先命中`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 早春踏青",
+            items = listOf(OutfitRecommendationItem("上装", "白T恤")),
+            detailMarkdown = "",
+        )
+
+        val selections = extractRecommendationSelections(recommendation)
+
+        assertEquals("早春", selections["season"])
+    }
+
+    @Test
+    fun `无预设选项命中时返回空预选`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 音乐节造型",
+            items = listOf(OutfitRecommendationItem("上装", "白T恤")),
+            detailMarkdown = "**理由**：醒目、方便活动。",
+        )
+
+        assertTrue(extractRecommendationSelections(recommendation).isEmpty())
+    }
+
+    @Test
+    fun `标题与理由分散命中可合并多维度`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 海边度假",
+            items = listOf(OutfitRecommendationItem("上装", "白T恤")),
+            detailMarkdown = "**理由**：运动活力，出片选全身照。",
+        )
+
+        val selections = extractRecommendationSelections(recommendation)
+
+        assertEquals("海边", selections["scene"])
+        assertEquals("运动活力", selections["mood"])
+        assertEquals("全身照", selections["shot"])
+    }
 }
 

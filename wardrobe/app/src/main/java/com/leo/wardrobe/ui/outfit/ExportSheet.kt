@@ -94,6 +94,9 @@ fun ExportSheet(
     items: List<Item>,
     existingOutfit: Outfit?,
     refPhotoFile: String? = null,
+    // it-056：调用方带来的五维预选（如顾问推荐的场景），打开时以持久化记忆为底、覆盖同 key；
+    // 空 map 时四处既有调用行为与此前完全一致
+    presetSelections: Map<String, String> = emptyMap(),
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -125,9 +128,11 @@ fun ExportSheet(
     LaunchedEffect(savedCustomPrompt) { if (customPrompt.isBlank() && savedCustomPrompt.isNotBlank()) customPrompt = savedCustomPrompt }
     // it-012：恢复上次维度选择——等 DataStore 首发射完成（ready）或值非空才 init，
     // 避免首帧空 map 把记忆标记为已初始化而永久丢弃（R2 实测竞态 bug）
-    LaunchedEffect(savedSelections, savedSelectionsReady) {
+    // it-056：init 时叠加调用方预选（覆盖同 key、保留其余记忆），顾问场景等语境随推荐带入
+    LaunchedEffect(savedSelections, savedSelectionsReady, presetSelections) {
         if (!selectionsInit && (savedSelectionsReady || savedSelections.isNotEmpty())) {
-            if (savedSelections.isNotEmpty()) selections = savedSelections
+            val merged = savedSelections + presetSelections
+            if (merged.isNotEmpty()) selections = merged
             selectionsInit = true
         }
     }
