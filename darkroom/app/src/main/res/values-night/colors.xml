@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 暗房墨绿纸窗口底（浅色值见 values/colors.xml） -->
-    <color name="window_background">#14160F</color>
+    <!-- 暗房石墨暗纸窗口底（it-008 对齐 it-006 paper dark #151515；浅色值见 values/colors.xml） -->
+    <color name="window_background">#151515</color>
 </resources>

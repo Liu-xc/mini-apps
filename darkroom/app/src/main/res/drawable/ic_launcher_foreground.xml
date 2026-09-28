@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 拍立得相纸：暗房底上一张白框相纸 + 显影中的方形相片 + 日期章橙点 -->
+<!-- 显影中（it-008 灰阶身份）：暗房石墨底上一张白框相纸，成像区左下已显影
+     （灰阶天空 + 落日 + 两层山影），右上仍是乳剂未显影浅灰——药膜前沿斜切；
+     日期章为石墨点 + 中性白线。monochrome 同源（themed icon 已接线）。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -12,26 +14,33 @@
         android:pivotY="54">
         <!-- 相纸白框（下边更宽） -->
         <path
-            android:fillColor="#F6F4EB"
+            android:fillColor="#FBFBFA"
             android:pathData="M24,18 h60 a3,3 0 0 1 3,3 v66 a3,3 0 0 1 -3,3 h-60 a3,3 0 0 1 -3,-3 v-66 a3,3 0 0 1 3,-3 z" />
-        <!-- 显影完成的相片 -->
+        <!-- 成像区：乳剂未显影底（右上大部分） -->
         <path
-            android:fillColor="#3E5A4C"
+            android:fillColor="#E7E7E2"
             android:pathData="M28,25 h52 v42 h-52 z" />
-        <!-- 相片里的落日 -->
+        <!-- 已显影区：左下起、药膜前沿斜向右上推进 -->
         <path
-            android:fillColor="#D98A4A"
-            android:pathData="M54,34 a9,9 0 1 0 0.01,0 z" />
-        <!-- 山影 -->
+            android:fillColor="#BFBFBC"
+            android:pathData="M28,67 L28,25 L50,25 C53,30 47,37 55,43 C63,49 73,51 80,56 L80,67 Z" />
+        <!-- 落日（灰阶） -->
         <path
-            android:fillColor="#2C403A"
-            android:pathData="M28,67 l14,-16 l10,11 l8,-9 l20,14 v0 h-52 z" />
-        <!-- 日期章橙点（手写标题位） -->
+            android:fillColor="#DBDBD8"
+            android:pathData="M45,31 a4,4 0 1 0 0.01,0 z" />
+        <!-- 山影两层（远/近） -->
         <path
-            android:fillColor="#C65A1E"
+            android:fillColor="#6E6E6B"
+            android:pathData="M28,62 l9,-11 l7,8 l8,-9 l10,12 z" />
+        <path
+            android:fillColor="#3A3A38"
+            android:pathData="M28,67 l14,-8 l11,8 z" />
+        <!-- 日期章：石墨点 + 中性白线（作品标题位） -->
+        <path
+            android:fillColor="#414141"
             android:pathData="M36,78 a2.6,2.6 0 1 0 5.2,0 a2.6,2.6 0 1 0 -5.2,0 z" />
         <path
-            android:fillColor="#E8E3D5"
+            android:fillColor="#DEDEDC"
             android:pathData="M48,76.4 h22 v3.2 h-22 z" />
     </group>
 </vector>

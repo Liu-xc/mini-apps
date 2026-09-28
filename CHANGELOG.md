@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(darkroom)**: it-008 显影过程动效精修与上架级质感收口——显影中段新增 progress 确定性的药液气泡（暗晕+白芯、种子驱动、倒放可逆）与前沿湿光带（胶片与 RevealField 前沿公式精确对位），定影落定并发 600ms 对角光泽扫，阶段文案 fade+rise 过场、百分比 tabular figures；上架收口：应用图标重绘为石墨底灰阶「显影中」构图（告别 it-006 前的墨绿+橙旧身份）、窗口底色对齐 paper token 消灭冷启动闪变、W1 首次冷入场五组 stagger 编排（导航壳持 flag 二次进入不重放）、W3 成片亮相入场、模式 chip/样片卡/snackbar 全部消灭瞬跳；新增 `DevelopFx` 纯函数真源 +7 单测（63 绿）。详 [it-008](darkroom/specs/iterations/it-008-store-polish-motion.md)。
+
 - **feat(wardrobe)**: it-058 交互体感上线专项——共享元素转场首次真正接线（W1 槽位/W3 网格→W5 详情、W8 hero→W7 轮播，此前 spec 声称但来源端从未挂 key）；全站照片灰阶占位消除白块闪现（Coil placeholder + crossfade）；新增 `pressScale` 按压反馈（照片卡/主 CTA，减弱动态不缩放）；随机一套忙碌态（Casino 旋转+防连点）；对话页 typing 三点呼吸与气泡入场；W1 四分区与导出面板设定行 stagger 入场；Tab 切换升 fade+微缩放层次；冷启动 splash 背景对齐 paper（含深色）；05 动效清单三处纸面承诺勘误（#3 接线/#8 空态自绘/#10 sheet stagger）并新增 #14–#18。动效走查方法：5 段录屏 709 帧 filmstrip + 视觉评审 + 源码钉死，详 [it-058](wardrobe/specs/iterations/it-058-motion-polish.md)。
 
 - **feat(darkroom)**: it-007 显影模式体系与拍立得还原——W1 新增「拍立得/数码相机/胶片」三模式选择（持久化），三模式各有独立卡面（白框相纸 / 深灰回放屏 + OSD 带 / 35mm 齿孔片条）、显现前沿（化学偏心 / 网格块 / 横向冲洗）与出纸动画（槽口升纸 / 开机扫描线 / 片盒卷出），曲线与印字配色按模式分派且三渲染端共用真源；拍立得按实物重修（滚轴入口偏心推进、分染料上色时序与窄动态、出纸分段顿挫 + 槽口下压、纸纹与成像区细线），并修掉定影末尾模糊硬跳变、模式偏好旧快照回冲、Activity 重建重放出纸三个缺陷；W2 的 Material Slider 换成自绘药水刻度条（5% 短刻 / 25% 长刻 / 阶段分界、阶段名上轨、拖动倒放语义不变）。56 单测全绿，AVD 走查三模式 W1–W3 与胶片原生导出，详 [it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md)。

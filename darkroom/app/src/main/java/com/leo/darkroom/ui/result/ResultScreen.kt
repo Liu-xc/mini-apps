@@ -2,6 +2,7 @@ package com.leo.darkroom.ui.result
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,11 +45,14 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -65,6 +69,7 @@ import com.leo.darkroom.card.PhotoCardPainter
 import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.ui.pageInsets
+import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -137,31 +142,46 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         }
 
         Spacer(Modifier.height(10.dp))
+        // it-008 M2.6 成片亮相：rise 16dp + fade + pop，每次新会话到达 W3 播一次；
+        // 光泽扫归 W2 定影（避免 750ms 内连扫两遍），此处只做亮相。
+        val reduceMotion = EditorialMotion.reduceMotion()
+        val entrance = remember { Animatable(if (reduceMotion) 1f else 0f) }
+        LaunchedEffect(Unit) {
+            if (entrance.value < 1f) entrance.animateTo(1f, EditorialMotion.pop())
+        }
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
                 .height(260.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (artwork.value != null) {
-                Image(
-                    bitmap = artwork.value!!,
-                    contentDescription = "${state.exportFormat.label}成片预览",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .width(previewWidth.coerceAtMost(maxWidth))
-                        .height(previewHeight)
-                        .clip(RoundedCornerShape(4.dp)),
-                )
-            } else {
-                Box(
-                    Modifier
-                        .width(previewWidth.coerceAtMost(maxWidth))
-                        .height(previewHeight)
-                        .background(colors.surface, RoundedCornerShape(4.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("正在整理相纸…", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+            val maxW = maxWidth
+            Box(
+                Modifier.graphicsLayer {
+                    alpha = entrance.value
+                    translationY = (1f - entrance.value) * 16.dp.toPx()
+                },
+            ) {
+                if (artwork.value != null) {
+                    Image(
+                        bitmap = artwork.value!!,
+                        contentDescription = "${state.exportFormat.label}成片预览",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .width(previewWidth.coerceAtMost(maxW))
+                            .height(previewHeight)
+                            .clip(RoundedCornerShape(4.dp)),
+                    )
+                } else {
+                    Box(
+                        Modifier
+                            .width(previewWidth.coerceAtMost(maxW))
+                            .height(previewHeight)
+                            .background(colors.surface, RoundedCornerShape(4.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("正在整理相纸…", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+                    }
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -45,6 +47,7 @@ import com.leo.darkroom.card.CardLayout
 import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.ChemicalMaskBitmap
 import com.leo.darkroom.card.CardSpec
+import com.leo.darkroom.develop.DevelopFx
 import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
@@ -125,6 +128,11 @@ fun DevelopCard(
                     }
                     drawVignette(visual)
                     grainBrush?.let { drawGrain(it, visual) }
+                    // it-008 过程动效：药液气泡 + 前沿湿光（纯 progress 驱动，85% 后自动归零）
+                    if (DevelopFx.bubblesFor(mode)) {
+                        drawWetBand(mode, progress, visual.reveal)
+                        drawBubbles(progress)
+                    }
                 }
             }
         }
@@ -226,6 +234,35 @@ private fun DrawScope.drawGrain(brush: ShaderBrush, visual: DevelopVisual) {
         alpha = (visual.grain * 150f).coerceIn(0f, 200f) / 255f,
         blendMode = BlendMode.Overlay,
     )
+}
+
+/** 前沿湿光：随显现前沿推进的软亮带，像药水正在浸湿乳剂（it-008 M1.2） */
+private fun DrawScope.drawWetBand(mode: DevelopMode, progress: Float, reveal: Float) {
+    val band = DevelopFx.wetBandAt(mode, progress, reveal)
+    if (band.alpha <= 0.004f) return
+    val bandW = size.width * 0.22f
+    val x = band.position * size.width
+    val brush = Brush.horizontalGradient(
+        colors = listOf(Color.Transparent, Color.White.copy(alpha = band.alpha), Color.Transparent),
+        startX = x - bandW,
+        endX = x + bandW,
+    )
+    withTransform({ rotate(band.angleDeg, pivot = center) }) {
+        val s = size.width + size.height
+        drawRect(brush, topLeft = Offset(-s, -s), size = Size(s * 2f, s * 2f))
+    }
+}
+
+/** 药液气泡：暗晕打底 + 白芯——白芯只在暗部可辨、暗晕在亮部可辨（it-008 终验实测） */
+private fun DrawScope.drawBubbles(progress: Float) {
+    for (i in 0 until DevelopFx.BUBBLE_COUNT) {
+        val b = DevelopFx.bubbleAt(i, progress)
+        if (b.alpha <= 0.004f) continue
+        val radius = b.radius * size.width
+        val center = Offset(b.x * size.width, b.y * size.height)
+        drawCircle(color = Color.Black.copy(alpha = b.alpha * 0.26f), radius = radius * 1.6f, center = center)
+        drawCircle(color = Color.White.copy(alpha = b.alpha), radius = radius, center = center)
+    }
 }
 
 private fun DrawScope.drawTexts(

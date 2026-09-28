@@ -1,8 +1,15 @@
 package com.leo.darkroom.ui.develop
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,10 +61,12 @@ import com.leo.darkroom.develop.EjectStyle
 import com.leo.darkroom.platform.ShakeDetector
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.EditorialMotion
+import com.leo.darkroom.ui.theme.GlossSweepOverlay
 import com.leo.darkroom.ui.theme.editorialColors
 import kotlin.math.roundToInt
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlinx.coroutines.launch
 
 /**
  * W2 显影台：有重量的出纸 → 三阶段显影 → 定影定格。
@@ -74,6 +83,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
     // 显影可能已经过半，重放出纸会让 92% 的会话又「吐」一次纸（it-007 实机发现）
     val eject = remember { Animatable(if (state.ejecting) 1f else 0f) }
     val settle = remember { Animatable(1f) } // 定影落定轻弹 scale
+    val gloss = remember { Animatable(0f) } // 定影光泽扫（it-008）
     LaunchedEffect(state.ejecting) {
         if (state.ejecting) {
             if (reduceMotion) {
@@ -90,9 +100,16 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
         }
     }
 
-    // 定影落定：scale 1→1.03→1（DESIGN.md 落定轻弹）
+    // 定影落定：scale 1→1.03→1（DESIGN.md 落定轻弹）+ 一次性光泽扫「定妆」。
+    // 光泽扫与轻弹并发起跑：600ms 内完成，不被 750ms 后的 W2→W3 切换切走。
     LaunchedEffect(state.progress >= 1f) {
         if (state.progress >= 1f) {
+            if (!reduceMotion) {
+                launch {
+                    gloss.animateTo(1f, tween(600, easing = FastOutSlowInEasing))
+                    gloss.snapTo(0f)
+                }
+            }
             EditorialMotion.runSettlePulse(settle)
         }
     }
@@ -190,6 +207,8 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
                         cardWidthPx = cardWidthPx,
                         grain = vm.grain,
                     )
+                    // 定影光泽扫掠过整卡（it-008 M1.3），与落定轻弹同拍
+                    GlossSweepOverlay(gloss.value, Modifier.matchParentSize())
                 }
 
                 // —— 出纸素材：按模式给机器形态 ——
@@ -264,7 +283,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
         ) {
             Text(
                 "${(state.progress * 100).roundToInt()}%",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
                 color = colors.accent,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -293,13 +312,23 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
         )
 
         Spacer(Modifier.height(2.dp))
-        Text(
-            state.mode.copyAt(state.progress),
-            style = MaterialTheme.typography.bodyMedium,
-            color = colors.ink,
-            fontWeight = FontWeight.Medium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-        )
+        // 阶段陪伴文案：换句时 fade + 上浮 6dp（it-008 M1.4），不再硬切
+        AnimatedContent(
+            targetState = state.mode.copyAt(state.progress),
+            transitionSpec = {
+                (slideInVertically(tween(160)) { it / 6 } + fadeIn(tween(160))) togetherWith
+                    (slideOutVertically(tween(120)) { -it / 6 } + fadeOut(tween(120)))
+            },
+            label = "stageCopy",
+        ) { copy ->
+            Text(
+                copy,
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.ink,
+                fontWeight = FontWeight.Medium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+        }
         Spacer(Modifier.height(3.dp))
         Text(
             if (state.shakeHint && state.shakeEnabled && !reduceMotion) {
