@@ -52,7 +52,7 @@ open /path/to/dist/island.app
 | `GLM_ISLAND_SHOT=<目录>` | DebugShot 自截图：~2.2s 渲染岛卡 PNG 后退出（ADR-011） |
 | `GLM_ISLAND_SHOT_SETTINGS=1` | 连设置窗一起截图 |
 | `GLM_ISLAND_BLANK=1` | 视作全未配置（空态走查） |
-| `GLM_ISLAND_SPIKE_EXPIRE_MIMO=1` | it-004 spike：剥离 serviceToken 模拟过期，验证静默续期 |
+| `GLM_ISLAND_SPIKE_EXPIRE_MIMO=1` | it-004 spike：凭证+会话双侧 serviceToken 置无效，验证静默续期 |
 
 > 本 README 顶部的界面截图即由上表钩子产出（`GLM_ISLAND_EXPAND=1` + `GLM_ISLAND_SHOT`）。
 

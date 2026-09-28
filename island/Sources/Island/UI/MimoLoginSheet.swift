@@ -65,6 +65,11 @@ struct MimoLoginWebView: NSViewRepresentable {
                 onStatus("已登录平台，正在保存会话…")
                 webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
                     let header = MimoSSO.cookieHeader(from: cookies)
+                    // it-004 诊断：只打名字/域/有效期（不打值）——expires=0 表示会话 Cookie（不落盘）
+                    let brief = cookies.map {
+                        "\($0.name)@\($0.domain) exp=\($0.expiresDate.map { Int($0.timeIntervalSince1970) } ?? 0)"
+                    }.joined(separator: ", ")
+                    NSLog("[island][login] 登录取得 Cookie \(cookies.count) 个: \(brief)")
                     DispatchQueue.main.async {
                         guard MimoSSO.hasServiceToken(header) else {
                             self.onStatus("未取得登录态，请刷新重试")

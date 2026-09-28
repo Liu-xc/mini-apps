@@ -49,18 +49,34 @@ final class MimoSessionRenewer: NSObject, WKNavigationDelegate {
         }
     }
 
-    /// M1 spike 调试钩子（`GLM_ISLAND_SPIKE_EXPIRE_MIMO=1`）：只剥离 serviceToken、
-    /// 保留账号会话——模拟 ~24h 自然过期，验证静默续期端到端（AC1/AC2，it-004）
+    /// M1 spike 调试钩子（`GLM_ISLAND_SPIKE_EXPIRE_MIMO=1`，start 前执行）：
+    /// ① credentials.json 的 serviceToken 置无效（触发 401——fetch 读的是凭证不是 WebView 存储）；
+    /// ② 剥离 WebView 会话里的 serviceToken（会话其余 Cookie 保留，逼续期走账号会话重 mint）；
+    /// ③ 输出会话 Cookie 清单（名字/域/有效期，不打值；exp=0 = 会话 Cookie 不落盘）——AC1/AC2 验证
     static func spikeExpireServiceToken() async {
+        let cookie = CredentialStore.load(account: KeychainAccount.mimoCookie)
+        if cookie.contains("api-platform_serviceToken=") {
+            let corrupted = cookie.replacingOccurrences(
+                of: "api-platform_serviceToken=[^;]*",
+                with: "api-platform_serviceToken=SPIKE-EXPIRED",
+                options: .regularExpression
+            )
+            CredentialStore.save(corrupted, account: KeychainAccount.mimoCookie)
+            NSLog("[island][spike] 凭证 serviceToken 已置无效（触发 401）")
+        }
         let store = WKWebsiteDataStore.default().httpCookieStore
         let cookies = await withCheckedContinuation { (continuation: CheckedContinuation<[HTTPCookie], Never>) in
             store.getAllCookies { continuation.resume(returning: $0) }
         }
+        let brief = cookies.map {
+            "\($0.name)@\($0.domain) exp=\($0.expiresDate.map { Int($0.timeIntervalSince1970) } ?? 0)"
+        }.joined(separator: ", ")
+        NSLog("[island][spike] WebView 会话 Cookie \(cookies.count) 个: \(brief)")
         for cookie in cookies where cookie.name == "api-platform_serviceToken" {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 store.delete(cookie) { continuation.resume() }
             }
-            NSLog("[island][spike] 已剥离 serviceToken（模拟过期，账号会话保留）")
+            NSLog("[island][spike] 已剥离 WebView serviceToken")
         }
     }
 
