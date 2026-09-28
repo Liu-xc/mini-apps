@@ -1,7 +1,7 @@
 # it-054 · 顾问穿搭卡片与 Markdown 回复渲染
 
 - **日期**：2026-09-28
-- **状态**：提案，等待用户确认
+- **状态**：已实现；构建、单测与浅/深色视觉走查通过
 - **来源**：顾问页面截图反馈：模型已经给出搭配思路，但必须把衣橱已有单品组织成可识别的穿搭卡片；模型文本也不能继续以原始 Markdown 符号直出。
 - **类型**：W13 顾问输出结构与呈现升级
 
@@ -80,8 +80,17 @@
 - **常青 spec**：`specs/01-user-stories.md` 增加 US-56/US-57；`specs/02-wireframes.md` 补 W13 卡片结构；`specs/04-architecture.md` 记录 UI 层解析边界；`specs/05-design-system.md` 记录 Markdown/卡片排版规则；`specs/CHANGELOG.md` 与根 `CHANGELOG.md` 记录迭代。
 - **不涉及**：`specs/03-data-model.md`、持久化 schema、衣橱实体与写入接口；本迭代不新增第三方依赖，除非实现评估证明现有 Compose 能力不足并另行记录 ADR。
 
+## 实施记录
+
+- 新增 `OutfitRecommendationParser` 纯 Kotlin 解析器与 JVM 单测。
+- 新增 `ChatMarkdown`：标题、粗体、斜体、行内代码、链接、无序/有序列表、引用和段落换行；assistant 回复改为 Markdown 正文 + 结构化穿搭卡片。
+- 卡片通过当前角色 `recommendationItems` 精确匹配真实 `Item`，使用本地照片；未匹配建议保留文字并显示中性提示。
+- 更新 system prompt 与演示回复，约束 `## 第一套 · 场景`、`- 品类：单品名` 协议。
+
 ## 验证记录
 
-- 提案阶段：待用户确认。
-- 实现阶段、构建、单测、模拟器截图：确认后回填。
-
+- `./gradlew :app:testDebugUnitTest :app:assembleDebug`：`BUILD SUCCESSFUL`，68 actionable tasks，解析器与既有 JVM 单测通过。
+- `./gradlew -PdemoDefault=true :app:installDebug`：`BUILD SUCCESSFUL`，演示 APK 安装至 Android 14 AVD。
+- 模拟器注入本地只读演示会话（不发起网络请求），验证当前衣橱 5/5 单品照片进入穿搭卡片；Markdown 标题、粗体、列表、引用不显示原始语法；浅色/深色均通过。
+- 截图：[浅色 W13](../../reports/2026-09-28-it054/it054-chat-light.png)、[深色 W13](../../reports/2026-09-28-it054/it054-chat-dark.png)。
+- `git diff --check`：通过；本次走查 P0/P1：0。
