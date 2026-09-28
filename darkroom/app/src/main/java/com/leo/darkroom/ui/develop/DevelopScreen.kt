@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
 import com.leo.darkroom.develop.DevelopSpec
@@ -114,7 +115,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
             Spacer(Modifier.width(4.dp))
             Text(
                 "DEVELOPING",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
                 color = colors.inkFaint,
             )
             Spacer(Modifier.weight(1f))
@@ -169,8 +170,8 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
                             .width(with(density) { (cardWidthPx * 0.92f).toDp() })
                             .height(12.dp)
                             .background(
-                                // 相机机身色恒定（拟物件不随主题翻色）
-                                color = Color(0xFF1E1F17),
+                                // Camera body remains a neutral graphite object in either theme.
+                                color = Color(0xFF171717),
                                 shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
                             ),
                     )

@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
 import com.leo.darkroom.card.SampleArt
@@ -78,7 +79,11 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text("DARKROOM", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+                    Text(
+                        "DARKROOM",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
+                        color = colors.inkFaint,
+                    )
                     Text("私人暗房", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
                 }
                 Spacer(Modifier.weight(1f))
@@ -184,7 +189,7 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
         Spacer(Modifier.height(16.dp))
         Text(
             "全程离线 · 照片不上传",
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+            style = MaterialTheme.typography.labelSmall,
             color = colors.inkFaint,
         )
     }

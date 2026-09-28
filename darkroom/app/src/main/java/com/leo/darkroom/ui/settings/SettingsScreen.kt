@@ -1,5 +1,6 @@
 package com.leo.darkroom.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -68,8 +69,8 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
         SectionCard {
             Text(
                 "显影速度",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.inkFaint,
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.ink,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
             DevelopSpeed.entries.forEach { speed ->
@@ -107,8 +108,8 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
         SectionCard {
             Text(
                 "互动",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.inkFaint,
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.ink,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
             ToggleRow(
@@ -130,7 +131,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
 
         // 关于
         SectionCard {
-            Text("关于", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint, modifier = Modifier.padding(bottom = 6.dp))
+            Text("关于", style = MaterialTheme.typography.titleMedium, color = colors.ink, modifier = Modifier.padding(bottom = 6.dp))
             Text(
                 "显影 DARKROOM 0.1.0",
                 style = MaterialTheme.typography.bodyMedium,
@@ -154,6 +155,7 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = colors.surface,
+        border = BorderStroke(1.dp, colors.hairline),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(16.dp), content = content)

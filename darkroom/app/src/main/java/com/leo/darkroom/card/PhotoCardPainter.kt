@@ -14,8 +14,9 @@ import android.graphics.RadialGradient
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.text.Layout
+import android.text.StaticLayout
 import android.text.TextPaint
-import android.text.TextUtils
 import java.util.WeakHashMap
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
@@ -31,13 +32,13 @@ data class CardPalette(
     val hairline: Int,
 ) {
     companion object {
-        /** 相纸恒定色（昼夜不翻色，见 05-design-system 个性声明） */
+        /** Neutral light paper and graphite print; fixed across interface themes. */
         val Default = CardPalette(
-            paper = 0xFFFDFCF6.toInt(),
-            ink = 0xFF27231A.toInt(),
-            inkFaint = 0xFF8A8375.toInt(),
-            accent = 0xFFC05A1A.toInt(),
-            hairline = 0xFFE8E3D5.toInt(),
+            paper = 0xFFFBFBFA.toInt(),
+            ink = 0xFF191919.toInt(),
+            inkFaint = 0xFF626262.toInt(),
+            accent = 0xFF414141.toInt(),
+            hairline = 0xFFDEDEDC.toInt(),
         )
     }
 }
@@ -89,7 +90,7 @@ object PhotoCardPainter {
         look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
         val layout = ShareLayout.solve(widthPx, heightPx, format)
-        canvas.drawColor(0xFF11140F.toInt())
+        canvas.drawColor(0xFF121212.toInt())
 
         // A muted, enlarged echo of the selected photo gives the paper card a physical setting.
         val backdrop = synchronized(backdropCache) {
@@ -102,7 +103,7 @@ object PhotoCardPainter {
             }
         }
         drawCenterCrop(canvas, backdrop, RectF(0f, 0f, widthPx, heightPx), backdropPaint)
-        canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA811140F.toInt() })
+        canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA80D0D0D.toInt() })
         val vignetteRadius = hypot(widthPx, heightPx) * 0.72f
         canvas.drawRect(
             0f,
@@ -114,7 +115,7 @@ object PhotoCardPainter {
                     widthPx / 2f,
                     heightPx / 2f,
                     vignetteRadius,
-                    intArrayOf(0x00000000, 0x66060907),
+                    intArrayOf(0x00000000, 0x66070707),
                     floatArrayOf(0.38f, 1f),
                     Shader.TileMode.CLAMP,
                 )
@@ -137,15 +138,15 @@ object PhotoCardPainter {
 
         if (spec.showWatermark && format == ShareFormat.STORY) {
             val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xD9FDFCF6.toInt()
+                color = 0xD9FBFBFA.toInt()
                 textSize = widthPx * 0.025f
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                typeface = Typeface.create(Typeface.SANS_SERIF, 500, false)
                 textAlign = Paint.Align.CENTER
             }
             canvas.drawText("DARKROOM", layout.wordmark.centerX, layout.wordmark.centerY, brandPaint)
-            brandPaint.color = 0xBDFDFCF6.toInt()
+            brandPaint.color = 0xBDFBFBFA.toInt()
             brandPaint.textSize = widthPx * 0.022f
-            brandPaint.typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+            brandPaint.typeface = Typeface.create(Typeface.SERIF, 500, false)
             canvas.drawText("把回忆洗出来", layout.caption.centerX, layout.caption.centerY, brandPaint)
         }
     }
@@ -317,7 +318,7 @@ object PhotoCardPainter {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = RadialGradient(
                 rect.centerX(), rect.centerY(), radius,
-                intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, Color.argb(strength, 8, 10, 8)),
+                intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, Color.argb(strength, 8, 8, 8)),
                 floatArrayOf(0f, 0.45f, 1f),
                 Shader.TileMode.CLAMP,
             )
@@ -374,27 +375,44 @@ object PhotoCardPainter {
     }
 
     private fun drawTexts(canvas: Canvas, layout: CardLayout, spec: CardSpec, palette: CardPalette) {
-        // 手写标题：衬线斜体，左对齐，超长省略
+        // Upright editorial title, centered vertically inside its two-line print area.
         val title = spec.title.trim()
         if (title.isNotEmpty()) {
             val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.ink
                 textSize = layout.titleSize
-                typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+                typeface = Typeface.create(Typeface.SERIF, 500, false)
             }
-            val line = TextUtils.ellipsize(title, tp, layout.title.width, TextUtils.TruncateAt.END)
-            val baseline = layout.title.top + layout.title.height * 0.80f
-            canvas.drawText(line.toString(), layout.title.left, baseline, tp)
+            val titleLayout = StaticLayout.Builder.obtain(
+                title,
+                0,
+                title.length,
+                tp,
+                layout.title.width.toInt().coerceAtLeast(1),
+            )
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setIncludePad(false)
+                .setLineSpacing(0f, 1.1f)
+                .setMaxLines(2)
+                .setEllipsize(android.text.TextUtils.TruncateAt.END)
+                .build()
+            canvas.save()
+            canvas.translate(
+                layout.title.left,
+                layout.title.top + ((layout.title.height - titleLayout.height).coerceAtLeast(0f) / 2f),
+            )
+            titleLayout.draw(canvas)
+            canvas.restore()
         }
 
-        // 日期章：等宽粗体橙色，右对齐；超域宽先缩字号（it-002 O3 两域互斥）
+        // Graphite date print: medium sans with tabular figures, right-aligned in its reserved domain.
         val date = spec.dateText.trim()
         if (date.isNotEmpty()) {
             val sp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.accent
                 textSize = layout.stampSize
-                typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                letterSpacing = 0.06f
+                typeface = Typeface.create(Typeface.SANS_SERIF, 500, false)
+                fontFeatureSettings = "tnum"
             }
             var w = sp.measureText(date)
             if (w > layout.stamp.width && w > 0f) {
@@ -410,7 +428,7 @@ object PhotoCardPainter {
             val wp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.inkFaint
                 textSize = layout.watermarkSize
-                letterSpacing = 0.22f
+                typeface = Typeface.create(Typeface.SANS_SERIF, 500, false)
             }
             val text = "显影 DARKROOM"
             val w = wp.measureText(text)

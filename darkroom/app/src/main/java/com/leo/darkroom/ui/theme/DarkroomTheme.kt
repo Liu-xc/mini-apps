@@ -9,10 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
-/**
- * 全局主题：Material 3 × 暗房相纸 token（specs/05-design-system.md）。
- * 动效基调见 [EditorialMotion]；相纸卡恒定白（个性偏移声明见 05 与 DESIGN.md §1 表）。
- */
+/** Global monochrome theme; printed photo cards keep their neutral light-paper palette. */
 @Composable
 fun DarkroomTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -25,7 +22,7 @@ fun DarkroomTheme(
             ink = DarkroomPalette.InkDark,
             inkFaint = DarkroomPalette.InkFaintDark,
             accent = DarkroomPalette.AccentDark,
-            accentContent = DarkroomPalette.PaperDark,
+            accentContent = Color(0xFF171717),
             hairline = DarkroomPalette.HairlineDark,
             cardPaper = DarkroomPalette.CardPaper,
             cardInk = DarkroomPalette.CardInk,
@@ -40,7 +37,7 @@ fun DarkroomTheme(
             ink = DarkroomPalette.Ink,
             inkFaint = DarkroomPalette.InkFaint,
             accent = DarkroomPalette.Accent,
-            accentContent = DarkroomPalette.SurfaceLight,
+            accentContent = Color.White,
             hairline = DarkroomPalette.Hairline,
             cardPaper = DarkroomPalette.CardPaper,
             cardInk = DarkroomPalette.CardInk,
@@ -53,22 +50,24 @@ fun DarkroomTheme(
     val colorScheme = if (darkTheme) {
         darkColorScheme(
             primary = DarkroomPalette.AccentDark,
-            onPrimary = DarkroomPalette.PaperDark,
+            onPrimary = Color(0xFF171717),
+            primaryContainer = Color(0xFF353535),
+            onPrimaryContainer = Color(0xFFF0F0EE),
+            secondary = DarkroomPalette.InkFaintDark,
+            onSecondary = Color(0xFF171717),
+            secondaryContainer = Color(0xFF292929),
+            onSecondaryContainer = Color(0xFFE0E0DE),
             outline = DarkroomPalette.InkFaintDark,
-            primaryContainer = Color(0xFF3A2A1A),
-            onPrimaryContainer = Color(0xFFF3D9C2),
-            secondaryContainer = Color(0xFF23261C),
-            onSecondaryContainer = Color(0xFFD2CEC0),
+            outlineVariant = DarkroomPalette.HairlineDark,
+            inverseSurface = Color(0xFFE8E8E6),
+            inverseOnSurface = Color(0xFF222222),
+            inversePrimary = DarkroomPalette.Accent,
             background = DarkroomPalette.PaperDark,
             onBackground = DarkroomPalette.InkDark,
             surface = DarkroomPalette.SurfaceDark,
             onSurface = DarkroomPalette.InkDark,
             surfaceVariant = DarkroomPalette.SurfaceDark,
             onSurfaceVariant = DarkroomPalette.InkFaintDark,
-            outlineVariant = DarkroomPalette.HairlineDark,
-            secondary = DarkroomPalette.AccentDark,
-            onSecondary = DarkroomPalette.PaperDark,
-            // 容器色阶全对齐暗房墨纸，防 M3 基线淡紫回跌（wardrobe it-029 C2 先例）
             surfaceContainerLowest = DarkroomPalette.SurfaceDark,
             surfaceContainerLow = DarkroomPalette.SurfaceDark,
             surfaceContainer = DarkroomPalette.SurfaceDark,
@@ -78,21 +77,24 @@ fun DarkroomTheme(
     } else {
         lightColorScheme(
             primary = DarkroomPalette.Accent,
-            onPrimary = DarkroomPalette.SurfaceLight,
+            onPrimary = Color.White,
+            primaryContainer = Color(0xFFE7E7E5),
+            onPrimaryContainer = Color(0xFF232323),
+            secondary = DarkroomPalette.InkFaint,
+            onSecondary = Color.White,
+            secondaryContainer = Color(0xFFEDEDEC),
+            onSecondaryContainer = Color(0xFF333333),
             outline = DarkroomPalette.InkFaint,
-            primaryContainer = Color(0xFFF4E0D0),
-            onPrimaryContainer = Color(0xFF6E300B),
-            secondaryContainer = Color(0xFFEFEBDD),
-            onSecondaryContainer = Color(0xFF43402F),
+            outlineVariant = DarkroomPalette.Hairline,
+            inverseSurface = Color(0xFF292929),
+            inverseOnSurface = DarkroomPalette.InkDark,
+            inversePrimary = DarkroomPalette.AccentDark,
             background = DarkroomPalette.Paper,
             onBackground = DarkroomPalette.Ink,
             surface = DarkroomPalette.SurfaceLight,
             onSurface = DarkroomPalette.Ink,
             surfaceVariant = DarkroomPalette.SurfaceLight,
             onSurfaceVariant = DarkroomPalette.InkFaint,
-            outlineVariant = DarkroomPalette.Hairline,
-            secondary = DarkroomPalette.Accent,
-            onSecondary = DarkroomPalette.SurfaceLight,
             surfaceContainerLowest = DarkroomPalette.SurfaceLight,
             surfaceContainerLow = DarkroomPalette.SurfaceLight,
             surfaceContainer = DarkroomPalette.SurfaceLight,

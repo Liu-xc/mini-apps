@@ -4,6 +4,7 @@
 
 ## 2026-09-28
 
+- **feat(darkroom)**: it-006 黑白灰编辑式视觉——全局纸面/Surface/交互强调与 Snackbar 逆色改中性灰阶，重订 CJK 字级并限制字距用于短拉丁标签；作品标题改常规衬线最多两行、日期改 Sans 等宽数字灰阶排印；分享装饰同步去暖色，照片影调选项保留。`testDebugUnitTest assembleDebug installDebug` 通过，Android 14 AVD 浅/深色 W1–W4 走查，详 [it-006](darkroom/specs/iterations/it-006-monochrome-editorial-identity.md)。
 - **feat(darkroom)**: it-005 可选成片风格——W3 加入原色/暖片/银影/青幕/柔光横向缩略预览，效果即时应用到分享预览、静图和视频逐帧；柔光按亮部阈值生成确定性晕光并缓存，风格切换会使旧导出失效；压缩 W3 预览与编辑区，保持导出按钮首屏可见。Debug 构建及 Android 14 AVD W3 浅/深色检查通过，详 [it-005](darkroom/specs/iterations/it-005-selectable-photo-looks.md)。
 - **feat(darkroom)**: it-004 暗房仪式与社交成片——W1 换成本地照片样片，W2 改为照片种子驱动的确定性药膜扩散并加入阶段短句与有重量的出纸回正，W3 将卡片预览提升为主视觉并新增 1:1/4:5/9:16 图片与视频统一构图（含故事安全区）；增加 `ShareLayout` 与 ADR-006，不引入依赖。Android 14 AVD 验证三画幅图片/视频均落库为 1080×1080、1080×1350、1080×1920，系统分享面板可打开；浅色/深色 W3 检查通过；`testDebugUnitTest` 38 项全绿，详 [it-004](darkroom/specs/iterations/it-004-emotional-darkroom-share.md)。
 

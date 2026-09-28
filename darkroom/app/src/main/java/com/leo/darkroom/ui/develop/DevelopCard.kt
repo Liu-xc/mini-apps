@@ -14,7 +14,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ShaderBrush
@@ -28,7 +27,6 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,7 +89,7 @@ fun DevelopCard(
         // —— 底层：相纸 + 页脚文字 ——
         Canvas(Modifier.fillMaxSize()) {
             drawRect(color = colors.cardPaper)
-            drawTexts(layout, spec, textMeasurer)
+            drawTexts(layout, spec, textMeasurer, colors)
         }
 
         // —— 照片区（离屏层，颗粒 Overlay 只对照片内容生效）——
@@ -164,7 +162,7 @@ private fun DrawScope.drawVignette(visual: DevelopVisual) {
             intArrayOf(
                 android.graphics.Color.TRANSPARENT,
                 android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.argb(strength, 8, 10, 8),
+                android.graphics.Color.argb(strength, 8, 8, 8),
             ),
             floatArrayOf(0f, 0.45f, 1f),
             android.graphics.Shader.TileMode.CLAMP,
@@ -186,36 +184,41 @@ private fun DrawScope.drawTexts(
     layout: CardLayout,
     spec: CardSpec,
     textMeasurer: TextMeasurer,
+    colors: com.leo.darkroom.ui.theme.EditorialColors,
 ) {
-    // 手写标题：衬线斜体，超长省略（与 native ellipsize 对表）
+    // Editorial work title: upright serif, at most two lines with a calm ellipsis.
     val title = spec.title.trim()
     if (title.isNotEmpty()) {
         val style = TextStyle(
             fontFamily = FontFamily.Serif,
-            fontStyle = FontStyle.Italic,
+            fontWeight = FontWeight.Medium,
             fontSize = layout.titleSize.toSp(),
-            color = Color(0xFF27231A),
+            lineHeight = (layout.titleSize * 1.1f).toSp(),
+            color = colors.cardInk,
         )
         val result = textMeasurer.measure(
             text = title,
             style = style,
-            constraints = Constraints(maxWidth = layout.title.width.toInt()),
-            maxLines = 1,
+            constraints = Constraints(
+                maxWidth = layout.title.width.toInt(),
+                maxHeight = layout.title.height.toInt(),
+            ),
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        val baselineTarget = layout.title.top + layout.title.height * 0.80f
-        drawText(result, topLeft = Offset(layout.title.left, baselineTarget - result.firstBaseline))
+        val top = layout.title.top + ((layout.title.height - result.size.height).coerceAtLeast(0f) / 2f)
+        drawText(result, topLeft = Offset(layout.title.left, top))
     }
 
-    // 日期章：等宽粗体橙色，右对齐；超域宽先缩字号（it-002 O3 两域互斥）
+    // Neutral date print: medium sans with tabular numerals; shrink before entering the title domain.
     val date = spec.dateText.trim()
     if (date.isNotEmpty()) {
         var style = TextStyle(
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Medium,
+            fontFeatureSettings = "tnum",
             fontSize = layout.stampSize.toSp(),
-            letterSpacing = 0.06.sp,
-            color = Color(0xFFC05A1A),
+            color = colors.cardAccent,
         )
         var result = textMeasurer.measure(date, style = style, maxLines = 1)
         if (result.size.width > layout.stamp.width && result.size.width > 0) {
@@ -235,9 +238,9 @@ private fun DrawScope.drawTexts(
     if (spec.showWatermark) {
         val style = TextStyle(
             fontFamily = FontFamily.SansSerif,
+            fontWeight = FontWeight.Medium,
             fontSize = layout.watermarkSize.toSp(),
-            letterSpacing = 0.22.sp,
-            color = Color(0xFF8A8375),
+            color = colors.cardInkFaint,
         )
         val result = textMeasurer.measure("显影 DARKROOM", style = style, maxLines = 1)
         drawText(

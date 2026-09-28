@@ -17,13 +17,13 @@ data class CardLayout(
     val height: Float,
     /** 相纸区（方形） */
     val photo: FRect,
-    /** 手写标题行 */
+    /** 两行以内的作品标题区 */
     val title: FRect,
     /** 日期章（右对齐） */
     val stamp: FRect,
     /** 卡脚水印（右对齐微缩行） */
     val watermark: FRect,
-    /** 手写标题字号（px） */
+    /** 作品标题字号（px） */
     val titleSize: Float,
     /** 日期章字号（px） */
     val stampSize: Float,
@@ -43,7 +43,7 @@ data class CardLayout(
         /** 整卡高宽比 = 1 + BOTTOM_FR - SIDE_FR = 1.20 */
         const val ASPECT = 1f + BOTTOM_FR - SIDE_FR
 
-        /** 手写标题域右界（相对卡宽）——必须 ≤ [STAMP_LEFT_FR]，两域互斥不重叠 */
+        /** 作品标题域右界（相对卡宽）——必须 ≤ [STAMP_LEFT_FR]，两域互斥不重叠 */
         const val TITLE_RIGHT_FR = 0.52f
 
         /** 日期章域左界（相对卡宽）——与标题域留 0.02w 天沟 */
@@ -67,15 +67,15 @@ data class CardLayout(
 
             val title = FRect(
                 left = side * 1.5f,
-                top = footerTop + footerH * 0.10f,
+                top = footerTop + footerH * 0.08f,
                 right = w * TITLE_RIGHT_FR,
                 bottom = footerTop + footerH * 0.66f,
             )
             val stamp = FRect(
                 left = w * STAMP_LEFT_FR,
-                top = footerTop + footerH * 0.13f,
+                top = footerTop + footerH * 0.17f,
                 right = w - side * 1.5f,
-                bottom = footerTop + footerH * 0.67f,
+                bottom = footerTop + footerH * 0.64f,
             )
             val watermark = FRect(
                 left = side * 1.5f,
@@ -90,8 +90,8 @@ data class CardLayout(
                 title = title,
                 stamp = stamp,
                 watermark = watermark,
-                titleSize = footerH * 0.36f,
-                stampSize = footerH * 0.30f,
+                titleSize = footerH * 0.205f,
+                stampSize = footerH * 0.205f,
                 watermarkSize = w * 0.024f,
             )
         }

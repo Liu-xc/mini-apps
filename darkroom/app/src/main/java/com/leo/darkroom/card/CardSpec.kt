@@ -7,7 +7,7 @@ import androidx.compose.runtime.Immutable
  */
 @Immutable
 data class CardSpec(
-    /** 手写标题（可空，空则只留日期章） */
+    /** 作品标题（可空，空则只留日期） */
     val title: String = "",
     /** 日期章文案，拍立得风格「1988 07 21」式（yyyy MM dd，可改任意日期） */
     val dateText: String,

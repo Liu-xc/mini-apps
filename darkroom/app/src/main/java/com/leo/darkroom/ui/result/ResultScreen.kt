@@ -53,7 +53,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -129,7 +128,11 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                 Text("一张可以带走的回忆", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
             }
             Spacer(Modifier.weight(1f))
-            Text("PRINTED", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Text(
+                "PRINTED",
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
+                color = colors.inkFaint,
+            )
         }
 
         Spacer(Modifier.height(10.dp))
@@ -170,7 +173,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("照片风格", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Text("照片风格", style = MaterialTheme.typography.titleMedium, color = colors.ink)
             Spacer(Modifier.weight(1f))
             Text(state.photoLook.note, style = MaterialTheme.typography.bodySmall, color = colors.accent)
         }
@@ -259,6 +262,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                     label = "日期章",
                     value = state.spec.dateText,
                     placeholder = "1988 07 21",
+                    tabularNumbers = true,
                     onValueChange = vm::setDate,
                 )
                 HorizontalDivider(color = colors.hairline)
@@ -288,7 +292,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
 
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("分享画幅", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Text("分享画幅", style = MaterialTheme.typography.titleMedium, color = colors.ink)
             Spacer(Modifier.weight(1f))
             Text(state.exportFormat.ratioLabel, style = MaterialTheme.typography.bodySmall, color = colors.accent)
         }
@@ -393,6 +397,7 @@ private fun CardEditLine(
     label: String,
     value: String,
     placeholder: String,
+    tabularNumbers: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
     val colors = editorialColors()
@@ -408,7 +413,10 @@ private fun CardEditLine(
             onValueChange = onValueChange,
             modifier = Modifier.weight(1f),
             singleLine = true,
-            textStyle = TextStyle(color = colors.ink, fontSize = 15.sp, lineHeight = 22.sp),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = colors.ink,
+                fontFeatureSettings = if (tabularNumbers) "tnum" else null,
+            ),
             cursorBrush = SolidColor(colors.accent),
             decorationBox = { innerTextField ->
                 Box {

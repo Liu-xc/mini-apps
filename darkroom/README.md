@@ -1,17 +1,18 @@
 # 显影 darkroom
 
-> 拍立得显影工具——传一张图，看它像相纸一样慢慢显影，定影成带白框与日期章的卡片，
+> 拍立得显影工具——传一张图，看它像相纸一样慢慢显影，定影成带灰阶印字的相纸卡片，
 > 一键导出成片或**显影过程视频**（含合成声轨），随时分享。全程离线。
 > 定位与价值流见 [specs/00-overview.md](specs/00-overview.md)；迭代状态见
 > [specs/iterations/](specs/iterations/)。
 
 ## 界面速览
 
-| [W1 选图](specs/iterations/assets-it-004/w1-pick.png) | [W2 显影台](specs/iterations/assets-it-004/w2-developing.png) | [W3 成片](specs/iterations/assets-it-005/w3-looks-light.png) | [W4 设置](specs/iterations/assets-it-004/w4-settings.png) |
+| [W1 选图](specs/iterations/assets-it-006/darkroom-01-w1-light.png) | [W2 显影台](specs/iterations/assets-it-006/darkroom-02-w2-light.png) | [W3 成片](specs/iterations/assets-it-006/darkroom-03-w3-light.png) | [W4 设置](specs/iterations/assets-it-006/darkroom-04-w4-light.png) |
 |---|---|---|---|
 | 相册/拍照/离线照片样片 | 药膜扩散+阶段文案+药水条 | 五种照片风格+卡面编辑+1:1/4:5/9:16 图与视频分享 | 速度/甩一甩/水印 |
 
 显影关键帧和竖屏故事预览也收在 `specs/iterations/assets-it-004/`；W3 五种成片风格与同一预览构图同步到图片、视频导出。
+it-006 的浅色/深色四屏截图在 `specs/iterations/assets-it-006/`；卡面作品标题最多两行，界面与卡面印字采用黑白灰，照片保留所选影调。
 
 ## 构建
 
