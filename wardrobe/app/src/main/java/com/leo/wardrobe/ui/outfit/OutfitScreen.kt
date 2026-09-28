@@ -35,6 +35,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,10 +50,12 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
@@ -59,10 +67,13 @@ import com.leo.wardrobe.domain.model.wishItemsOf
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.SlotCell
+import com.leo.wardrobe.ui.components.StaggeredEntrance
 import com.leo.wardrobe.ui.components.fadingBottomEdge
+import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -236,27 +247,47 @@ fun OutfitScreen(
                     color = if (mixWishes) editorialColors().accentContent else editorialColors().inkFaint,
                 )
             }
+            // it-058 C5：随机进行中的忙碌态（图标旋转）+ 防连点（进行中忽略点击，
+            // 连点会重叠排新一轮 animateScrollToPage，槽位运动互相打断观感撕裂）
+            var rolling by remember { mutableStateOf(false) }
+            val casinoSpin = rememberInfiniteTransition(label = "casino")
+            val casinoAngle by casinoSpin.animateFloat(
+                0f, 360f,
+                infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Restart),
+                label = "casino-angle",
+            )
             TextButton(
                 onClick = {
+                    if (rolling) return@TextButton
+                    rolling = true
                     scope.launch {
-                        pagerStates.entries.toList()
-                            .sortedBy { it.key.ordinal }
-                            .filter { it.key in activeCategories && it.value.pageCount > 1 }
-                            .forEachIndexed { index, (_, state) ->
-                                launch {
-                                    delay(index * 100L)
-                                    // it-047 #9：跳页弹簧显式收敛进 EditorialMotion（05 #2 老虎机）
-                                    state.animateScrollToPage(
-                                        Random.nextInt(state.pageCount),
-                                        animationSpec = EditorialMotion.smooth(),
-                                    )
+                        try {
+                            pagerStates.entries.toList()
+                                .sortedBy { it.key.ordinal }
+                                .filter { it.key in activeCategories && it.value.pageCount > 1 }
+                                .forEachIndexed { index, (_, state) ->
+                                    launch {
+                                        delay(index * 100L)
+                                        // it-047 #9：跳页弹簧显式收敛进 EditorialMotion（05 #2 老虎机）
+                                        state.animateScrollToPage(
+                                            Random.nextInt(state.pageCount),
+                                            animationSpec = EditorialMotion.smooth(),
+                                        )
+                                    }
                                 }
-                            }
+                        } finally {
+                            // 略过尾停顿（最后槽落定即止），节奏与老虎机一致
+                            rolling = false
+                        }
                     }
                 },
                 enabled = effectiveItems.isNotEmpty(),
             ) {
-                Icon(Icons.Rounded.Casino, contentDescription = null)
+                Icon(
+                    Icons.Rounded.Casino,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(if (rolling) casinoAngle else 0f),
+                )
                 Spacer(Modifier.width(6.dp))
                 Text("随机一套", style = MaterialTheme.typography.titleSmall)
             }
@@ -314,45 +345,57 @@ fun OutfitScreen(
                         Text("＋ 添加单品")
                     }
                 } else {
+                    // it-058 C7：四分区首进错峰入场（对齐 W3/W8 的 StaggeredEntrance 惯例；
+                    // rememberSaveable 一次性，Tab 往返不重播——DESIGN.md §3 二次进入走快路径）
+                    var entranceDone by rememberSaveable { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { entranceDone = true }
                     // 头区：帽子
-                    ZoneRow(
-                        zone = listOf(WardrobeCategory.HAT), activeCats = activeCategories,
-                        catItems = catItems, pagerStates = pagerStates, vm = vm,
-                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
-                        coach = coachPhase,
-                        aspectOf = { 1f },
-                        onAdd = { zone -> addSheetCats = addableCats(zone) },
-                    )
+                    StaggeredEntrance(index = 0, animate = !entranceDone) {
+                        ZoneRow(
+                            zone = listOf(WardrobeCategory.HAT), activeCats = activeCategories,
+                            catItems = catItems, pagerStates = pagerStates, vm = vm,
+                            onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                            coach = coachPhase,
+                            aspectOf = { 1f },
+                            onAdd = { zone -> addSheetCats = addableCats(zone) },
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     // 上身区：外套 | 上装 | 连衣裙
-                    ZoneRow(
-                        zone = listOf(WardrobeCategory.OUTERWEAR, WardrobeCategory.TOP, WardrobeCategory.DRESS),
-                        activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
-                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
-                        coach = coachPhase,
-                        aspectOf = { 0.78f },
-                        onAdd = { zone -> addSheetCats = addableCats(zone) },
-                    )
+                    StaggeredEntrance(index = 1, animate = !entranceDone) {
+                        ZoneRow(
+                            zone = listOf(WardrobeCategory.OUTERWEAR, WardrobeCategory.TOP, WardrobeCategory.DRESS),
+                            activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
+                            onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                            coach = coachPhase,
+                            aspectOf = { 0.78f },
+                            onAdd = { zone -> addSheetCats = addableCats(zone) },
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     // 腿行：包(左挂) | 下装（窄长） | 配饰(右挂)
-                    ZoneRow(
-                        zone = listOf(WardrobeCategory.BAG, WardrobeCategory.BOTTOM, WardrobeCategory.ACCESSORY),
-                        activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
-                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
-                        coach = coachPhase,
-                        aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.6f else 0.85f },
-                        onAdd = { zone -> addSheetCats = addableCats(zone) },
-                    )
+                    StaggeredEntrance(index = 2, animate = !entranceDone) {
+                        ZoneRow(
+                            zone = listOf(WardrobeCategory.BAG, WardrobeCategory.BOTTOM, WardrobeCategory.ACCESSORY),
+                            activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
+                            onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                            coach = coachPhase,
+                            aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.6f else 0.85f },
+                            onAdd = { zone -> addSheetCats = addableCats(zone) },
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     // 脚区：鞋
-                    ZoneRow(
-                        zone = listOf(WardrobeCategory.SHOES), activeCats = activeCategories,
-                        catItems = catItems, pagerStates = pagerStates, vm = vm,
-                        onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
-                        coach = coachPhase,
-                        aspectOf = { 2.6f },
-                        onAdd = { zone -> addSheetCats = addableCats(zone) },
-                    )
+                    StaggeredEntrance(index = 3, animate = !entranceDone) {
+                        ZoneRow(
+                            zone = listOf(WardrobeCategory.SHOES), activeCats = activeCategories,
+                            catItems = catItems, pagerStates = pagerStates, vm = vm,
+                            onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
+                            coach = coachPhase,
+                            aspectOf = { 2.6f },
+                            onAdd = { zone -> addSheetCats = addableCats(zone) },
+                        )
+                    }
                 }
             }
         }
@@ -368,7 +411,8 @@ fun OutfitScreen(
             Button(
                 onClick = { exportItems = currentItemsFromMemory },
                 enabled = effectiveItems.isNotEmpty(),
-                modifier = Modifier.weight(1f),
+                // it-058 C3：主 CTA 按压反馈
+                modifier = Modifier.weight(1f).pressScale(0.96f),
             ) {
                 Icon(
                     Icons.Rounded.ContentCopy,

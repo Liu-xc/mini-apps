@@ -75,6 +75,8 @@ import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
+import com.leo.wardrobe.ui.components.StaggeredEntrance
+import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.EditorialMotion
@@ -310,23 +312,26 @@ fun ExportSheet(
                     ) {
                         Column {
                             PromptPresets.dimensions.forEachIndexed { index, dim ->
-                                DimensionSettingRow(
-                                    dim = dim,
-                                    selectedValue = selections[dim.key],
-                                    expanded = activeDimensionKey == dim.key,
-                                    isPrimary = dim.key == PromptPresets.SCENE.key,
-                                    allowCustom = dim.key == PromptPresets.SCENE.key, // it-057：场景可自定义
-                                    onToggle = {
-                                        activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
-                                    },
-                                    onSelect = { opt ->
-                                        selections = if (selections[dim.key] == opt) {
-                                            selections - dim.key
-                                        } else {
-                                            selections + (dim.key to opt)
-                                        }
-                                    },
-                                )
+                                // it-058 C7（05 动效#10 兑现）：sheet 弹出后设定行轻错峰淡入
+                                StaggeredEntrance(index = index, animate = true) {
+                                    DimensionSettingRow(
+                                        dim = dim,
+                                        selectedValue = selections[dim.key],
+                                        expanded = activeDimensionKey == dim.key,
+                                        isPrimary = dim.key == PromptPresets.SCENE.key,
+                                        allowCustom = dim.key == PromptPresets.SCENE.key, // it-057：场景可自定义
+                                        onToggle = {
+                                            activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
+                                        },
+                                        onSelect = { opt ->
+                                            selections = if (selections[dim.key] == opt) {
+                                                selections - dim.key
+                                            } else {
+                                                selections + (dim.key to opt)
+                                            }
+                                        },
+                                    )
+                                }
                                 if (index != PromptPresets.dimensions.lastIndex) {
                                     HorizontalDivider(
                                         color = editorialColors().hairline,
@@ -450,7 +455,8 @@ fun ExportSheet(
                                     }
                                 },
                                 enabled = composedFile != null,
-                                modifier = Modifier.weight(1.25f),
+                                // it-058 C3：主 CTA 按压反馈
+                                modifier = Modifier.weight(1.25f).pressScale(0.96f),
                             ) {
                                 Icon(if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, contentDescription = null)
                                 Text(if (copied) "已复制 ✓" else "复制长图", maxLines = 1)

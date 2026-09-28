@@ -71,6 +71,8 @@ import com.leo.wardrobe.ui.components.FadingScrollRow
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.pressScale
+import com.leo.wardrobe.ui.components.sharedPhoto
 import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.components.WardrobeCategoryGrayscaleFilter
@@ -419,6 +421,8 @@ private fun ItemCard(
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
+            // it-058 C3：整卡按压反馈（照片卡是大体积感元素，涟漪在灰阶主题下不可见）
+            .pressScale(0.97f)
             .combinedClickable(onClick = onOpenDetail, onLongClick = onDelete)
             .padding(8.dp),
     ) {
@@ -428,9 +432,11 @@ private fun ItemCard(
                 contentDescription = item.name,
                 corner = 10.dp,
                 mat = true,
+                // it-058 C2：W3 网格 → W5 详情共享元素（05 动效#3 补齐来源端）
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.8f),
+                    .aspectRatio(0.8f)
+                    .sharedPhoto("item-photo-${item.id}"),
             )
             // it-012：··· 显式入口（P0：替代零提示长按）
             // it-033：触控热区 48dp（外层点击盒），视觉圆钮保持 28dp/图标 18dp

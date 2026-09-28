@@ -49,6 +49,7 @@ import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.TagRow
+import com.leo.wardrobe.ui.components.sharedPhoto
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.detail.OutfitThumb
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -319,12 +320,15 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
                 if (effect != null) {
                     // 用户导入的成品穿搭图：衬纸 Fit 完整展示（it-042 C2——原全幅 Crop 在宽盒里
                     // 把竖图人物头部裁掉，与同页网格缩略（0.86 近原比）两种呈现打架；it-011 C5 同语言）
+                    // it-058 C2：W8 → W7 共享元素（05 动效#3）；hero 恒为首图，与 W7 轮播 page 0 对齐
                     com.leo.wardrobe.ui.components.PhotoCard(
                         file = vm.imageFileOf(effect.file),
                         contentDescription = "穿搭成品图",
                         corner = 0.dp,
                         mat = true,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .sharedPhoto("outfit-photo-${outfit.id}-0"),
                     )
                 } else {
                     // 人体叙事拼贴：淡色人形轮廓底 + 缺失品类虚线空槽（it-011 O7）

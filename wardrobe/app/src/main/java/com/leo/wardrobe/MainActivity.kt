@@ -5,16 +5,20 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.only
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checkroom
@@ -366,7 +370,16 @@ private fun HomeTabs(
     val openItem: (String) -> Unit = { nav.navigate(Routes.itemDetail(it)) }
     val editItem: (String?) -> Unit = { nav.navigate(Routes.itemEdit(it)) }
 
-    Crossfade(targetState = tab, animationSpec = tween(220), label = "tabs") { current ->
+    // it-058 C4：Tab 切换 fade + 0.985→1 微缩放层次（原纯 Crossfade 平面感强；
+    // 预算仍在 220ms 内，DESIGN.md §3；走框架 MotionDurationScale 自动降级）
+    AnimatedContent(
+        targetState = tab,
+        transitionSpec = {
+            (fadeIn(tween(220)) + scaleIn(initialScale = 0.985f, animationSpec = tween(220)))
+                .togetherWith(fadeOut(tween(160)))
+        },
+        label = "tabs",
+    ) { current ->
         when (current) {
             Tab.OUTFIT -> OutfitScreen(
                 vm = vm,

@@ -2,8 +2,20 @@
 
 package com.leo.wardrobe.ui.chat
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -19,6 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -28,7 +41,6 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
@@ -227,11 +240,9 @@ fun ChatScreen(
                 if (thinking || streaming.isNotEmpty()) {
                     item(key = "live") {
                         if (thinking && streaming.isEmpty()) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                                Spacer(Modifier.size(8.dp))
-                                Text("思考中…", style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint)
-                            }
+                            // it-058 C6：typing 三点呼吸（assistant 气泡同形制小容器）——
+                            // 替代 14dp 转圈+文字，与 AI 位的「正在组织语言」语义一致
+                            TypingDots()
                         } else {
                             AiBubble(
                                 text = streaming + "▍",
@@ -255,9 +266,10 @@ fun ChatScreen(
                     }
                 }
                 items(display.size, key = { "row-${display.size - 1 - it}" }) { idx ->
+                    // it-058 C6：新消息气泡入场（fade+轻上移 220ms；框架动画随系统「移除动画」降级）
                     when (val row = display[idx]) {
-                        is RowUi.Me -> MeBubble(row.text)
-                        is RowUi.Ai -> AiBubble(
+                        is RowUi.Me -> BubbleIn { MeBubble(row.text) }
+                        is RowUi.Ai -> BubbleIn { AiBubble(
                             text = row.text,
                             wardrobeItems = recommendationItems,
                             imageFileOf = vm::imageFileOf,
@@ -283,9 +295,9 @@ fun ChatScreen(
                                     }
                                 }
                             } else null,
-                        )
+                        ) }
                         // it-043 O3：历史工具条默认折叠为中文摘要
-                        is RowUi.Tools -> ToolsRow(row.names, row.results, initialExpanded = false)
+                        is RowUi.Tools -> BubbleIn { ToolsRow(row.names, row.results, initialExpanded = false) }
                     }
                 }
             }
@@ -561,6 +573,60 @@ private fun ToolsRow(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * it-058 C6：消息气泡入场——fade + 轻上移 220ms（首次组合播放一次；
+ * 打开会话=页面级入场，新消息=逐条入场）。走框架 MotionDurationScale，
+ * 系统「移除动画」下自动瞬时呈现。
+ */
+@Composable
+private fun BubbleIn(content: @Composable () -> Unit) {
+    val state = remember { MutableTransitionState(false).apply { targetState = true } }
+    AnimatedVisibility(
+        visibleState = state,
+        enter = fadeIn(tween(200)) + slideInVertically(tween(220)) { it / 10 },
+    ) { content() }
+}
+
+/**
+ * it-058 C6：AI 思考中的三点呼吸指示——assistant 气泡同形制小容器
+ * （paper + hairline 16dp 圆角），三点 140ms 错相呼吸；灰阶、无音效。
+ */
+@Composable
+private fun TypingDots() {
+    val ec = editorialColors()
+    val transition = rememberInfiniteTransition(label = "typing")
+    val dots = (0..2).map { i ->
+        transition.animateFloat(
+            0.25f, 1f,
+            infiniteRepeatable(
+                tween(420, delayMillis = i * 140, easing = LinearEasing),
+                RepeatMode.Reverse,
+            ),
+            label = "dot$i",
+        )
+    }
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = ec.paper,
+        border = BorderStroke(1.dp, ec.hairline),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            dots.forEach { a ->
+                Box(
+                    Modifier
+                        .size(6.dp)
+                        .graphicsLayer { alpha = a.value }
+                        .background(ec.inkFaint, CircleShape),
+                )
             }
         }
     }

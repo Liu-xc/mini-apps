@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -36,6 +37,7 @@ fun PhotoCard(
     matColor: Color? = null,
 ) {
     if (!mat) {
+        // it-058 C1：灰阶占位兜住解码期（crossfade 只管占位→成图渐入，无占位即白块闪现）
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(file)
@@ -43,6 +45,9 @@ fun PhotoCard(
                 .build(),
             contentDescription = contentDescription,
             contentScale = contentScale,
+            placeholder = ColorPainter(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ),
             modifier = modifier.clip(RoundedCornerShape(corner)),
         )
         return

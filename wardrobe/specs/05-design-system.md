@@ -53,17 +53,22 @@
 |---|---|---|---|
 | 1 | 槽位轮播 | ~~HorizontalPager + graphicsLayer 缩放形变~~ → it-003 起为 3×3 迷你格内 HorizontalPager（吸附换衣保留；迷你尺寸下取消缩放/透明形变）；it-047 参数收敛：2 处 `HorizontalPager`（`SlotGrid.kt` 槽位、`OutfitDetailScreen.kt` W7 轮播）显式 `PagerDefaults.flingBehavior(snapAnimationSpec = EditorialMotion.smooth())`、`beyondViewportPageCount = 1`（1.7.0+ 参数名），`SlotGrid.kt` 序号跳页 `animateScrollToPage` 同传 `animationSpec = EditorialMotion.smooth()` | W1、W7 |
 | 2 | 🎲 老虎机 | 逐槽位 `animateScrollToPage` 随机目标（it-047 显式 `animationSpec = EditorialMotion.smooth()`），槽间 100ms stagger；落定轻弹 scale 1→1.03→1 已落地（it-047：`snapshotFlow { settledPage }` 触发，`tween(80)` 上行、`EditorialMotion.pop()` 回落；启动 1.5s 内不弹，入场恢复不产生动效） | W1 |
-| 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图、穿搭格→W7 成品图，无缝放大 | W1→W5、W8→W7 |
+| 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图、穿搭格→W7 成品图，无缝放大。**it-058 起真正接线**：W1 槽位/W3 网格挂 `item-photo-${id}`（仅 pager 当前页挂 key，防预取页抢匹配）；W8 hero 挂 `outfit-photo-${id}-0` 与 W7 轮播 page 0 对齐（W7 仅当前页挂 key；停在他页返回时无匹配即整页转场，不错位） | W1→W5、W3→W5、W8→W7 |
 | 4 | 复制成功 | 按钮内容 AnimatedContent morph 成 ✓，同时 Canvas 自绘彩屑粒子（15-20 粒，砖红/墨黑/米白三色，重力下落 600ms） | W6 |
 | 5 | 滑动删除 | Material3 `SwipeToDismissBox`，背景显现删除图标，删除后 `animateItem` 淡出回落 | W3 |
 | 6 | 切角色 | 数据区 `Crossfade`，角色名 `slideInVertically`+fade | W2 确认后 |
-| 7 | 列表入场（it-028 落地） | `StaggeredEntrance`：24ms 错峰 fade+上移 28f，`rememberSaveable` 标志**仅首进播放**（DESIGN.md §3 预算）；删除/重排走 `animateItem()` | W3/W8 |
-| 8 | 空状态 | Lottie 动画（衣架/晾衣绳插画，取自 LottieFiles 免费资源，json 放 res/raw） | W1/W3/W8 空态 |
+| 7 | 列表入场（it-028 落地） | `StaggeredEntrance`：24ms 错峰 fade+上移 28f，`rememberSaveable` 标志**仅首进播放**（DESIGN.md §3 预算）；删除/重排走 `animateItem()`。it-058 起 W1 以四分区（头/上身/腿/脚 ZoneRow）为单位同规格入场 | W1/W3/W8 |
+| 8 | 空状态 | ~~Lottie 动画~~（it-001 起改零外部依赖自绘：EmptyState 内嵌 1400ms 往复 sway 摆动图形，本条勘误 it-058 收口） | W1/W3/W8 空态 |
 | 9 | 收藏 ☆→★ | scale 心跳 1→1.2→1 + accent 着色 | W6/W7 |
-| 10 | 底部弹层 | ModalBottomSheet（M3 弹簧），导出面板内容 staggered 淡入 | W2/W6 |
+| 10 | 底部弹层 | ModalBottomSheet（M3 弹簧），导出面板画面设定行 staggered 淡入（it-058 兑现：`StaggeredEntrance` 包 `DimensionSettingRow`，sheet 每次打开轻错峰） | W2/W6 |
 | 11 | 统计数字 count-up（it-027） | `CountUpText`：Animatable 首进 0→N 起数、档位切换旧值过渡，`EditorialMotion.smooth()`，三格 60ms 错峰 | W9 三大数字 |
 | 12 | 卡组飞出/随机抽取（it-047 自研内核，弹簧承 it-046 基准） | `libs/carddeck` 换官方 `AnchoredDraggable` 自研内核（三方 compose-swipeable-cards 依赖与 JitPack 仓库已删）：**单一弹簧源** `DeckStyle.flyOutSpec = spring(0.9, 500)`（≈0.32s 到位、<0.5% 过冲，替代旧库默认 spring(0.6,100) 的 1s 晃尾）——手势落定/程序化 `animateTo`/回中共用，旋转=位移/50 派生无第二弹簧；甩出判定 = 速度 ≥125dp/s 或 100dp 位置阈值（自研 `flingTarget`，官方 computeTarget 在 v=0 只取最近锚点、位置阈值不参与）；`drawRandom` 步距 420→560ms 与飞行同量级（旧 55ms 连发=多张叠飞撕裂；实测 483–607ms 含提交开销）、飞出 300–360ms 首达截停、末张回卷甩出+揭示不再瞬移；‹n/m› 精确 ±1（`committedTarget` 幂等提交门）；W1 序号 n/m 末页回卷即时落位保持。**it-048 修订**：提交信号改到达帧观察（offset 精确到锚 + 三重落定门）+ 按下快进结算 `onDeckDown`——连滑间隔小于飞行动画时长也逐张推进（旧 settledValue 翻转模型吞同向二次甩出，实测「连续滑动滑不动」）；卡组容器**不得 clipToBounds**（W8 甩卡真实飞行需溢出空间，it-031 旧库时代的包裹已删） | W8 卡组、W1 槽位序号 |
-| 13 | 减弱动态降级（it-047） | 读 `Settings.Global.ANIMATOR_DURATION_SCALE == 0`（ContentObserver 实时感知，切换无需重启）→ 事实源唯一、分层双入口：carddeck `rememberDeckReduceMotion()`（W8 卡组，`CardDeck` 默认参数接线）与 `EditorialMotion.reduceMotion()`（W1/W7 pager），调用点不散写。W8：手势/程序化落定 `snap(0)` 即时、`drawRandom` 每步即时落位 + 每步一次 Confirm 震（保留步距节奏，最终落定震仍归 app 层）、拖拽保持 1:1（输入非动画）。W1/W7：`EditorialMotion.pagerFling` 降级返回自实现瞬时吸附（就近整页直接落位）——官方 `SnapFlingBehavior` 的 decay+snap 被钉死在 scale=1 的 withContext（foundation 1.8.3 字节码实证），不吃系统缩放，仅改 snapAnimationSpec 不够；`animateScrollToPage`/轻弹 Animatable 走框架 MotionDurationScale 自动降级；对应 DESIGN.md §3「跟随系统『移除动画/减弱动态』无障碍设置整体降级」 | 系统动画缩放=0 时的 W8 卡组 + W1 槽位/序号 + W7 轮播 |
+| 13 | 减弱动态降级（it-047） | 读 `Settings.Global.ANIMATOR_DURATION_SCALE == 0`（ContentObserver 实时感知，切换无需重启）→ 事实源唯一、分层双入口：carddeck `rememberDeckReduceMotion()`（W8 卡组，`CardDeck` 默认参数接线）与 `EditorialMotion.reduceMotion()`（W1/W7 pager），调用点不散写。W8：手势/程序化落定 `snap(0)` 即时、`drawRandom` 每步即时落位 + 每步一次 Confirm 震（保留步距节奏，最终落定震仍归 app 层）、拖拽保持 1:1（输入非动画）。W1/W7：`EditorialMotion.pagerFling` 降级返回自实现瞬时吸附（就近整页直接落位）——官方 `SnapFlingBehavior` 的 decay+snap 被钉死在 scale=1 的 withContext（foundation 1.8.3 字节码实证），不吃系统缩放，仅改 snapAnimationSpec 不够；`animateScrollToPage`/轻弹 Animatable 走框架 MotionDurationScale 自动降级；对应 DESIGN.md §3「跟随系统『移除动画/减弱动态』无障碍设置整体降级」。it-058 增补：`pressScale` 减弱动态下不缩放；Tab/BubbleIn/StaggeredEntrance 走框架 MotionDurationScale 自动降级 | 系统动画缩放=0 时的 W8 卡组 + W1 槽位/序号 + W7 轮播 + 全站按压/入场 |
+| 14 | 按压反馈（it-058 C3） | `Modifier.pressScale()`：按下快弹簧降至 0.97、抬手 `EditorialMotion.pop()` 回弹；自行侦测按压不依赖 InteractionSource；**只挂大体积感元素**（照片卡/整卡/主 CTA 0.96–0.975），文字按钮保留涟漪不叠加双层反馈；减弱动态不缩放 | W1 槽位照片、W3 单品卡、W1/W6「复制长图」CTA |
+| 15 | 照片灰阶占位（it-058 C1） | `PhotoCard` 非 mat 分支 `placeholder = ColorPainter(surfaceVariant@45%)` 兜住磁盘解码期，crossfade 220ms 占位→成图（此前无占位=全站白块闪现；mat 分支衬纸底色本就兜底）；不动 Coil 内存缓存 key（不同尺寸共享条目会导致放大端取到小图变糊） | 全站 PhotoCard |
+| 16 | 对话气泡入场与 typing（it-058 C6） | `BubbleIn`：fade 200ms + 上移 1/10 高度 220ms（首次组合播放；框架随系统动画缩放降级）；`TypingDots` 三点 140ms 错相呼吸替代 14dp 转圈+文字，容器与 assistant 气泡同形制（paper+hairline 16dp） | W13 |
+| 17 | 随机一套忙碌态（it-058 C5） | 滚动 job 存活期按钮进入忙碌：Casino 图标 700ms/圈匀速旋转 + 存活期忽略点击（连点会重叠排轮次，槽位运动互相打断撕裂）；结束自然静止 | W1 顶栏 |
+| 18 | Tab 转场与冷启动衔接（it-058 C4/C8） | 顶层 Tab 由纯 `Crossfade` 升 `AnimatedContent`：fadeIn 220ms + scale 0.985→1 对 fadeOut 160ms（预算内、M3 微层次）；`values-v31`/`values-night-v31` 显式 `windowSplashScreenBackground` 对齐 paper/paper_dark，消除冷启动第三种底色 | 顶层四 Tab、冷启动 |
 
 ## 触感反馈（it-027 · DESIGN.md §4 基线）
 

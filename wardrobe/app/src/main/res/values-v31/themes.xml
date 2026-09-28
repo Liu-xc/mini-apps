@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- it-058 C8：Android 12+ 系统 splash 背景显式对齐窗口底色，消除冷启动「splash 白→内容」之外的
+     第三种底色（默认 splash 背景未设时取系统浅色，与 paper 有肉眼色差，录屏实测状态栏区闪变） -->
+<resources>
+    <style name="Theme.Wardrobe" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@color/paper</item>
+    </style>
+</resources>

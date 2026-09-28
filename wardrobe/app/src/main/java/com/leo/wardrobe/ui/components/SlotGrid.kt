@@ -178,6 +178,8 @@ fun SlotCell(
                         Modifier
                             .fillMaxSize()
                             .graphicsLayer { if (wished) alpha = 0.72f }
+                            // it-058 C3：按压缩放反馈（与进详情点击同一元素）
+                            .pressScale(0.975f)
                             // it-042 C4：单击进详情不变；长按补全名提示（窄槽「鼠尾…」兜底）
                             .combinedClickable(
                                 onClick = { onCardTap(item) },
@@ -214,6 +216,14 @@ fun SlotCell(
                             // 帽(1.0)/鞋(2.6) 极端比例裁切会剪帽檐/鞋底（内容包围盒实测），
                             // 保留 Fit 但衬纸固定浅色 #F2F3F5，主题无关不再变黑
                             val fitPaper = aspect >= 0.95f
+                            // it-058 C2：当前页挂共享元素（W1→W5 照片无缝放大，05 动效#3）；
+                            // 仅 settled/current 页挂 key——beyondViewport 预取页不参与匹配，
+                            // 否则转场时刻树中存在多个同前缀 key，来源端不可见也会抢匹配
+                            val shared = if (pagerState.currentPage == page) {
+                                Modifier.fillMaxSize().sharedPhoto("item-photo-${item.id}")
+                            } else {
+                                Modifier.fillMaxSize()
+                            }
                             PhotoCard(
                                 file = imageFileOf(item.imageFile),
                                 contentDescription = item.name,
@@ -221,7 +231,7 @@ fun SlotCell(
                                 mat = fitPaper,
                                 matColor = if (fitPaper) Color(0xFFF2F3F5) else null,
                                 contentScale = if (fitPaper) ContentScale.Fit else ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = shared,
                             )
                         }
                         // it-019：愿望卡左上「想买」角标 + 虚线描边，与已有单品一眼可辨

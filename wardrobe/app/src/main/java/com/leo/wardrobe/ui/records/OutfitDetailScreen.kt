@@ -69,6 +69,7 @@ import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.rememberHaptics
+import com.leo.wardrobe.ui.components.sharedPhoto
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.outfit.ExportSheet
 import com.leo.wardrobe.ui.theme.EditorialMotion
@@ -234,6 +235,8 @@ fun OutfitDetailScreen(
                         beyondViewportPageCount = 1,
                     ) { page ->
                         val img = outfit.effectImages[page]
+                        // it-058 C2：W8 hero ↔ W7 轮播共享元素（05 动效#3）——仅当前页挂 key
+                        // （page 0 与 W8 hero 对齐：进页飞入成立；停在他页返回时无匹配即整页转场，不错位）
                         PhotoCard(
                             file = vm.imageFileOf(img.file),
                             contentDescription = "成品效果图 ${page + 1}",
@@ -241,7 +244,14 @@ fun OutfitDetailScreen(
                             mat = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(0.86f),
+                                .aspectRatio(0.86f)
+                                .then(
+                                    if (pagerState.currentPage == page) {
+                                        Modifier.sharedPhoto("outfit-photo-${outfit.id}-$page")
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         )
                     }
                     if (outfit.effectImages.size > 1) {
