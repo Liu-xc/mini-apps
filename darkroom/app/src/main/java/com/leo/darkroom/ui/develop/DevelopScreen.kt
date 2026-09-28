@@ -2,6 +2,7 @@ package com.leo.darkroom.ui.develop
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +24,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,8 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -46,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
+import com.leo.darkroom.develop.EjectStyle
 import com.leo.darkroom.platform.ShakeDetector
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.EditorialMotion
@@ -65,17 +69,24 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
     val context = LocalContext.current
     val reduceMotion = EditorialMotion.reduceMotion()
 
-    // 出纸动画：卡片自槽口升起（1 → 0），随后启动显影
-    val eject = remember { Animatable(1f) }
+    // 出纸动画：卡片自槽口/片盒升起，随后启动显影。
+    // 由 state.ejecting 驱动而不是 LaunchedEffect(Unit)——Activity 被系统重建时
+    // 显影可能已经过半，重放出纸会让 92% 的会话又「吐」一次纸（it-007 实机发现）
+    val eject = remember { Animatable(if (state.ejecting) 1f else 0f) }
     val settle = remember { Animatable(1f) } // 定影落定轻弹 scale
-    LaunchedEffect(Unit) {
-        if (reduceMotion) {
-            eject.snapTo(0f)
-            vm.onEjectDone()
-            vm.skipDevelop()
+    LaunchedEffect(state.ejecting) {
+        if (state.ejecting) {
+            if (reduceMotion) {
+                eject.snapTo(0f)
+                vm.onEjectDone()
+                vm.skipDevelop()
+            } else {
+                // it-007 M2：分段顿挫的出纸（快推/微顿/缓出），替代原 pop 弹簧匀速滑出
+                eject.animateTo(0f, tween(EditorialMotion.EJECT_MS, easing = EditorialMotion.ejectEase))
+                vm.onEjectDone()
+            }
         } else {
-            eject.animateTo(0f, EditorialMotion.pop())
-            vm.onEjectDone()
+            eject.snapTo(0f)
         }
     }
 
@@ -120,7 +131,7 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
             )
             Spacer(Modifier.weight(1f))
             Text(
-                "${state.speed.label} · ${DevelopSpec.phaseAt(state.progress).label}",
+                "${state.speed.label} · ${state.mode.stageLabel(DevelopSpec.phaseAt(state.progress))}",
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.ink,
             )
@@ -138,60 +149,119 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
             val layout = com.leo.darkroom.card.CardLayout.solve(
                 with(density) { maxWidth.toPx() - 2.dp.toPx() },
                 with(density) { maxHeight.toPx() },
+                state.mode,
             )
             val cardWidthPx = layout.width
             val cardHeightPx = layout.height
 
             Box(contentAlignment = Alignment.Center) {
-                // 卡片（出纸位移 + 定影落定缩放）
+                // 卡片（出纸位移 + 定影落定缩放 + 脱纸阴影）
                 Box(
-                    Modifier.graphicsLayer {
-                        translationY = eject.value * cardHeightPx
-                        rotationZ = sin((1f - eject.value) * PI.toFloat()) * 1.15f
-                        scaleX = settle.value
-                        scaleY = settle.value
-                    },
+                    Modifier
+                        .graphicsLayer {
+                            when (state.mode.eject) {
+                                // 相纸自槽口升起
+                                EjectStyle.SLOT_RISE -> {
+                                    translationY = eject.value * cardHeightPx
+                                    rotationZ = sin((1f - eject.value) * PI.toFloat()) * 1.15f
+                                }
+                                // 胶片自片盒口横向卷出
+                                EjectStyle.FILM_WIND -> {
+                                    translationX = eject.value * cardWidthPx
+                                    rotationZ = sin((1f - eject.value) * PI.toFloat()) * 0.8f
+                                }
+                                // 数码屏原地开机点亮，不位移
+                                EjectStyle.SCREEN_WAKE -> {
+                                    val wake = 1f - eject.value
+                                    scaleX = 0.96f + 0.04f * wake
+                                    scaleY = 0.96f + 0.04f * wake
+                                }
+                            }
+                            scaleX = scaleX * settle.value
+                            scaleY = scaleY * settle.value
+                        }
+                        .shadow(8.dp, RectangleShape),
                 ) {
                     DevelopCard(
                         photo = state.photo,
                         spec = state.spec,
+                        mode = state.mode,
                         progress = state.progress,
                         cardWidthPx = cardWidthPx,
                         grain = vm.grain,
                     )
                 }
-                // 相机槽口：固定在卡片最终底缘之下（照片升起后完全脱出，不压卡脚）；
-                // 出纸过程中卡片自其后方升起——槽口画在卡片之上
-                if (eject.value > 0.001f) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset { IntOffset(0, 12.dp.roundToPx()) }
-                            .width(with(density) { (cardWidthPx * 0.92f).toDp() })
-                            .height(12.dp)
-                            .background(
-                                // Camera body remains a neutral graphite object in either theme.
-                                color = Color(0xFF171717),
-                                shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
-                            ),
-                    )
+
+                // —— 出纸素材：按模式给机器形态 ——
+                when (state.mode.eject) {
+                    // 相机槽口：固定在卡片最终底缘之下，出纸时被机构下压再回位
+                    EjectStyle.SLOT_RISE -> if (eject.value > 0.001f) {
+                        val push = (1f - eject.value).coerceIn(0f, 1f)
+                        val pressPx = with(density) { (5.dp * sin(PI.toFloat() * push)).roundToPx() }
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .offset { IntOffset(0, 12.dp.roundToPx() + pressPx) }
+                                .width(with(density) { (cardWidthPx * 0.92f).toDp() })
+                                .height(12.dp)
+                                .background(
+                                    // Camera body remains a neutral graphite object in either theme.
+                                    color = Color(0xFF171717),
+                                    shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp),
+                                ),
+                        )
+                    }
+
+                    // 片盒口：竖直机构条，胶片自其左侧卷出
+                    EjectStyle.FILM_WIND -> if (eject.value > 0.001f) {
+                        val push = (1f - eject.value).coerceIn(0f, 1f)
+                        val pressPx = with(density) { (5.dp * sin(PI.toFloat() * push)).roundToPx() }
+                        Box(
+                            Modifier
+                                .align(Alignment.CenterEnd)
+                                .offset { IntOffset(pressPx, 0) }
+                                .width(12.dp)
+                                .height(with(density) { (cardHeightPx * 0.96f).toDp() })
+                                .background(
+                                    color = Color(0xFF171717),
+                                    shape = RoundedCornerShape(topEnd = 6.dp, bottomEnd = 6.dp),
+                                ),
+                        )
+                    }
+
+                    // 开机扫描线：随点亮进度自上而下扫过整块屏
+                    EjectStyle.SCREEN_WAKE -> if (eject.value > 0.001f) {
+                        val sweep = 1f - eject.value.coerceIn(0f, 1f)
+                        Canvas(
+                            Modifier
+                                .align(Alignment.Center)
+                                .size(
+                                    with(density) { cardWidthPx.toDp() },
+                                    with(density) { cardHeightPx.toDp() },
+                                ),
+                        ) {
+                            val y = size.height * sweep
+                            drawRect(color = Color(0x12FFFFFF), size = Size(size.width, y))
+                            drawLine(
+                                color = Color(0x59FFFFFF),
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = 2.dp.toPx(),
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        // 进度读数 + 阶段
+        // 进度读数（阶段名由刻度条上方一排承担，此处不再重复）
         Row(
             Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.Bottom,
         ) {
-            Text(
-                DevelopSpec.phaseAt(state.progress).label,
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.ink,
-            )
-            Spacer(Modifier.weight(1f))
             Text(
                 "${(state.progress * 100).roundToInt()}%",
                 style = MaterialTheme.typography.titleMedium,
@@ -202,36 +272,29 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
 
         Spacer(Modifier.height(6.dp))
 
-        // 药水条
-        Slider(
-            value = state.progress,
-            onValueChange = { f ->
+        // 药水刻度条（it-007 M1：自绘化学刻度，替换 Material Slider）
+        ChemicalGauge(
+            progress = state.progress,
+            stageLabels = state.mode.stages,
+            onDragStart = {
                 if (!scrubbing) {
                     scrubbing = true
                     vm.pause()
                 }
-                vm.seek(f)
             },
-            onValueChangeFinished = {
-                scrubbing = false
-                vm.play()
+            onSeek = vm::seek,
+            onDragEnd = {
+                if (scrubbing) {
+                    scrubbing = false
+                    vm.play()
+                }
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = colors.accent,
-                activeTrackColor = colors.accent,
-                inactiveTrackColor = colors.hairline,
-            ),
         )
 
         Spacer(Modifier.height(2.dp))
         Text(
-            when {
-                state.progress < DevelopSpec.LATENT_END -> "先让这一刻安静一会儿"
-                state.progress < DevelopSpec.EMERGING_END -> "让回忆慢慢浮出来"
-                state.progress < 1f -> "光影正在慢慢定住"
-                else -> "这一刻，已经好好留下"
-            },
+            state.mode.copyAt(state.progress),
             style = MaterialTheme.typography.bodyMedium,
             color = colors.ink,
             fontWeight = FontWeight.Medium,
@@ -240,9 +303,13 @@ fun DevelopScreen(vm: DarkroomViewModel, state: UiState) {
         Spacer(Modifier.height(3.dp))
         Text(
             if (state.shakeHint && state.shakeEnabled && !reduceMotion) {
-                "轻轻晃动，亲手唤醒这张相纸"
+                when (state.mode) {
+                    DevelopMode.POLAROID -> "轻轻晃动，亲手唤醒这张相纸"
+                    DevelopMode.DIGITAL -> "轻轻晃动，让画面稳下来"
+                    DevelopMode.FILM -> "轻轻晃动，让药液走匀"
+                }
             } else {
-                "拖动药水条，可正放或倒放重看"
+                "拖动刻度条，可正放或倒放重看"
             },
             style = MaterialTheme.typography.bodySmall,
             color = colors.inkFaint,

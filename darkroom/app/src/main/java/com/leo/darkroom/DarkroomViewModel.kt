@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
@@ -14,6 +13,7 @@ import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.data.PhotoRepository
 import com.leo.darkroom.data.PrefsStore
 import com.leo.darkroom.develop.DevelopClock
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpeed
 import com.leo.darkroom.export.ExportPlan
 import com.leo.darkroom.export.ShareHelper
@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -56,6 +57,8 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         val shakeHint: Boolean = false,
         val speed: DevelopSpeed = DevelopSpeed.STANDARD,
         val shakeEnabled: Boolean = true,
+        /** 当前显影模式（it-007 US-14；W1 选择，会话内不变） */
+        val mode: DevelopMode = DevelopMode.POLAROID,
         val loadingPhoto: Boolean = false,
         val exporting: Boolean = false,
         val exportProgress: Float = 0f,
@@ -77,6 +80,9 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
     private var fixedJob: Job? = null
     private var cameraUri: Uri? = null
 
+    /** 用户是否已在本次进程内选过显影模式（挡启动期 DataStore 回填） */
+    private var modeChosen = false
+
     init {
         viewModelScope.launch {
             prefs.speed.collect { speed ->
@@ -85,6 +91,16 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         }
         viewModelScope.launch {
             prefs.shakeEnabled.collect { v -> _state.update { it.copy(shakeEnabled = v) } }
+        }
+        viewModelScope.launch {
+            // 模式只在启动时读一次（it-007）：W1 的 setMode 是即时真源。
+            // DataStore 首次读取可能晚于用户点击，晚到的旧快照会把刚选的模式冲回去，
+            // 所以用户一旦选过就不再接受启动期的回填。
+            prefs.mode.first().let { m ->
+                _state.update { s ->
+                    if (!modeChosen && s.screen == Screen.PICK) s.copy(mode = m) else s
+                }
+            }
         }
         viewModelScope.launch {
             prefs.watermarkDefault.collect { v ->
@@ -280,6 +296,13 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
 
     fun setSpeed(speed: DevelopSpeed) = viewModelScope.launch { prefs.setSpeed(speed) }
 
+    /** 显影模式（W1 选择，it-007 US-14）：先落会话态再写偏好，避免选完立即开洗时读到旧值 */
+    fun setMode(mode: DevelopMode) {
+        modeChosen = true
+        _state.update { it.copy(mode = mode) }
+        viewModelScope.launch { prefs.setMode(mode) }
+    }
+
     fun setShakeEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setShakeEnabled(enabled) }
 
     fun setWatermarkDefault(enabled: Boolean) = viewModelScope.launch { prefs.setWatermarkDefault(enabled) }
@@ -295,7 +318,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
             runCatching {
                 val bmp = withContext(Dispatchers.Default) {
                     PhotoCardPainter.renderShareFrame(
-                        photo, s.spec, CardPalette.Default, grain, s.exportFormat, look = s.photoLook,
+                        photo, s.spec, s.mode, grain, s.exportFormat, look = s.photoLook,
                     )
                 }
                 withContext(Dispatchers.IO) {
@@ -331,12 +354,13 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
             _state.update { it.copy(exporting = true, exportProgress = 0f) }
             runCatching {
                 val outFile = File(getApplication<Application>().cacheDir, "export_${System.currentTimeMillis()}.mp4")
-                val plan = ExportPlan(developMs = s.speed.durationMs)
+                val plan = ExportPlan(developMs = s.speed.durationMs, leadMs = s.mode.leadMs)
                 withContext(Dispatchers.IO) {
                     exporter.export(
                         VideoExporter.Params(
                             photo = photo,
                             spec = s.spec,
+                            mode = s.mode,
                             plan = plan,
                             format = s.exportFormat,
                             look = s.photoLook,

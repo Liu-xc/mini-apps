@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
 import com.leo.darkroom.card.SampleArt
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.editorialColors
 
@@ -140,6 +144,30 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
                 Text("现在拍一张")
             }
 
+            // it-007 US-14 显影模式：拍立得 / 数码相机 / 胶片
+            Spacer(Modifier.height(16.dp))
+            Text("显影模式", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+            Spacer(Modifier.height(10.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                DevelopMode.entries.forEach { mode ->
+                    ModeChip(
+                        mode = mode,
+                        selected = state.mode == mode,
+                        onClick = { vm.setMode(mode) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                state.mode.note,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.inkFaint,
+            )
+
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("先从一张样片开始", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
@@ -192,5 +220,82 @@ fun PickScreen(vm: DarkroomViewModel, state: UiState) {
             style = MaterialTheme.typography.labelSmall,
             color = colors.inkFaint,
         )
+    }
+}
+
+/**
+ * 显影模式选择（it-007 US-14）：三枚等宽 chip，选中态同时用边框与字重表达，
+ * 微型示意图是 Canvas 画的形体，不用 emoji（DESIGN §5 反例 2）。
+ */
+@Composable
+private fun ModeChip(
+    mode: DevelopMode,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = editorialColors()
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(66.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = colors.surface,
+        border = BorderStroke(
+            if (selected) 1.5.dp else 1.dp,
+            if (selected) colors.ink else colors.hairline,
+        ),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Canvas(Modifier.size(22.dp)) { drawModeGlyph(mode, colors) }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                mode.label,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) colors.ink else colors.inkFaint,
+            )
+        }
+    }
+}
+
+/** 三种卡面的缩微剪影：相纸白框 / 屏幕 + OSD / 齿孔片条 */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawModeGlyph(
+    mode: DevelopMode,
+    colors: com.leo.darkroom.ui.theme.EditorialColors,
+) {
+    val w = size.width
+    val h = size.height
+    when (mode) {
+        DevelopMode.POLAROID -> {
+            // 白框相纸：成像区在上、底边更宽
+            drawRect(colors.ink, topLeft = Offset(w * 0.16f, h * 0.03f), size = Size(w * 0.68f, h * 0.94f))
+            drawRect(colors.paper, topLeft = Offset(w * 0.23f, h * 0.10f), size = Size(w * 0.54f, h * 0.50f))
+        }
+
+        DevelopMode.DIGITAL -> {
+            // 深色机身 + 亮屏 + 底部 OSD 一横
+            drawRect(colors.ink, topLeft = Offset(w * 0.08f, h * 0.12f), size = Size(w * 0.84f, h * 0.74f))
+            drawRect(colors.paper, topLeft = Offset(w * 0.15f, h * 0.19f), size = Size(w * 0.70f, h * 0.44f))
+            drawRect(
+                colors.paper,
+                topLeft = Offset(w * 0.28f, h * 0.72f),
+                size = Size(w * 0.44f, h * 0.06f),
+            )
+        }
+
+        DevelopMode.FILM -> {
+            // 片条：深底 + 中间片格 + 上下两排齿孔
+            drawRect(colors.ink, topLeft = Offset(0f, h * 0.18f), size = Size(w, h * 0.64f))
+            drawRect(colors.paper, topLeft = Offset(w * 0.07f, h * 0.33f), size = Size(w * 0.86f, h * 0.34f))
+            for (i in 0..3) {
+                val x = w * 0.08f + i * w * 0.24f
+                drawRect(colors.paper, topLeft = Offset(x, h * 0.22f), size = Size(w * 0.13f, h * 0.07f))
+                drawRect(colors.paper, topLeft = Offset(x, h * 0.71f), size = Size(w * 0.13f, h * 0.07f))
+            }
+        }
     }
 }

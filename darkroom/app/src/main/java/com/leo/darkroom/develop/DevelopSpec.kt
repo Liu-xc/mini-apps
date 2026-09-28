@@ -34,6 +34,23 @@ data class DevelopVisual(
     val grain: Float,
     /** 暗角强度 0..1 */
     val vignette: Float,
+    /**
+     * 染料分层上色时序（it-007 M2）：真实相纸的青/品红/黄三层不是同时出现，
+     * 三者是各通道的瞬时衰减——青层先压红（中途青灰）、品红层压绿、黄层压蓝，
+     * 定影后全部回到 1，白平衡归位。
+     */
+    val redGain: Float = 1f,
+    val greenGain: Float = 1f,
+    val blueGain: Float = 1f,
+    /** 暗部抬升（0..1，写入 0..255 色彩空间的偏移比例）——相纸不给死黑 */
+    val shadowLift: Float = 0f,
+    /** 高光压缩 0..1（相纸动态范围窄） */
+    val highlightGain: Float = 1f,
+    /**
+     * 负片反相程度 0..1（it-007 M3 胶片模式）：1 = 完全负片，0 = 正片。
+     * 4×5 色彩矩阵可完整表达（gain = 1-2t，offset = 255t）。
+     */
+    val invert: Float = 0f,
 )
 
 /**
@@ -52,25 +69,99 @@ object DevelopSpec {
         else -> DevelopPhase.FIXED
     }
 
-    /** 确定性映射：进度 → 全部视觉参数 */
-    fun visualAt(progress: Float): DevelopVisual {
+    /** 确定性映射：进度 → 全部视觉参数（默认拍立得） */
+    fun visualAt(progress: Float): DevelopVisual = visualAt(DevelopMode.POLAROID, progress)
+
+    /** 确定性映射：模式 + 进度 → 全部视觉参数（it-007 M3） */
+    fun visualAt(mode: DevelopMode, progress: Float): DevelopVisual {
         val p = progress.coerceIn(0f, 1f)
         val latent = smoothstep(0f, LATENT_END, p)
         val emerge = smoothstep(LATENT_END, EMERGING_END, p)
         val fix = smoothstep(EMERGING_END, 1f, p)
-        return DevelopVisual(
-            phase = phaseAt(p),
-            imageAlpha = 0.10f + 0.25f * latent + 0.65f * emerge,
-            saturation = 0.05f + 0.30f * latent + 0.50f * emerge + 0.15f * fix,
-            contrast = 0.85f + 0.05f * latent + 0.12f * emerge + 0.08f * fix,
-            brightness = 0.60f + 0.15f * latent + 0.22f * emerge + 0.03f * fix,
-            warmth = -0.35f * latent + 0.85f * emerge - 0.42f * fix,
-            blurFraction = 0.045f - 0.012f * latent - 0.029f * emerge - 0.004f * fix,
-            reveal = (0.10f + 0.15f * latent + 0.75f * emerge).coerceAtMost(1f),
-            grain = 0.55f - 0.15f * latent - 0.18f * emerge - 0.10f * fix,
-            vignette = 0.75f - 0.12f * latent - 0.30f * emerge - 0.13f * fix,
-        )
+        return when (mode) {
+            DevelopMode.POLAROID -> polaroidVisual(p, latent, emerge, fix)
+            DevelopMode.DIGITAL -> digitalVisual(p, latent, emerge, fix)
+            DevelopMode.FILM -> filmVisual(p, latent, emerge, fix)
+        }
     }
+
+    /** 拍立得：化学推进 + 分染料上色 + 窄动态相纸影调 */
+    private fun polaroidVisual(
+        p: Float,
+        latent: Float,
+        emerge: Float,
+        fix: Float,
+    ): DevelopVisual = DevelopVisual(
+        phase = phaseAt(p),
+        imageAlpha = 0.10f + 0.25f * latent + 0.65f * emerge,
+        saturation = 0.05f + 0.30f * latent + 0.50f * emerge + 0.15f * fix,
+        contrast = 0.85f + 0.05f * latent + 0.12f * emerge + 0.08f * fix,
+        brightness = 0.60f + 0.15f * latent + 0.22f * emerge + 0.03f * fix,
+        // 中途压向青冷、定影回正微暖（真实相纸先冷后暖）
+        warmth = -0.38f * latent - 0.18f * emerge + 0.64f * fix,
+        // 末态不给完全锐利：保留极轻柔焦（0.006）
+        blurFraction = 0.050f - 0.014f * latent - 0.024f * emerge - 0.006f * fix,
+        reveal = (0.10f + 0.15f * latent + 0.75f * emerge).coerceAtMost(1f),
+        grain = 0.55f - 0.12f * latent - 0.15f * emerge - 0.08f * fix,
+        // 暗角随显影一起沉降：起手过重会把最早从边缘显现的一小块压成脏黑斑
+        vignette = 0.45f - 0.08f * latent - 0.12f * emerge - 0.05f * fix,
+        // 染料分层：青层压红（早）→ 黄层压蓝（中）→ 品红层压绿（晚），定影后全部归位
+        redGain = 1f - 0.15f * bump(p, 0.10f, 0.38f, 0.88f),
+        greenGain = 1f - 0.06f * bump(p, 0.42f, 0.68f, 0.96f),
+        blueGain = 1f - 0.05f * bump(p, 0.28f, 0.55f, 0.92f),
+        shadowLift = 0.012f + 0.038f * fix,
+        highlightGain = 1f - 0.06f * fix,
+        invert = 0f,
+    )
+
+    /** 数码相机：屏幕点亮 + 网格块加载——无染料、无窄动态、末态干净锐利 */
+    private fun digitalVisual(
+        p: Float,
+        latent: Float,
+        emerge: Float,
+        fix: Float,
+    ): DevelopVisual = DevelopVisual(
+        phase = phaseAt(p),
+        imageAlpha = 0.06f + 0.34f * latent + 0.60f * emerge,
+        saturation = 0.40f + 0.28f * latent + 0.27f * emerge + 0.05f * fix,
+        contrast = 0.88f + 0.05f * latent + 0.11f * emerge + 0.06f * fix,
+        brightness = 0.72f + 0.13f * latent + 0.13f * emerge + 0.02f * fix,
+        warmth = 0f,
+        blurFraction = 0.030f - 0.014f * latent - 0.014f * emerge - 0.002f * fix,
+        reveal = (0.18f + 0.42f * latent + 0.40f * emerge).coerceAtMost(1f),
+        // 颗粒是传感器噪点：起手明显，成像后收得很小
+        grain = 0.50f - 0.20f * latent - 0.15f * emerge - 0.05f * fix,
+        vignette = 0.16f - 0.04f * latent - 0.06f * emerge - 0.02f * fix,
+        redGain = 1f,
+        greenGain = 1f,
+        blueGain = 1f,
+        shadowLift = 0f,
+        highlightGain = 1f,
+        invert = 0f,
+    )
+
+    /** 胶片：负片从反相翻正 + 重颗粒 + 片基影调 */
+    private fun filmVisual(
+        p: Float,
+        latent: Float,
+        emerge: Float,
+        fix: Float,
+    ): DevelopVisual = DevelopVisual(
+        phase = phaseAt(p),
+        imageAlpha = 0.14f + 0.31f * latent + 0.55f * emerge,
+        saturation = 0.12f + 0.23f * latent + 0.45f * emerge + 0.20f * fix,
+        contrast = 0.80f + 0.06f * latent + 0.14f * emerge + 0.10f * fix,
+        brightness = 0.70f + 0.12f * latent + 0.15f * emerge + 0.03f * fix,
+        warmth = -0.30f * latent - 0.15f * emerge + 0.55f * fix,
+        blurFraction = 0.035f - 0.010f * latent - 0.018f * emerge - 0.005f * fix,
+        reveal = (0.12f + 0.30f * latent + 0.58f * emerge).coerceAtMost(1f),
+        grain = 0.60f - 0.14f * latent - 0.16f * emerge - 0.05f * fix,
+        vignette = 0.40f - 0.06f * latent - 0.12f * emerge - 0.04f * fix,
+        shadowLift = 0.015f + 0.035f * fix,
+        highlightGain = 1f - 0.05f * fix,
+        // 负片在显影中段翻正：起手全反相，72% 处归为正片
+        invert = 1f - smoothstep(0.15f, 0.72f, p),
+    )
 
     /**
      * 进度 → RGBA 4×5 色彩矩阵（20 floats，行优先、每行末列为偏移）。
@@ -114,8 +205,20 @@ object DevelopSpec {
             lumR - lumR * s, lumG - lumG * s, lumB + (1 - lumB) * s, 0f, 0f,
             0f, 0f, 0f, 1f, 0f,
         )
-        // 列向量约定 v'=M·v：先亮度→对比→色温→饱和 = 矩阵乘序 sat·warm·contrast·bright
-        return concat(sat, concat(warm, concat(contrast, bright)))
+        // 相纸/片基影调：染料分层增益 + 窄动态（暗部 lift / 高光 gain）+ 负片反相。
+        // 注意本管线工作在 0..255 色彩空间，lift 与反相偏移必须 ×255 写入偏移列。
+        val lift = v.shadowLift * 255f
+        val invert = v.invert.coerceIn(0f, 1f)
+        val invertGain = 1f - 2f * invert
+        val invertOffset = 255f * invert
+        val tone = floatArrayOf(
+            v.redGain * v.highlightGain * invertGain, 0f, 0f, 0f, lift + invertOffset,
+            0f, v.greenGain * v.highlightGain * invertGain, 0f, 0f, lift + invertOffset,
+            0f, 0f, v.blueGain * v.highlightGain * invertGain, 0f, lift + invertOffset,
+            0f, 0f, 0f, 1f, 0f,
+        )
+        // 列向量约定 v'=M·v：先亮度→对比→色温→饱和→影调 = 矩阵乘序 tone·sat·warm·contrast·bright
+        return concat(tone, concat(sat, concat(warm, concat(contrast, bright))))
     }
 
     /** 模糊像素数：比例 × 照片短边 */
@@ -145,4 +248,8 @@ object DevelopSpec {
         val t = ((x - edge0) / (edge1 - edge0)).coerceIn(0f, 1f)
         return t * t * (3f - 2f * t)
     }
+
+    /** 钟形 bump：[a, peak, b] 起—峰—落，返回 0..1（染料分层上色时序用） */
+    fun bump(p: Float, a: Float, peak: Float, b: Float): Float =
+        smoothstep(a, peak, p) - smoothstep(peak, b, p)
 }

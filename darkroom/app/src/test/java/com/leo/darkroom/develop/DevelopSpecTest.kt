@@ -57,12 +57,33 @@ class DevelopSpecTest {
         assertEquals(0f, m[17], 1e-6f)
         assertEquals(1f, m[18], 1e-6f)
         assertEquals(0f, m[19], 1e-6f)
-        // 对角线 = 亮度×对比，R/B 叠加色温残留（w=0.08 微暖是定影设计值）
+        // 对角线 = 亮度×对比×影调（染料层定影归位=1），R/B 再叠加色温残留
+        // （w=0.08 微暖是定影设计值）；影调层 = 分通道染料增益 × 高光压缩
         val v = DevelopSpec.visualAt(1f)
         val g = v.brightness * v.contrast
-        assertEquals(g * (1f + 0.1f * v.warmth), m[0], 1e-3f)
-        assertEquals(g, m[6], 1e-3f)
-        assertEquals(g * (1f - 0.1f * v.warmth), m[12], 1e-3f)
+        assertEquals(g * (1f + 0.1f * v.warmth) * v.redGain * v.highlightGain, m[0], 1e-3f)
+        assertEquals(g * v.greenGain * v.highlightGain, m[6], 1e-3f)
+        assertEquals(g * (1f - 0.1f * v.warmth) * v.blueGain * v.highlightGain, m[12], 1e-3f)
+        // 染料全部归位、窄动态生效（暗部被抬起）
+        assertEquals(1f, v.redGain, 1e-6f)
+        assertEquals(1f, v.greenGain, 1e-6f)
+        assertEquals(1f, v.blueGain, 1e-6f)
+        assertTrue(v.shadowLift > 0.01f)
+        assertTrue(v.highlightGain < 1f)
+    }
+
+    @Test
+    fun `dye layers develop in sequence and settle at the end`() {
+        // 中途：青层先压红 → 画面偏青；品红层压绿、黄层压蓝稍晚
+        val mid = DevelopSpec.visualAt(0.40f)
+        assertTrue(mid.redGain < 1f)
+        assertTrue(mid.greenGain >= mid.redGain)
+        // 起点与终点染料均归位（不给首帧/末帧色偏）
+        assertEquals(1f, DevelopSpec.visualAt(0f).redGain, 1e-6f)
+        assertEquals(1f, DevelopSpec.visualAt(1f).blueGain, 1e-6f)
+        // 中途色温压向青冷，定影回正微暖
+        assertTrue(DevelopSpec.visualAt(0.70f).warmth < 0f)
+        assertTrue(DevelopSpec.visualAt(1f).warmth > 0f)
     }
 
     @Test
@@ -93,5 +114,64 @@ class DevelopSpecTest {
         assertEquals(0f, DevelopSpec.smoothstep(0.15f, 0.7f, -1f), 1e-6f)
         assertEquals(1f, DevelopSpec.smoothstep(0.15f, 0.7f, 5f), 1e-6f)
         assertEquals(0.5f, DevelopSpec.smoothstep(0f, 1f, 0.5f), 1e-6f)
+    }
+
+    // —— it-007 M3：模式曲线 ——
+
+    @Test
+    fun `every mode is deterministic and ends fully developed`() {
+        DevelopMode.entries.forEach { mode ->
+            val a = DevelopSpec.visualAt(mode, 0.42f)
+            val b = DevelopSpec.visualAt(mode, 0.42f)
+            assertEquals("$mode must be deterministic", a, b)
+
+            val start = DevelopSpec.visualAt(mode, 0f)
+            val end = DevelopSpec.visualAt(mode, 1f)
+            assertEquals("$mode end reveal", 1f, end.reveal, 1e-6f)
+            assertEquals("$mode end alpha", 1f, end.imageAlpha, 1e-5f)
+            assertEquals("$mode end saturation", 1f, end.saturation, 1e-5f)
+            assertTrue("$mode starts dimmer", start.brightness < end.brightness)
+            assertTrue("$mode starts blurrier", start.blurFraction > end.blurFraction)
+        }
+    }
+
+    @Test
+    fun `film starts as a negative and flips to a positive`() {
+        val start = DevelopSpec.visualAt(DevelopMode.FILM, 0f)
+        assertTrue("fully negative at start", start.invert >= 0.99f)
+        assertEquals("positive by the end", 0f, DevelopSpec.visualAt(DevelopMode.FILM, 1f).invert, 1e-6f)
+
+        val m = DevelopSpec.colorMatrix(start)
+        assertTrue("negative inverts the channel gain", m[0] < 0f)
+        assertTrue("negative pushes the offset near white", m[4] > 200f)
+    }
+
+    @Test
+    fun `digital stays neutral with no film tone roll-off`() {
+        val v = DevelopSpec.visualAt(DevelopMode.DIGITAL, 1f)
+        assertEquals(1f, v.redGain, 1e-6f)
+        assertEquals(1f, v.blueGain, 1e-6f)
+        assertEquals(0f, v.shadowLift, 1e-6f)
+        assertEquals(1f, v.highlightGain, 1e-6f)
+        assertEquals(0f, v.warmth, 1e-6f)
+        assertEquals(0f, v.invert, 1e-6f)
+    }
+
+    @Test
+    fun `modes read differently at the same progress`() {
+        val mid = 0.5f
+        val polaroid = DevelopSpec.visualAt(DevelopMode.POLAROID, mid)
+        val digital = DevelopSpec.visualAt(DevelopMode.DIGITAL, mid)
+        val film = DevelopSpec.visualAt(DevelopMode.FILM, mid)
+        // 颗粒：胶片最重，数码最轻
+        assertTrue("film grain > polaroid", film.grain > polaroid.grain)
+        assertTrue("polaroid grain > digital", polaroid.grain > digital.grain)
+        // 暗角：数码几乎不给
+        assertTrue("polaroid vignette > digital", polaroid.vignette > digital.vignette)
+        // 中途只有胶片还在反相（p=0.5 时已翻掉约 2/3，仍是部分负片）
+        assertTrue("film still part-negative", film.invert > 0.1f)
+        assertTrue("film is further from positive than the others", film.invert > digital.invert)
+        assertEquals(0f, digital.invert, 1e-6f)
+        assertEquals(0f, polaroid.invert, 1e-6f)
     }
 }

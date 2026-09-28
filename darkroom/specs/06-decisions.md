@@ -54,3 +54,23 @@
 - **背景**：径向遮罩边缘规则，图片、视频与预览缺少同构分享布局；逐帧随机噪声无法稳定重放或 seek。
 - **决策**：`ChemicalDiffusion` 以照片确定性种子与 progress 生成低频不规则扩散遮罩，Compose/native 渲染共用，native 位图按 progress 桶缓存；`ShareFormat` 与纯数学 `ShareLayout` 放在 `card` 层，让 `export → card` 单向复用，静态图片、视频和预览共用 1:1/4:5/9:16 构图。默认 4:5。
 - **代价**：遮罩在 192×192 采样后双线性放大；与真实液体的三维流体模拟不同，但成本稳定、照片离线可用且进度可重现。若后续替换扩散模型，保持输入/输出确定并继续共享同一布局契约。
+
+## ADR-007 显影模式三态抽象（模式 = 曲线 + 显现 + 卡面 + 出纸）
+
+- **状态**：已采纳（2026-09-29，it-007）
+- **背景**：需求要更丰富的显影效果并点名「数码相机」「胶片吐出」，而 it-001–it-006 的
+  曲线、遮罩、卡面几何与出纸动画全部写死为拍立得；同时拍立得本身要按实物重修。
+- **决策**：引入纯 Kotlin `DevelopMode`（拍立得 / 数码相机 / 胶片），它只持有「说哪种话」——
+  阶段名、陪伴文案、显现方式 `RevealKind`、出纸方式 `EjectStyle`、导出起手时长。
+  实现按层分派、互不越界：
+  曲线 `DevelopSpec.visualAt(mode, progress)`；
+  显现 `RevealField.alphaMask(kind, …)`（吸收原 `ChemicalDiffusion`，三种前沿共用噪声与桶缓存）；
+  几何 `CardLayout.solve(mode, width, maxH)` 与 `aspectOf(mode)`，`ShareLayout` 按模式反解构图；
+  配色 `CardPalette.forMode(mode)` 由渲染器内部推导，预览与导出不再各传一份。
+  模式是 W1 的创作选择，写入 DataStore `develop_mode` 跨会话保留。
+- **依据**：守住 ADR-005「进度是唯一真源」——模式只是把 `f(progress)` 换成按模式分派；
+  单一卡面真源继续满足 it-001 AC4。选中态即时写回 `UiState`，DataStore 只在启动时回填一次
+  （且用户已选则不接受回填），避开旧快照把刚选的模式冲回去的竞态。
+- **代价**：三套几何与三套曲线使单测面扩大（CardLayout / DevelopSpec / RevealField / ShareLayout
+  各增模式用例）；深色卡面（数码屏、片基）需要独立的分享底构图分支。
+  回退预案：三个 `when` 分派集中在枚举上，删掉枚举值即退回拍立得单模式。

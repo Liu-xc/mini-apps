@@ -15,12 +15,12 @@ import android.opengl.EGLExt
 import android.opengl.GLES20
 import android.opengl.GLUtils
 import android.view.Surface
-import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
 import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
 import java.io.File
 import java.nio.ByteBuffer
@@ -40,7 +40,7 @@ class VideoExporter {
     data class Params(
         val photo: Bitmap,
         val spec: CardSpec,
-        val palette: CardPalette = CardPalette.Default,
+        val mode: DevelopMode = DevelopMode.POLAROID,
         val plan: ExportPlan,
         val format: ShareFormat,
         val look: PhotoLook = PhotoLook.ORIGINAL,
@@ -102,7 +102,7 @@ class VideoExporter {
                 if (!inputDone) {
                     if (framesDone < total) {
                         val timing = plan.frameAt(framesDone)
-                        val visual = DevelopSpec.visualAt(timing.developProgress)
+                        val visual = DevelopSpec.visualAt(params.mode, timing.developProgress)
                         PhotoCardPainter.paintShareFrame(
                             canvas = frameCanvas,
                             widthPx = videoWidth.toFloat(),
@@ -110,7 +110,7 @@ class VideoExporter {
                             photo = params.photo,
                             spec = params.spec,
                             visual = visual,
-                            palette = params.palette,
+                            mode = params.mode,
                             grain = grain,
                             format = params.format,
                             look = params.look,

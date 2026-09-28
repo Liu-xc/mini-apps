@@ -1,5 +1,7 @@
 package com.leo.darkroom.card
 
+import com.leo.darkroom.develop.DevelopMode
+
 enum class ShareFormat(
     val label: String,
     val ratioLabel: String,
@@ -22,15 +24,22 @@ data class ShareLayout(
     val safeBottom: Float,
 ) {
     companion object {
-        fun solve(width: Float, height: Float, format: ShareFormat): ShareLayout {
+        fun solve(
+            width: Float,
+            height: Float,
+            format: ShareFormat,
+            mode: DevelopMode = DevelopMode.POLAROID,
+        ): ShareLayout {
             require(width > 0f && height > 0f) { "share frame must be positive" }
             val cardWidthFraction = when (format) {
                 ShareFormat.SQUARE -> 0.74f
                 ShareFormat.FEED -> 0.72f
                 ShareFormat.STORY -> 0.80f
             }
-            val cardWidth = minOf(width * cardWidthFraction, height / CardLayout.ASPECT * 0.90f)
-            val cardHeight = cardWidth * CardLayout.ASPECT
+            // 卡面高宽比随显影模式变化（胶片是横条），构图按模式反解
+            val aspect = CardLayout.aspectOf(mode)
+            val cardWidth = minOf(width * cardWidthFraction, height / aspect * 0.90f)
+            val cardHeight = cardWidth * aspect
             val cardLeft = (width - cardWidth) / 2f
             val cardTop = (height - cardHeight) / 2f
             val safeTop = height * 0.12f

@@ -3,6 +3,7 @@ package com.leo.darkroom.ui.develop
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -11,15 +12,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -37,12 +42,13 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.card.CardLayout
+import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.ChemicalMaskBitmap
 import com.leo.darkroom.card.CardSpec
-import com.leo.darkroom.develop.ChemicalDiffusion
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
-import com.leo.darkroom.ui.theme.editorialColors
+import com.leo.darkroom.develop.RevealField
 import kotlin.math.roundToInt
 
 /**
@@ -57,17 +63,19 @@ import kotlin.math.roundToInt
 fun DevelopCard(
     photo: Bitmap?,
     spec: CardSpec,
+    mode: DevelopMode,
     progress: Float,
     cardWidthPx: Float,
     modifier: Modifier = Modifier,
     grain: Bitmap? = null,
 ) {
-    val visual = DevelopSpec.visualAt(progress)
-    val layout = remember(cardWidthPx) { CardLayout.solve(cardWidthPx) }
-    val colors = editorialColors()
+    val visual = DevelopSpec.visualAt(mode, progress)
+    val layout = remember(cardWidthPx, mode) { CardLayout.solve(cardWidthPx, mode = mode) }
+    // 卡面印字配色与导出端共用 CardPalette（it-007 AC3：预览与成片不许错配）
+    val palette = remember(mode) { CardPalette.forMode(mode) }
     val textMeasurer = rememberTextMeasurer()
-    val revealMask = remember(photo, ChemicalDiffusion.bucket(visual.reveal)) {
-        photo?.let { ChemicalMaskBitmap.forPhoto(it, visual.reveal) }
+    val revealMask = remember(photo, mode, RevealField.bucket(mode.reveal, visual.reveal)) {
+        photo?.let { ChemicalMaskBitmap.forPhoto(mode.reveal, it, visual.reveal) }
     }
     val revealMaskImage = remember(revealMask) { revealMask?.asImageBitmap() }
 
@@ -86,10 +94,14 @@ fun DevelopCard(
     }
 
     Box(modifier.size(cardWidthDp, cardHeightDp)) {
-        // —— 底层：相纸 + 页脚文字 ——
+        // —— 底层：卡面 + 页脚文字 ——
         Canvas(Modifier.fillMaxSize()) {
-            drawRect(color = colors.cardPaper)
-            drawTexts(layout, spec, textMeasurer, colors)
+            drawRect(color = Color(palette.paper))
+            // 极轻纸纹：压在纸面与印字之下（it-007 M2，与 PhotoCardPainter 同参数）
+            grainBrush?.let {
+                drawRect(brush = it, alpha = 0.05f, blendMode = BlendMode.Overlay)
+            }
+            drawTexts(layout, spec, textMeasurer, palette)
         }
 
         // —— 照片区（离屏层，颗粒 Overlay 只对照片内容生效）——
@@ -98,6 +110,7 @@ fun DevelopCard(
                 Modifier
                     .offset { IntOffset(layout.photo.left.toInt(), layout.photo.top.toInt()) }
                     .size(Dp(layout.photo.width / density), Dp(layout.photo.height / density))
+                    .background(Color(palette.hairline))
                     .clip(androidx.compose.ui.graphics.RectangleShape)
                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
             ) {
@@ -113,6 +126,41 @@ fun DevelopCard(
                     drawVignette(visual)
                     grainBrush?.let { drawGrain(it, visual) }
                 }
+            }
+        }
+
+        // 胶片齿孔（几何真源在 CardLayout.sprocketHoles）
+        val holes = remember(layout) { CardLayout.sprocketHoles(layout) }
+        if (holes.isNotEmpty()) {
+            Canvas(Modifier.fillMaxSize()) {
+                val radius = cardWidthPx * 0.008f
+                for (hole in holes) {
+                    drawRoundRect(
+                        color = Color(CardPalette.FILM_HOLE),
+                        topLeft = Offset(hole.left, hole.top),
+                        size = Size(hole.width, hole.height),
+                        cornerRadius = CornerRadius(radius, radius),
+                    )
+                }
+            }
+        }
+
+        // 成像区边界的极细分界（画在照片之上，与导出端同参数）
+        Canvas(Modifier.fillMaxSize()) {
+            drawRect(
+                color = Color(palette.hairline),
+                topLeft = Offset(layout.photo.left, layout.photo.top),
+                size = Size(layout.photo.width, layout.photo.height),
+                style = Stroke(width = (cardWidthPx * 0.0015f).coerceAtLeast(1f)),
+            )
+            // 深色卡面在深色页底上补一圈外框，否则整张卡会糊进背景
+            if (mode != DevelopMode.POLAROID) {
+                drawRect(
+                    color = Color(palette.hairline),
+                    topLeft = Offset.Zero,
+                    size = Size(cardWidthPx, layout.height),
+                    style = Stroke(width = (cardWidthPx * 0.0018f).coerceAtLeast(1f)),
+                )
             }
         }
     }
@@ -184,7 +232,7 @@ private fun DrawScope.drawTexts(
     layout: CardLayout,
     spec: CardSpec,
     textMeasurer: TextMeasurer,
-    colors: com.leo.darkroom.ui.theme.EditorialColors,
+    palette: CardPalette,
 ) {
     // Editorial work title: upright serif, at most two lines with a calm ellipsis.
     val title = spec.title.trim()
@@ -194,7 +242,7 @@ private fun DrawScope.drawTexts(
             fontWeight = FontWeight.Medium,
             fontSize = layout.titleSize.toSp(),
             lineHeight = (layout.titleSize * 1.1f).toSp(),
-            color = colors.cardInk,
+            color = Color(palette.ink),
         )
         val result = textMeasurer.measure(
             text = title,
@@ -218,7 +266,7 @@ private fun DrawScope.drawTexts(
             fontWeight = FontWeight.Medium,
             fontFeatureSettings = "tnum",
             fontSize = layout.stampSize.toSp(),
-            color = colors.cardAccent,
+            color = Color(palette.accent),
         )
         var result = textMeasurer.measure(date, style = style, maxLines = 1)
         if (result.size.width > layout.stamp.width && result.size.width > 0) {
@@ -240,7 +288,7 @@ private fun DrawScope.drawTexts(
             fontFamily = FontFamily.SansSerif,
             fontWeight = FontWeight.Medium,
             fontSize = layout.watermarkSize.toSp(),
-            color = colors.cardInkFaint,
+            color = Color(palette.inkFaint),
         )
         val result = textMeasurer.measure("显影 DARKROOM", style = style, maxLines = 1)
         drawText(

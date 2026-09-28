@@ -1,6 +1,6 @@
 # it-007 — 显影模式体系、拍立得还原与药水刻度条
 
-状态：**待用户确认**
+状态：**实施完成（2026-09-29）**
 日期：2026-09-29
 
 ## 背景与动机
@@ -119,7 +119,7 @@ W1 主按钮与样片区之间新增一行「显影模式」：Section title 17s
 - `ui/pick/ModeRow`：W1 模式选择行；`DarkroomViewModel.UiState.mode` + PrefsStore `develop_mode`。
 - 出纸动画：单 Animatable + 分段 easing，顿挫为进度的确定性函数；三模式各一套出纸素材（槽口 / 扫描线 / 片盒口）。
 - `ExportPlan` 的 lead 段按模式参数化（0.5–0.8s），hold 与帧率不变。
-- 单测：`DevelopSpecTest`（三曲线单调性、染料时序、反相与矩阵正确性）、`CardLayoutTest`（三几何、字段互斥、`maxH` 反解）、`ChemicalDiffusionTest`（三种前沿的确定性、单调推进、桶一致性）、`ExportPlanTest`（三模式时间线）、`ShareLayoutTest`（三种 aspect 的画幅安全区）。
+- 单测：`DevelopSpecTest`（三曲线单调性、染料时序、反相与矩阵正确性）、`CardLayoutTest`（三几何、字段互斥、`maxH` 反解）、`RevealFieldTest`（三种前沿的确定性、单调推进、桶一致性）、`ExportPlanTest`（三模式时间线）、`ShareLayoutTest`（三种 aspect 的画幅安全区）。
 
 ## 里程碑
 
@@ -141,4 +141,52 @@ W1 主按钮与样片区之间新增一行「显影模式」：Section title 17s
 
 ## 验证记录
 
-（待实施）
+**构建与单测**：`./gradlew testDebugUnitTest assembleDebug` 全绿，单测 **56 项 0 失败**——
+新增 `RevealFieldTest`（三种前沿的确定性/覆盖增长/入槽与推进方向/块状离散）、
+`CardLayoutTest` 三形态几何与齿孔、`DevelopSpecTest` 三模式曲线与负片矩阵、
+`ShareLayoutTest` 三模式×三画幅构图、`ExportPlanTest` 模式起手时长。
+
+**实机走查（Android 14 AVD，截图见 `assets-it-007/`）**：
+
+- **M1 刻度条**：`darkroom-02-w2-gauge-light.png`——5% 短刻 / 25% 长刻 / 阶段分界更长、
+  已显影段实心、手柄圆点与百分比读数、阶段名上轨随进度点亮；拖动正放/倒放/暂停语义与原 Slider 一致。
+- **M2 拍立得还原**：显影前沿自左下滚轴入口偏心推进（0% 起手帧可见入口先亮）、
+  未显影区为中性浅灰乳剂底（原橄榄绿已去除）、中途低饱和青灰→定影偏暖回正、
+  出纸分段顿挫且槽口下压回位、卡面纸纹与成像区细线、脱纸阴影。
+- **M3 三模式**：
+  - W1 模式行 `darkroom-01-w1-modes-light.png`：三枚 chip 可选、选中态边框+字重、下方说明随选切换。
+  - 数码相机 `darkroom-03-w2-digital-wake.png`：开机扫描线自上而下、网格块逐格点亮、
+    深色屏卡面 + 底部 OSD 带、阶段名「取景/曝光/成像」与专属文案、无槽口。
+  - 胶片 `darkroom-04-w2-film-sweep.png`：横向冲洗带自左向右推进、上下齿孔带与片基信息带、
+    负片在中段翻正、阶段名「感光/显影/定影」、片盒口竖条随卷入。
+  - 成片页 `darkroom-05-w3-film.png`：胶片卡在亮场分享底上构图正常、安全区不越界。
+  - 原生导出 `darkroom-06-export-film.jpg`：1080×1350、齿孔/信息带/印字与预览一致（AC3）。
+
+**过程中修掉的两个真问题**（均已回填常青 spec）：
+
+1. **模式回冲**：`prefs.mode` 常驻 `collect` 会用 DataStore 旧快照把 W1 刚选的模式冲掉，
+   出现「选了数码却洗出胶片」。改为启动时 `first()` 回填一次，且用户已选则不回填。
+2. **出纸重放**：`LaunchedEffect(Unit)` 在 Activity 被系统重建时整段重放，
+   进度 92% 的会话又「吐」一次纸。改为由 `UiState.ejecting` 驱动。
+
+**与提案的偏差（均已在常青 spec 同步）**：
+
+- 提案写「卡面四角加极轻圆角」——**按实物否决**：相纸是直角裁切，且 05 §3 已有
+  「相纸边缘保持方正」，改为只做纸纹与成像区细线。
+- 提案写「数码/胶片以等宽小字排印」——**未做模式专属字形**，标题仍为衬线、日期仍为
+  无衬线等宽数字；黑白灰统一排印优先于拟物字形。
+- 提案未列但实现中必要：`downscaleBlurred` 映射改为连续（原实现在 blurFraction 跨 0.002 阈值
+  时由「不模糊」硬跳到「很糊」，定影末尾会啪一下变清晰，同时无法表达末态轻柔焦）；
+  深色卡面（数码/胶片）的分享底由中性暗底改为**亮场**，否则深卡糊进深底、投影不可读。
+- `SfxSynth` 未做模式差异化：三段结构与包络保持原样（提案中该项本就允许不动）。
+
+**验证边界**：
+
+- 数码相机模式的**原生静图导出**未单独取到干净样张——走查期间有并行会话占用同一台模拟器，
+  多次 `input tap`/`am start` 落到对方界面，三次导出文件字节完全相同（均为胶片样张）。
+  数码路径的几何（`CardLayout` 单测）、配色（`CardPalette.forMode`）与 Compose 预览已验证，
+  印字绘制与胶片共用同一 `drawTexts`，风险面已收敛。
+- 未重新执行完整的**视频编码导出**（三模式 × 三画幅未逐一跑）；`VideoExporter` 仅确认
+  `mode` 参数已贯通到 `paintShareFrame`，时间线由 `ExportPlanTest` 覆盖。
+- 未做系统字体放大与减弱动态的专项复测（减弱动态分支逻辑未改动）。
+- 走查用 `Android 14 AVD`，浅色/深色均看过 W1/W2；深色只截到 W1 与 W2，W3 深色未留档。

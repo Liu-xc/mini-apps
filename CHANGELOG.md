@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(darkroom)**: it-007 显影模式体系与拍立得还原——W1 新增「拍立得/数码相机/胶片」三模式选择（持久化），三模式各有独立卡面（白框相纸 / 深灰回放屏 + OSD 带 / 35mm 齿孔片条）、显现前沿（化学偏心 / 网格块 / 横向冲洗）与出纸动画（槽口升纸 / 开机扫描线 / 片盒卷出），曲线与印字配色按模式分派且三渲染端共用真源；拍立得按实物重修（滚轴入口偏心推进、分染料上色时序与窄动态、出纸分段顿挫 + 槽口下压、纸纹与成像区细线），并修掉定影末尾模糊硬跳变、模式偏好旧快照回冲、Activity 重建重放出纸三个缺陷；W2 的 Material Slider 换成自绘药水刻度条（5% 短刻 / 25% 长刻 / 阶段分界、阶段名上轨、拖动倒放语义不变）。56 单测全绿，AVD 走查三模式 W1–W3 与胶片原生导出，详 [it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md)。
+
 - **feat(wardrobe)**: it-056 导出面板携带顾问场景——对话推荐卡「复制长图」打开 W6 面板时，标题/说明命中的五维预设选项（场景·办公室、季节·早秋 等）自动预选、一键可改，不再要求用户把 Agent 刚说过的场景重选一遍；提取走 `extractRecommendationSelections` 纯函数（长词优先包含匹配，半截词不命中），`ExportSheet` 新增 `presetSelections` 参数以记忆为底覆盖同 key，四处既有调用零变化；81 测全绿 + AVD 端到端走查，详 [it-056](wardrobe/specs/iterations/it-056-chat-export-scene-preset.md)。
 
 - **feat(wardrobe)**: it-055 顾问卡片可点可导——W13 推荐卡已匹配单品 tile 点击进 W5 单品详情（未匹配不可点、中性提示保留），卡片底部「复制长图」与 W5 顶下新导出入口均复用 W6 导出面板（`existingOutfit=null`，搭配页/心愿同先例），整套与单件都能出「照片拼版+五维提示词」长图拿去外部生图；匹配逻辑抽 `matchRecommendationItems` 纯函数 +2 JVM 单测，77 测全绿；浅/深色走查 P0/P1=0，详 [it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md)。

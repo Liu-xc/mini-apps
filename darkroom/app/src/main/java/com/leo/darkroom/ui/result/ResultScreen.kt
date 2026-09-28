@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
-import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.PhotoCardPainter
 import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
@@ -80,7 +79,9 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     val density = LocalDensity.current
     val previewWidthPx = with(density) { previewWidth.roundToPx() }.coerceAtLeast(180)
     val previewHeightPx = with(density) { previewHeight.roundToPx() }.coerceAtLeast(180)
-    val artwork = produceState<ImageBitmap?>(null, photo, state.spec, state.exportFormat, state.photoLook) {
+    val artwork = produceState<ImageBitmap?>(
+        null, photo, state.spec, state.exportFormat, state.photoLook, state.mode,
+    ) {
         if (photo != null) {
             val bitmap = withContext(Dispatchers.Default) {
                 Bitmap.createBitmap(previewWidthPx, previewHeightPx, Bitmap.Config.ARGB_8888).also { preview ->
@@ -90,8 +91,8 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                         heightPx = previewHeightPx.toFloat(),
                         photo = photo,
                         spec = state.spec,
-                        visual = com.leo.darkroom.develop.DevelopSpec.visualAt(1f),
-                        palette = CardPalette.Default,
+                        visual = com.leo.darkroom.develop.DevelopSpec.visualAt(state.mode, 1f),
+                        mode = state.mode,
                         grain = vm.grain,
                         format = state.exportFormat,
                         look = state.photoLook,

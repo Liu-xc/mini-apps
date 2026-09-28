@@ -1,5 +1,6 @@
 package com.leo.darkroom.export
 
+import com.leo.darkroom.develop.DevelopMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -55,5 +56,17 @@ class ExportPlanTest {
         assertEquals(420, slow.frameCount)
         val fast = ExportPlan(developMs = 4_000L)
         assertEquals(6_000L, fast.totalMs)
+    }
+
+    @Test
+    fun `film mode leaves a longer lead for the winding animation`() {
+        assertEquals(500L, DevelopMode.POLAROID.leadMs)
+        assertEquals(500L, DevelopMode.DIGITAL.leadMs)
+        assertEquals(800L, DevelopMode.FILM.leadMs)
+        val plan = ExportPlan(developMs = 8_000L, leadMs = DevelopMode.FILM.leadMs)
+        assertEquals(10_300L, plan.totalMs)
+        // 800ms 内仍是起手空白
+        assertEquals(0f, plan.frameAt(23).developProgress)
+        assertTrue(plan.frameAt(25).developProgress > 0f)
     }
 }

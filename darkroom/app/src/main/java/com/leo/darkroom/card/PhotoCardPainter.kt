@@ -18,8 +18,10 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import java.util.WeakHashMap
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
 import com.leo.darkroom.develop.DevelopVisual
+import com.leo.darkroom.develop.RevealField
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -40,6 +42,31 @@ data class CardPalette(
             accent = 0xFF414141.toInt(),
             hairline = 0xFFDEDEDC.toInt(),
         )
+
+        /** 胶片齿孔：物理穿孔恒为近黑，不随界面主题翻色 */
+        const val FILM_HOLE = 0xFF0E0E0E.toInt()
+
+        /**
+         * 模式对应的卡面印字配色（it-007 M3）：拍立得是浅相纸，
+         * 数码/胶片是深机身与片基，文字翻成浅色——预览与导出共用，杜绝错配。
+         */
+        fun forMode(mode: DevelopMode): CardPalette = when (mode) {
+            DevelopMode.POLAROID -> Default
+            DevelopMode.DIGITAL -> CardPalette(
+                paper = 0xFF1A1A1A.toInt(),
+                ink = 0xFFF2F2F0.toInt(),
+                inkFaint = 0xFFB9B9B6.toInt(),
+                accent = 0xFFD0D0CE.toInt(),
+                hairline = 0xFF3A3A3A.toInt(),
+            )
+            DevelopMode.FILM -> CardPalette(
+                paper = 0xFF232323.toInt(),
+                ink = 0xFFF2F2F0.toInt(),
+                inkFaint = 0xFFB9B9B6.toInt(),
+                accent = 0xFFD0D0CE.toInt(),
+                hairline = 0xFF3A3A3A.toInt(),
+            )
+        }
     }
 }
 
@@ -59,21 +86,69 @@ object PhotoCardPainter {
         photo: Bitmap?,
         spec: CardSpec,
         visual: DevelopVisual,
-        palette: CardPalette,
+        mode: DevelopMode,
         grain: Bitmap?,
         look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
-        val layout = CardLayout.solve(cardWidthPx)
+        val layout = CardLayout.solve(cardWidthPx, mode = mode)
+        val palette = CardPalette.forMode(mode)
         val paper = Paint().apply { color = palette.paper }
         canvas.drawRect(0f, 0f, cardWidthPx, layout.height, paper)
+        // 相纸/片基不是纯色平涂：极轻的确定性纸纹压在纸面与印字之下（it-007 M2）
+        if (grain != null) drawGrain(canvas, RectF(0f, 0f, cardWidthPx, layout.height), grain, 0.05f)
 
         val photoRect = RectF(layout.photo.left, layout.photo.top, layout.photo.right, layout.photo.bottom)
-        // 相片衬底（潜影期透过低 alpha 隐约可见的灰绿底）
+        // 照片衬底（未显影时透过低 alpha 隐约可见）
         canvas.drawRect(photoRect, Paint().apply { color = palette.hairline })
         if (photo != null && visual.imageAlpha > 0.01f) {
-            drawDevelopPhoto(canvas, photo, photoRect, visual, grain, look)
+            drawDevelopPhoto(canvas, photo, photoRect, visual, grain, look, mode)
         }
+        drawFilmSprockets(canvas, layout, palette)
         drawTexts(canvas, layout, spec, palette)
+        // 成像区边界的极细分界（hairline）
+        canvas.drawRect(
+            photoRect,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = (cardWidthPx * 0.0015f).coerceAtLeast(1f)
+                color = palette.hairline
+            },
+        )
+        // 深色卡面（数码屏/片基）在深色页底上补一圈外框，否则整张卡会糊进背景
+        if (mode != DevelopMode.POLAROID) {
+            canvas.drawRect(
+                0f,
+                0f,
+                cardWidthPx,
+                layout.height,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = (cardWidthPx * 0.0018f).coerceAtLeast(1f)
+                    color = palette.hairline
+                },
+            )
+        }
+    }
+
+    /** 胶片齿孔：14 孔等距穿孔（几何由 CardLayout.sprocketHoles 单一真源给出） */
+    private fun drawFilmSprockets(canvas: Canvas, layout: CardLayout, palette: CardPalette) {
+        val holes = CardLayout.sprocketHoles(layout)
+        if (holes.isEmpty()) return
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = CardPalette.FILM_HOLE }
+        val radius = layout.width * 0.008f
+        for (hole in holes) {
+            canvas.drawRoundRect(
+                RectF(hole.left, hole.top, hole.right, hole.bottom),
+                radius,
+                radius,
+                paint,
+            )
+        }
+        // 齿孔带与片格/信息带之间的极细边界
+        val rule = Paint().apply { color = palette.hairline }
+        listOfNotNull(layout.sprocketTop, layout.sprocketBottom).forEach { band ->
+            canvas.drawRect(0f, band.bottom - 1f, layout.width, band.bottom, rule)
+        }
     }
 
     /** Social-ready frame; still and video exports share this exact composition. */
@@ -84,67 +159,73 @@ object PhotoCardPainter {
         photo: Bitmap,
         spec: CardSpec,
         visual: DevelopVisual,
-        palette: CardPalette,
+        mode: DevelopMode,
         grain: Bitmap?,
         format: ShareFormat,
         look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
-        val layout = ShareLayout.solve(widthPx, heightPx, format)
-        canvas.drawColor(0xFF121212.toInt())
+        val layout = ShareLayout.solve(widthPx, heightPx, format, mode)
+        // 深色卡面（数码屏/片基）要放在亮场上才分得开；相纸仍走原暗场
+        val darkCard = mode != DevelopMode.POLAROID
+        canvas.drawColor(if (darkCard) 0xFFF1F1EF.toInt() else 0xFF121212.toInt())
 
-        // A muted, enlarged echo of the selected photo gives the paper card a physical setting.
+        // A muted, enlarged echo of the selected photo gives the card a physical setting.
         val backdrop = synchronized(backdropCache) {
             backdropCache[photo] ?: downscaleBlurred(photo, 0.015f).also { backdropCache[photo] = it }
         }
         val backdropPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-            alpha = 88
+            alpha = if (darkCard) 130 else 88
             if (look != PhotoLook.ORIGINAL) {
                 colorFilter = ColorMatrixColorFilter(ColorMatrix(look.colorMatrix()))
             }
         }
         drawCenterCrop(canvas, backdrop, RectF(0f, 0f, widthPx, heightPx), backdropPaint)
-        canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA80D0D0D.toInt() })
-        val vignetteRadius = hypot(widthPx, heightPx) * 0.72f
-        canvas.drawRect(
-            0f,
-            0f,
-            widthPx,
-            heightPx,
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = RadialGradient(
-                    widthPx / 2f,
-                    heightPx / 2f,
-                    vignetteRadius,
-                    intArrayOf(0x00000000, 0x66070707),
-                    floatArrayOf(0.38f, 1f),
-                    Shader.TileMode.CLAMP,
-                )
-            },
-        )
+        if (darkCard) {
+            canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0x55FBFBFA.toInt() })
+        } else {
+            canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA80D0D0D.toInt() })
+            val vignetteRadius = hypot(widthPx, heightPx) * 0.72f
+            canvas.drawRect(
+                0f,
+                0f,
+                widthPx,
+                heightPx,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    shader = RadialGradient(
+                        widthPx / 2f,
+                        heightPx / 2f,
+                        vignetteRadius,
+                        intArrayOf(0x00000000, 0x66070707),
+                        floatArrayOf(0.38f, 1f),
+                        Shader.TileMode.CLAMP,
+                    )
+                },
+            )
+        }
         if (grain != null) drawGrain(canvas, RectF(0f, 0f, widthPx, heightPx), grain, 0.09f)
 
         val cardRect = RectF(layout.card.left, layout.card.top, layout.card.right, layout.card.bottom)
         canvas.drawRect(
             cardRect,
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0x39000000
+                color = if (darkCard) 0x59000000 else 0x39000000
                 maskFilter = BlurMaskFilter(layout.card.width * 0.025f, BlurMaskFilter.Blur.NORMAL)
             },
         )
         canvas.save()
         canvas.translate(layout.card.left, layout.card.top)
-        paint(canvas, layout.card.width, photo, spec, visual, palette, grain, look)
+        paint(canvas, layout.card.width, photo, spec, visual, mode, grain, look)
         canvas.restore()
 
         if (spec.showWatermark && format == ShareFormat.STORY) {
             val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0xD9FBFBFA.toInt()
+                color = if (darkCard) 0xD9191919.toInt() else 0xD9FBFBFA.toInt()
                 textSize = widthPx * 0.025f
                 typeface = Typeface.create(Typeface.SANS_SERIF, 500, false)
                 textAlign = Paint.Align.CENTER
             }
             canvas.drawText("DARKROOM", layout.wordmark.centerX, layout.wordmark.centerY, brandPaint)
-            brandPaint.color = 0xBDFBFBFA.toInt()
+            brandPaint.color = if (darkCard) 0xB3191919.toInt() else 0xBDFBFBFA.toInt()
             brandPaint.textSize = widthPx * 0.022f
             brandPaint.typeface = Typeface.create(Typeface.SERIF, 500, false)
             canvas.drawText("把回忆洗出来", layout.caption.centerX, layout.caption.centerY, brandPaint)
@@ -154,10 +235,10 @@ object PhotoCardPainter {
     fun renderShareFrame(
         photo: Bitmap,
         spec: CardSpec,
-        palette: CardPalette,
+        mode: DevelopMode,
         grain: Bitmap?,
         format: ShareFormat,
-        visual: DevelopVisual = DevelopSpec.visualAt(1f),
+        visual: DevelopVisual = DevelopSpec.visualAt(mode, 1f),
         look: PhotoLook = PhotoLook.ORIGINAL,
     ): Bitmap {
         val bitmap = Bitmap.createBitmap(format.width, format.height, Bitmap.Config.ARGB_8888)
@@ -168,7 +249,7 @@ object PhotoCardPainter {
             photo,
             spec,
             visual,
-            palette,
+            mode,
             grain,
             format,
             look,
@@ -180,15 +261,15 @@ object PhotoCardPainter {
     fun renderCard(
         photo: Bitmap,
         spec: CardSpec,
-        palette: CardPalette,
+        mode: DevelopMode,
         grain: Bitmap?,
-        visual: DevelopVisual = DevelopSpec.visualAt(1f),
+        visual: DevelopVisual = DevelopSpec.visualAt(mode, 1f),
         widthPx: Int = 1200,
         look: PhotoLook = PhotoLook.ORIGINAL,
     ): Bitmap {
-        val height = (CardLayout.solve(widthPx.toFloat()).height).roundToInt()
+        val height = CardLayout.solve(widthPx.toFloat(), mode = mode).height.roundToInt()
         val bmp = Bitmap.createBitmap(widthPx, height, Bitmap.Config.ARGB_8888)
-        paint(Canvas(bmp), widthPx.toFloat(), photo, spec, visual, palette, grain, look)
+        paint(Canvas(bmp), widthPx.toFloat(), photo, spec, visual, mode, grain, look)
         return bmp
     }
 
@@ -196,13 +277,15 @@ object PhotoCardPainter {
     fun renderLookThumbnail(photo: Bitmap, grain: Bitmap?, look: PhotoLook, widthPx: Int, heightPx: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val rect = RectF(0f, 0f, widthPx.toFloat(), heightPx.toFloat())
-        drawDevelopPhoto(Canvas(bitmap), photo, rect, DevelopSpec.visualAt(1f), grain, look)
+        drawDevelopPhoto(
+            Canvas(bitmap), photo, rect, DevelopSpec.visualAt(1f), grain, look, DevelopMode.POLAROID,
+        )
         return bitmap
     }
 
     /**
-     * 显影中的照片：中心裁切 → 色彩矩阵 → 中心向外晕开遮罩 → 暗角 → 颗粒。
-     * 模糊用「缩小再放大」近似（化学扩散感、全 Canvas 一致，ADR-004）。
+     * 显影中的照片：中心裁切 → 色彩矩阵 → 显现遮罩 → 暗角 → 颗粒。
+     * 模糊用「缩小再放大」近似（ADR-004）。
      */
     private fun drawDevelopPhoto(
         canvas: Canvas,
@@ -211,6 +294,7 @@ object PhotoCardPainter {
         visual: DevelopVisual,
         grain: Bitmap?,
         look: PhotoLook,
+        mode: DevelopMode,
     ) {
         val saveCount = canvas.saveLayer(rect, null)
         canvas.clipRect(rect)
@@ -248,7 +332,7 @@ object PhotoCardPainter {
         if (look.glowStrength > 0f) drawSoftGlow(canvas, rect, photo, look.glowStrength)
 
         if (visual.reveal < 0.999f) {
-            val mask = ChemicalMaskBitmap.forPhoto(photo, visual.reveal)
+            val mask = ChemicalMaskBitmap.forPhoto(mode.reveal, photo, visual.reveal)
             canvas.drawBitmap(
                 mask,
                 null,
@@ -291,12 +375,16 @@ object PhotoCardPainter {
     }
 
     /**
-     * 模糊：缩到约 1/8~1/30 再拉伸回原大（双线性滤波）。
-     * blurFraction 0.045（最糊）→ factor 0.035；≤0.002（定影）→ 直接原样绘制。
+     * 模糊：缩到小尺寸再拉伸回原大（双线性滤波，ADR-004）。
+     *
+     * it-007 M2：映射改为连续。原实现在 blurFraction ≤0.002 时原样绘制、
+     * 略高于阈值直接跳到约 0.11 的缩放比——定影末尾会硬跳一下才变清晰；
+     * 同时它无法表达「末态保留极轻柔焦」。现在 0 → 1.0（无模糊）线性到
+     * 0.05 → 0.05（最糊），曲线末态 0.006 落在 0.89 附近，收尾是柔的。
      */
     private fun downscaleBlurred(photo: Bitmap, blurFraction: Float): Bitmap {
-        if (blurFraction <= 0.002f) return photo
-        val factor = (0.035f + (0.045f - blurFraction).coerceAtLeast(0f) / 0.045f * 0.085f).coerceIn(0.03f, 0.95f)
+        if (blurFraction <= 0.0005f) return photo
+        val factor = (1f - blurFraction * 19f).coerceIn(0.05f, 1f)
         val w = (photo.width * factor).roundToInt().coerceAtLeast(8)
         val h = (photo.height * factor).roundToInt().coerceAtLeast(8)
         return Bitmap.createScaledBitmap(photo, w, h, true)
