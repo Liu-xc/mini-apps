@@ -9,6 +9,7 @@ final class UsageStore: ObservableObject {
 
     let settings: AppSettings
     private let caches: [ProviderKind: SnapshotCache]
+    private let sessionRenewer = MimoSessionRenewer()   // it-004：MiMo 静默续期（单飞）
     private var refreshTimer: Timer?
     private var consecutiveFailures = 0
 
@@ -68,6 +69,10 @@ final class UsageStore: ObservableObject {
     // MARK: - 刷新
 
     func start() async {
+        // it-004 M1 spike 钩子：剥离 serviceToken 模拟过期，验证静默续期（AC1）
+        if ProcessInfo.processInfo.environment["GLM_ISLAND_SPIKE_EXPIRE_MIMO"] == "1" {
+            await MimoSessionRenewer.spikeExpireServiceToken()
+        }
         await refreshAll()
         scheduleNextRefresh()
     }
@@ -98,7 +103,7 @@ final class UsageStore: ObservableObject {
                     snap = try await StaticDemoProvider(kind: kind, rows: descriptor.demoRows(Date()))
                         .fetchSnapshot()
                 } else {
-                    snap = try await descriptor.makeProvider(settings).fetchSnapshot()
+                    snap = try await fetchWithRenewal(kind, descriptor)
                     if kind == .glm, settings.endpointMode == .auto {
                         // auto 探测赢家记忆（ADR-003），偏好收编进 settings
                         settings.preferredEndpoint = EndpointMode.mode(forHost: snap.endpointHost)
@@ -127,6 +132,49 @@ final class UsageStore: ObservableObject {
         scheduleNextRefresh()
     }
 
+    // MARK: - 登录态续期（it-004）
+
+    /// 拉取单源。MiMo 登录态过期且该源处于 active 会话时：先静默续期（SSO 换新
+    /// serviceToken），成功则落盘并重试一次；账号会话已死标记 expired 停自动重试（AC3）。
+    private func fetchWithRenewal(_ kind: ProviderKind, _ descriptor: ProviderDescriptor) async throws -> UsageSnapshot {
+        do {
+            return try await descriptor.makeProvider(settings).fetchSnapshot()
+        } catch let err as ProviderError where err.sessionExpired && !settings.demoMode {
+            guard let login = descriptor.sessionLogin else { throw err }
+            guard settings.sessionState(kind) == .active else {
+                // 手动粘贴模式维持原文案（US-8 回归）；已判死改引导重新登录
+                if settings.sessionState(kind) == .expired {
+                    throw ProviderError(message: "\(descriptor.title) 登录已失效，请在设置重新登录", sessionExpired: true)
+                }
+                throw err
+            }
+            let startURL = err.loginURL ?? login.startURL
+            NSLog("[island][refresh] \(kind) 登录态过期，尝试静默续期")
+            let header: String
+            do {
+                header = try await sessionRenewer.renew(startURL: startURL)
+            } catch {
+                if (error as? SessionRenewError)?.sessionDead == true {
+                    settings.setSessionState(kind, .expired)
+                }
+                NSLog("[island][refresh] \(kind) 静默续期失败: \(error.localizedDescription)")
+                throw error
+            }
+            CredentialStore.save(header, account: descriptor.credentialAccount)
+            credentialKinds.insert(kind)
+            settings.setSessionState(kind, .active)
+            NSLog("[island][refresh] \(kind) 静默续期成功，重试拉取")
+            return try await descriptor.makeProvider(settings).fetchSnapshot()
+        }
+    }
+
+    /// 登录窗/续期取到的整段 Cookie 落盘并标记 active 会话（设置页登录回调入口）
+    func adoptSessionCookie(_ header: String, kind: ProviderKind) {
+        guard !header.isEmpty else { return }
+        settings.setSessionState(kind, .active)
+        saveSecret(kind, header)
+    }
+
     // MARK: - 凭证（registry 驱动，不按源硬编码）
 
     func saveSecret(_ kind: ProviderKind, _ value: String) {
@@ -134,15 +182,24 @@ final class UsageStore: ObservableObject {
         guard !trimmed.isEmpty else { return }
         CredentialStore.save(trimmed, account: ProviderRegistry.descriptor(kind).credentialAccount)
         credentialKinds.insert(kind)
+        // it-004：手动粘贴接管 → 会话状态回手动（active 不降级——粘贴不作废 App 内账号会话）
+        if ProviderRegistry.descriptor(kind).sessionLogin != nil, settings.sessionState(kind) != .active {
+            settings.setSessionState(kind, .manual)
+        }
         if settings.demoMode { settings.demoMode = false }
         Task { await refreshAll() }
     }
 
     func clearCredential(_ kind: ProviderKind) {
-        CredentialStore.delete(account: ProviderRegistry.descriptor(kind).credentialAccount)
+        let descriptor = ProviderRegistry.descriptor(kind)
+        CredentialStore.delete(account: descriptor.credentialAccount)
         credentialKinds.remove(kind)
         states[kind] = SourceState()   // 清快照与错误
         try? caches[kind]?.remove()    // 磁盘缓存一并删除（防重启后幽灵数据）
+        if descriptor.sessionLogin != nil {
+            MimoSessionRenewer.clearWebsiteData()   // AC4：登录会话数据一并清除
+            settings.setSessionState(kind, .none)
+        }
     }
 
     func setDemoMode(_ enabled: Bool) {

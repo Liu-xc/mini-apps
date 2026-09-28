@@ -45,6 +45,9 @@
 ## W3 设置窗口（460×620，Form grouped）
 
 凭证分区**按 ProviderRegistry 渲染**（GLM Coding Plan：SecureField API Key / 小米 MiMo TOKEN
-Plan：SecureField Cookie 字符串；已配置时「XX 已存入本机（0600 加密限制文件）」+「清除」
-**二次确认**）· 端点（GLM 平台 Picker + 控制台链接）· 刷新（间隔 Picker + 演示模式）·
-系统（开机自启）· 诊断（**逐源** DisclosureGroup 原始响应查看/拷贝）。
+Plan：SecureField Cookie 字符串 + **「登录小米账号…」按钮与登录态状态行**（it-004：active 绿
+「已登录，自动续期中」/ expired 红「登录已失效，请重新登录」/ manual 灰「手动 Cookie 模式」，
+点击按钮弹 520×680 登录 sheet：内嵌 WKWebView + 底部状态行/取消）；已配置时
+「XX 已存入本机（0600 加密限制文件）」+「清除」**二次确认**）· 端点（GLM 平台 Picker +
+控制台链接）· 刷新（间隔 Picker + 演示模式）· 系统（开机自启）· 诊断（**逐源** DisclosureGroup
+原始响应查看/拷贝）。

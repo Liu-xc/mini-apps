@@ -6,6 +6,10 @@ protocol UsageProviding {
 
 struct ProviderError: LocalizedError {
     let message: String
+    /// it-004：登录态过期（MiMo Cookie/会话失效）——store 可尝试静默续期
+    var sessionExpired = false
+    /// 401 响应体里的 SSO loginUrl（有则续期从它起跳；缺省用控制台页兜底）
+    var loginURL: URL?
     var errorDescription: String? { message }
 }
 
@@ -81,10 +85,19 @@ struct MiMoUsageProvider: UsageProviding {
         guard (200..<300).contains(http.statusCode) else {
             // Cookie 失效时服务器直接回 HTTP 401 状态码（而非 200+body code）——
             // 状态守卫先于 body 检查，必须在此映射友好文案，否则永远显示 "HTTP 401"（US-8 AC）
-            throw ProviderError(message: Self.errorMessage(forHTTPStatus: http.statusCode))
+            // it-004：401/403 标记 sessionExpired 并带上 body 里的 loginUrl（静默续期入口）
+            throw ProviderError(
+                message: Self.errorMessage(forHTTPStatus: http.statusCode),
+                sessionExpired: http.statusCode == 401 || http.statusCode == 403,
+                loginURL: MimoSSO.loginURL(from401Body: data)
+            )
         }
         if let text = String(data: data, encoding: .utf8), text.contains("\"code\":401") {
-            throw ProviderError(message: "MiMo Cookie 已过期，请在设置更新")
+            throw ProviderError(
+                message: "MiMo Cookie 已过期，请在设置更新",
+                sessionExpired: true,
+                loginURL: MimoSSO.loginURL(from401Body: data)
+            )
         }
         return try MiMoQuotaParser.parse(data)
     }

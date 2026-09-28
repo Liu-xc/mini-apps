@@ -12,7 +12,7 @@ struct SettingsView: View {
         Form {
             // 凭证分区按注册表渲染（ADR-009：新增源无需改此文件）
             ForEach(ProviderRegistry.all) { descriptor in
-                CredentialSection(descriptor: descriptor, store: store)
+                CredentialSection(descriptor: descriptor, settings: settings, store: store)
             }
             endpointSection
             refreshSection
@@ -114,10 +114,12 @@ struct SettingsView: View {
 
 private struct CredentialSection: View {
     let descriptor: ProviderDescriptor
+    @ObservedObject var settings: AppSettings
     @ObservedObject var store: UsageStore
 
     @State private var input = ""
     @State private var confirmClear = false
+    @State private var showLogin = false
 
     private var configured: Bool { store.credentialKinds.contains(descriptor.kind) }
 
@@ -131,6 +133,23 @@ private struct CredentialSection: View {
                     input = ""
                 }
                 .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            if let session = descriptor.sessionLogin {
+                HStack(spacing: 8) {
+                    Button("登录小米账号…") { showLogin = true }
+                    Spacer()
+                    sessionStatus
+                }
+                .sheet(isPresented: $showLogin) {
+                    MimoLoginSheet(
+                        startURL: session.startURL,
+                        onCookie: { header in
+                            store.adoptSessionCookie(header, kind: descriptor.kind)
+                            showLogin = false
+                        },
+                        onCancel: { showLogin = false }
+                    )
+                }
             }
             if configured {
                 HStack {
@@ -158,6 +177,27 @@ private struct CredentialSection: View {
             Text(descriptor.credentialHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// it-004：登录态状态行（active 绿 / expired 红 / manual 灰提示；none 无行）
+    @ViewBuilder
+    private var sessionStatus: some View {
+        switch settings.sessionState(descriptor.kind) {
+        case .active:
+            Label("已登录，自动续期中", systemImage: "checkmark.seal.fill")
+                .font(.callout)
+                .foregroundStyle(.green)
+        case .expired:
+            Label("登录已失效，请重新登录", systemImage: "exclamationmark.triangle.fill")
+                .font(.callout)
+                .foregroundStyle(.red)
+        case .manual:
+            Text("手动 Cookie 模式 · 登录可启用自动续期")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .none:
+            EmptyView()
         }
     }
 }

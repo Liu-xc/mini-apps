@@ -13,11 +13,11 @@ Mac 刘海处的**功能入口容器**：默认完全隐形，鼠标移到刘海
 
 - **GLM Coding Plan TOKEN 用量**——每源一个面板：单主环（环心=剩余%+档名、颜色=健康度），
   环下明细行（每周档重置 / 百分比）；
-- **小米 MiMo TOKEN Plan**（Cookie 认证）——套餐主环 + 已用/额度绝对量行。
+- **小米 MiMo TOKEN Plan**（登录自动续期 / Cookie 粘贴兜底）——套餐主环 + 已用/额度绝对量行。
 
 按源状态独立：任一源失败只在该源面板与页脚明示，他源照常展示。
 规格文档见 [specs/](specs/)，当前进度见
-[specs/iterations/it-003-card-rework-and-registry.md](specs/iterations/it-003-card-rework-and-registry.md)。
+[specs/iterations/it-004-mimo-session-autorenew.md](specs/iterations/it-004-mimo-session-autorenew.md)。
 
 ## 构建 / 测试 / 打包
 
@@ -36,7 +36,9 @@ open /path/to/dist/island.app
 ```
 
 - 默认无任何常驻 UI；鼠标移到刘海触发展开，点击可固定，移开/点外部收起。
-- 首次使用：菜单栏图标 → 设置 → 粘贴 API Key / MiMo Cookie
+- 首次使用：菜单栏图标 → 设置 → 粘贴 GLM API Key；MiMo **推荐点「登录小米账号…」**
+  （内嵌 WebView 登录一次，之后 serviceToken 过期自动静默换新，ADR-012），
+  也可粘贴 Cookie 走手动模式（过期需自行更新）
   （只存本机 `~/Library/Application Support/island/credentials.json`，**0600 权限限制文件**，
   不入仓库/日志；钥匙串因 ad-hoc 重签名 ACL 失效已迁出，ADR-010）。
 
@@ -50,6 +52,7 @@ open /path/to/dist/island.app
 | `GLM_ISLAND_SHOT=<目录>` | DebugShot 自截图：~2.2s 渲染岛卡 PNG 后退出（ADR-011） |
 | `GLM_ISLAND_SHOT_SETTINGS=1` | 连设置窗一起截图 |
 | `GLM_ISLAND_BLANK=1` | 视作全未配置（空态走查） |
+| `GLM_ISLAND_SPIKE_EXPIRE_MIMO=1` | it-004 spike：剥离 serviceToken 模拟过期，验证静默续期 |
 
 > 本 README 顶部的界面截图即由上表钩子产出（`GLM_ISLAND_EXPAND=1` + `GLM_ISLAND_SHOT`）。
 

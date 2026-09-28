@@ -41,6 +41,12 @@ FooterStatus（页脚状态纯函数）· IslandTheme（健康度阈值/色值�
 - 演示/真实按 `AppSettings.demoMode` 切换（demo 数据由 registry 注入，走同一条刷新管线）。
 - 解析器是纯静态函数（Data in / Snapshot out），now 注入可测。
 - GLM auto 端点赢家由 store 回写 `settings.preferredEndpoint`（ADR-003）。
+- **登录态续期（it-004 ADR-012）**：`MiMoUsageProvider` 401 → `ProviderError(sessionExpired, loginURL)`
+  → `UsageStore.fetchWithRenewal`：源处于 `active` 会话才调 `MimoSessionRenewer`（离屏 WKWebView，
+  持久化 data store）静默走 SSO——成功回写凭证 + 重试一次；账号会话死（`SessionRenewError.sessionDead`）
+  → `expired` 停自动重试。设置页 `MimoLoginSheet` 与续期器共享 `WKWebsiteDataStore.default()`；
+  状态机在 `AppSettings.sessionState(kind)`（UserDefaults），驱动设置状态行与续期闸门。
+  `ProviderDescriptor.sessionLogin`（nil=不支持，如 GLM）保持注册表驱动，UI/清除逻辑无按源硬编码。
 
 ## 并发模型
 

@@ -1,5 +1,11 @@
 import Foundation
 
+/// it-004：登录态续期能力（nil = 该源只走静态凭证，如 GLM API Key）
+struct SessionLoginConfig {
+    /// 登录窗与静默续期的起始页（会 302 到小米账号 SSO）
+    let startURL: URL
+}
+
 /// 内容源注册条目（it-003 ADR-009）。凭证、面板、设置分区、菜单摘要全部由本表驱动。
 struct ProviderDescriptor: Identifiable {
     let kind: ProviderKind
@@ -17,6 +23,8 @@ struct ProviderDescriptor: Identifiable {
     let credentialHint: String
     /// 未配置时面板内提示（"未配置 API Key" / "未配置 Cookie"）
     let unconfiguredText: String
+    /// it-004：支持账号登录自动续期时的配置（nil = 不支持）
+    let sessionLogin: SessionLoginConfig?
     /// 真实数据提供方（凭证与端点由内部自取）
     let makeProvider: @MainActor (AppSettings) -> any UsageProviding
     /// 演示数据（now 注入，重置时刻相对当前）
@@ -48,6 +56,7 @@ enum ProviderRegistry {
         credentialNoun: "Key",
         credentialHint: "官方用量接口 /api/monitor/usage/quota/limit 仅查询、不消耗套餐额度；凭证只存本机 0600 权限限制文件，不入仓库/日志。",
         unconfiguredText: "未配置 API Key",
+        sessionLogin: nil,
         makeProvider: { settings in
             MonitorUsageProvider(
                 endpointMode: settings.endpointMode,
@@ -75,8 +84,9 @@ enum ProviderRegistry {
         credentialAccount: KeychainAccount.mimoCookie,
         credentialLabel: "Cookie 字符串",
         credentialNoun: "Cookie",
-        credentialHint: "该接口只认浏览器登录态：登录 platform.xiaomimimo.com 控制台后，从网络请求复制整段 Cookie 粘贴到这里；Cookie 过期时更新一次即可。",
+        credentialHint: "推荐点上方「登录小米账号」启用自动续期（登录态只存本机 0600 文件，过期自动静默换新）；也可从浏览器登录控制台后复制整段 Cookie 粘贴，手动模式过期需自行更新。",
         unconfiguredText: "未配置 Cookie",
+        sessionLogin: SessionLoginConfig(startURL: MimoSSO.consoleURL),
         makeProvider: { _ in MiMoUsageProvider() },
         demoRows: { now in
             [

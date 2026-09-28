@@ -53,13 +53,15 @@
 ## US-5 设置与安全
 凭证只存**本机 0600 权限限制文件** `~/Library/Application Support/island/credentials.json`
 （不入仓库/日志；钥匙串因 ad-hoc 签名 ACL 失效已迁出，ADR-010）。
-设置窗口（460×620）：**凭证分区按 `ProviderRegistry` 渲染**（GLM=API Key / MiMo=Cookie 字符串，
-含已存入状态行 + 「清除」二次确认）、平台端点（自动/bigmodel.cn/z.ai）、刷新间隔、演示模式、
-开机自启（SMAppService）、控制台链接、**逐源诊断**（原始响应查看/拷贝）。
+设置窗口（460×620）：**凭证分区按 `ProviderRegistry` 渲染**（GLM=API Key / MiMo=Cookie 字符串 +
+**「登录小米账号…」入口与登录态状态行**（it-004 US-9），含已存入状态行 + 「清除」二次确认）、
+平台端点（自动/bigmodel.cn/z.ai）、刷新间隔、演示模式、开机自启（SMAppService）、控制台链接、
+**逐源诊断**（原始响应查看/拷贝）。
 菜单栏：**按源分组摘要**（源名 + 各档行 + 逐源错误/空态）/ 立即刷新 / 演示模式 / 设置 /
 打开控制台 / 退出；菜单图标 = 各源主档健康度色条。
 
-**AC**：缓存文件与日志中无凭证；清除需确认且快照缓存一并删除；自启开关即时生效（.app 形态）。
+**AC**：缓存文件与日志中无凭证；清除需确认且快照缓存一并删除（支持会话的源同步清
+WebView 网站数据，it-004 AC4）；自启开关即时生效（.app 形态）。
 
 ## US-6 离线韧性
 断网、超时、解析失败均不崩溃；卡片继续展示；解析宽松降级（字段缺失显示 --%）。
@@ -77,12 +79,40 @@
 **AC**：新增源不需改卡片/设置/菜单/窗口代码；GLM 正常 + MiMo 过期时页脚出现 MiMo 错误文案
 （修 it-002 AC4 吞错）；布局尺寸由 `IslandLayout` 单一真源推导（遮罩/hitTest/窗口帧同源）。
 
-## US-8 小米 MiMo TOKEN Plan
-设置页粘贴 Cookie 字符串（浏览器登录 platform.xiaomimimo.com 后从网络请求复制），
-存 0600 文件 account `mimo-cookie`（**会过期**，设置里更新）；
+## US-8 小米 MiMo TOKEN Plan（it-004 修订：登录自动续期为主、粘贴为兜底）
 接口 `platform.xiaomimimo.com`，`percent` 为**小数比例**（0.0118 = 已用 1.18%），
 limit=0 条目跳过、无重置时间；主档标签 **「套餐」**（面板头已标源名，不重复厂商名），
 环下一行展示已用/额度绝对量（billion 单位，≥100B 不带小数）。
+凭证两条路：**优先走 US-9 登录自动续期**；兜底保留设置页粘贴 Cookie 字符串
+（浏览器登录控制台后从网络请求复制，存 0600 文件 account `mimo-cookie`，手动模式过期需自行更新）。
 
 **AC**：spike 实测响应单测通过（percent 比例、limit=0 跳过、标签=套餐）；
-Cookie 过期（code 401）→ 该源错误明示「MiMo Cookie 已过期，请在设置更新」。
+Cookie 过期（code 401）且手动模式 → 该源错误明示「MiMo Cookie 已过期，请在设置更新」；
+登录态过期且 active 会话 → 走 US-9 静默续期而非直接报错。
+
+## US-9 MiMo 登录态自动续期（it-004 新增）
+**背景**：tp- plan key 查控制台用量已实测证伪（6 认证形态 401、模型 host 无用量端点、
+官方无此 API——2026-09-29 复核，见 it-004），Cookie ~24h 过期、日更成本高，改由
+**持久化 WKWebsiteDataStore 承载小米账号会话**实现自动续期：
+
+- **设置页登录**：MiMo 分区「登录小米账号…」→ sheet 内嵌 WKWebView（持久化 data store）
+  走完整 SSO；着陆平台并取得 `api-platform_serviceToken` 后整段 Cookie 落盘 0600 文件、
+  会话状态置 `active`。
+- **静默续期**：刷新时 serviceToken 过期（401 + sessionExpired）且状态 `active` →
+  离屏 WebView 加载 loginUrl（缺省用控制台页）走 SSO——账号会话存活则零交互换新，
+  Cookie 回写后**重试拉取一次**（AC2）。
+- **账号会话失效**：停在账号登录页超 5s 宽限 → 状态置 `expired`、**停止自动重试**（AC3），
+  面板/页脚明示「登录已失效，请在设置重新登录」；网络/超时类暂态失败不改状态、
+  下周期按退避再试。
+- **状态行**：active 绿「已登录，自动续期中」/ expired 红「登录已失效，请重新登录」/
+  manual 灰「手动 Cookie 模式 · 登录可启用自动续期」（UserDefaults `sessionState.<kind>` 持久化）。
+- **状态机**：none →（粘贴）manual →（登录/续期成功）active →（账号会话死）expired →（重登）active；
+  active 状态下粘贴不降级；清除凭证 → none + 清 WebView 网站数据。
+
+**AC**：
+- AC1：账号会话存活期内，静默走 loginUrl 换新后 usage 200（会话寿命观察值记录在 it-004 验证记录）。
+- AC2：过期 → 自动续期 → 数据恢复，全程无用户交互；单次过期最多续期 1 次 + 重试 1 次，
+  其余沿用常规刷新退避。
+- AC3：账号会话失效不崩溃、不死循环（expired 后停自动续期），文案明示 + 一键重登入口。
+- AC4：凭证/会话 Cookie 不入仓库与日志；WebView 不注入 JS、不自动填密；清除凭证同步清网站数据。
+- AC5：手动粘贴（US-8 兜底）与 GLM 全链路回归不破；swift test 全绿。

@@ -64,11 +64,29 @@ final class AppSettings: ObservableObject {
         set { UserDefaults.standard.set(newValue?.rawValue, forKey: "preferredEndpoint") }
     }
 
+    /// it-004：按源登录态（UserDefaults `sessionState.<kind>`），驱动设置页状态行与静默续期闸门
+    @Published private(set) var sessionStates: [ProviderKind: SessionState] = [:]
+
+    func sessionState(_ kind: ProviderKind) -> SessionState {
+        sessionStates[kind] ?? .none
+    }
+
+    func setSessionState(_ kind: ProviderKind, _ state: SessionState) {
+        sessionStates[kind] = state
+        UserDefaults.standard.set(state.rawValue, forKey: "sessionState.\(kind.rawValue)")
+    }
+
     init() {
         let forceDemo = ProcessInfo.processInfo.environment["GLM_ISLAND_DEMO"] == "1"
         endpointMode = EndpointMode(rawValue: UserDefaults.standard.string(forKey: "endpointMode") ?? "") ?? .auto
         refreshMinutes = UserDefaults.standard.object(forKey: "refreshMinutes") as? Int ?? 5
         demoMode = forceDemo || UserDefaults.standard.bool(forKey: "demoMode")
         consoleURLString = UserDefaults.standard.string(forKey: "consoleURLString") ?? ""
+        for kind in ProviderKind.allCases {
+            let raw = UserDefaults.standard.string(forKey: "sessionState.\(kind.rawValue)") ?? ""
+            if let state = SessionState(rawValue: raw) {
+                sessionStates[kind] = state
+            }
+        }
     }
 }

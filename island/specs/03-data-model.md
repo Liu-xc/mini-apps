@@ -80,12 +80,17 @@ ProviderRegistry.all = [glm, mimo]   // 新增源 = ProviderKind case + 本表�
 - 该账号 limits 中**没有 MCP 档**（展示层也已按需求隐藏）
 - 伴生接口（M2 再接）：`/api/monitor/usage/model-usage`、`/api/monitor/usage/tool-usage`
 
-### 小米 MiMo TOKEN Plan（it-002 spike 实测）
+### 小米 MiMo TOKEN Plan（it-002 spike 实测；it-004 增补续期时序）
 
 - `GET https://platform.xiaomimimo.com/api/v1/tokenPlan/usage`，
   请求头 `Cookie: <登录态整段>` + `referer: …/console/plan-manage` + 浏览器 UA + `x-timezone: Asia/Shanghai`
-  （**只认浏览器登录态**；`tp-` 开头的 plan key 是模型调用 key，控制台接口一律 401）
+  （**只认浏览器登录态**；`tp-` 开头的 plan key 是模型调用 key，控制台接口一律 401——
+  2026-09-29 复核 6 认证形态 + 10 候选端点全灭，**key 查用量终局证伪**，见 it-004）
 - 响应信封 `{code, message, data}`；`code != 0` 抛错，body 含 `"code":401` → Cookie 过期
+- **401/403 或 body code 401 → `ProviderError(sessionExpired: true, loginURL:)`**（it-004）：
+  body 可能带 `loginUrl`（account.xiaomi.com serviceLogin，缺省则用控制台页兜底起跳）；
+  store 见 sessionExpired 且源处于 active 会话 → `MimoSessionRenewer` 静默续期 →
+  新 Cookie 回写 → 重试一次（时序与状态机见 01-US9 / 06-ADR12）
 - `data.usage`（主档）/ `data.monthUsage`（兜底）内 `items[]`：
   `percent` 为**小数比例**（0.0118 = 已用 1.18%，剩余 = (1−percent)×100）；
   `limit=0` 条目（未购买的补偿包）跳过；**无重置时间字段**
@@ -98,7 +103,9 @@ ProviderRegistry.all = [glm, mimo]   // 新增源 = ProviderKind case + 本表�
 | 数据 | 位置 | 内容 |
 |---|---|---|
 | GLM Key | `~/Library/Application Support/island/credentials.json`（chmod 0600）account `glm-key` | 不入仓库/日志 |
-| MiMo Cookie | 同上，account `mimo-cookie`（**会过期**，设置里更新） | 同上 |
+| MiMo Cookie | 同上，account `mimo-cookie`（登录自动续期回写 / 手动粘贴；**会过期**） | 同上 |
+| 登录态状态 | UserDefaults `sessionState.<kind>`（none/manual/active/expired，it-004） | 驱动设置状态行与续期闸门 |
+| 小米账号会话 | `WKWebsiteDataStore.default()`（WebKit 持久化目录，it-004） | serviceToken/pass 登录态；**清除凭证时一并清除** |
 | 快照缓存 | `~/Library/Application Support/island/snapshot-<kind>.json`（每源一份） | UsageSnapshot（无凭证）；清除凭证即删除 |
 | 偏好 | UserDefaults | `endpointMode` / `refreshMinutes` / `demoMode` / `consoleURLString` / `preferredEndpoint`（auto 探测赢家记忆，ADR-003） |
 

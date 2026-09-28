@@ -128,3 +128,18 @@
   `GLM_ISLAND_BLANK=1`（空态）、`GLM_ISLAND_DEMO/EXPAND`（演示/即展开）组合出全部走查状态。
 - 后果：走查命令一行可复现（见 README）；不依赖任何系统授权。
   代价：只能截本 App 自己的窗口（菜单栏图标/系统 UI 仍需人工目检）。
+
+## ADR-012：MiMo 登录态以持久化 WKWebsiteDataStore 承载，静默续期替代日更 Cookie（it-004）
+
+- 背景：控制台用量接口只认小米账号登录态；「tp- plan key 查用量」2026-09-29 复核**终局证伪**
+  （6 认证形态 401、模型 host 10 候选端点全 404、官方文档无此 API）。serviceToken ~24h 过期
+  → 用户日更 Cookie；401 body 的 `loginUrl` 拿旧 Cookie 跟过去只会落到登录页（实测）
+  ——静默换新**必须有账号级会话**。
+- 决策：设置页「登录小米账号」内嵌**持久化** `WKWebsiteDataStore` 的 WKWebView 完成一次登录，
+  App 持有账号会话（pass cookie，寿命远长于 serviceToken）；serviceToken 过期时离屏 WebView
+  静默走 SSO → sts 回调种新 Cookie → 提取回写 `credentials.json`（**接口凭证仍单源**）→ 重试。
+  状态机 `none/manual/active/expired`（UserDefaults `sessionState.<kind>`）：`expired` 停自动重试
+  等手动登录；手动粘贴 Cookie 保留为兜底。
+- 后果：账号会话存活期内零维护（预期数周~数月一登）；代价 = App 内多一份 WebView 会话数据
+  （与浏览器同级，清凭证即清）、首登需交互（可能验证码）、登录页若反 WebView 需调 UA。
+  若账号会话寿命 ≤1 天则收益归零——it-004 M1 spike Gate 已把该风险列为实施前必过项。
