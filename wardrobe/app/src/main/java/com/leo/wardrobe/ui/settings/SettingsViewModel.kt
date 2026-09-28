@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 
 /**
  * 设置域 ViewModel（it-041 阶段 A，US-41a）：厂商/模型/自定义连接偏好 + Key 密文存取 + 连通性自检。
- * Key 本体永不出现在 UI（只给 mask）与日志；演示模式下 Key 输入禁用（AppContainer 注入内存实现）。
+ * Key 本体永不出现在 UI（只给 mask）与日志；it-050 的 Mock 环境使用独立 Keystore 命名空间。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModel(app: Application) : AndroidViewModel(app) {
@@ -51,7 +51,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionUi())
 
     /** 当前厂商已存 Key 的 mask（如 sk-a***wxyz）；null = 未配置 */
-    val keyMask: StateFlow<String?> = connection
+    private val keyRevision = MutableStateFlow(0)
+    val keyMask: StateFlow<String?> = combine(connection, keyRevision) { ui, _ -> ui }
         .flatMapLatest { ui -> flow { emit(keyStore.get(ui.presetId)?.let(::maskApiKey)) } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -131,7 +132,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 prefs.setAiConnection(ui.presetId, ui.model.trim())
                 if (ui.presetId == CUSTOM_ID) prefs.setAiCustom(ui.customBaseUrl.trim(), ui.customModel.trim())
-                keyInput.trim().takeIf { it.isNotEmpty() }?.let { keyStore.put(ui.presetId, it) }
+                keyInput.trim().takeIf { it.isNotEmpty() }?.let {
+                    keyStore.put(ui.presetId, it)
+                    keyRevision.value += 1
+                }
             }.onFailure {
                 _check.value = CheckState.Failure("保存失败：${it.message ?: "未知错误"}")
                 return@launch
@@ -168,6 +172,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun clearKey(presetId: String) {
         viewModelScope.launch {
             keyStore.delete(presetId)
+            keyRevision.value += 1
             prefs.setAiLastCheck("")
             _check.value = CheckState.Idle
         }
@@ -196,6 +201,10 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun resetCheck() {
         _check.value = CheckState.Idle
+    }
+
+    fun clearMockChatCache() {
+        container.mockChatCache?.clear()
     }
 
     companion object {

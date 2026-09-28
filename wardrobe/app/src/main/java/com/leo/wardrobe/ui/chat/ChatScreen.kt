@@ -104,6 +104,7 @@ private val SUGGESTIONS = listOf("配一套通勤装", "我有哪些外套", "�
 @Composable
 fun ChatScreen(
     vm: ChatViewModel,
+    sessionId: String,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit = {},
     appVm: com.leo.wardrobe.ui.AppViewModel? = null,
@@ -115,6 +116,8 @@ fun ChatScreen(
     val running by vm.running.collectAsState()
     val error by vm.error.collectAsState()
     val notices by vm.toolNotices.collectAsState()
+    val canChat by vm.canChat.collectAsState()
+    val cacheHit by vm.cacheHit.collectAsState()
 
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -125,6 +128,7 @@ fun ChatScreen(
     // 重组可能被跳过（走查实测：完成后 chip 不出现，须重进页面）；外层读取 + Boolean
     // 参数变化能强制 items 内容重组
     val showActions = !running && error == null && display.firstOrNull() is RowUi.Ai
+    LaunchedEffect(sessionId) { vm.open(sessionId) }
     // it-043 补遗（真因）：reverseLayout 下新消息插在 index0（视口锚定会把新项挤到可视区
     // 下方），消息数变化后必须主动滚回 index0——否则最新回复不可见（走查实测：UI 停在旧内容）
     LaunchedEffect(messages.size) {
@@ -167,11 +171,11 @@ fun ChatScreen(
                     ) {
                         // it-043 O2：居中 + 措辞与占位错开（占位=「输入问题…」）
                         EmptyState(
-                            title = "今天想搭点什么？",
-                            hint = "点下面的示例直接开始，也可以输入任意问题",
+                            title = if (canChat) "今天想搭点什么？" else "这段对话只读",
+                            hint = if (canChat) "点下面的示例直接开始，也可以输入任意问题" else "配置 API Key 后可继续这段对话",
                         )
                         // it-043 O2：示例可点 chip（一键提问）
-                        FlowRow(
+                        if (canChat) FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth(),
@@ -190,7 +194,15 @@ fun ChatScreen(
             } else {
                 // it-043 O3：错误容器紧贴失败轮次（列表最底部=最新轮次下方）
                 error?.let { err ->
-                    item(key = "error") { ErrorRow(err, onRetry = vm::retry, onDismiss = vm::clearError, onOpenSettings = onOpenSettings) }
+                    item(key = "error") {
+                        ErrorRow(
+                            error = err,
+                            canChat = canChat,
+                            onRetry = vm::retry,
+                            onDismiss = vm::clearError,
+                            onOpenSettings = onOpenSettings,
+                        )
+                    }
                 }
                 if (thinking || streaming.isNotEmpty()) {
                     item(key = "live") {
@@ -233,8 +245,10 @@ fun ChatScreen(
                                             vm.copyReply(row.text)
                                             appVm?.toast("已复制回复")
                                         }
-                                        ActionChipBtn("换个场合再推荐") { vm.send("换个场合再推荐一套") }
-                                        ActionChipBtn("重新生成") { vm.regenerate() }
+                                        if (canChat) {
+                                            ActionChipBtn("换个场合再推荐") { vm.send("换个场合再推荐一套") }
+                                            ActionChipBtn("重新生成") { vm.regenerate() }
+                                        }
                                     }
                                 }
                             } else null,
@@ -246,8 +260,25 @@ fun ChatScreen(
             }
         }
 
-        // 输入栏（ime=Send 与应用内发送同一行为）
-        Row(
+        if (cacheHit) {
+            Text(
+                "已使用测试缓存",
+                style = MaterialTheme.typography.labelSmall,
+                color = ec.inkFaint,
+                modifier = Modifier.padding(start = 20.dp, bottom = 2.dp),
+            )
+        }
+        // 未配置时不渲染输入栏：历史可读、但不能误触写入会话（it-050）。
+        if (!canChat) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("配置 API Key 后可发起对话", style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint)
+                TextButton(onClick = onOpenSettings) { Text("去配置") }
+            }
+        } else Row(
             Modifier
                 .fillMaxWidth()
                 .imePadding()
@@ -290,6 +321,7 @@ fun ChatScreen(
 @Composable
 private fun ErrorRow(
     error: AgentError,
+    canChat: Boolean,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -311,7 +343,7 @@ private fun ErrorRow(
             Column(Modifier.weight(1f)) {
                 Text(error.userMessage, style = MaterialTheme.typography.bodyMedium, color = errorColor)
                 Row {
-                    TextButton(onClick = onRetry) { Text("重试") }
+                    if (canChat) TextButton(onClick = onRetry) { Text("重试") }
                     // it-043 O3：Key/网络类直达设置，恢复路径少一跳
                     if (error is AgentError.Auth || error is AgentError.Network) {
                         TextButton(onClick = onOpenSettings) { Text("去设置") }

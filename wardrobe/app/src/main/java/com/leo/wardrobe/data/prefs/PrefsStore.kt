@@ -16,7 +16,7 @@ private val Context.store by preferencesDataStore("wardrobe_prefs")
  * 轻偏好：当前角色 + 各槽位组合记忆（US-06），按 personId 隔离。
  * it-011：导出维度选择记忆 + 格位滑动 coach 首演标记。
  */
-class PrefsStore(private val context: Context) {
+class PrefsStore(private val context: Context, private val aiNamespace: String = "") {
 
     private val keyPerson = stringPreferencesKey("current_person")
     private val keyPersonNote = stringPreferencesKey("person_note")
@@ -93,10 +93,11 @@ class PrefsStore(private val context: Context) {
 
     // it-041 US-41a：AI 模型连接偏好（Key 本体走 KeystoreApiKeyStore，不进 DataStore）
 
-    private val keyAiPreset = stringPreferencesKey("ai_preset")
-    private val keyAiModel = stringPreferencesKey("ai_model")
-    private val keyAiCustomBaseUrl = stringPreferencesKey("ai_custom_base_url")
-    private val keyAiCustomModel = stringPreferencesKey("ai_custom_model")
+    private fun aiKey(name: String) = stringPreferencesKey("${aiNamespace}ai_$name")
+    private val keyAiPreset = aiKey("preset")
+    private val keyAiModel = aiKey("model")
+    private val keyAiCustomBaseUrl = aiKey("custom_base_url")
+    private val keyAiCustomModel = aiKey("custom_model")
 
     /** 选中的厂商 preset id（Providers.all 或 "custom"） */
     val aiPresetId: Flow<String> = context.store.data.map { it[keyAiPreset] ?: "glm" }
@@ -124,7 +125,7 @@ class PrefsStore(private val context: Context) {
 
     // it-043 O4（走查 C6）：最近一次自检结果持久化——「OK|model|epochMs」或「ERR|message|epochMs」
 
-    private val keyAiLastCheck = stringPreferencesKey("ai_last_check")
+    private val keyAiLastCheck = aiKey("last_check")
 
     val aiLastCheck: Flow<String?> = context.store.data.map { it[keyAiLastCheck] }
 

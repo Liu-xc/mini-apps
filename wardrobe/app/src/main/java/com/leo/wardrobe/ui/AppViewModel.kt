@@ -17,7 +17,7 @@ import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.outfitById
 import com.leo.wardrobe.domain.model.outfitWithItems
-import com.leo.wardrobe.domain.model.personById
+import com.leo.wardrobe.domain.model.currentPersonOrFirst
 import com.leo.wardrobe.domain.model.newId
 import com.leo.wardrobe.domain.model.wishItemById
 import com.leo.wardrobe.domain.model.wishItemsOf
@@ -93,7 +93,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val currentPerson: StateFlow<Person?> =
         combine(repo.data, prefs.currentPersonId) { d, savedId ->
-            savedId?.let { d.personById(it) } ?: d.persons.firstOrNull()
+            d.currentPersonOrFirst(savedId)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** 各槽位组合记忆：Map<品类.name, itemId>（US-06） */

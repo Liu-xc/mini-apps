@@ -57,7 +57,7 @@ import com.leo.wardrobe.ui.theme.editorialColors
 /**
  * W11 设置页（it-041 阶段 A，US-41a）：模型连接（厂商/模型/Key/连通性自检）+ 模式状态。
  * 白顶栏沉浸二级页（it-034 组，路由加入根 Scaffold 去顶 inset 名单）；
- * Key 只出 mask（红线③），演示模式禁用输入（红线②）。
+ * Key 只出 mask（红线③）；it-050 的 Mock 环境使用隔离测试连接与缓存。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +78,7 @@ fun SettingsScreen(
     var presetMenu by remember { mutableStateOf(false) }
     var modelMenu by remember { mutableStateOf(false) }
     var clearAsk by remember { mutableStateOf(false) }
+    var clearCacheAsk by remember { mutableStateOf(false) }
     var exitDemoAsk by remember { mutableStateOf(false) }
 
     // 自检成功 = 关键确认动作，一次轻震（DESIGN.md §4；Running→Success 边沿触发）
@@ -124,7 +125,8 @@ fun SettingsScreen(
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("模型连接", style = MaterialTheme.typography.titleLarge, color = ec.ink)
                     Text(
-                        "BYOK 直连模型厂商：Key 加密存于本机，导出数据不携带，界面只显示尾码。",
+                        if (vm.isDemo) "测试连接：Key 与真实衣橱隔离加密保存，导出数据不携带。"
+                        else "BYOK 直连模型厂商：Key 加密存于本机，导出数据不携带，界面只显示尾码。",
                         style = MaterialTheme.typography.bodyMedium,
                         color = ec.ink,
                     )
@@ -263,12 +265,10 @@ fun SettingsScreen(
                         },
                         label = { Text("API Key", color = ec.ink) },
                         singleLine = true,
-                        enabled = !vm.isDemo,
                         visualTransformation = PasswordVisualTransformation(),
                         supportingText = {
                             Text(
                                 when {
-                                    vm.isDemo -> "演示模式不保存 Key"
                                     keyMask != null -> "已保存 $keyMask · 留空保持不变"
                                     else -> "未配置"
                                 },
@@ -333,12 +333,12 @@ fun SettingsScreen(
                     ) {
                         Button(
                             onClick = { vm.saveAndCheck(connection, keyInput) },
-                            enabled = !running && !customIncomplete && !vm.isDemo,
+                            enabled = !running && !customIncomplete,
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(if (running) "自检中…" else "保存并自检")
                         }
-                        if (keyMask != null && !vm.isDemo) {
+                        if (keyMask != null) {
                             // it-043 O4（走查 C8）：回退动作中性弱色，与主 CTA 分层（仍带二次确认）
                             TextButton(
                                 onClick = { clearAsk = true },
@@ -347,6 +347,13 @@ fun SettingsScreen(
                                 ),
                             ) { Text("清除 Key") }
                         }
+                    }
+
+                    if (vm.isDemo) {
+                        TextButton(
+                            onClick = { clearCacheAsk = true },
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = ec.inkFaint),
+                        ) { Text("清除测试缓存") }
                     }
 
                     // it-041 阶段 B：对话入口（W12）
@@ -488,6 +495,17 @@ fun SettingsScreen(
                 }) { Text("清除") }
             },
             dismissButton = { TextButton(onClick = { clearAsk = false }) { Text("取消") } },
+        )
+    }
+    if (clearCacheAsk) {
+        AlertDialog(
+            onDismissRequest = { clearCacheAsk = false },
+            title = { Text("清除测试缓存？") },
+            text = { Text("将删除本机 Mock 顾问缓存；下次相同请求会重新调用模型。") },
+            confirmButton = {
+                TextButton(onClick = { clearCacheAsk = false; vm.clearMockChatCache() }) { Text("清除") }
+            },
+            dismissButton = { TextButton(onClick = { clearCacheAsk = false }) { Text("取消") } },
         )
     }
 

@@ -6,6 +6,7 @@
 |---|---|---|---|
 | 衣橱 | [`wardrobe/`](wardrobe/) | 安卓原生应用：多角色衣橱管理、滑动组合穿搭、录入去背景、导出生图素材给 AI 生图 Agent、成品效果图回录与单品双向关联、穿搭打卡与衣橱回顾、心愿清单 | 开发中 (it-020) |
 | 吃啥 | [`eats/`](eats/) | 安卓原生应用：吃喝玩乐三类记录（堂食/外卖/自做）、地图标记 + 最近一次追踪、卡组快速决策、统计回顾、想吃想玩愿望清单 | 开发中 (it-009) |
+| 显影 | [`darkroom/`](darkroom/) | 安卓原生应用：拍立得显影工具——传图看三阶段显影动画（潜影/浮现/定影）、药水条倒放、甩一甩加速、黑白灰编辑式卡面、成片位图与**显影过程视频**（EGL 逐帧编码+合成声轨）双导出，全程离线 | 开发中 (it-001) |
 | 剪贴盒 | [`clips/`](clips/) | 双端剪贴板历史（Android Kotlin/Compose + macOS SwiftUI），clips.json 文件格式为跨端契约，双端单测对齐 | 提案中（it-001 specs 已备，未开工） |
 | 灵岛 | [`island/`](island/) | macOS 刘海功能入口容器：默认隐形，hover 刘海动画展开内容卡片；多内容源按 ProviderRegistry 单表并排展示（GLM + 小米 MiMo TOKEN 用量：单主环剩余%·健康度配色·行式明细），凭证 0600 本机文件、按源状态独立、布局单一真源 | it-003 已完成（单环卡片 + 可扩展架构） |
 | 驿站 | [`posthouse/`](posthouse/) | macOS 菜单栏工具：本地 git 仓库烽火台（三态报警 + 明细菜单 + 带网络参数的手动推送）、白名单自动补推（默认全关、永不 force 永不自动 pull）、每晚邸报战报 + 成就系统 | it-001 已完成（M1 烽火台 + M2 自动哨兵 + M3 邸报） |
@@ -36,5 +37,5 @@
 
 ## 环境要求
 
-- 安卓应用（衣橱、吃啥）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见各应用目录的 README：[wardrobe/README.md](wardrobe/README.md)、[eats/README.md](eats/README.md)。
+- 安卓应用（衣橱、吃啥、显影）：JDK 17、Android SDK（platform 35 / build-tools 34+）。构建方式见各应用目录的 README：[wardrobe/README.md](wardrobe/README.md)、[eats/README.md](eats/README.md)、[darkroom/README.md](darkroom/README.md)。
 - 网页应用（象棋竞技场、赤峰环线）：Node.js 20+。构建方式见各应用目录的 README：[xiangqi/README.md](xiangqi/README.md)、[travel-rpg/README.md](travel-rpg/README.md)。

@@ -4,6 +4,10 @@ package com.leo.wardrobe.domain.model
 
 fun WardrobeData.personById(id: String): Person? = persons.firstOrNull { it.id == id }
 
+/** 当前角色解析与 W1/W2 保持一致：有效的已保存角色优先，否则回退到首个角色。 */
+fun WardrobeData.currentPersonOrFirst(savedId: String?): Person? =
+    savedId?.let(::personById) ?: persons.firstOrNull()
+
 fun WardrobeData.itemsOf(personId: String): List<Item> = items.filter { it.personId == personId }
 
 fun WardrobeData.itemsOf(personId: String, category: WardrobeCategory): List<Item> =

@@ -4,7 +4,9 @@
 
 ## 2026-09-28
 
+- **feat(wardrobe)**: it-052 全局黑白灰高级视觉与排版系统落地——主题 token、Material 色阶、全局 Typography、心愿占位、年度回顾、数据包状态符号、复制纸屑与导出长图均收口为中性灰阶；照片/成品图保留原色；同步更新 DESIGN.md 与 wardrobe 常青 spec。
 - **feat(darkroom)**: it-006 黑白灰编辑式视觉——全局纸面/Surface/交互强调与 Snackbar 逆色改中性灰阶，重订 CJK 字级并限制字距用于短拉丁标签；作品标题改常规衬线最多两行、日期改 Sans 等宽数字灰阶排印；分享装饰同步去暖色，照片影调选项保留。`testDebugUnitTest assembleDebug installDebug` 通过，Android 14 AVD 浅/深色 W1–W4 走查，详 [it-006](darkroom/specs/iterations/it-006-monochrome-editorial-identity.md)。
+- **feat(wardrobe)**: it-050 顾问升为第四个底部导航 Tab，新增多会话列表与详情；旧单会话自动进入历史索引，未配置 Key 时历史可读但不可新建/发送。Mock 环境启用独立的连接偏好、Keystore、会话、用量与 7 天/100 条/50 MB 响应缓存；整轮完成后才写缓存，失败/取消丢弃，W11 自检不走缓存。`:app:testDebugUnitTest` 70 项全绿、`:app:assembleDebug` 成功；模拟器确认四 Tab 与历史会话列表。Mock 真 Key 首发/缓存命中未做联网验收，避免调用未由用户在测试命名空间配置的凭证；详 [it-050](wardrobe/specs/iterations/it-050-chat-top-level-and-mock-cache.md)。
 - **feat(darkroom)**: it-005 可选成片风格——W3 加入原色/暖片/银影/青幕/柔光横向缩略预览，效果即时应用到分享预览、静图和视频逐帧；柔光按亮部阈值生成确定性晕光并缓存，风格切换会使旧导出失效；压缩 W3 预览与编辑区，保持导出按钮首屏可见。Debug 构建及 Android 14 AVD W3 浅/深色检查通过，详 [it-005](darkroom/specs/iterations/it-005-selectable-photo-looks.md)。
 - **feat(darkroom)**: it-004 暗房仪式与社交成片——W1 换成本地照片样片，W2 改为照片种子驱动的确定性药膜扩散并加入阶段短句与有重量的出纸回正，W3 将卡片预览提升为主视觉并新增 1:1/4:5/9:16 图片与视频统一构图（含故事安全区）；增加 `ShareLayout` 与 ADR-006，不引入依赖。Android 14 AVD 验证三画幅图片/视频均落库为 1080×1080、1080×1350、1080×1920，系统分享面板可打开；浅色/深色 W3 检查通过；`testDebugUnitTest` 38 项全绿，详 [it-004](darkroom/specs/iterations/it-004-emotional-darkroom-share.md)。
 

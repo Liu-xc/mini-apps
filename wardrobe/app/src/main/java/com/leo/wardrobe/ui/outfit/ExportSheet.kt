@@ -3,6 +3,12 @@
 package com.leo.wardrobe.ui.outfit
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,8 +31,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Face
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
@@ -72,6 +77,7 @@ import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
+import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -79,9 +85,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * W6 导出面板（it-002 改版；it-011 O8 高频优先；it-012 R2 三修）：
- * 结构 = 滚动区（标题/自适应预览/场景常驻/四维折叠/人物/Prompt/收藏）+ **底部固定动作栏**
- * （复制长图/分享/只复制文本永远可见，展开维度不再挤走）；维度选择记忆经 ready 标志修竞态。
+ * W6 导出面板：预览是内容主角，画面设定常驻可扫读，补充信息与 Prompt 分段编辑；
+ * 底部复制/保存/分享动作始终固定可达。维度选择记忆经 ready 标志修竞态。
  */
 @Composable
 fun ExportSheet(
@@ -112,7 +117,9 @@ fun ExportSheet(
     var collected by remember { mutableStateOf(false) }
     var confettiTrigger by remember { mutableIntStateOf(0) }
     var composeJob by remember { mutableStateOf<Job?>(null) }
-    var advancedOpen by remember { mutableStateOf(false) }
+    // it-051：永远展示五维当前值；只展开正在编辑的一行，避免把“场景”藏在泛化折叠入口中。
+    var activeDimensionKey by remember { mutableStateOf<String?>(null) }
+    var resolvedInitialDimension by remember { mutableStateOf(false) }
 
     LaunchedEffect(savedNote) { if (personNote.isBlank() && savedNote.isNotBlank()) personNote = savedNote }
     LaunchedEffect(savedCustomPrompt) { if (customPrompt.isBlank() && savedCustomPrompt.isNotBlank()) customPrompt = savedCustomPrompt }
@@ -122,6 +129,13 @@ fun ExportSheet(
         if (!selectionsInit && (savedSelectionsReady || savedSelections.isNotEmpty())) {
             if (savedSelections.isNotEmpty()) selections = savedSelections
             selectionsInit = true
+        }
+    }
+    // 首次打开且尚未选择场景时，直接呈现“场景”候选；已有选择则保持紧凑、可扫读的常态。
+    LaunchedEffect(selectionsInit, selections) {
+        if (selectionsInit && !resolvedInitialDimension) {
+            activeDimensionKey = PromptPresets.SCENE.key.takeIf { selections[it] == null }
+            resolvedInitialDimension = true
         }
     }
 
@@ -272,48 +286,28 @@ fun ExportSheet(
                         }
                     }
 
-                    // it-013：五维全部收进一个可选折叠区（场景不再常驻）——自由写 prompt 是主路径，维度只是可选微调
-                    val selCount = PromptPresets.dimensions.count { selections[it.key] != null }
+                    Text(
+                        "画面设定",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = editorialColors().ink,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
                     Surface(
-                        onClick = { advancedOpen = !advancedOpen },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                        border = BorderStroke(1.dp, editorialColors().hairline),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                        ) {
-                            Text(
-                                "风格与场景维度（全部可选）",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = editorialColors().ink,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (selCount > 0) {
-                                Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.primary) {
-                                    Text(
-                                        "$selCount",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
-                                    )
-                                }
-                            }
-                            Icon(
-                                if (advancedOpen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = editorialColors().inkFaint,
-                            )
-                        }
-                    }
-                    AnimatedVisibility(visible = advancedOpen) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            PromptPresets.dimensions.forEach { dim ->
-                                DimensionChips(
+                        Column {
+                            PromptPresets.dimensions.forEachIndexed { index, dim ->
+                                DimensionSettingRow(
                                     dim = dim,
-                                    selected = selections,
+                                    selectedValue = selections[dim.key],
+                                    expanded = activeDimensionKey == dim.key,
+                                    isPrimary = dim.key == PromptPresets.SCENE.key,
+                                    onToggle = {
+                                        activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
+                                    },
                                     onSelect = { opt ->
                                         selections = if (selections[dim.key] == opt) {
                                             selections - dim.key
@@ -322,57 +316,72 @@ fun ExportSheet(
                                         }
                                     },
                                 )
+                                if (index != PromptPresets.dimensions.lastIndex) {
+                                    HorizontalDivider(
+                                        color = editorialColors().hairline,
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                    )
+                                }
                             }
-                            Text(
-                                "一个都不选也可以——直接在下面写你的要求",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = editorialColors().inkFaint,
-                                modifier = Modifier.padding(start = 2.dp),
-                            )
                         }
                     }
+                    Text(
+                        "可只设场景；其余参数按需要补充。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = editorialColors().inkFaint,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
 
+                    Text(
+                        "补充信息",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = editorialColors().ink,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                    FieldLabel(title = "人物描述", meta = "会记住上次")
                     OutlinedTextField(
                         value = personNote,
                         onValueChange = { personNote = it },
                         modifier = Modifier.fillMaxWidth(),
-                        // it-036 C8②：两输入框统一占位符式——去 floating label（线框 W6②）
-                        placeholder = { Text("人物描述（记住上次）") },
+                        placeholder = { Text("例如：短发，偏瘦，自然站姿") },
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodySmall,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = editorialTextFieldColors(),
                     )
 
                     // it-013：自定义要求（可选，自由撰写，追加到文案末尾，记住上次）
+                    FieldLabel(title = "自定义要求", meta = "可选 · 会记住上次")
                     OutlinedTextField(
                         value = customPrompt,
                         onValueChange = { customPrompt = it },
                         modifier = Modifier.fillMaxWidth(),
-                        // it-036 C8②：原 floating label 缺口式 → 与人物描述同占位符式
-                        placeholder = { Text("自定义要求（可选，记住上次）") },
+                        placeholder = { Text("例如：不要改变鞋子的颜色") },
                         minLines = 2,
                         textStyle = MaterialTheme.typography.bodySmall,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = editorialTextFieldColors(),
                     )
 
-                    // Prompt 文案：深底等宽高对比单层容器（it-011 O8——导出的灵魂）
+                    Text(
+                        "生成文案",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = editorialColors().ink,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
+                    FieldLabel(title = "给生图 Agent 的提示词", meta = "实时生成 · 可编辑")
                     OutlinedTextField(
                         value = imagePrompt,
                         onValueChange = { promptEdit = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(150.dp),
-                        label = { Text("文案（实时生成，可编辑）") },
                         textStyle = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace,
                             color = editorialColors().ink,
                         ),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            cursorColor = editorialColors().accent,
-                            focusedBorderColor = editorialColors().accent,
-                            unfocusedBorderColor = editorialColors().hairline,
-                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = editorialTextFieldColors(),
                     )
 
                     HorizontalDivider(color = editorialColors().hairline)
@@ -503,32 +512,102 @@ fun ExportSheet(
     }
 }
 
-/** 单维度选择器（单选、可再点取消） */
+/** W6 it-051：常驻值的画面设定行；仅展开当前编辑项，避免嵌套弹层。 */
 @Composable
-private fun DimensionChips(
+private fun DimensionSettingRow(
     dim: com.leo.wardrobe.domain.usecase.PromptDimension,
-    selected: Map<String, String>,
+    selectedValue: String?,
+    expanded: Boolean,
+    isPrimary: Boolean,
+    onToggle: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            dim.label,
-            style = MaterialTheme.typography.labelMedium,
-            color = editorialColors().inkFaint,
-        )
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            dim.options.forEach { opt ->
-                FilterChip(
-                    selected = selected[dim.key] == opt,
-                    onClick = { onSelect(opt) },
-                    label = { Text(opt) },
+    Surface(
+        onClick = onToggle,
+        color = if (isPrimary) MaterialTheme.colorScheme.primary.copy(alpha = 0.055f) else Color.Transparent,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    dim.label,
+                    style = if (isPrimary) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelLarge,
+                    color = editorialColors().ink,
+                    modifier = Modifier.weight(1f),
                 )
+                Text(
+                    selectedValue ?: "未设置",
+                    style = if (isPrimary) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodySmall,
+                    color = if (selectedValue != null) editorialColors().accentContent else editorialColors().inkFaint,
+                    maxLines = 1,
+                )
+                Icon(
+                    Icons.Rounded.KeyboardArrowRight,
+                    contentDescription = "编辑${dim.label}",
+                    tint = editorialColors().inkFaint,
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(20.dp),
+                )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(animationSpec = EditorialMotion.smooth()) + fadeIn(animationSpec = tween(100)),
+                exit = shrinkVertically(animationSpec = EditorialMotion.smooth()) + fadeOut(animationSpec = tween(90)),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    dim.options.forEach { opt ->
+                        FilterChip(
+                            selected = selectedValue == opt,
+                            onClick = { onSelect(opt) },
+                            modifier = Modifier.heightIn(min = 44.dp),
+                            label = { Text(opt) },
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+/** 表单标签常驻在输入框外，空字段不再依赖低对比 placeholder 说明用途。 */
+@Composable
+private fun FieldLabel(title: String, meta: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = editorialColors().ink,
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            meta,
+            style = MaterialTheme.typography.labelSmall,
+            color = editorialColors().inkFaint,
+        )
+    }
+}
+
+@Composable
+private fun editorialTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+    cursorColor = editorialColors().accent,
+    focusedBorderColor = editorialColors().accent,
+    unfocusedBorderColor = editorialColors().hairline,
+)

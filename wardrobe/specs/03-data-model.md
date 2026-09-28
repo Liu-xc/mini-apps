@@ -146,3 +146,9 @@
 3. 删除 Outfit 时：其 effectImages 物理删除；Notes 级联删除；WearLog 级联删除（it-018）。
 4. 删除 Person 时：级联删除其全部 Item/Outfit/Note/WearLog 及图片文件，含形象参考照 refImageFile（it-017）；更换参考照时旧文件删除。
 5. Outfit.itemIds 中的 id 必须有效（加载时清洗悬空引用）；WearLog 的 outfitId/personId 同样清洗（it-018）。
+
+## 顾问私有数据（it-050，不属于 WardrobeData/数据包）
+
+`agent-sessions/<sessionId>.json` 继续由 `FileSessionStore` 保存消息；同目录 `index.json` 保存 `ChatSessionSummary(id, title, createdAt, updatedAt, preview)`，供 W12 排序和会话列表展示。旧 `wardrobe-chat.json` 首次读取时只登记入索引，不改消息内容。Mock 环境使用 `mock-agent-sessions/` 独立目录，避免测试会话混入真实会话。
+
+Mock 真实模型缓存放 `cacheDir/mock-agent-cache/<sha256>.json`，条目为完成态消息、用量与创建时间。指纹含 Mock 数据版本、厂商/模型、测试 Key 的摘要、完整消息上下文、system prompt 与工具定义；TTL 7 天，最多 100 条或 50 MB。会话索引、缓存、所有 Key 都不属于 `wardrobe.json`，不导出。

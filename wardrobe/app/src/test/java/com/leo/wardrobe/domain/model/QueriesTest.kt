@@ -13,6 +13,15 @@ class QueriesTest {
     )
 
     @Test
+    fun currentPersonPrefersSavedSelectionAndFallsBackForMissingOrStaleId() {
+        val d = data()
+        assertEquals("p2", d.currentPersonOrFirst("p2")?.id)
+        assertEquals("p1", d.currentPersonOrFirst(null)?.id)
+        assertEquals("p1", d.currentPersonOrFirst("deleted-person")?.id)
+        assertNull(WardrobeData().currentPersonOrFirst(null))
+    }
+
+    @Test
     fun sameSetDifferentOrderMatches() {
         val d = data(Outfit("o1", "p1", itemIds = listOf("a", "b", "c")))
         assertEquals("o1", d.outfitWithItems("p1", listOf("c", "a", "b"))?.id)

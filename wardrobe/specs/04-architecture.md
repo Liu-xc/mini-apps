@@ -25,8 +25,8 @@ di/AppContainer.kt = 组合根，装配一切依赖（手动构造器注入）
 ```
 com.leo.wardrobe/
 ├─ WardrobeApp.kt                 # Application：创建 AppContainer
-├─ MainActivity.kt                # 单 Activity：NavHost + 底部三 Tab + 主题
-├─ di/AppContainer.kt             # 组合根（演示模式仓库/图片目录切换；内置演示资源按 revision 刷新）
+├─ MainActivity.kt                # 单 Activity：NavHost + 底部四 Tab + 主题
+├─ di/AppContainer.kt             # 组合根（演示仓库/图片目录切换；内置演示资源按 revision 刷新）
 ├─ domain/
 │  ├─ model/      Person Item Outfit OutfitImage Note WearLog WishItem WishOutfit
 │  │              WardrobeCategory TagPresets WardrobeData（Queries.kt 派生查询）
@@ -36,8 +36,9 @@ com.leo.wardrobe/
 ├─ data/
 │  ├─ repo/WardrobeRepositoryImpl.kt   # 继承 store SDK 的 SsotRepository（SSOT+原子落盘+广播；writeHook 预留同步登记）
 │  ├─ image/ImageFileStore.kt          # 实现 ImageStore + ImageEditStore 接口(it-021)；文件管理走 store SDK FileMediaStore
-│  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆/AI 连接偏好 it-041）RecapPrefsStore（回忆提醒）KeystoreApiKeyStore（BYOK Key 密文，ADR-024）
-│  └─ mock/                            # it-015 演示模式：MockWardrobeData（种子）/ MockWardrobeRepository（内存，级联语义与 Impl 锁定一致，it-020）/ DemoMode（开关）
+│  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆/真实与 Mock 隔离的 AI 连接偏好）RecapPrefsStore / KeystoreApiKeyStore
+│  ├─ chat/                            # ChatSessionIndex（会话摘要目录；消息仍归 agent FileSessionStore）
+│  └─ mock/                            # Mock 数据/仓库/DemoMode；MockChatCache + CachedMockChatModel（it-050）
 ├─ export/
 │  ├─ OutfitImageComposer.kt      # Bitmap 拼合成图（2列网格+品类标签）
 │  ├─ JpegXmp.kt                  # 成品图 XMP 元数据回写（it-013）
@@ -55,7 +56,7 @@ com.leo.wardrobe/
    ├─ recap/       WardrobeRecapScreen RecapViewModel WardrobeRecapLongImage(W9，it-018/021)
    ├─ wishlist/    WishlistScreen(W10，it-019)
    ├─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域)
-   └─ chat/        ChatScreen(W12) ChatViewModel WardrobeTools(it-041 阶段B，只读衣橱工具)
+   └─ chat/        ChatListScreen(W12) ChatScreen(W13) ChatViewModel WardrobeTools（多会话 + 只读门禁）
 ```
 
 ## 设计模式
@@ -73,9 +74,11 @@ com.leo.wardrobe/
 ## 状态与导航
 
 - 全局：`AppViewModel` 暴露 `currentPerson: StateFlow<Person?>` 与 `data: StateFlow<WardrobeData>`。
-- 页面导航：Compose Navigation。路由：`home`(三 Tab) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（it-041 W11）/ `chat`（it-041 阶段 B W12；settings/chat 均为白底二级页组）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
+- 当前角色：`WardrobeData.currentPersonOrFirst(savedId)` 是共享解析规则；聊天工具必须使用与 W1/W2 一致的首角色回退，避免 DataStore 尚未写入或保存了旧 id 时误判“当前没有角色”。
+- 页面导航：Compose Navigation。路由：`home`(四 Tab，W12 顾问会话列表) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（W11）/ `chat/{sessionId}`（W13 会话详情）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
 - 组合记忆（US-06）：各品类选中 itemId 存 `DataStore<Preferences>`（PrefsStore），key 按 personId 隔离。
 - 回忆提醒开关存 DataStore（RecapPrefsStore），ReminderScheduler 对齐 WorkManager 任务。
+- Mock 模式的 AI 偏好、Keystore alias、会话/用量目录、缓存目录与真实衣橱分命名空间；只有主动保存 Mock Key 后才允许外呼。`CachedMockChatModel` 以完整请求与 Key 摘要指纹命中私有缓存，失败/取消不写入。
 
 ## 错误处理
 
@@ -84,7 +87,7 @@ com.leo.wardrobe/
 
 ## 测试策略
 
-- `domain`/`data` 纯 JVM 单测：Repository 不变量（级联删除、悬空清洗）、**Mock 与 Impl 级联语义一致性**（it-020）、RecapCalculator、BuildOutfitPrompt、Queries 派生查询。wardrobe.json 原子写/迁移/恢复由 libs/store 的 SnapshotStoreTest 覆盖（ADR-012）。
+- `domain`/`data` 纯 JVM 单测：Repository 不变量（级联删除、悬空清洗）、**Mock 与 Impl 级联语义一致性**（it-020）、RecapCalculator、BuildOutfitPrompt、Queries、Mock Chat 缓存命中/Key 变化 miss/失败不写。wardrobe.json 原子写/迁移/恢复由 libs/store 的 SnapshotStoreTest 覆盖（ADR-012）。
 - UI 以模拟器走查验证；Compose UI 测试留待后续迭代。
 
 ## 构建配置

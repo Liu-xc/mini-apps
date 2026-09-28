@@ -54,7 +54,8 @@ class AppContainer(private val context: Context) {
     /** it-024：数据包导出/导入（演示模式下入口置灰，服务层再兜底拒绝） */
     val packages = com.leo.wardrobe.data.packages.WardrobePackages(repository, snapshotStore, imageStore, demo)
 
-    val prefs: PrefsStore = PrefsStore(context)
+    /** 非敏感的模型偏好同样按真实/Mock 运行数据域隔离。 */
+    val prefs: PrefsStore = PrefsStore(context, if (demo) "mock_" else "")
     /** 「好久没穿」提醒设置（it-018 阶段C） */
     val recapPrefs: com.leo.wardrobe.data.prefs.RecapPrefsStore =
         com.leo.wardrobe.data.prefs.RecapPrefsStore(context)
@@ -63,22 +64,42 @@ class AppContainer(private val context: Context) {
     val cutoutEngine: com.leo.libs.cutout.CutoutEngine = com.leo.libs.cutout.OnnxCutoutEngine(
         modelBytes = { context.assets.open("u2netp.onnx").use { it.readBytes() } },
     )
-    /** it-041 US-41a：BYOK Key 存储——演示模式永不挂真 key（libs/agent 红线②，注入内存实现） */
+    /** it-050：Mock 测试连接与真实衣橱连接使用完全独立的 Keystore 命名空间。 */
     val apiKeyStore: com.leo.libs.agent.ApiKeyStore =
-        if (demo) com.leo.libs.agent.InMemoryApiKeyStore() else KeystoreApiKeyStore(context)
+        KeystoreApiKeyStore(context, if (demo) "mock_agent" else "agent")
 
-    /** it-041：模型传输实例工厂——构造零副作用（OkHttp 客户端惰性请求），不进启动路径；
-     *  演示模式挂离线 FakeChatModel（红线②：零外呼，工具仍真查演示数据） */
+    /** Mock 真实模型的私有响应缓存：不进数据包，退出演示不触碰真实数据。 */
+    val mockChatCache: com.leo.wardrobe.data.mock.MockChatCache? =
+        if (demo) com.leo.wardrobe.data.mock.MockChatCache(File(context.cacheDir, "mock-agent-cache")) else null
+
+    /** it-050：模型传输实例工厂。Mock 有 Key 时真实直连并经私有缓存；无 Key 由 UI/VM 只读拦截。 */
     fun chatModel(preset: com.leo.libs.agent.ProviderPreset): com.leo.libs.agent.ChatModel =
-        if (demo) com.leo.wardrobe.data.mock.demoChatModel()
-        else com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore)
+        com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore).let { model ->
+            mockChatCache?.let { cache ->
+                com.leo.wardrobe.data.mock.CachedMockChatModel(model, cache) {
+                    val key = apiKeyStore.get(preset.id).orEmpty()
+                    java.security.MessageDigest.getInstance("SHA-256")
+                        .digest(key.toByteArray(Charsets.UTF_8))
+                        .joinToString("") { "%02x".format(it) }
+                }
+            } ?: model
+        }
 
     /** it-041 阶段 B：AI 对话会话（tmp→rename 原子写，杀进程可续）与用量记账 */
     val agentSession: com.leo.libs.agent.session.FileSessionStore =
-        com.leo.libs.agent.session.FileSessionStore(File(context.filesDir, "agent-sessions"))
+        com.leo.libs.agent.session.FileSessionStore(
+            File(context.filesDir, if (demo) "mock-agent-sessions" else "agent-sessions"),
+        )
+
+    /** 多会话目录（it-050），只存摘要与排序信息；消息仍在 agentSession。 */
+    val chatSessions = com.leo.wardrobe.data.chat.ChatSessionIndex(
+        File(context.filesDir, if (demo) "mock-agent-sessions/index.json" else "agent-sessions/index.json"), agentSession,
+    )
 
     val agentUsage: com.leo.libs.agent.usage.FileUsageLedger =
-        com.leo.libs.agent.usage.FileUsageLedger(File(context.filesDir, "agent-usage.json"))
+        com.leo.libs.agent.usage.FileUsageLedger(
+            File(context.filesDir, if (demo) "mock-agent-usage.json" else "agent-usage.json"),
+        )
 
     val buildPrompt: BuildOutfitPrompt = BuildOutfitPrompt()
     val pickRandom: PickRandomOutfit = PickRandomOutfit()

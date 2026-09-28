@@ -17,12 +17,14 @@ import javax.crypto.spec.GCMParameterSpec
  * AndroidKeyStore 主密钥（不可导出）+ AES-GCM，密文落普通 SharedPreferences。
  *
  * 红线：③ 日志/异常只出 mask（调用方用 maskApiKey）；① 数据包导出不读本文件；
- * ② 演示模式由 AppContainer 注入 InMemoryApiKeyStore，真 key 不进演示态。
+ * ② 演示模式使用独立 namespace 的 KeyStore alias 与偏好文件，不读取真实环境 Key。
  */
-class KeystoreApiKeyStore(context: Context) : ApiKeyStore {
+class KeystoreApiKeyStore(context: Context, namespace: String = "agent") : ApiKeyStore {
 
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("agent_secrets", Context.MODE_PRIVATE)
+        context.getSharedPreferences("${namespace}_secrets", Context.MODE_PRIVATE)
+
+    private val keyAlias = "wardrobe_${namespace}_api_key"
 
     override suspend fun get(presetId: String): String? {
         val encoded = prefs.getString(presetId, null) ?: return null
@@ -53,12 +55,12 @@ class KeystoreApiKeyStore(context: Context) : ApiKeyStore {
 
     private fun secretKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
+        (keyStore.getEntry(keyAlias, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
         // 首次生成（并发竞态下后生成者覆盖无妨，都是新随机钥）
         val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         gen.init(
             KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
+                keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -70,7 +72,6 @@ class KeystoreApiKeyStore(context: Context) : ApiKeyStore {
 
     private companion object {
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "wardrobe_agent_api_key"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val GCM_TAG_BITS = 128
     }

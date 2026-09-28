@@ -133,6 +133,7 @@
 - **决策**（2026-09-25）：Manifest 新增 `android.permission.INTERNET`，**唯一用途 = BYOK 模型直连**（W11 连通性自检 + W12 对话，US-41）；00-overview 定位句修订并明示该边界。三条红线沿用 libs/agent ADR-003：① 数据包导出永不带 Key（agent_secrets 独立 SharedPreferences，PackageCodec 不读）；② 演示模式永挂内存 KeyStore（AppContainer 注入 `InMemoryApiKeyStore`，UI 禁用输入）；③ 日志/界面只出 `maskApiKey` 尾码。Key 落盘 = AndroidKeyStore 主密钥 + AES-GCM（`KeystoreApiKeyStore`，SDK 只见 `ApiKeyStore` 接口——平台实现归 app 层，agent ADR-003 既定）。
 - **理由**：点对点直连不产生服务端/账号/遥测，与「个人自用、数据本机」不冲突——联网是能力开关而非架构转向；Keystore 不可导出密钥比 SharedPreferences 明文跨过泄露面；演示模式隔离保证走查零真实外呼。
 - **后果**：应用商店/用户可见的权限清单多一条 INTERNET（可与「关闭 AI 功能则零联网」表述一并理解）；对话内容会随上下文发给所选厂商（用户主动发起，与导出长图给生图 Agent 同性质）；厂商可用性取决于用户 Key 与网络（错误分类文案给可读兜底）。
+- **修订（it-050 / ADR-026）**：Mock 环境经用户主动配置隔离的测试 Key 后可以真实外呼并启用本机结果缓存；未配置测试 Key 时仍然只读、零外呼。原「演示模式永挂 InMemoryApiKeyStore、Key 输入禁用」规则仅对 it-050 前行为有效。
 
 ## ADR-023 补抠以「候选新图 + 会话内保留/还原」落地，跨会话不可撤销（it-040）
 - **背景**：ADR-016 拍板原图即弃，已抠图是唯一输入；spike（[报告](../../../reports/2026-09-25-cutout-recut-spike/)）证明二次分割可行（IoU ≥0.945、透明区 RGB 零清黑、三代损失 ≤0.7dB），但**没有原图可回退**是硬约束。备选：A. 无条件覆盖（无反悔，风险不可见）；B. 双图存储（推翻 ADR-016，存储翻倍）；C. 候选新图（推理产独立新文件，确认才换图）。
@@ -146,3 +147,9 @@
 - **理由**：foundation 1.8.3 的 `AnchoredDraggable` 零 experimental、@Stable、无需 OptIn，速度驱动 fling 与动画注入原生可用；**单一 spec 源**（手势 settle、程序化 `animateTo`、回中全走 `DeckStyle.flyOutSpec`）消灭现库双动画体系；官方 `computeTarget` 在 v=0 时只取最近锚点（位置阈值不参与，实测 v=0.0 丢甩出），自研 `flingTarget`（速度 ≥125dp/s 按方向甩、否则 100dp 位置阈值）补官方缺口；**爆炸半径小**——`CardDeckController` 契约（next/previous/restart/drawRandom/onSwipe…）不变，wardrobe `RecordsScreen`/eats `SpinScreen` 各 1 个调用点近零改动。
 - **后果**：代价 = 3–5 天自研（含双端回归，非 1–2 天）+ 自养内核（手感无上游可参考，5 个结构性缺陷在测试中才发现并修复）；真机 60fps 量化为遗留项（模拟器 gfxinfo 基线失真，与 it-046 同结论）；RTL 未处理记为已知差异（应用中文 LTR，旧库有 reverseX）。连带：eats ADR-011「W1 随机交互采用三方卡组库封装（不自研手势动画）」被本 ADR 取代，需在 eats `06-decisions.md` 注记。
 - **修订**（2026-09-27 it-048）：「settledValue 提交管线」修订为**到达帧提交**（offset 精确到锚 + pointerDown/isAnimationRunning/flingInProgress 三重落定门）并新增按下快进结算 `onDeckDown`——连滑同向落锚 settled 不翻转，旧模型吞第二次甩出且排队 `snapTo(Rest)` 会抢锁拉回用户手中卡片（实测「连续滑动滑不动」）；fling 的 spring animate 不在官方动画跟踪内（dragStatus=Dragging），必须独立 `flingInProgress` 门挡飞越帧（实测缺它一次甩卡连环推进 4 张）。宿主容器不得 clipToBounds（甩卡真实飞行需溢出空间，wardrobe/eats 两处包裹已删）。机制详见 carddeck `specs/00-overview.md` it-048 修订小节。
+
+## ADR-026 Mock BYOK 采用隔离连接与请求缓存（it-050）
+- **背景**：原 ADR-024 要求演示模式永远 `InMemoryApiKeyStore` + 离线 FakeChatModel，利于零外呼走查，却不能在确定性 Mock 衣橱上做真实模型回归；重复测试亦重复消耗时间和额度。
+- **决策**（2026-09-28）：Mock 环境允许用户**主动**保存测试 Key 后真实直连模型；Key、厂商/模型偏好与真实衣橱分别使用独立 Keystore alias、SharedPreferences 与 DataStore keys，绝不互读。默认无 Key 时 W12/W13 一律只读。Mock 真调以完整请求、工具定义、Mock 数据版本、模型及测试 Key 摘要作 SHA-256 指纹，完成态写入私有 cacheDir；TTL 7 天，最多 100 条/50 MB，失败或取消不缓存，W11 可二次确认清除。
+- **理由**：把真实回归权限限制在用户显式保存的测试连接，同时保留真实数据与凭证隔离；缓存对工具回合和最终回答分别重放，不篡改 AgentRunner 的会话/工具契约。
+- **后果**：演示模式不再是绝对零外呼，而是「无 Key 零外呼、已主动配置才外呼」；缓存命中可能不反映厂商最新回答，故仅限 Mock 测试环境并以低调状态标识。所有 Key/缓存/会话索引均不进数据包。

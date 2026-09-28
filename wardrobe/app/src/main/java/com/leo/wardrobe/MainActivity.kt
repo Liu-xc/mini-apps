@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -128,11 +129,12 @@ private object Routes {
     const val RECAP = "recap"
     const val WISHLIST = "wishlist"
     const val SETTINGS = "settings" // it-041：W11 设置页
-    const val CHAT = "chat" // it-041 阶段 B：W12 对话页
+    const val CHAT = "chat/{sessionId}" // it-050：W13 对话详情
+    fun chat(sessionId: String) = "chat/$sessionId"
 }
 
 private enum class Tab(val label: String) {
-    OUTFIT("搭配"), RECORDS("穿搭记录"), WARDROBE("衣橱")
+    OUTFIT("搭配"), RECORDS("穿搭记录"), WARDROBE("衣橱"), CHAT("顾问")
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -212,6 +214,7 @@ private fun WardrobeRoot() {
                                         Tab.OUTFIT -> Icons.Filled.Style
                                         Tab.RECORDS -> Icons.Filled.ViewModule
                                         Tab.WARDROBE -> Icons.Filled.Checkroom
+                                        Tab.CHAT -> Icons.Rounded.SmartToy
                                     },
                                     contentDescription = t.label,
                                 )
@@ -253,7 +256,7 @@ private fun WardrobeRoot() {
                 ) {
                     composable(Routes.HOME) {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-                            HomeTabs(vm, nav, tab)
+                            HomeTabs(vm, chatVm, nav, tab)
                         }
                     }
                     composable(Routes.ITEM_EDIT) { entry ->
@@ -306,8 +309,14 @@ private fun WardrobeRoot() {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             com.leo.wardrobe.ui.settings.SettingsScreen(
                                 vm = settingsVm,
-                                onBack = { nav.popBackStack() },
-                                onOpenChat = { nav.navigate(Routes.CHAT) },
+                                onBack = {
+                                    chatVm.refreshSessions()
+                                    nav.popBackStack()
+                                },
+                                onOpenChat = {
+                                    nav.popBackStack(Routes.HOME, false)
+                                    tab = Tab.CHAT
+                                },
                             )
                         }
                     }
@@ -316,6 +325,7 @@ private fun WardrobeRoot() {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
                             com.leo.wardrobe.ui.chat.ChatScreen(
                                 vm = chatVm,
+                                sessionId = it.arguments?.getString("sessionId").orEmpty(),
                                 onBack = { nav.popBackStack() },
                                 // it-043 O3：Key/网络类错误直达设置
                                 onOpenSettings = {
@@ -345,7 +355,12 @@ private fun WardrobeRoot() {
 }
 
 @Composable
-private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
+private fun HomeTabs(
+    vm: AppViewModel,
+    chatVm: com.leo.wardrobe.ui.chat.ChatViewModel,
+    nav: NavHostController,
+    tab: Tab,
+) {
     val openItem: (String) -> Unit = { nav.navigate(Routes.itemDetail(it)) }
     val editItem: (String?) -> Unit = { nav.navigate(Routes.itemEdit(it)) }
 
@@ -365,6 +380,11 @@ private fun HomeTabs(vm: AppViewModel, nav: NavHostController, tab: Tab) {
                 onOpenItem = openItem,
                 onOpenRecap = { nav.navigate(Routes.RECAP) },
                 onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+            )
+            Tab.CHAT -> com.leo.wardrobe.ui.chat.ChatListScreen(
+                vm = chatVm,
+                onOpenSession = { nav.navigate(Routes.chat(it)) },
                 onOpenSettings = { nav.navigate(Routes.SETTINGS) },
             )
         }
