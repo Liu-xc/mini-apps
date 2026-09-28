@@ -73,6 +73,7 @@ import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.iconRes
+import com.leo.wardrobe.ui.components.WardrobeCategoryGrayscaleFilter
 import com.leo.wardrobe.ui.theme.editorialColors
 
 /**
@@ -260,6 +261,7 @@ fun WardrobeScreen(
                                 painter = painterResource(c.iconRes),
                                 contentDescription = c.label,
                                 contentScale = ContentScale.Fit,
+                                colorFilter = WardrobeCategoryGrayscaleFilter,
                                 modifier = Modifier.size(22.dp),
                             )
                         }

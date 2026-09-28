@@ -123,7 +123,7 @@ class WardrobeRecapLongImage(
                 val left = PAD + col * (CELL + CELL_GAP)
                 val cellTop = y + row * (CELL + CELL_GAP)
                 val rect = RectF(left.toFloat(), cellTop.toFloat(), left + CELL.toFloat(), cellTop + CELL.toFloat())
-                canvas.drawRoundRect(rect, 20f, 20f, Paint().apply { color = 0xFFF0F4EE.toInt() })
+                canvas.drawRoundRect(rect, 20f, 20f, Paint().apply { color = 0xFFF0F0ED.toInt() })
                 val scale = min(rect.width() / bmp.width, rect.height() / bmp.height)
                 val dw = bmp.width * scale
                 val dh = bmp.height * scale
@@ -181,13 +181,13 @@ class WardrobeRecapLongImage(
         const val FOOTER_H = 320
         const val QUALITY = 90
 
-        const val BG = 0xFFF5F8F2.toInt()
-        const val INK = 0xFF1D2620.toInt()
-        const val FAINT = 0xFF747F75.toInt()
-        const val ACCENT_GRAPHIC = 0xFF429E68.toInt()
-        const val ACCENT_ACTION = 0xFF1D6845.toInt()
-        const val BAR = 0xFFDCE6D8.toInt()
-        const val HAIR = 0xFFE3EBE0.toInt()
+        const val BG = 0xFFF7F7F5.toInt()
+        const val INK = 0xFF111111.toInt()
+        const val FAINT = 0xFF6B6B67.toInt()
+        const val ACCENT_GRAPHIC = 0xFF555550.toInt()
+        const val ACCENT_ACTION = 0xFF111111.toInt()
+        const val BAR = 0xFFD9D9D4.toInt()
+        const val HAIR = 0xFFD9D9D4.toInt()
 
         private val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = INK; textSize = 92f; typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)

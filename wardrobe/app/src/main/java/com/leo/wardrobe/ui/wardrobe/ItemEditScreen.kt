@@ -63,6 +63,7 @@ import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.WardrobeCategoryGrayscaleFilter
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.components.rememberHaptics
@@ -420,6 +421,7 @@ fun ItemEditScreen(
                                     painter = painterResource(c.iconRes),
                                     contentDescription = null,
                                     contentScale = ContentScale.Fit,
+                                    colorFilter = WardrobeCategoryGrayscaleFilter,
                                     modifier = Modifier.size(15.dp),
                                 )
                                 Text(c.label, modifier = Modifier.padding(start = 4.dp))

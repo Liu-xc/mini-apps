@@ -10,22 +10,23 @@ import androidx.compose.ui.graphics.Color
  * M3 colorScheme 承载标准槽位，编辑风专有色经 LocalEditorialColors 下发。
  */
 object WardrobePalette {
-    // 浅色（米白纸感）
-    val Paper = Color(0xFFF5F9F3)
+    // 浅色（偏暖纸白）
+    val Paper = Color(0xFFF7F7F5)
     val SurfaceLight = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF1D2620)
-    val InkFaint = Color(0xFF747F75)
-    val Accent = Color(0xFF429E68)
-    val AccentStrong = Color(0xFF1D6845)
-    val Hairline = Color(0xFFE3EBE0)
+    val Ink = Color(0xFF111111)
+    val InkFaint = Color(0xFF6B6B67)
+    /** 中性主强调；照片和成品图保留原色，UI chrome 不再使用品牌绿。 */
+    val Accent = Color(0xFF111111)
+    val AccentStrong = Color(0xFF111111)
+    val Hairline = Color(0xFFD9D9D4)
 
-    // 深色（墨纸）
-    val PaperDark = Color(0xFF10150F)
-    val SurfaceDark = Color(0xFF1B231B)
-    val InkDark = Color(0xFFEAF2E8)
-    val InkFaintDark = Color(0xFF94A294)
-    val AccentDark = Color(0xFF74C790)
-    val HairlineDark = Color(0xFF273127)
+    // 深色（炭黑纸）
+    val PaperDark = Color(0xFF111110)
+    val SurfaceDark = Color(0xFF1B1B1A)
+    val InkDark = Color(0xFFF2F2EF)
+    val InkFaintDark = Color(0xFFA6A6A0)
+    val AccentDark = Color(0xFFF2F2EF)
+    val HairlineDark = Color(0xFF393936)
 }
 
 @Immutable
@@ -34,7 +35,7 @@ data class EditorialColors(
     val surface: Color,
     val ink: Color,
     val inkFaint: Color,
-    /** Brand green for decorative graphics only. */
+    /** 中性主强调，保留独立 token 以维持语义结构。 */
     val accent: Color,
     /** High-contrast foreground for accent text and action states. */
     val accentContent: Color,

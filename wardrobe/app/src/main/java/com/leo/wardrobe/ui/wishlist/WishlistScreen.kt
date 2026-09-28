@@ -92,19 +92,18 @@ import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
 
 /**
- * it-036 C10：无图心愿卡的品类色块占位——品类 → 柔和固定色（不随主题翻转，
- * 与线框 W10③ 同构：外套蓝灰 / 包焦糖 / 鞋松绿 …）。前景（星+品类字）按色块
- * 亮度取白/墨，见 WishRow 的 luminance 判断。
+ * it-052：无图心愿卡的品类色块占位改为中性灰阶；前景（星+品类字）按色块
+ * 亮度取白/墨，保留品类差异但不引入品牌色。
  */
 private val CategoryPlaceholderColors: Map<WardrobeCategory, Color> = mapOf(
-    WardrobeCategory.TOP to Color(0xFFE4F0EA),        // 浅青
-    WardrobeCategory.OUTERWEAR to Color(0xFFE2ECF6),  // 蓝灰（线框取色）
-    WardrobeCategory.BOTTOM to Color(0xFFE5E9F5),     // 靛蓝灰
-    WardrobeCategory.DRESS to Color(0xFFD8A2B3),      // 玫瑰粉（中调）
-    WardrobeCategory.SHOES to Color(0xFF86B79B),      // 松绿（中调）
-    WardrobeCategory.BAG to Color(0xFFF6EADE),        // 焦糖棕（线框取色）
-    WardrobeCategory.HAT to Color(0xFFF2ECD9),        // 麦穗黄
-    WardrobeCategory.ACCESSORY to Color(0xFFEBEDEF),  // 银灰
+    WardrobeCategory.TOP to Color(0xFFE9E9E6),
+    WardrobeCategory.OUTERWEAR to Color(0xFFDEDEDA),
+    WardrobeCategory.BOTTOM to Color(0xFFD3D3CF),
+    WardrobeCategory.DRESS to Color(0xFFC8C8C4),
+    WardrobeCategory.SHOES to Color(0xFFBDBDB8),
+    WardrobeCategory.BAG to Color(0xFFE2E2DE),
+    WardrobeCategory.HAT to Color(0xFFF0F0ED),
+    WardrobeCategory.ACCESSORY to Color(0xFFEBEBE8),
 )
 
 /**

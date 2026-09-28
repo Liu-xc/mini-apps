@@ -357,7 +357,7 @@ fun WardrobeRecapScreen(
                             // 对比 ≥4.5:1：浅色下 onSurfaceVariant(0x808D82) 仅 ~3:1，加深一档；
                             // 深色下 onSurfaceVariant(0x94A294) 对墨纸 ~7:1 直接可用
                             color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
-                            else Color(0xFF55605A),
+                            else Color(0xFF555550),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -491,17 +491,17 @@ private fun VersatileCard(rank: Int, name: String, sub: String, photoFile: File?
 }
 
 /**
- * it-034 C6：品类分布色阶——同色系 6 档绿（深→浅），按数量降序铺档（数量最大段最深，
+ * it-052：品类分布色阶——同色系 6 档石墨灰（深→浅），按数量降序铺档（数量最大段最深，
  * 保证拿到段内白字标注的宽段一定落在深色档）；段间 2dp 留白保留。
  * 档位按段数均摊，段数不足/超过 6 时在首尾档之间插值取档。
  */
 private val CategoryRamp = listOf(
-    Color(0xFF14543A),
-    Color(0xFF1D6845),
-    Color(0xFF2A7D55),
-    Color(0xFF429E68),  // 品牌绿（Accent 同值）
-    Color(0xFF7CC09B),
-    Color(0xFFBFE1CE),
+    Color(0xFF222220),
+    Color(0xFF3B3B38),
+    Color(0xFF555550),
+    Color(0xFF777772),
+    Color(0xFFA6A6A0),
+    Color(0xFFD6D6D1),
 )
 
 @Composable
@@ -643,7 +643,7 @@ private fun ReminderSettings(
                         "演示模式不推送",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
-                        else Color(0xFF55605A),
+                        else Color(0xFF555550),
                     )
                 }
             }

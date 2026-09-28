@@ -173,6 +173,7 @@ fun SlotCell(
                     // it-029 C1：收缩瞬间页码可能仍越界，跳过该页组合避免越界崩溃
                     val item = items.getOrNull(page) ?: return@HorizontalPager
                     val wished = item.isWishSlot // it-019：愿望单品卡视觉
+                    val wishAccent = editorialColors().ink
                     Box(
                         Modifier
                             .fillMaxSize()
@@ -194,7 +195,7 @@ fun SlotCell(
                                 Icon(
                                     Icons.Rounded.Star,
                                     contentDescription = null,
-                                    tint = Color(0xFF3FA265),
+                                    tint = wishAccent,
                                     modifier = Modifier.size(32.dp),
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -255,7 +256,7 @@ fun SlotCell(
                                     .drawBehind {
                                         val stroke = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))
                                         drawRoundRect(
-                                            color = Color(0xFF3FA265),
+                                            color = wishAccent,
                                             cornerRadius = CornerRadius(12.dp.toPx()),
                                             style = Stroke(width = 2.dp.toPx(), pathEffect = stroke),
                                         )

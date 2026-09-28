@@ -9,12 +9,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.R
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.ui.theme.editorialColors
+
+/** 品类图标属于 UI chrome，统一去饱和；用户照片不使用此滤镜。 */
+val WardrobeCategoryGrayscaleFilter: ColorFilter = ColorFilter.colorMatrix(
+    ColorMatrix().apply { setToSaturation(0f) },
+)
 
 /** 品类 3D 图标（thiings.co 素材，README 署名）；UI 层映射，domain 保持无 Android 依赖 */
 val WardrobeCategory.iconRes: Int
@@ -37,6 +44,7 @@ fun CategoryLabel(category: WardrobeCategory, count: Int? = null, size: Int = 16
             painter = painterResource(category.iconRes),
             contentDescription = null,
             contentScale = ContentScale.Fit,
+            colorFilter = WardrobeCategoryGrayscaleFilter,
             modifier = Modifier.size(size.dp),
         )
         Text(

@@ -163,7 +163,7 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
     private suspend fun photo(item: Item): Bitmap = imageStore.decode(item.imageFile) ?: FALLBACK
 
     private fun label(item: Item): String = buildString {
-        if (item.isWishSlot) append("🌟想买 · ") // it-019：愿望单品标注
+        if (item.isWishSlot) append("想买 · ") // it-019：愿望单品标注
         append(item.category.label)
         append(" · ")
         append(item.name.take(14))
@@ -174,7 +174,7 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
 
     private fun drawCell(canvas: Canvas, cell: Cell) {
         val r = cell.rect
-        val bg = Paint().apply { color = 0xFFF7F3EC.toInt() }
+        val bg = Paint().apply { color = 0xFFF4F4F1.toInt() }
         canvas.drawRoundRect(r, 14f, 14f, bg)
         // 照片 Fit 居中（不变形）
         val inset = 8f
@@ -215,7 +215,7 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
         val text = "本人形象参考 · 五官身形以此为准"
         val w = refLabelPaint.measureText(text) + 2 * REF_LABEL_PAD_X
         val rect = RectF((WIDTH - w) / 2f, top + dh + 14f, (WIDTH + w) / 2f, top + dh + 14f + REF_LABEL_H)
-        canvas.drawRoundRect(rect, 16f, 16f, Paint().apply { color = 0xFFFAF3E6.toInt() })
+        canvas.drawRoundRect(rect, 16f, 16f, Paint().apply { color = 0xFFF1F1EE.toInt() })
         canvas.drawText(
             text,
             rect.left + REF_LABEL_PAD_X,
@@ -233,9 +233,9 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
     private fun drawPromptBlock(canvas: Canvas, promptLayout: StaticLayout, top: Float) {
         val blockH = promptLayout.height + 2 * PROMPT_PAD
         val rect = RectF(PAD.toFloat(), top, (WIDTH - PAD).toFloat(), top + blockH)
-        canvas.drawRoundRect(rect, 18f, 18f, Paint().apply { color = 0xFFFAF7F2.toInt() })
+        canvas.drawRoundRect(rect, 18f, 18f, Paint().apply { color = 0xFFF7F7F5.toInt() })
         canvas.drawRoundRect(rect, 18f, 18f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFFE8E2D9.toInt()
+            color = 0xFFD9D9D4.toInt()
             style = Paint.Style.STROKE
             strokeWidth = 3f
         })
@@ -260,7 +260,7 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
         textSize = 30f
     }
     private val refLabelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF8A6D3B.toInt()
+        color = 0xFF555550.toInt()
         textSize = 32f
     }
 

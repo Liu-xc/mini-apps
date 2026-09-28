@@ -61,11 +61,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** it-026 O4：符号分层色（两应用同一套：＋绿 ↻琥珀 ＝灰，✗红 ✓绿） */
-private val SymAdd = Color(0xFF2E7D32)
-private val SymUpdate = Color(0xFFB8860B)
-private val SymKeep = Color(0xFF86909C)
-private val SymCheck = Color(0xFF2E7D32)
+/** it-052：数据差异符号统一为石墨灰；危险态仍保留语义红。 */
+private val SymAdd = Color(0xFF3B3B38)
+private val SymUpdate = Color(0xFF6B6B67)
+private val SymKeep = Color(0xFF969690)
+private val SymCheck = Color(0xFF3B3B38)
 /** it-026 O1：替换危险态底色（警示红浅底） */
 private val DangerTint = Color(0xFFFDECEC)
 
@@ -115,7 +115,7 @@ fun DataPackageSection(
                         "演示模式下不可用，不触碰真实数据",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
-                        else Color(0xFF55605A),
+                        else Color(0xFF555550),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     )
                 }
@@ -170,7 +170,7 @@ private fun DataRow(
             Box(
                 Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xFFF0F1EF)),
+                    .background(Color(0xFFF0F0ED)),
             ) {
                 Text(
                     "演示模式",

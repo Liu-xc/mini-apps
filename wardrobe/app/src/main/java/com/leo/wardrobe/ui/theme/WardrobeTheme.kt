@@ -10,7 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
 /**
- * 全局主题：Material 3 × 时装编辑风 token（specs/05-design-system.md）。
+ * 全局主题：Material 3 × 黑白灰时装编辑风 token（specs/05-design-system.md）。
  * 动效基调见 [EditorialMotion]；Expressive motionScheme 待 material3 1.5 稳定后接入（ADR-004）。
  */
 @Composable
@@ -45,10 +45,10 @@ fun WardrobeTheme(
             primary = WardrobePalette.AccentDark,
             onPrimary = WardrobePalette.PaperDark,
             outline = WardrobePalette.InkFaintDark,
-            primaryContainer = Color(0xFF1E4230),
-            onPrimaryContainer = Color(0xFFCDEBD6),
-            secondaryContainer = Color(0xFF243127),
-            onSecondaryContainer = Color(0xFFC7D6C5),
+            primaryContainer = Color(0xFF333330),
+            onPrimaryContainer = WardrobePalette.InkDark,
+            secondaryContainer = Color(0xFF2A2A28),
+            onSecondaryContainer = WardrobePalette.InkDark,
             background = WardrobePalette.PaperDark,
             onBackground = WardrobePalette.InkDark,
             surface = WardrobePalette.SurfaceDark,
@@ -70,10 +70,10 @@ fun WardrobeTheme(
             primary = WardrobePalette.AccentStrong,
             onPrimary = WardrobePalette.SurfaceLight,
             outline = WardrobePalette.InkFaint,
-            primaryContainer = Color(0xFFDDF0E4),
-            onPrimaryContainer = Color(0xFF1E5B36),
-            secondaryContainer = Color(0xFFEAF3EC),
-            onSecondaryContainer = Color(0xFF37503C),
+            primaryContainer = Color(0xFFE5E5E1),
+            onPrimaryContainer = WardrobePalette.Ink,
+            secondaryContainer = Color(0xFFEEEEEB),
+            onSecondaryContainer = WardrobePalette.Ink,
             background = WardrobePalette.Paper,
             onBackground = WardrobePalette.Ink,
             surface = WardrobePalette.SurfaceLight,
