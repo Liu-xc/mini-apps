@@ -3,8 +3,11 @@ package com.leo.darkroom.ui.result
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +26,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Videocam
@@ -41,25 +45,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
 import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.PhotoCardPainter
+import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.editorialColors
@@ -71,12 +76,12 @@ import kotlinx.coroutines.withContext
 fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     val colors = editorialColors()
     val photo = state.photo
-    val previewHeight = 300.dp
+    val previewHeight = 250.dp
     val previewWidth = previewHeight * (state.exportFormat.width.toFloat() / state.exportFormat.height)
     val density = LocalDensity.current
     val previewWidthPx = with(density) { previewWidth.roundToPx() }.coerceAtLeast(180)
     val previewHeightPx = with(density) { previewHeight.roundToPx() }.coerceAtLeast(180)
-    val artwork = produceState<ImageBitmap?>(null, photo, state.spec, state.exportFormat) {
+    val artwork = produceState<ImageBitmap?>(null, photo, state.spec, state.exportFormat, state.photoLook) {
         if (photo != null) {
             val bitmap = withContext(Dispatchers.Default) {
                 Bitmap.createBitmap(previewWidthPx, previewHeightPx, Bitmap.Config.ARGB_8888).also { preview ->
@@ -90,10 +95,20 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                         palette = CardPalette.Default,
                         grain = vm.grain,
                         format = state.exportFormat,
+                        look = state.photoLook,
                     )
                 }
             }
             value = bitmap.asImageBitmap()
+        }
+    }
+    val lookThumbnails = produceState<List<ImageBitmap>>(emptyList(), photo) {
+        if (photo != null) {
+            value = withContext(Dispatchers.Default) {
+                PhotoLook.entries.map { look ->
+                    PhotoCardPainter.renderLookThumbnail(photo, vm.grain, look, 144, 92).asImageBitmap()
+                }
+            }
         }
     }
 
@@ -121,7 +136,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .height(310.dp),
+                .height(260.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (artwork.value != null) {
@@ -149,9 +164,81 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
 
         Spacer(Modifier.height(4.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("卡面", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Text("成片预览", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
             Spacer(Modifier.weight(1f))
-            Text("编辑会同步到图片与视频", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+            Text("风格与编辑同步到图片和视频", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("照片风格", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
+            Spacer(Modifier.weight(1f))
+            Text(state.photoLook.note, style = MaterialTheme.typography.bodySmall, color = colors.accent)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            PhotoLook.entries.forEachIndexed { index, look ->
+                val selected = state.photoLook == look
+                Column(
+                    modifier = Modifier
+                        .width(78.dp)
+                        .height(72.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(colors.surface)
+                        .border(
+                            BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) colors.accent else colors.hairline),
+                            RoundedCornerShape(10.dp),
+                        )
+                        .clickable(
+                            enabled = !state.exporting,
+                            role = Role.RadioButton,
+                            onClick = { vm.setPhotoLook(look) },
+                        )
+                        .semantics { this.selected = selected }
+                        .padding(5.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    val thumbnail = lookThumbnails.value.getOrNull(index)
+                    if (thumbnail != null) {
+                        Image(
+                            bitmap = thumbnail,
+                            contentDescription = "${look.label}效果预览",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(6.dp)),
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(colors.hairline),
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Text(
+                            look.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (selected) colors.accent else colors.ink,
+                            maxLines = 1,
+                        )
+                        if (selected) {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = "已选择",
+                                tint = colors.accent,
+                                modifier = Modifier.size(13.dp),
+                            )
+                        }
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
         Surface(
@@ -160,7 +247,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             color = colors.surface,
             border = BorderStroke(1.dp, colors.hairline),
         ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                 CardEditLine(
                     label = "标题",
                     value = state.spec.title,
@@ -177,8 +264,8 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                 HorizontalDivider(color = colors.hairline)
                 Row(
                     Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
+                    .fillMaxWidth()
+                        .height(44.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -312,7 +399,7 @@ private fun CardEditLine(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(58.dp),
+            .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = colors.inkFaint, modifier = Modifier.width(62.dp))

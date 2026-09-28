@@ -7,11 +7,11 @@
 
 ## 界面速览
 
-| [W1 选图](specs/iterations/assets-it-004/w1-pick.png) | [W2 显影台](specs/iterations/assets-it-004/w2-developing.png) | [W3 成片](specs/iterations/assets-it-004/w3-feed-preview.png) | [W4 设置](specs/iterations/assets-it-004/w4-settings.png) |
+| [W1 选图](specs/iterations/assets-it-004/w1-pick.png) | [W2 显影台](specs/iterations/assets-it-004/w2-developing.png) | [W3 成片](specs/iterations/assets-it-005/w3-looks-light.png) | [W4 设置](specs/iterations/assets-it-004/w4-settings.png) |
 |---|---|---|---|
-| 相册/拍照/离线照片样片 | 药膜扩散+阶段文案+药水条 | 卡面编辑+1:1/4:5/9:16 图与视频分享 | 速度/甩一甩/水印 |
+| 相册/拍照/离线照片样片 | 药膜扩散+阶段文案+药水条 | 五种照片风格+卡面编辑+1:1/4:5/9:16 图与视频分享 | 速度/甩一甩/水印 |
 
-显影关键帧和竖屏故事预览也收在 `specs/iterations/assets-it-004/`；W3 同一预览构图同步到图片、视频导出。
+显影关键帧和竖屏故事预览也收在 `specs/iterations/assets-it-004/`；W3 五种成片风格与同一预览构图同步到图片、视频导出。
 
 ## 构建
 

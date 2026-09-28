@@ -9,6 +9,7 @@ import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
+import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.data.PhotoRepository
 import com.leo.darkroom.data.PrefsStore
@@ -59,6 +60,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         val exporting: Boolean = false,
         val exportProgress: Float = 0f,
         val exportFormat: ShareFormat = ShareFormat.FEED,
+        val photoLook: PhotoLook = PhotoLook.ORIGINAL,
         val message: String? = null,
         val savedImageUri: Uri? = null,
         val savedVideoUri: Uri? = null,
@@ -144,6 +146,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                     dateText = CardSpec.today(),
                     showWatermark = it.spec.showWatermark,
                 ),
+                photoLook = PhotoLook.ORIGINAL,
                 progress = 0f,
                 playing = false,
                 ejecting = true,
@@ -261,6 +264,18 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun setPhotoLook(look: PhotoLook) {
+        _state.update {
+            if (it.exporting || it.photoLook == look) it
+            else it.copy(
+                photoLook = look,
+                savedImageUri = null,
+                savedVideoUri = null,
+                lastSavedKind = SavedKind.NONE,
+            )
+        }
+    }
+
     // —— 设置 ——
 
     fun setSpeed(speed: DevelopSpeed) = viewModelScope.launch { prefs.setSpeed(speed) }
@@ -279,7 +294,9 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
             _state.update { it.copy(exporting = true, exportProgress = 0f) }
             runCatching {
                 val bmp = withContext(Dispatchers.Default) {
-                    PhotoCardPainter.renderShareFrame(photo, s.spec, CardPalette.Default, grain, s.exportFormat)
+                    PhotoCardPainter.renderShareFrame(
+                        photo, s.spec, CardPalette.Default, grain, s.exportFormat, look = s.photoLook,
+                    )
                 }
                 withContext(Dispatchers.IO) {
                     val uri = ShareHelper.saveImage(getApplication(), bmp, "显影_${s.spec.dateText.replace(' ', '-')}")
@@ -322,6 +339,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                             spec = s.spec,
                             plan = plan,
                             format = s.exportFormat,
+                            look = s.photoLook,
                             outFile = outFile,
                         ),
                     ) { p -> _state.update { it.copy(exportProgress = p) } }

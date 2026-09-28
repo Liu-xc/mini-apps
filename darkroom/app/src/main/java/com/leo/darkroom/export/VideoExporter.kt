@@ -19,6 +19,7 @@ import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
+import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
 import com.leo.darkroom.develop.DevelopSpec
 import java.io.File
@@ -42,6 +43,7 @@ class VideoExporter {
         val palette: CardPalette = CardPalette.Default,
         val plan: ExportPlan,
         val format: ShareFormat,
+        val look: PhotoLook = PhotoLook.ORIGINAL,
         val outFile: File,
         /** null = 无声视频 */
         val withAudio: Boolean = true,
@@ -111,6 +113,7 @@ class VideoExporter {
                             palette = params.palette,
                             grain = grain,
                             format = params.format,
+                            look = params.look,
                         )
 
                         egl.drawFrame(frameBmp)

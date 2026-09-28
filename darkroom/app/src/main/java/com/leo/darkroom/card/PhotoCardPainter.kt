@@ -50,6 +50,7 @@ data class CardPalette(
 object PhotoCardPainter {
 
     private val backdropCache = WeakHashMap<Bitmap, Bitmap>()
+    private val glowCache = WeakHashMap<Bitmap, Bitmap>()
 
     fun paint(
         canvas: Canvas,
@@ -59,6 +60,7 @@ object PhotoCardPainter {
         visual: DevelopVisual,
         palette: CardPalette,
         grain: Bitmap?,
+        look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
         val layout = CardLayout.solve(cardWidthPx)
         val paper = Paint().apply { color = palette.paper }
@@ -68,7 +70,7 @@ object PhotoCardPainter {
         // 相片衬底（潜影期透过低 alpha 隐约可见的灰绿底）
         canvas.drawRect(photoRect, Paint().apply { color = palette.hairline })
         if (photo != null && visual.imageAlpha > 0.01f) {
-            drawDevelopPhoto(canvas, photo, photoRect, visual, grain)
+            drawDevelopPhoto(canvas, photo, photoRect, visual, grain, look)
         }
         drawTexts(canvas, layout, spec, palette)
     }
@@ -84,6 +86,7 @@ object PhotoCardPainter {
         palette: CardPalette,
         grain: Bitmap?,
         format: ShareFormat,
+        look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
         val layout = ShareLayout.solve(widthPx, heightPx, format)
         canvas.drawColor(0xFF11140F.toInt())
@@ -92,7 +95,12 @@ object PhotoCardPainter {
         val backdrop = synchronized(backdropCache) {
             backdropCache[photo] ?: downscaleBlurred(photo, 0.015f).also { backdropCache[photo] = it }
         }
-        val backdropPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply { alpha = 88 }
+        val backdropPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            alpha = 88
+            if (look != PhotoLook.ORIGINAL) {
+                colorFilter = ColorMatrixColorFilter(ColorMatrix(look.colorMatrix()))
+            }
+        }
         drawCenterCrop(canvas, backdrop, RectF(0f, 0f, widthPx, heightPx), backdropPaint)
         canvas.drawRect(0f, 0f, widthPx, heightPx, Paint().apply { color = 0xA811140F.toInt() })
         val vignetteRadius = hypot(widthPx, heightPx) * 0.72f
@@ -124,7 +132,7 @@ object PhotoCardPainter {
         )
         canvas.save()
         canvas.translate(layout.card.left, layout.card.top)
-        paint(canvas, layout.card.width, photo, spec, visual, palette, grain)
+        paint(canvas, layout.card.width, photo, spec, visual, palette, grain, look)
         canvas.restore()
 
         if (spec.showWatermark && format == ShareFormat.STORY) {
@@ -149,6 +157,7 @@ object PhotoCardPainter {
         grain: Bitmap?,
         format: ShareFormat,
         visual: DevelopVisual = DevelopSpec.visualAt(1f),
+        look: PhotoLook = PhotoLook.ORIGINAL,
     ): Bitmap {
         val bitmap = Bitmap.createBitmap(format.width, format.height, Bitmap.Config.ARGB_8888)
         paintShareFrame(
@@ -161,6 +170,7 @@ object PhotoCardPainter {
             palette,
             grain,
             format,
+            look,
         )
         return bitmap
     }
@@ -173,11 +183,20 @@ object PhotoCardPainter {
         grain: Bitmap?,
         visual: DevelopVisual = DevelopSpec.visualAt(1f),
         widthPx: Int = 1200,
+        look: PhotoLook = PhotoLook.ORIGINAL,
     ): Bitmap {
         val height = (CardLayout.solve(widthPx.toFloat()).height).roundToInt()
         val bmp = Bitmap.createBitmap(widthPx, height, Bitmap.Config.ARGB_8888)
-        paint(Canvas(bmp), widthPx.toFloat(), photo, spec, visual, palette, grain)
+        paint(Canvas(bmp), widthPx.toFloat(), photo, spec, visual, palette, grain, look)
         return bmp
+    }
+
+    /** Compact style-strip preview; it uses the same photo treatment as the full-size render. */
+    fun renderLookThumbnail(photo: Bitmap, grain: Bitmap?, look: PhotoLook, widthPx: Int, heightPx: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val rect = RectF(0f, 0f, widthPx.toFloat(), heightPx.toFloat())
+        drawDevelopPhoto(Canvas(bitmap), photo, rect, DevelopSpec.visualAt(1f), grain, look)
+        return bitmap
     }
 
     /**
@@ -190,16 +209,42 @@ object PhotoCardPainter {
         rect: RectF,
         visual: DevelopVisual,
         grain: Bitmap?,
+        look: PhotoLook,
     ) {
         val saveCount = canvas.saveLayer(rect, null)
         canvas.clipRect(rect)
 
         val src = downscaleBlurred(photo, visual.blurFraction)
+        val visualMatrix = DevelopSpec.colorMatrix(visual)
+        val combinedMatrix = if (look == PhotoLook.ORIGINAL) {
+            visualMatrix
+        } else {
+            DevelopSpec.concat(look.colorMatrix(), visualMatrix)
+        }
         val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG).apply {
             alpha = (visual.imageAlpha * 255f).roundToInt().coerceIn(0, 255)
-            colorFilter = ColorMatrixColorFilter(ColorMatrix(DevelopSpec.colorMatrix(visual)))
+            colorFilter = ColorMatrixColorFilter(ColorMatrix(combinedMatrix))
         }
         drawCenterCrop(canvas, src, rect, paint)
+
+        if (look.warmHighlights) {
+            drawLuminanceTint(
+                canvas, src, rect,
+                red = 255f, green = 194f, blue = 150f,
+                alphaRed = 0.22f, alphaGreen = 0.22f, alphaBlue = 0.22f, alphaOffset = -32f,
+            )
+        }
+        if (look.cinematicSplitTone) {
+            drawLuminanceTint(
+                canvas, src, rect,
+                red = 17f, green = 43f, blue = 67f,
+                alphaRed = -0.28f * 0.213f, alphaGreen = -0.28f * 0.715f,
+                alphaBlue = -0.28f * 0.072f, alphaOffset = 71.4f,
+            )
+        }
+
+        // Keep the highlight bloom inside the same reveal front as the photo itself.
+        if (look.glowStrength > 0f) drawSoftGlow(canvas, rect, photo, look.glowStrength)
 
         if (visual.reveal < 0.999f) {
             val mask = ChemicalMaskBitmap.forPhoto(photo, visual.reveal)
@@ -210,11 +255,38 @@ object PhotoCardPainter {
                 Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
             )
         }
-        drawVignette(canvas, rect, visual)
+        drawVignette(canvas, rect, visual, look.vignetteScale)
         if (grain != null && visual.grain > 0.02f) {
-            drawGrain(canvas, rect, grain, visual.grain)
+            drawGrain(canvas, rect, grain, visual.grain * look.grainScale)
         }
         canvas.restoreToCount(saveCount)
+    }
+
+    /** Overlay a restrained tint whose alpha follows source luminance. */
+    private fun drawLuminanceTint(
+        canvas: Canvas,
+        source: Bitmap,
+        rect: RectF,
+        red: Float,
+        green: Float,
+        blue: Float,
+        alphaRed: Float,
+        alphaGreen: Float,
+        alphaBlue: Float,
+        alphaOffset: Float,
+    ) {
+        val matrix = ColorMatrix(
+            floatArrayOf(
+                0f, 0f, 0f, 0f, red,
+                0f, 0f, 0f, 0f, green,
+                0f, 0f, 0f, 0f, blue,
+                alphaRed, alphaGreen, alphaBlue, 0f, alphaOffset,
+            ),
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(matrix)
+        }
+        drawCenterCrop(canvas, source, rect, paint)
     }
 
     /**
@@ -238,10 +310,10 @@ object PhotoCardPainter {
         canvas.drawBitmap(src, null, RectF(left, top, left + dw, top + dh), paint)
     }
 
-    private fun drawVignette(canvas: Canvas, rect: RectF, visual: DevelopVisual) {
-        if (visual.vignette <= 0.02f) return
+    private fun drawVignette(canvas: Canvas, rect: RectF, visual: DevelopVisual, lookScale: Float) {
+        if (visual.vignette * lookScale <= 0.02f) return
         val radius = hypot(rect.width(), rect.height()) / 2f * 1.08f
-        val strength = (0.55f * visual.vignette * 255f).roundToInt()
+        val strength = (0.55f * visual.vignette * lookScale * 255f).roundToInt()
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = RadialGradient(
                 rect.centerX(), rect.centerY(), radius,
@@ -251,6 +323,45 @@ object PhotoCardPainter {
             )
         }
         canvas.drawRect(rect, paint)
+    }
+
+    /** A cached, thresholded highlight bloom keeps the soft-glow look stable across video frames. */
+    private fun drawSoftGlow(canvas: Canvas, rect: RectF, photo: Bitmap, strength: Float) {
+        val glow = synchronized(glowCache) {
+            glowCache[photo] ?: createSoftGlow(photo).also { glowCache[photo] = it }
+        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            alpha = (strength * 255f).roundToInt().coerceIn(0, 255)
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.SCREEN)
+        }
+        drawCenterCrop(canvas, glow, rect, paint)
+    }
+
+    /** Threshold bright areas, then down/up-sample once to create a soft, deterministic halo. */
+    private fun createSoftGlow(photo: Bitmap): Bitmap {
+        val width = (photo.width * 0.24f).roundToInt().coerceAtLeast(8)
+        val height = (photo.height * 0.24f).roundToInt().coerceAtLeast(8)
+        val extracted = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val threshold = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+            colorFilter = ColorMatrixColorFilter(
+                ColorMatrix(
+                    floatArrayOf(
+                        0f, 0f, 0f, 0f, 255f,
+                        0f, 0f, 0f, 0f, 255f,
+                        0f, 0f, 0f, 0f, 255f,
+                        0.213f, 0.715f, 0.072f, 0f, -150f,
+                    ),
+                ),
+            )
+        }
+        Canvas(extracted).drawBitmap(photo, null, RectF(0f, 0f, width.toFloat(), height.toFloat()), threshold)
+        val blurWidth = (width / 3).coerceAtLeast(8)
+        val blurHeight = (height / 3).coerceAtLeast(8)
+        val blurredSmall = Bitmap.createScaledBitmap(extracted, blurWidth, blurHeight, true)
+        val blurred = Bitmap.createScaledBitmap(blurredSmall, width, height, true)
+        if (blurredSmall !== extracted && blurredSmall !== blurred) blurredSmall.recycle()
+        if (extracted !== blurred) extracted.recycle()
+        return blurred
     }
 
     private fun drawGrain(canvas: Canvas, rect: RectF, grain: Bitmap, strength: Float) {

@@ -11,6 +11,7 @@ com.leo.darkroom
 ├── card/             成片卡面（布局 + 两套渲染端共享真源）
 │   ├── CardLayout      纯数学布局 solve(width, maxH?)（单测覆盖；可用高度反解 + 签名域互斥，it-002）
 │   ├── CardSpec        结构化字段
+│   ├── PhotoLook       五种确定性照片风格参数（it-005）
 │   ├── PhotoCardPainter  android.graphics 渲染器（位图导出 + 视频逐帧）
 │   ├── GrainNoise      确定性颗粒噪声瓦片
 │   ├── ShareLayout     1:1/4:5/9:16 构图解算与平台安全区
@@ -45,6 +46,7 @@ com.leo.darkroom
 - **视频导出**：单后台线程完成 采集→(音轨合成+编码)→EGL makeCurrent→逐帧
   （`PhotoCardPainter.paintShareFrame` 依 `ShareLayout` 生成画布 → 纹理 blit → `eglPresentationTimeANDROID` → swap）→ 编码 drain → mux。
   进度以帧号回调 StateFlow。
+- **成片风格**（it-005）：W3 选择保存在 `UiState.photoLook`，由 `PhotoCardPainter` 把同一确定性色调矩阵、颗粒与可选高光晕光用于预览、静图和视频逐帧；新照片复位原色，不写入 `CardSpec`。柔光高光中间图按原照片弱引用缓存，视频帧复用。
 - **单测边界**：纯 Kotlin 层全量覆盖；`VideoExporter`/`DevelopCard` 走模拟器实测（it-001 验证记录）。
 
 ## 构建
