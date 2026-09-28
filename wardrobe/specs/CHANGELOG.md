@@ -4,6 +4,11 @@
 
 ## 未发布
 
+### it-055 — 顾问卡片点进详情与长图导出
+- W13 推荐卡已匹配单品 tile 可点击进入 W5 单品详情，未匹配 tile 不可点；卡片底部新增「复制长图」打开 W6 导出面板（`existingOutfit=null`，items=已匹配单品）。
+- W5 单品详情新增全宽「复制长图」入口，单件导出与心愿单件导出同先例；匹配逻辑抽为 `matchRecommendationItems` 纯函数并补单测。
+- 详见 [it-055](iterations/it-055-chat-card-detail-and-export.md)。
+
 ### it-054 — 顾问穿搭卡片与 Markdown 回复渲染
 - W13 将模型回复按 Markdown 协议渲染，并把引用当前衣橱已有单品的方案转换为真实照片穿搭卡片。
 - 卡片只精确匹配当前角色单品；未匹配建议明确标注，不伪装为库存；复制动作仍复制原始 Markdown。

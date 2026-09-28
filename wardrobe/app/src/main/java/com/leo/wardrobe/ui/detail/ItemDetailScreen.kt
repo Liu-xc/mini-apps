@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +70,7 @@ import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.sharedPhoto
+import com.leo.wardrobe.ui.outfit.ExportSheet
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
 import java.text.SimpleDateFormat
@@ -104,6 +106,8 @@ fun ItemDetailScreen(
     // it-043 C7 补遗：候选图放大核对（2× + 拖动平移）
     var zoomOpen by remember { mutableStateOf(false) }
     var zoomOffset by remember { mutableStateOf(Offset.Zero) }
+    // it-055 US-58：单件长图导出——复用 W6 面板（与心愿单品导出同先例）
+    var showExport by remember { mutableStateOf(false) }
     val haptics = rememberHaptics()
     val isCutout = remember(item.id, item.imageFile) { vm.looksCutoutPhoto(item.imageFile) }
 
@@ -418,6 +422,22 @@ fun ItemDetailScreen(
                 }
             }
 
+            // it-055 US-58：单件长图导出——与 W7 同一词汇（ContentCopy + 「复制长图」）
+            OutlinedButton(
+                onClick = { showExport = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 18.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.ContentCopy,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("复制长图")
+            }
+
             HorizontalDivider(color = editorialColors().hairline, modifier = Modifier.padding(vertical = 18.dp))
             Text(
                 "评论（${notes.size}）",
@@ -432,6 +452,16 @@ fun ItemDetailScreen(
             )
             Spacer(Modifier.height(28.dp))
         }
+    }
+
+    if (showExport) {
+        ExportSheet(
+            vm = vm,
+            items = listOf(item),
+            existingOutfit = null,
+            refPhotoFile = vm.currentPerson.value?.refImageFile,
+            onDismiss = { showExport = false },
+        )
     }
 }
 

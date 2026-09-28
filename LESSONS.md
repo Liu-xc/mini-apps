@@ -24,11 +24,13 @@
 - **超时判罚用「静默超时」（无输出时长），别用总时长**——LLM/agent 合法长思考可达数十分钟，总时长硬中断会把「想得久」误判成「挂死」。· [xiangqi it-001](xiangqi/specs/iterations/it-001-arena-mvp.md) · 2026-09
 - **spec/文档不钉死易漂移的数字（测试用例数等）**——以 CI/测试套件实际结果为准，写死必漂移。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
 - **「本地全绿」≠「CI 绿」**——CI 配置入库后必须看首跑结果，未实跑的流水线视同未验证。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
+- **多会话共用一台 AVD 走查：重聚焦 → 操作 → 快截图，焦点被抢就整链重试**——并发会话随时切前台，`am start` 拉回自家应用后再 tap，tap 后 1–2s 内截图，落屏前先核对画面是不是自己的 App，单次不中重试而非改代码。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09
 
 ### 架构与数据
 
 - **解析外部/持久化数据：未知字段一律忽略不崩**——向前兼容是硬要求，收紧解析前先确认不破坏旧数据。· [libs/agent 00-architecture](libs/agent/specs/00-architecture.md) · 2026-09
 - **别拿状态「翻转」当提交信号，改用「到达/精确值 + 门禁」**——快速重复动作下 edge 信号会漏触发；配幂等门防重放。· [wardrobe it-048](wardrobe/specs/iterations/it-048-hotfix-deck-clip-continuity.md) · 2026-09
+- **新入口要出同类内容，先搜同组件的既有调用点再决定复用还是新造**——导出/分享这类面板往往早已支持「无实体」参数（如 ExportSheet 的 `existingOutfit=null`，搭配页/心愿先例），签名够用就零新 UI 接线。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09
 
 ### Android / Compose
 
@@ -38,3 +40,4 @@
 ### Agent 协作与工具
 
 - **浏览器/IAB 截图可能拿到旧帧**——关键状态截图连拍两次，取第二张。· [travel-rpg scenes 报告](reports/2026-09-24-travel-rpg-scenes/README.md) · 2026-09
+- **`cmd uimode night` 切了但 UI 没变：先查 `mGlobalConfiguration` 是否含 `night`，再 force-stop 冷启应用**——配置变更偶发不重建 Activity，热重启下 `isSystemInDarkTheme` 会拿旧值；冷启后仍未变才去查应用主题链路。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09

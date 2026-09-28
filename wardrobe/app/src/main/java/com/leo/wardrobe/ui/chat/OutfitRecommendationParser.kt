@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.chat
 
+import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.WardrobeCategory
 
 /**
@@ -116,4 +117,21 @@ private fun parseItemLine(line: String): OutfitRecommendationItem? {
 fun cleanInlineMarkdown(value: String): String = value
     .replace(Regex("\\[([^]]+)]\\([^)]*\\)"), "$1")
     .replace(Regex("(`{1,3}|\\*{1,3}|_{1,3})"), "")
+    .trim()
+
+/**
+ * it-055：协议单品 → 当前角色衣橱的匹配真源（UI 层与测试共用）。
+ *
+ * 对不上的单品保留原文、第二项为 null，由 UI 决定灰显与不可点；
+ * 不把模型虚构的名称伪装成可导航的本地条目。
+ */
+fun matchRecommendationItems(
+    recommendation: OutfitRecommendation,
+    wardrobeItems: List<Item>,
+): List<Pair<OutfitRecommendationItem, Item?>> = recommendation.items.map { line ->
+    line to wardrobeItems.firstOrNull { normalizeName(it.name) == normalizeName(line.itemName) }
+}
+
+private fun normalizeName(value: String): String = value
+    .replace(Regex("\\s+"), "")
     .trim()

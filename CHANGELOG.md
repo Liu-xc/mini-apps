@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(wardrobe)**: it-055 顾问卡片可点可导——W13 推荐卡已匹配单品 tile 点击进 W5 单品详情（未匹配不可点、中性提示保留），卡片底部「复制长图」与 W5 顶下新导出入口均复用 W6 导出面板（`existingOutfit=null`，搭配页/心愿同先例），整套与单件都能出「照片拼版+五维提示词」长图拿去外部生图；匹配逻辑抽 `matchRecommendationItems` 纯函数 +2 JVM 单测，77 测全绿；浅/深色走查 P0/P1=0，详 [it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md)。
+
 - **docs(repo)**: 建立 Agent 经验自进化闭环（仓库级元迭代 it-001）——新增根 `LESSONS.md` 经验库（头部读写/晋级/淘汰/容量规则 + 回填 8 条种子教训）；AGENTS.md 迭代流程新增第⑤步「经验沉淀」（原 CHANGELOG 步顺延为⑥）、上下文恢复新增必读 `LESSONS.md`；仓库级元迭代提案落档 `specs/iterations/it-001-agent-lessons-loop.md`，README 仓库约定补经验库一行。
 
 ## 2026-09-28

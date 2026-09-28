@@ -333,6 +333,8 @@ private fun WardrobeRoot() {
                                 },
                                 // it-044 O6：复制回复的全局 toast
                                 appVm = vm,
+                                // it-055 US-56：推荐卡单品 tile → W5 单品详情
+                                onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
                             )
                         }
                     }

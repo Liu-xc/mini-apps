@@ -1,6 +1,9 @@
 package com.leo.wardrobe.ui.chat
 
+import com.leo.wardrobe.domain.model.Item
+import com.leo.wardrobe.domain.model.WardrobeCategory
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -66,6 +69,57 @@ class OutfitRecommendationParserTest {
     fun `清理名称里的强调和链接语法`() {
         assertEquals("牛津纺衬衫", cleanInlineMarkdown("**牛津纺衬衫**"))
         assertEquals("查看衬衫", cleanInlineMarkdown("[查看衬衫](https://example.com)"))
+    }
+
+    // ---- it-055 US-56/58：协议单品 → 衣橱匹配（tile 可点与导出素材的共同真源）----
+
+    @Test
+    fun `匹配按名称规范化进行——对上的给 Item 对不上的保留 null`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 通勤",
+            items = listOf(
+                OutfitRecommendationItem("上装", "牛津纺衬衫"),
+                OutfitRecommendationItem("下装", "不存在的裤子"),
+                OutfitRecommendationItem("鞋", "板鞋"),
+            ),
+            detailMarkdown = "",
+        )
+        val wardrobe = listOf(
+            Item("i1", "p1", WardrobeCategory.TOP, "牛津纺 衬衫", imageFile = "a.webp"),
+            Item("i2", "p1", WardrobeCategory.BOTTOM, "直筒牛仔裤", imageFile = "b.webp"),
+            Item("i3", "p1", WardrobeCategory.SHOES, "板鞋", imageFile = "c.webp"),
+        )
+
+        val matched = matchRecommendationItems(recommendation, wardrobe)
+
+        assertEquals(3, matched.size)
+        assertEquals("i1", matched[0].second?.id)
+        assertNull(matched[1].second)
+        assertEquals("不存在的裤子", matched[1].first.itemName)
+        assertEquals("i3", matched[2].second?.id)
+    }
+
+    @Test
+    fun `匹配保持协议顺序且衣橱多件同名时取首件`() {
+        val recommendation = OutfitRecommendation(
+            title = "第二套 · 休闲",
+            items = listOf(
+                OutfitRecommendationItem("上装", "白T恤"),
+                OutfitRecommendationItem("下装", "工装裤"),
+            ),
+            detailMarkdown = "",
+        )
+        val wardrobe = listOf(
+            Item("t1", "p1", WardrobeCategory.TOP, "白T恤", imageFile = "1.webp"),
+            Item("t2", "p1", WardrobeCategory.TOP, "白T恤", imageFile = "2.webp"),
+            Item("b1", "p1", WardrobeCategory.BOTTOM, "工装裤", imageFile = "3.webp"),
+        )
+
+        val matched = matchRecommendationItems(recommendation, wardrobe)
+
+        assertEquals(listOf("上装", "下装"), matched.map { it.first.categoryLabel })
+        assertEquals("t1", matched[0].second?.id)
+        assertEquals("b1", matched[1].second?.id)
     }
 }
 

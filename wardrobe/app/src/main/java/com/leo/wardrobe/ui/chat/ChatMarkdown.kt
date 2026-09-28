@@ -2,6 +2,7 @@ package com.leo.wardrobe.ui.chat
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -222,6 +227,8 @@ fun AssistantReply(
     wardrobeItems: List<Item>,
     imageFileOf: (String) -> File?,
     modifier: Modifier = Modifier,
+    onOpenItem: (String) -> Unit = {},
+    onExport: ((List<Item>) -> Unit)? = null,
 ) {
     val parsed = remember(text, wardrobeItems) { parseAssistantReply(text) }
     Column(
@@ -235,6 +242,8 @@ fun AssistantReply(
                     recommendation = part.value,
                     wardrobeItems = wardrobeItems,
                     imageFileOf = imageFileOf,
+                    onOpenItem = onOpenItem,
+                    onExport = onExport,
                 )
             }
         }
@@ -246,12 +255,13 @@ private fun OutfitRecommendationCard(
     recommendation: OutfitRecommendation,
     wardrobeItems: List<Item>,
     imageFileOf: (String) -> File?,
+    onOpenItem: (String) -> Unit,
+    onExport: ((List<Item>) -> Unit)?,
 ) {
     val ec = editorialColors()
+    // it-055：匹配逻辑与测试共用同一纯函数（matchRecommendationItems）
     val resolved = remember(recommendation, wardrobeItems) {
-        recommendation.items.map { line ->
-            line to wardrobeItems.firstOrNull { normalizeName(it.name) == normalizeName(line.itemName) }
-        }
+        matchRecommendationItems(recommendation, wardrobeItems)
     }
     Surface(
         color = ec.paper,
@@ -282,6 +292,12 @@ private fun OutfitRecommendationCard(
                             name = item?.name ?: line.itemName,
                             image = item?.let { imageFileOf(it.imageFile) },
                             matched = item != null,
+                            // it-055 US-56：匹配成功才可点进 W5；未匹配保持中性不可点
+                            onClick = if (item != null) {
+                                { onOpenItem(item.id) }
+                            } else {
+                                null
+                            },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -303,6 +319,24 @@ private fun OutfitRecommendationCard(
                     bodyColor = ec.ink,
                 )
             }
+            // it-055 US-58：整套导出——复用 W6 导出面板（至少一件匹配才有素材可拼）
+            val matchedItems = resolved.mapNotNull { it.second }
+            if (onExport != null && matchedItems.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    OutlinedButton(onClick = { onExport(matchedItems) }) {
+                        Icon(
+                            Icons.Rounded.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("复制长图", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
         }
     }
 }
@@ -314,9 +348,11 @@ private fun OutfitItemTile(
     image: File?,
     matched: Boolean,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val ec = editorialColors()
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    val base = if (onClick != null) modifier.clickable(onClick = onClick) else modifier
+    Column(base, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -349,7 +385,3 @@ private fun OutfitItemTile(
         )
     }
 }
-
-private fun normalizeName(value: String): String = value
-    .replace(Regex("\\s+"), "")
-    .trim()

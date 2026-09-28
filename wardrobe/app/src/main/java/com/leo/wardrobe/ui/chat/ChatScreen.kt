@@ -107,6 +107,7 @@ fun ChatScreen(
     onBack: () -> Unit,
     onOpenSettings: () -> Unit = {},
     appVm: com.leo.wardrobe.ui.AppViewModel? = null,
+    onOpenItem: (String) -> Unit = {},
 ) {
     val ec = editorialColors()
     val messages by vm.messages.collectAsState()
@@ -120,6 +121,16 @@ fun ChatScreen(
     val recommendationItems by vm.recommendationItems.collectAsState()
 
     var input by remember { mutableStateOf("") }
+    // it-055 US-58：推荐卡「复制长图」→ W6 导出面板（items=该套已匹配单品）
+    var exportItems by remember { mutableStateOf<List<com.leo.wardrobe.domain.model.Item>?>(null) }
+    val exportVm = appVm
+    // 面板需要 AppViewModel；未注入时卡片不显示导出按钮（避免死按钮）
+    val onExportRecommendation: ((List<com.leo.wardrobe.domain.model.Item>) -> Unit)? =
+        if (exportVm != null) {
+            { items -> exportItems = items }
+        } else {
+            null
+        }
     val listState = rememberLazyListState()
     val rows = remember(messages) { groupRows(messages) }
     val display = remember(rows) { rows.asReversed() } // reverseLayout：index0=底部=最新
@@ -217,6 +228,9 @@ fun ChatScreen(
                                 text = streaming + "▍",
                                 wardrobeItems = recommendationItems,
                                 imageFileOf = vm::imageFileOf,
+                                onOpenItem = onOpenItem,
+                                // 流式半截回复不给导出（动作只挂完整消息，防导出残缺套）
+                                onExport = null,
                             )
                         }
                     }
@@ -238,6 +252,8 @@ fun ChatScreen(
                             text = row.text,
                             wardrobeItems = recommendationItems,
                             imageFileOf = vm::imageFileOf,
+                            onOpenItem = onOpenItem,
+                            onExport = onExportRecommendation,
                             // it-043 补遗（走查 06页 P2）：回复署名时间戳（旧会话 0 不显示）
                             stamp = row.stamp.takeIf { it > 0L },
                             // it-044 O6（走查 C11）：最新一条完整回复下挂复制/追问/重新生成动作
@@ -321,6 +337,19 @@ fun ChatScreen(
             }
         }
     }
+
+    // it-055 US-58：推荐卡长图导出——复用 W6 面板（existingOutfit=null，与搭配页/心愿同先例）
+    exportVm?.let { vmRef ->
+        exportItems?.let { items ->
+            com.leo.wardrobe.ui.outfit.ExportSheet(
+                vm = vmRef,
+                items = items,
+                existingOutfit = null,
+                refPhotoFile = vmRef.currentPerson.value?.refImageFile,
+                onDismiss = { exportItems = null },
+            )
+        }
+    }
 }
 
 /** it-043 O3：容器化错误条（图标 + 分类文案 + 重试/去设置/知道了） */
@@ -388,6 +417,8 @@ private fun AiBubble(
     imageFileOf: (String) -> java.io.File?,
     stamp: Long? = null,
     actions: (@Composable () -> Unit)? = null,
+    onOpenItem: (String) -> Unit = {},
+    onExport: ((List<com.leo.wardrobe.domain.model.Item>) -> Unit)? = null,
 ) {
     val ec = editorialColors()
     Column {
@@ -402,6 +433,8 @@ private fun AiBubble(
                     text = text,
                     wardrobeItems = wardrobeItems,
                     imageFileOf = imageFileOf,
+                    onOpenItem = onOpenItem,
+                    onExport = onExport,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 )
             }
