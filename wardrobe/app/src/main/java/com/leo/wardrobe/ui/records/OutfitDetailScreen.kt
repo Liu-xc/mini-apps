@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,13 +28,17 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,8 +56,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.domain.model.NoteParent
+import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.itemById
 import com.leo.wardrobe.domain.model.notesOf
 import com.leo.wardrobe.domain.model.outfitById
@@ -79,6 +86,7 @@ fun OutfitDetailScreen(
     outfitId: String,
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit,
+    onOpenOutfit: (String) -> Unit,
 ) {
     val data by vm.data.collectAsState()
     val outfit = remember(outfitId, data) { data.outfitById(outfitId) }
@@ -88,14 +96,43 @@ fun OutfitDetailScreen(
         return
     }
 
-    val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val notes = remember(data, outfit) { data.notesOf(NoteParent.OUTFIT, outfit.id) }
     val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
 
     var showDelete by remember { mutableStateOf(false) }
     var showTagEdit by remember { mutableStateOf(false) }
     var showExport by remember { mutableStateOf(false) }
+    var actionMenuOpen by remember { mutableStateOf(false) }
+    var editingItems by remember(outfit.id) { mutableStateOf(false) }
+    var draftItemIds by remember(outfit.id) { mutableStateOf(outfit.itemIds) }
+    var pickerCategories by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
     var tagDraft by remember { mutableStateOf(outfit.tags) }
+
+    val shownItemIds = if (editingItems) draftItemIds else outfit.itemIds
+    val items = remember(data, shownItemIds) { shownItemIds.mapNotNull { data.itemById(it) } }
+
+    fun enterItemEdit(categories: List<WardrobeCategory>? = null) {
+        if (!editingItems) {
+            draftItemIds = outfit.itemIds
+            editingItems = true
+        }
+        pickerCategories = categories
+    }
+
+    fun selectItem(itemId: String) {
+        val selected = data.itemById(itemId) ?: return
+        val replaced = draftItemIds.filterNot { currentId ->
+            data.itemById(currentId)?.category == selected.category
+        }
+        draftItemIds = (replaced + selected.id).distinct()
+        pickerCategories = null
+    }
+
+    fun saveItemEdit() {
+        vm.updateOutfitItems(outfit.id, draftItemIds) { saved ->
+            if (saved) editingItems = false
+        }
+    }
 
     val pickEffect = rememberPhotoPicker { uri ->
         if (uri != null) vm.importEffectImage(outfit, items.map { it.id }, uri)
@@ -103,23 +140,71 @@ fun OutfitDetailScreen(
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("穿搭 · ${dateFormat.format(Date(outfit.createdAt))}") },
+        title = { Text("穿搭 · ${dateFormat.format(Date(outfit.createdAt))}") },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
                 }
             },
             actions = {
-                IconButton(onClick = { tagDraft = outfit.tags; showTagEdit = true }) {
-                    Icon(Icons.Rounded.Edit, contentDescription = "编辑标签")
-                }
-                IconButton(onClick = { showDelete = true }) {
-                    // it-034 C5：破坏性操作警示红（执行前确认对话框已有，见下方 showDelete）
-                    Icon(
-                        Icons.Rounded.Delete,
-                        contentDescription = "删除穿搭",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                if (editingItems) {
+                    IconButton(onClick = { editingItems = false; draftItemIds = outfit.itemIds; pickerCategories = null }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "取消调整")
+                    }
+                    IconButton(
+                        onClick = { saveItemEdit() },
+                        enabled = draftItemIds.isNotEmpty() && draftItemIds != outfit.itemIds,
+                    ) {
+                        Icon(Icons.Rounded.Check, contentDescription = "保存调整")
+                    }
+                } else {
+                    Box {
+                        IconButton(onClick = { actionMenuOpen = true }) {
+                            Icon(Icons.Rounded.MoreVert, contentDescription = "更多穿搭操作")
+                        }
+                        DropdownMenu(
+                            expanded = actionMenuOpen,
+                            onDismissRequest = { actionMenuOpen = false },
+                        ) {
+                            if (outfit.effectImages.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("调整单品") },
+                                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
+                                    onClick = {
+                                        actionMenuOpen = false
+                                        enterItemEdit()
+                                    },
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("编辑标签") },
+                                leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
+                                onClick = {
+                                    actionMenuOpen = false
+                                    tagDraft = outfit.tags
+                                    showTagEdit = true
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("创建副本") },
+                                leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
+                                onClick = {
+                                    actionMenuOpen = false
+                                    vm.duplicateOutfit(outfit) { duplicate ->
+                                        duplicate?.let { onOpenOutfit(it.id) }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    IconButton(onClick = { showDelete = true }) {
+                        // it-034 C5：破坏性操作警示红（执行前确认对话框已有，见下方 showDelete）
+                        Icon(
+                            Icons.Rounded.Delete,
+                            contentDescription = "删除穿搭",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             },
         )
@@ -152,6 +237,8 @@ fun OutfitDetailScreen(
                         PhotoCard(
                             file = vm.imageFileOf(img.file),
                             contentDescription = "成品效果图 ${page + 1}",
+                            contentScale = ContentScale.Fit,
+                            mat = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.86f),
@@ -197,38 +284,60 @@ fun OutfitDetailScreen(
                     com.leo.wardrobe.ui.components.BodyCollage(
                         items = items,
                         imageFileOf = vm::imageFileOf,
+                        onEmptySlotClick = { categories -> enterItemEdit(categories) },
+                        onItemClick = if (editingItems) {
+                            { item -> pickerCategories = listOf(item.category) }
+                        } else null,
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(0.8f),
                     )
                     // it-012：角标移拼贴右上，远离「未配X」空槽语义区
-                    Surface(
-                        onClick = { pickEffect() },
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                        color = MaterialTheme.colorScheme.primary,
-                        shadowElevation = 3.dp,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(10.dp),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    if (!editingItems) {
+                        Surface(
+                            onClick = { pickEffect() },
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.primary,
+                            shadowElevation = 3.dp,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(10.dp),
                         ) {
-                            Icon(
-                                Icons.Rounded.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(15.dp),
-                            )
-                            Text(
-                                "录入成品图",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = androidx.compose.ui.graphics.Color.White,
-                                modifier = Modifier.padding(start = 4.dp),
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Add,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(15.dp),
+                                )
+                                Text(
+                                    "录入成品图",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    modifier = Modifier.padding(start = 4.dp),
+                                )
+                            }
                         }
                     }
+                }
+            }
+
+            if (editingItems) {
+                Text(
+                    "点衣物可替换，点虚线空槽可补齐",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = editorialColors().inkFaint,
+                )
+                OutlinedButton(
+                    onClick = { pickerCategories = WardrobeCategory.entries },
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("添加单品")
                 }
             }
 
@@ -243,7 +352,10 @@ fun OutfitDetailScreen(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 1.dp,
-                    onClick = { onOpenItem(item.id) },
+                    onClick = {
+                        if (editingItems) pickerCategories = listOf(item.category)
+                        else onOpenItem(item.id)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
@@ -265,11 +377,17 @@ fun OutfitDetailScreen(
                                 .weight(1f)
                                 .padding(start = 12.dp),
                         )
-                        Icon(
-                            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                            contentDescription = null,
-                            tint = editorialColors().inkFaint,
-                        )
+                        if (editingItems) {
+                            IconButton(onClick = { draftItemIds = draftItemIds.filterNot { it == item.id } }) {
+                                Icon(Icons.Rounded.Close, contentDescription = "移除${item.name}")
+                            }
+                        } else {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = editorialColors().inkFaint,
+                            )
+                        }
                     }
                 }
             }
@@ -339,6 +457,72 @@ fun OutfitDetailScreen(
             )
             Spacer(Modifier.height(28.dp))
         }
+    }
+
+    pickerCategories?.let { categories ->
+        val candidates = data.items.filter { item ->
+            item.personId == outfit.personId && item.category in categories
+        }
+        AlertDialog(
+            onDismissRequest = { pickerCategories = null },
+            title = {
+                Text(
+                    when {
+                        categories.size == 1 -> "选择${categories.first().label}"
+                        categories == WardrobeCategory.entries -> "添加单品"
+                        else -> "补齐上身"
+                    },
+                )
+            },
+            text = {
+                if (candidates.isEmpty()) {
+                    Text("当前角色没有可选单品", color = editorialColors().ink)
+                } else {
+                    Column(
+                        modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        candidates.forEach { candidate ->
+                            Surface(
+                                onClick = { selectItem(candidate.id) },
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                tonalElevation = 1.dp,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                ) {
+                                    PhotoCard(
+                                        file = vm.imageFileOf(candidate.imageFile),
+                                        contentDescription = candidate.name,
+                                        corner = 10.dp,
+                                        mat = true,
+                                        modifier = Modifier.size(width = 44.dp, height = 54.dp),
+                                    )
+                                    Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                                        Text(
+                                            candidate.name,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = editorialColors().ink,
+                                        )
+                                        Text(
+                                            "${candidate.category.label} · ${candidate.color}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = editorialColors().inkFaint,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { pickerCategories = null }) { Text("取消") }
+            },
+        )
     }
 
     if (showDelete) {

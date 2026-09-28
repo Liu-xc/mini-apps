@@ -95,6 +95,20 @@ fun ItemEditScreen(
     var desc by remember(existing?.id) { mutableStateOf(existing?.desc ?: "") }
     var tags by remember(existing?.id) { mutableStateOf(existing?.tags ?: emptyList()) }
     var photoMissing by remember { mutableStateOf(false) }
+    val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
+
+    fun runCutout(src: String) {
+        if (cutting) return
+        cutting = true
+        vm.cutoutPhoto(src) { out ->
+            cutting = false
+            if (out != null) {
+                cutoutFile?.let(vm::deletePhotoFile)
+                cutoutFile = out
+                haptics.confirm()
+            } // 推理失败时保留原图，VM 提示可重试
+        }
+    }
 
     val pickPhoto = rememberPhotoPicker { uri ->
         if (uri != null) {
@@ -102,28 +116,15 @@ fun ItemEditScreen(
             vm.importPhoto(uri) { file ->
                 importing = false
                 if (file != null) {
-                    // 换照片 = 弃用当前抠图版，回到原图态
+                    // 新照片默认去背景；保留原图作候选回退，直到用户保存或还原。
                     cutoutFile?.let(vm::deletePhotoFile)
                     cutoutFile = null
+                    importedFile?.let(vm::deletePhotoFile)
                     importedFile = file
                     photoMissing = false
+                    runCutout(file)
                 }
             }
-        }
-    }
-
-    val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
-
-    fun doCutout() {
-        val src = importedFile ?: return
-        if (cutting) return
-        cutting = true
-        vm.cutoutPhoto(src) { out ->
-            cutting = false
-            if (out != null) {
-                cutoutFile = out
-                haptics.confirm()
-            }   // 成功即采用；失败 toast 且原图不动（VM 内处理）
         }
     }
 
@@ -332,7 +333,7 @@ fun ItemEditScreen(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { doCutout() },
+                        onClick = { importedFile?.let(::runCutout) },
                         enabled = !cutting && !importing,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().height(44.dp),

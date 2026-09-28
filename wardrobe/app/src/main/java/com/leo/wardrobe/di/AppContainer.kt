@@ -89,17 +89,25 @@ class AppContainer(private val context: Context) {
         if (demo) unpackMockImages(context)
     }
 
-    /** 内置演示照片解包到 mock 图片目录（缺才拷，保持幂等） */
+    /**
+     * 内置演示照片解包到 mock 图片目录。
+     * it-049 首次引入 revision：升级后刷新同名内置照片（如转透明底的商品图），
+     * 但不触碰由演示操作临时写入的 UUID 文件。
+     */
     private fun unpackMockImages(context: Context) {
         val dir = File(context.cacheDir, "mock-images").apply { mkdirs() }
+        val revisionFile = File(dir, ".asset-revision")
+        val refreshBundledAssets = runCatching { revisionFile.readText() != MOCK_ASSET_REVISION }
+            .getOrDefault(true)
         context.assets.list("mock").orEmpty().forEach { name ->
             val target = File(dir, name)
-            if (!target.exists()) {
+            if (refreshBundledAssets || !target.exists()) {
                 context.assets.open("mock/$name").use { input ->
                     target.outputStream().use { input.copyTo(it) }
                 }
             }
         }
+        if (refreshBundledAssets) revisionFile.writeText(MOCK_ASSET_REVISION)
     }
 
     /** 与 APK 内置图片同源的完整演示 JSON；图片由 init 中的解包逻辑统一准备。 */
@@ -107,4 +115,8 @@ class AppContainer(private val context: Context) {
         MockWardrobeData.fromJson(
             context.assets.open("mock/wardrobe.json").bufferedReader().use { it.readText() },
         )
+
+    private companion object {
+        const val MOCK_ASSET_REVISION = "it-049"
+    }
 }

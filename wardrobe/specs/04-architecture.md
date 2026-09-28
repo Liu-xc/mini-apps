@@ -26,7 +26,7 @@ di/AppContainer.kt = 组合根，装配一切依赖（手动构造器注入）
 com.leo.wardrobe/
 ├─ WardrobeApp.kt                 # Application：创建 AppContainer
 ├─ MainActivity.kt                # 单 Activity：NavHost + 底部三 Tab + 主题
-├─ di/AppContainer.kt             # 组合根（含演示模式仓库/图片目录切换）
+├─ di/AppContainer.kt             # 组合根（演示模式仓库/图片目录切换；内置演示资源按 revision 刷新）
 ├─ domain/
 │  ├─ model/      Person Item Outfit OutfitImage Note WearLog WishItem WishOutfit
 │  │              WardrobeCategory TagPresets WardrobeData（Queries.kt 派生查询）

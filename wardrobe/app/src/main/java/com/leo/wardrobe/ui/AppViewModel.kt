@@ -304,6 +304,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteOutfit(id: String) = launchSafely(okToast = "已删除穿搭") { repo.deleteOutfit(id) }
 
+    /** W7 编辑：只接受同角色衣物，至少保留一件；标签、成品图等其余字段原样保留。 */
+    fun updateOutfitItems(id: String, itemIds: List<String>, onDone: (Boolean) -> Unit = {}) {
+        launchSafely(failToast = "更新穿搭失败") {
+            val outfit = repo.data.value.outfitById(id) ?: run {
+                onDone(false)
+                return@launchSafely
+            }
+            val uniqueIds = itemIds.distinct()
+            val validIds = uniqueIds.filter { itemId ->
+                repo.data.value.items.any { item -> item.id == itemId && item.personId == outfit.personId }
+            }
+            if (validIds.isEmpty() || validIds.size != uniqueIds.size) {
+                toast("请保留至少一件当前角色的衣物")
+                onDone(false)
+                return@launchSafely
+            }
+            repo.updateOutfit(outfit.copy(itemIds = validIds, updatedAt = System.currentTimeMillis()))
+            toast("穿搭已更新")
+            onDone(true)
+        }
+    }
+
+    /** 创建可独立调整的新记录；不复制成品图、评论或穿着记录，避免副本沿用过期内容。 */
+    fun duplicateOutfit(source: Outfit, onDone: (Outfit?) -> Unit = {}) {
+        launchSafely(failToast = "创建副本失败") {
+            val duplicate = repo.createOutfit(source.personId, source.itemIds, source.tags)
+            toast("已创建副本")
+            onDone(duplicate)
+        }
+    }
+
     fun updateOutfitTags(id: String, tags: List<String>) = launchSafely {
         repo.data.value.outfitById(id)?.let { repo.updateOutfit(it.copy(tags = tags.distinct())) }
     }

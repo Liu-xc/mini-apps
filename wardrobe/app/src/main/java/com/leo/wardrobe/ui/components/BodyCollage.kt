@@ -1,6 +1,7 @@
 package com.leo.wardrobe.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -26,6 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.leo.wardrobe.domain.model.Item
@@ -44,6 +47,8 @@ fun BodyCollage(
     imageFileOf: (String) -> File?,
     modifier: Modifier = Modifier,
     showEmptySlots: Boolean = true,
+    onEmptySlotClick: ((List<WardrobeCategory>) -> Unit)? = null,
+    onItemClick: ((Item) -> Unit)? = null,
 ) {
     val byCat = items.groupBy { it.category }
     val hat = byCat[WardrobeCategory.HAT]?.firstOrNull()
@@ -71,12 +76,14 @@ fun BodyCollage(
                     label = hat.name,
                     shape = CircleShape,
                     modifier = Modifier.fillMaxHeight().fillMaxWidth(0.5f).align(Alignment.Center),
+                    onClick = onItemClick?.let { { it(hat) } },
                 )
             } else if (showEmptySlots) {
                 EmptyBodySlot(
                     label = "未配帽",
                     shape = CircleShape,
                     modifier = Modifier.fillMaxHeight(0.72f).fillMaxWidth(0.5f).align(Alignment.Center),
+                    onClick = onEmptySlotClick?.let { { it(listOf(WardrobeCategory.HAT)) } },
                 )
             }
         }
@@ -92,6 +99,7 @@ fun BodyCollage(
                         label = item.name,
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.weight(1f).fillMaxHeight(),
+                        onClick = onItemClick?.let { { it(item) } },
                     )
                 }
             }
@@ -100,6 +108,9 @@ fun BodyCollage(
                 label = "未配上装",
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.weight(0.33f).fillMaxWidth(),
+                onClick = onEmptySlotClick?.let {
+                    { it(listOf(WardrobeCategory.OUTERWEAR, WardrobeCategory.TOP, WardrobeCategory.DRESS)) }
+                },
             )
         }
         // 腿行：包(矮挂) | 下装（窄长主体） | 配饰(矮挂)
@@ -115,6 +126,7 @@ fun BodyCollage(
                         label = it.name,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.26f).fillMaxHeight(0.62f),
+                        onClick = onItemClick?.let { onClick -> { onClick(it) } },
                     )
                 }
                 if (bottom != null) {
@@ -123,12 +135,14 @@ fun BodyCollage(
                         label = bottom.name,
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.weight(if (bag == null && acc == null) 1f else 0.48f).fillMaxHeight(),
+                        onClick = onItemClick?.let { { it(bottom) } },
                     )
                 } else if (showEmptySlots) {
                     EmptyBodySlot(
                         label = "未配下装",
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.weight(0.48f).fillMaxHeight(0.82f),
+                        onClick = onEmptySlotClick?.let { { it(listOf(WardrobeCategory.BOTTOM)) } },
                     )
                 }
                 acc?.let {
@@ -137,6 +151,7 @@ fun BodyCollage(
                         label = it.name,
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(0.26f).fillMaxHeight(0.62f),
+                        onClick = onItemClick?.let { onClick -> { onClick(it) } },
                     )
                 }
             }
@@ -145,6 +160,7 @@ fun BodyCollage(
                 label = "未配下装",
                 shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.weight(0.42f).fillMaxWidth(),
+                onClick = onEmptySlotClick?.let { { it(listOf(WardrobeCategory.BOTTOM)) } },
             )
         }
         // 脚：鞋落扁脚剪影；缺失显示扁空槽
@@ -155,12 +171,14 @@ fun BodyCollage(
                     label = shoes.name,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(Alignment.Center),
+                    onClick = onItemClick?.let { { it(shoes) } },
                 )
             } else if (showEmptySlots) {
                 EmptyBodySlot(
                     label = "未配鞋",
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxHeight(0.66f).fillMaxWidth(0.62f).align(Alignment.Center),
+                    onClick = onEmptySlotClick?.let { { it(listOf(WardrobeCategory.SHOES)) } },
                 )
             }
         }
@@ -178,16 +196,16 @@ private fun BodySlot(
     label: String,
     shape: androidx.compose.ui.graphics.Shape,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
-    Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f), modifier = modifier) {
-        Box(contentAlignment = Alignment.Center) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(file).crossfade(180).build(),
-                contentDescription = label,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize().padding(3.dp),
-            )
-        }
+    val interaction = onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier
+    Box(modifier = modifier.clip(shape).then(interaction), contentAlignment = Alignment.Center) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data(file).crossfade(180).build(),
+            contentDescription = label,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize().padding(3.dp),
+        )
     }
 }
 
@@ -197,11 +215,14 @@ private fun EmptyBodySlot(
     label: String,
     shape: androidx.compose.ui.graphics.Shape,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     // it-031 C6：空槽虚线与文字加深一档，贴近 ink 级对比（审查：inkFaint 贴近 3:1 下限）
     val outline = editorialColors().inkFaint.copy(alpha = 0.85f)
+    val interaction = onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier
     Box(
         modifier
+            .then(interaction)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), shape)
             .dashedBorder(outline, width = 1.5.dp),
         contentAlignment = Alignment.Center,

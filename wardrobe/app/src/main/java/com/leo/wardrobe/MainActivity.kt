@@ -334,6 +334,7 @@ private fun WardrobeRoot() {
                                 outfitId = id,
                                 onBack = { nav.popBackStack() },
                                 onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
+                                onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
                             )
                         }
                     }
