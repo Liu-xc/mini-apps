@@ -1,6 +1,10 @@
 # CHANGELOG
 
-> AGENTS.md 迭代流程第⑤步要求的变更流水；本文件于 it-001 建立（此前仓库未落地该约定）。
+> AGENTS.md 迭代流程第⑥步要求的变更流水；本文件于 it-001 建立（此前仓库未落地该约定）。
+
+## 2026-09-29
+
+- **docs(repo)**: 建立 Agent 经验自进化闭环（仓库级元迭代 it-001）——新增根 `LESSONS.md` 经验库（头部读写/晋级/淘汰/容量规则 + 回填 8 条种子教训）；AGENTS.md 迭代流程新增第⑤步「经验沉淀」（原 CHANGELOG 步顺延为⑥）、上下文恢复新增必读 `LESSONS.md`；仓库级元迭代提案落档 `specs/iterations/it-001-agent-lessons-loop.md`，README 仓库约定补经验库一行。
 
 ## 2026-09-28
 

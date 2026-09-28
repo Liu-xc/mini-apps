@@ -11,10 +11,12 @@
   → ② 用户确认提案后才开始写代码
   → ③ 实现：代码 + 同步更新受影响的常青 spec（见下）
   → ④ 验证：构建/测试/截图，结果回填 it-XXX 文件的「验证记录」小节
-  → ⑤ CHANGELOG.md 记一行；git 提交（规范见下）
+  → ⑤ 经验沉淀：若有跨任务可复用的教训/技巧，写入根 [LESSONS.md](LESSONS.md)
+      （≤3 条，一行一条，按其头部规则：带出处链接与年月）
+  → ⑥ CHANGELOG.md 记一行；git 提交（规范见下）
 ```
 
-**纯 bugfix 可跳过①**，但必须在 it-XXX（或新建 it-XXX-hotfix）回填问题与修法。
+**纯 bugfix 可跳过①**，但必须在 it-XXX（或新建 it-XXX-hotfix）回填问题与修法；教训有普适性同样走⑤写入 LESSONS.md。
 
 ## 常青 spec（代码合入时必须保持一致）
 
@@ -46,9 +48,10 @@ feat|fix|docs|spec|chore(scope): 一句话描述 (#it-XXX)
 
 1. 读 `README.md`（仓库总览）→ 目标应用 `README.md`（构建方式）
 2. UI/交互相关任务先读根目录 [`DESIGN.md`](DESIGN.md)（跨应用质量基准：硬 token/动效规则/触感基线/反例清单/评审 query）
-3. 读该应用 `specs/00-overview.md` → `01-user-stories.md` → 与任务相关的常青 spec
-4. 读 `specs/iterations/` 里最近一次迭代，了解当前进度与遗留问题
-5. 再读代码
+3. 读根目录 [`LESSONS.md`](LESSONS.md)（经验库：历史踩坑与行为规则，先看规则再动手，别重踩）
+4. 读该应用 `specs/00-overview.md` → `01-user-stories.md` → 与任务相关的常青 spec
+5. 读 `specs/iterations/` 里最近一次迭代，了解当前进度与遗留问题
+6. 再读代码
 
 ## 其他
 
