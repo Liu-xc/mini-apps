@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
@@ -118,6 +117,7 @@ fun ChatScreen(
     val notices by vm.toolNotices.collectAsState()
     val canChat by vm.canChat.collectAsState()
     val cacheHit by vm.cacheHit.collectAsState()
+    val recommendationItems by vm.recommendationItems.collectAsState()
 
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -213,7 +213,11 @@ fun ChatScreen(
                                 Text("思考中…", style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint)
                             }
                         } else {
-                            AiBubble(streaming + "▍")
+                            AiBubble(
+                                text = streaming + "▍",
+                                wardrobeItems = recommendationItems,
+                                imageFileOf = vm::imageFileOf,
+                            )
                         }
                     }
                 }
@@ -232,6 +236,8 @@ fun ChatScreen(
                         is RowUi.Me -> MeBubble(row.text)
                         is RowUi.Ai -> AiBubble(
                             text = row.text,
+                            wardrobeItems = recommendationItems,
+                            imageFileOf = vm::imageFileOf,
                             // it-043 补遗（走查 06页 P2）：回复署名时间戳（旧会话 0 不显示）
                             stamp = row.stamp.takeIf { it > 0L },
                             // it-044 O6（走查 C11）：最新一条完整回复下挂复制/追问/重新生成动作
@@ -376,7 +382,13 @@ private fun MeBubble(text: String) {
 }
 
 @Composable
-private fun AiBubble(text: String, stamp: Long? = null, actions: (@Composable () -> Unit)? = null) {
+private fun AiBubble(
+    text: String,
+    wardrobeItems: List<com.leo.wardrobe.domain.model.Item>,
+    imageFileOf: (String) -> java.io.File?,
+    stamp: Long? = null,
+    actions: (@Composable () -> Unit)? = null,
+) {
     val ec = editorialColors()
     Column {
         Row(Modifier.fillMaxWidth()) {
@@ -386,10 +398,10 @@ private fun AiBubble(text: String, stamp: Long? = null, actions: (@Composable ()
                 border = BorderStroke(1.dp, ec.hairline),
                 modifier = Modifier.widthIn(max = 320.dp),
             ) {
-                Text(
-                    text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ec.ink,
+                AssistantReply(
+                    text = text,
+                    wardrobeItems = wardrobeItems,
+                    imageFileOf = imageFileOf,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 )
             }

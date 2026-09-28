@@ -96,3 +96,10 @@ com.leo.wardrobe/
 - composite build：`includeBuild("../libs/store"、"../libs/carddeck"、"../libs/cutout"、"../libs/agent")`，坐标 `com.leo.libs:{store,carddeck,cutout,agent}`（ADR-012/013/016，agent 见 it-041/ADR-024）
 - 依赖：Compose BOM、material3（Expressive）、navigation-compose、coil-compose、lottie-compose、kotlinx-serialization-json、androidx.exifinterface、DataStore preferences、onnxruntime-android 1.20.0（cutout 运行时，版本须与 SDK 编译期对齐，ADR-016）、leo-agent（BYOK 模型接入，okhttp 由 SDK 传递）、JUnit4 + kotlinx-coroutines-test；carddeck 自研内核（it-047）无三方卡组依赖，JitPack 仓已从 settings.gradle.kts 移除
 - 权限：`POST_NOTIFICATIONS` + `RECEIVE_BOOT_COMPLETED`（it-018）+ **`INTERNET`（it-041/ADR-024，仅 BYOK 模型直连使用）**
+
+## it-054 顾问回复解析边界
+
+- `ChatViewModel.recommendationItems` 从 Repository 快照和当前角色偏好派生当前角色单品；W13 卡片图片只通过 `imageFile` 本地解析，不信任模型 URL。
+- `ui/chat/OutfitRecommendationParser.kt` 是纯 Kotlin 文本解析层：识别约定的 Markdown 标题和品类行，输出 UI 值对象，不读写 Repository，不修改会话内容。
+- `ui/chat/ChatMarkdown.kt` 负责 Markdown 子集排版与卡片组合呈现；复制仍调用原始 assistant 文本，UI 解析结果不回写 `Message`。
+- 解析失败降级为普通 Markdown 正文，避免模型输出格式变化阻断聊天；本迭代不新增持久化字段和写入工具。

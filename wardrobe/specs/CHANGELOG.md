@@ -4,6 +4,11 @@
 
 ## 未发布
 
+### it-054 — 顾问穿搭卡片与 Markdown 回复渲染
+- W13 将模型回复按 Markdown 协议渲染，并把引用当前衣橱已有单品的方案转换为真实照片穿搭卡片。
+- 卡片只精确匹配当前角色单品；未匹配建议明确标注，不伪装为库存；复制动作仍复制原始 Markdown。
+- 新增纯 Kotlin 回复解析器单测；详情见 [it-054](iterations/it-054-chat-outfit-cards-markdown.md)。
+
 ### it-053 — 顾问角色上下文回退修复
 - 顾问查询当前角色时与 W1/W2 共用同一回退规则；新装 Mock 或旧角色 id 失效时，不再误报“当前没有角色”。
 - 明确无角色时停止后续重复查询；详情见 [it-053](iterations/it-053-chat-person-context-hotfix.md)。

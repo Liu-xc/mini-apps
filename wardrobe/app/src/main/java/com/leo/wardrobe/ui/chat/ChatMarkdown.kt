@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -222,9 +221,13 @@ fun AssistantReply(
     text: String,
     wardrobeItems: List<Item>,
     imageFileOf: (String) -> File?,
+    modifier: Modifier = Modifier,
 ) {
     val parsed = remember(text, wardrobeItems) { parseAssistantReply(text) }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         parsed.parts.forEach { part ->
             when (part) {
                 is AssistantReplyPart.Markdown -> MarkdownText(part.text)
@@ -350,4 +353,3 @@ private fun OutfitItemTile(
 private fun normalizeName(value: String): String = value
     .replace(Regex("\\s+"), "")
     .trim()
-
