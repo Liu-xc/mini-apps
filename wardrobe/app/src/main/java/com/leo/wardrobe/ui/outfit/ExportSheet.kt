@@ -97,6 +97,9 @@ fun ExportSheet(
     // it-056：调用方带来的五维预选（如顾问推荐的场景），打开时以持久化记忆为底、覆盖同 key；
     // 空 map 时四处既有调用行为与此前完全一致
     presetSelections: Map<String, String> = emptyMap(),
+    // it-057：对话入口传 true——初始值只反映本次推荐，不叠加历史记忆，
+    // 避免上一套的「办公室」残留在新推荐的表单里冒充本次场景
+    replaceSavedSelections: Boolean = false,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -129,9 +132,11 @@ fun ExportSheet(
     // it-012：恢复上次维度选择——等 DataStore 首发射完成（ready）或值非空才 init，
     // 避免首帧空 map 把记忆标记为已初始化而永久丢弃（R2 实测竞态 bug）
     // it-056：init 时叠加调用方预选（覆盖同 key、保留其余记忆），顾问场景等语境随推荐带入
+    // it-057：replaceSavedSelections=true（对话入口）时不叠加记忆——表单只反映本次推荐
     LaunchedEffect(savedSelections, savedSelectionsReady, presetSelections) {
         if (!selectionsInit && (savedSelectionsReady || savedSelections.isNotEmpty())) {
-            val merged = savedSelections + presetSelections
+            val base = if (replaceSavedSelections) emptyMap() else savedSelections
+            val merged = base + presetSelections
             if (merged.isNotEmpty()) selections = merged
             selectionsInit = true
         }
@@ -310,6 +315,7 @@ fun ExportSheet(
                                     selectedValue = selections[dim.key],
                                     expanded = activeDimensionKey == dim.key,
                                     isPrimary = dim.key == PromptPresets.SCENE.key,
+                                    allowCustom = dim.key == PromptPresets.SCENE.key, // it-057：场景可自定义
                                     onToggle = {
                                         activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
                                     },
@@ -518,12 +524,17 @@ fun ExportSheet(
 }
 
 /** W6 it-051：常驻值的画面设定行；仅展开当前编辑项，避免嵌套弹层。 */
+/**
+ * it-057：场景行支持自由值——预设 chips 之外带「自定义」入口；
+ * 当前值为预设外文本（顾问推荐的自由场景短语）时以选中态 chip 常驻，点击即清除。
+ */
 @Composable
 private fun DimensionSettingRow(
     dim: com.leo.wardrobe.domain.usecase.PromptDimension,
     selectedValue: String?,
     expanded: Boolean,
     isPrimary: Boolean,
+    allowCustom: Boolean = false,
     onToggle: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
@@ -566,20 +577,72 @@ private fun DimensionSettingRow(
                 enter = expandVertically(animationSpec = EditorialMotion.smooth()) + fadeIn(animationSpec = tween(100)),
                 exit = shrinkVertically(animationSpec = EditorialMotion.smooth()) + fadeOut(animationSpec = tween(90)),
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    dim.options.forEach { opt ->
-                        FilterChip(
-                            selected = selectedValue == opt,
-                            onClick = { onSelect(opt) },
-                            modifier = Modifier.heightIn(min = 44.dp),
-                            label = { Text(opt) },
-                        )
+                val freeValue = selectedValue?.takeIf { it !in dim.options }
+                var customEditing by remember { mutableStateOf(false) }
+                var customInput by remember { mutableStateOf("") }
+                Column {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(start = 16.dp, end = 16.dp, bottom = if (customEditing) 8.dp else 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        dim.options.forEach { opt ->
+                            FilterChip(
+                                selected = selectedValue == opt,
+                                onClick = { onSelect(opt) },
+                                modifier = Modifier.heightIn(min = 44.dp),
+                                label = { Text(opt) },
+                            )
+                        }
+                        if (allowCustom) {
+                            // it-057：顾问带入的自由场景值常驻为选中态 chip，点击清除
+                            if (freeValue != null) {
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { onSelect(freeValue) }, // 与当前值相同 → 走移除分支
+                                    modifier = Modifier.heightIn(min = 44.dp),
+                                    label = { Text(freeValue) },
+                                )
+                            }
+                            FilterChip(
+                                selected = customEditing,
+                                onClick = {
+                                    customInput = ""
+                                    customEditing = !customEditing
+                                },
+                                modifier = Modifier.heightIn(min = 44.dp),
+                                label = { Text("自定义") },
+                            )
+                        }
+                    }
+                    if (customEditing) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            OutlinedTextField(
+                                value = customInput,
+                                onValueChange = { customInput = it },
+                                placeholder = { Text("输入${dim.label}…") },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = editorialTextFieldColors(),
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Button(
+                                enabled = customInput.isNotBlank(),
+                                onClick = {
+                                    onSelect(customInput.trim())
+                                    customEditing = false
+                                },
+                            ) { Text("确定") }
+                        }
                     }
                 }
             }

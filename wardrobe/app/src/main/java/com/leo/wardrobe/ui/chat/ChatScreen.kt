@@ -123,6 +123,7 @@ fun ChatScreen(
     var input by remember { mutableStateOf("") }
     // it-055 US-58：推荐卡「复制长图」→ W6 导出面板（items=该套已匹配单品）
     // it-056：同时携带从推荐文本提取的五维预选（场景等），面板打开即带上顾问语境
+    // it-057：replace=true 净初值——不叠加历史记忆，表单只反映本次推荐
     var exportRequest by remember {
         mutableStateOf<Pair<List<com.leo.wardrobe.domain.model.Item>, Map<String, String>>?>(null)
     }
@@ -356,6 +357,7 @@ fun ChatScreen(
                 existingOutfit = null,
                 refPhotoFile = vmRef.currentPerson.value?.refImageFile,
                 presetSelections = presetSelections,
+                replaceSavedSelections = true, // it-057：对话入口净初值，防上次场景残留
                 onDismiss = { exportRequest = null },
             )
         }

@@ -122,10 +122,10 @@ class OutfitRecommendationParserTest {
         assertEquals("b1", matched[1].second?.id)
     }
 
-    // ---- it-056：导出面板五维预选提取 ----
+    // ---- it-056/it-057：导出面板五维预选提取 ----
 
     @Test
-    fun `标题与理由中的场景词预选五维且不取半截选项`() {
+    fun `预设命中优先于自由回填且氛围按前缀放宽`() {
         val parsed = parseAssistantReply(
             """
             ## 第一套 · 通勤
@@ -139,14 +139,14 @@ class OutfitRecommendationParserTest {
 
         val selections = extractRecommendationSelections(recommendation)
 
+        // 「办公室」出现在适合行 → 选预设而非回填「通勤」；场景短语「通勤」经前缀放宽命中「通勤简约」
         assertEquals("办公室", selections["scene"])
         assertEquals("早秋", selections["season"])
-        // 「通勤」只是 mood 选项「通勤简约」的半截，不构成命中
-        assertNull(selections["mood"])
+        assertEquals("通勤简约", selections["mood"])
     }
 
     @Test
-    fun `季节最长选项优先命中`() {
+    fun `季节最长选项优先命中且场景短语自由回填`() {
         val recommendation = OutfitRecommendation(
             title = "第一套 · 早春踏青",
             items = listOf(OutfitRecommendationItem("上装", "白T恤")),
@@ -156,17 +156,24 @@ class OutfitRecommendationParserTest {
         val selections = extractRecommendationSelections(recommendation)
 
         assertEquals("早春", selections["season"])
+        assertEquals("早春踏青", selections["scene"])
     }
 
     @Test
-    fun `无预设选项命中时返回空预选`() {
+    fun `无预设命中时场景回填短语原文其余维度为空`() {
         val recommendation = OutfitRecommendation(
             title = "第一套 · 音乐节造型",
             items = listOf(OutfitRecommendationItem("上装", "白T恤")),
             detailMarkdown = "**理由**：醒目、方便活动。",
         )
 
-        assertTrue(extractRecommendationSelections(recommendation).isEmpty())
+        val selections = extractRecommendationSelections(recommendation)
+
+        assertEquals("音乐节造型", selections["scene"])
+        assertNull(selections["mood"])
+        assertNull(selections["season"])
+        assertNull(selections["light"])
+        assertNull(selections["shot"])
     }
 
     @Test
@@ -182,6 +189,35 @@ class OutfitRecommendationParserTest {
         assertEquals("海边", selections["scene"])
         assertEquals("运动活力", selections["mood"])
         assertEquals("全身照", selections["shot"])
+    }
+
+    // ---- it-057：自由场景与氛围放宽 ----
+
+    @Test
+    fun `超长场景短语截断到八字`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 周末休闲逛街遛娃看展",
+            items = listOf(OutfitRecommendationItem("上装", "白T恤")),
+            detailMarkdown = "",
+        )
+
+        assertEquals("周末休闲逛街遛娃", extractRecommendationSelections(recommendation)["scene"])
+    }
+
+    @Test
+    fun `氛围前缀两字即可命中且季节光线不放宽`() {
+        val recommendation = OutfitRecommendation(
+            title = "第一套 · 约会晚餐",
+            items = listOf(OutfitRecommendationItem("上装", "白T恤")),
+            detailMarkdown = "**理由**：整体温柔一些。",
+        )
+
+        val selections = extractRecommendationSelections(recommendation)
+
+        assertEquals("温柔知性", selections["mood"])
+        // 枚举维度不接受半截词（「温柔」不含任何季节/光线前缀）
+        assertNull(selections["season"])
+        assertNull(selections["light"])
     }
 }
 

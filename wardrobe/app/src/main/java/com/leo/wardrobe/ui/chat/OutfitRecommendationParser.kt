@@ -138,16 +138,47 @@ private fun normalizeName(value: String): String = value
     .trim()
 
 /**
- * it-056：从推荐标题与说明提取导出面板「画面设定」五维的预选值。
+ * it-056/it-057：从推荐标题与说明提取导出面板「画面设定」五维的预选值。
  *
  * system prompt 要求每套方案以「## 第 X 套 · 场景」开头，场景信息天然在标题里，
- * 「适合/理由」里还常写场合与季节；对 PromptPresets 各维选项做包含匹配，
- * 每维取首个命中（选项序已长词在前：早春先于春、全身+环境远景先于全身照）。
+ * 「适合/理由」里还常写场合与季节。规则：
+ * - 场景：标题短语或全文含预设选项则选预设（长词在前），否则回填标题「·」后
+ *   的场景短语原文（≤8 字，超长截断）——AI 的自由措辞不被 8 个枚举丢弃；
+ * - 氛围：放宽到选项的 ≥2 字前缀（「休闲」→「休闲随性」「通勤」→「通勤简约」）；
+ * - 季节/光线/构图：维持完整枚举匹配（理由文本噪声大，不放宽）。
  * 预选只是面板初值，用户可一键改掉或取消，故不做否定句等语义级甄别。
  */
 fun extractRecommendationSelections(recommendation: OutfitRecommendation): Map<String, String> {
     val text = "${recommendation.title}\n${recommendation.detailMarkdown}"
+    val phrase = scenePhrase(recommendation.title)
     return PromptPresets.dimensions.mapNotNull { dim ->
-        dim.options.firstOrNull { text.contains(it) }?.let { dim.key to it }
+        val value = when (dim.key) {
+            PromptPresets.SCENE.key ->
+                dim.options.firstOrNull { (phrase ?: "").contains(it) || text.contains(it) }
+                    ?: phrase?.take(FREE_SCENE_MAX)
+            PromptPresets.MOOD.key -> relaxedOption(text, dim.options)
+            else -> dim.options.firstOrNull { text.contains(it) }
+        }
+        value?.let { dim.key to it }
     }.toMap()
 }
+
+/** 标题「·」后的场景短语（去掉空白）；缺失或只剩「第 X 套」序号时为 null */
+private fun scenePhrase(title: String): String? {
+    val after = title.substringAfter('·', "").trim()
+    return after.takeIf { it.isNotBlank() && !SET_NO.matches(it) }
+}
+
+/** it-057 氛围放宽：选项的 ≥2 字前缀出现在文本即命中，取前缀最长者 */
+private fun relaxedOption(text: String, options: List<String>): String? =
+    options.mapNotNull { option ->
+        (2..option.length)
+            .map { option.substring(0, it) }
+            .filter { text.contains(it) }
+            .maxByOrNull { it.length }
+            ?.let { hit -> hit to option }
+    }.maxByOrNull { it.first.length }?.second
+
+private const val FREE_SCENE_MAX = 8
+
+private val SET_NO = Regex("^第[一二三四五六七八九十百\\d]+套$")
