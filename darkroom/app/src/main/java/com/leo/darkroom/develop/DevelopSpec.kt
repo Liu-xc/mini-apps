@@ -85,7 +85,7 @@ object DevelopSpec {
         }
     }
 
-    /** 拍立得：化学推进 + 分染料上色 + 窄动态相纸影调 */
+    /** 拍立得：白浊层均匀消散 + 分染料上色 + 窄动态相纸影调 */
     private fun polaroidVisual(
         p: Float,
         latent: Float,
@@ -101,9 +101,11 @@ object DevelopSpec {
         warmth = -0.38f * latent - 0.18f * emerge + 0.64f * fix,
         // 末态不给完全锐利：保留极轻柔焦（0.006）
         blurFraction = 0.050f - 0.014f * latent - 0.024f * emerge - 0.006f * fix,
-        reveal = (0.10f + 0.15f * latent + 0.75f * emerge).coerceAtMost(1f),
+        // it-008 二次修正：白浊层全程渐次变薄（4%→15%→78%→100%），
+        // 对表真实拍立得「整张从白里逐步浮现」——不再 70% 就全透
+        reveal = (0.04f + 0.11f * latent + 0.63f * emerge + 0.22f * fix).coerceAtMost(1f),
         grain = 0.55f - 0.12f * latent - 0.15f * emerge - 0.08f * fix,
-        // 暗角随显影一起沉降：起手过重会把最早从边缘显现的一小块压成脏黑斑
+        // 暗角随显影一起沉降：起手过重会把最早显现的画面压成脏黑斑
         vignette = 0.45f - 0.08f * latent - 0.12f * emerge - 0.05f * fix,
         // 染料分层：青层压红（早）→ 黄层压蓝（中）→ 品红层压绿（晚），定影后全部归位
         redGain = 1f - 0.15f * bump(p, 0.10f, 0.38f, 0.88f),

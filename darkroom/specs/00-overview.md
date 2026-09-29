@@ -21,7 +21,7 @@
   → 显影台：DevelopClock 推进 progress → DevelopSpec.visualAt(mode, p) 确定性映射（视觉参数 + 色彩矩阵）
       预览端 = Compose DevelopCard（RenderEffect 模糊/ColorMatrix/晕开/暗角/颗粒）
       药水刻度条拖动倒放、甩一甩（加速度计）加速
-  → RevealField(mode.reveal) 显现前沿（化学偏心 / 网格块 / 横向冲洗）稳定推进
+  → RevealField(mode.reveal) 显现遮罩（拍立得白浊层均匀消散 / 网格块 / 横向冲洗）稳定推进
   → 定影定格 → 成片页：CardSpec（标题/日期章/水印）+ CardLayout.solve(mode, …) → 同一渲染器三输出
       ① 预览 DevelopCard ② 位图 PhotoCardPainter.renderCard ③ 视频 VideoExporter 逐帧
   → MediaStore「显影」相簿 + 分享面板（content:// 直出）

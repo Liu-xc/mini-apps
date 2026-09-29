@@ -21,13 +21,19 @@ class RevealFieldTest {
 
     @Test
     fun `coverage grows as every kind develops`() {
-        RevealKind.entries.forEach { kind ->
+        // 前沿类（SWEEP/BLOCKS）：已显影像素数随进度增长
+        listOf(RevealKind.SWEEP, RevealKind.BLOCKS).forEach { kind ->
             val early = revealed(kind, 0.10f)
             val mid = revealed(kind, 0.35f)
             val late = revealed(kind, 0.70f)
             assertTrue("$kind 0.10→0.35 grew", early < mid)
             assertTrue("$kind 0.35→0.70 grew", mid < late)
         }
+        // 均匀消散（CHEMICAL，it-008 二次修正）：白浊层不透明度随进度单调变薄
+        val a = RevealField.alphaAt(RevealKind.CHEMICAL, 0.5f, 0.5f, 0.10f, seed = 19)
+        val b = RevealField.alphaAt(RevealKind.CHEMICAL, 0.5f, 0.5f, 0.35f, seed = 19)
+        val c = RevealField.alphaAt(RevealKind.CHEMICAL, 0.5f, 0.5f, 0.70f, seed = 19)
+        assertTrue("veil thins monotonically", a > b && b > c)
     }
 
     @Test
@@ -49,13 +55,16 @@ class RevealFieldTest {
     }
 
     @Test
-    fun `chemical front pushes away from the bottom-left inlet`() {
+    fun `chemical clears uniformly without directional bias`() {
         val seed = 77
-        val amount = 0.35f
-        // 入口附近先显影（不透明度低），远端仍是乳剂底
+        val amount = 0.45f
+        // it-008 二次修正：白浊层均匀消散——各角与中心的不透明度只差在纸面噪点幅度内
         val nearInlet = RevealField.alphaAt(RevealKind.CHEMICAL, 0.12f, 0.90f, amount, seed)
         val farCorner = RevealField.alphaAt(RevealKind.CHEMICAL, 0.96f, 0.04f, amount, seed)
-        assertTrue("inlet should be further along", nearInlet < farCorner)
+        val center = RevealField.alphaAt(RevealKind.CHEMICAL, 0.5f, 0.5f, amount, seed)
+        assertTrue("corner spread within mottle amplitude", kotlin.math.abs(nearInlet - farCorner) <= 18)
+        assertTrue("center spread within mottle amplitude", kotlin.math.abs(nearInlet - center) <= 18)
+        assertTrue("mid amount keeps a substantial veil", center in 96..160)
     }
 
     @Test

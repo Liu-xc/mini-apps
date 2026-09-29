@@ -2,14 +2,14 @@ package com.leo.darkroom.develop
 
 import kotlin.math.exp
 import kotlin.math.floor
-import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
- * 确定性显现前沿（it-007 M3）：预览与导出渲染器共用的遮罩真源。
+ * 确定性显现遮罩（it-007 M3 建立，it-008 修正 CHEMICAL 语义）：预览与导出渲染器共用的真源。
  *
  * 三种 [RevealKind] 共用噪声、桶缓存与 0..1 覆盖语义：
- * - [RevealKind.CHEMICAL] 拍立得——试剂从左下滚轴入口偏心压入，前沿有药膜堆积带
+ * - [RevealKind.CHEMICAL] 拍立得——白浊阻光层**均匀消散**：真实相纸的显影发生在夹层内，
+ *   用户看到的是整张画面从白里逐步浮现（it-008 修正：原「左下入口偏心前沿 + 堆积暗边」
+ *   实机观感像胶水扩散，与真实过程不符）；仅保留低频纸面噪点模拟涂层不完全均匀
  * - [RevealKind.BLOCKS] 数码相机——网格块按种子顺序逐格点亮
  * - [RevealKind.SWEEP] 胶片——从左向右的冲洗推进带，带水洗湿边
  *
@@ -65,12 +65,12 @@ object RevealField {
     private fun sample(kind: RevealKind, x: Float, y: Float, amount: Float, seed: Int): Cell =
         when (kind) {
             RevealKind.CHEMICAL -> {
-                val edge = 0.060f + (1f - amount) * 0.040f
-                val threshold = 1.12f - amount * 1.82f
-                val front = chemicalFront(x, y, seed)
-                val visible = smoothstep(threshold - edge, threshold + edge, front)
-                val band = gaussian((front - threshold) / edge)
-                Cell(alphaOf(1f - visible, band), band)
+                // 白浊层均匀消散：无方向、无前沿暗边；低频噪点幅度 ≤5.5%，
+                // 只提供纸面质感、读不出花斑（it-008 修正，对表真实拍立得观感）
+                val mottle = valueNoise(x * 2.6f, y * 2.6f, seed) * 0.055f
+                val visible = (amount + mottle).coerceIn(0f, 1f)
+                val alpha = ((1f - visible) * 255f).toInt().coerceIn(0, 255)
+                Cell(alpha, 0f)
             }
 
             RevealKind.BLOCKS -> {
@@ -99,23 +99,6 @@ object RevealField {
     /** 高斯带：峰值在前沿，向两侧衰减（药膜堆积 / 水洗湿边） */
     private fun gaussian(d: Float): Float = if (d < -3f || d > 3f) 0f else exp(-d * d * 0.55f)
 
-    // —— CHEMICAL：左下滚轴入口偏心推进 ——
-
-    private fun chemicalFront(x: Float, y: Float, seed: Int): Float {
-        val inletX = 0.16f + (lattice(17, -8, seed) - 0.5f) * 0.10f
-        val inletY = 0.84f + (lattice(-4, 23, seed) - 0.5f) * 0.10f
-        // 主前沿：从入口向右上推进，横向铺展快于纵向（滚轴沿宽度压过）
-        val d0 = ellipseDistance(x, y, inletX, inletY, 1.25f, 0.90f)
-        // 只贴底边与左边的两条窄药膜带——不吞掉右上的最后区域，推进要读得出方向
-        val d1 = ellipseDistance(x, y, 0.60f, 1.20f, 1.15f, 0.48f)
-        val d2 = ellipseDistance(x, y, -0.10f, 0.45f, 0.60f, 1.05f)
-        val distance = min(d0, min(d1, d2))
-        val warp = valueNoise(x * 2.2f, y * 2.6f, seed xor 0x2C11) * 0.10f
-        val broad = valueNoise(x * 4.1f, y * 4.1f, seed) * 0.26f
-        val detail = valueNoise(x * 9.0f, y * 9.0f, seed xor 0x5A17) * 0.045f
-        return 1f - distance + warp + broad + detail
-    }
-
     // —— BLOCKS：网格块逐格点亮 ——
 
     private fun blockWave(x: Float, y: Float, seed: Int): Float {
@@ -128,12 +111,6 @@ object RevealField {
         // 块内从左上向右下扫过，避免整格同时闪
         val local = (fx * 0.55f + fy * 0.45f) * 0.14f
         return order * 0.86f + local
-    }
-
-    private fun ellipseDistance(x: Float, y: Float, cx: Float, cy: Float, rx: Float, ry: Float): Float {
-        val dx = (x - cx) / rx
-        val dy = (y - cy) / ry
-        return sqrt(dx * dx + dy * dy)
     }
 
     private fun valueNoise(x: Float, y: Float, seed: Int): Float {

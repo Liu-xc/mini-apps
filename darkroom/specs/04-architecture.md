@@ -8,7 +8,7 @@ com.leo.darkroom
 │   ├── DevelopMode     显影模式三态：阶段名/文案/显现方式/出纸方式/导出起手（it-007）
 │   ├── DevelopSpec     模式+进度→视觉参数 + 4×5 色彩矩阵（确定性映射）
 │   ├── DevelopClock    毫秒进度累积：tick/boost/seek（甩一甩/刻度条）
-│   └── RevealField     三种显现前沿（化学偏心/网格块/横向冲洗），共用噪声与桶缓存
+│   └── RevealField     三种显现遮罩（拍立得白浊均匀消散/网格块/横向冲洗），共用噪声与桶缓存
 ├── card/             成片卡面（布局 + 两套渲染端共享真源）
 │   ├── CardLayout      纯数学布局 solve(width, maxH?, mode) + aspectOf + sprocketHoles（单测覆盖）
 │   ├── CardSpec        结构化字段

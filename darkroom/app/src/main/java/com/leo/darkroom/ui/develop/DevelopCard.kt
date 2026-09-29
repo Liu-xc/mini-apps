@@ -128,11 +128,9 @@ fun DevelopCard(
                     }
                     drawVignette(visual)
                     grainBrush?.let { drawGrain(it, visual) }
-                    // it-008 过程动效：药液气泡 + 前沿湿光（纯 progress 驱动，85% 后自动归零）
-                    if (DevelopFx.bubblesFor(mode)) {
-                        drawWetBand(mode, progress, visual.reveal)
-                        drawBubbles(progress)
-                    }
+                    // it-008 二次修正：气泡删除（真实显影看不见泡）；湿光带仅胶片
+                    //（与冲洗前沿精确对位；拍立得/数码在 wetBandAt 内恒零）
+                    drawWetBand(mode, progress, visual.reveal)
                 }
             }
         }
@@ -236,7 +234,7 @@ private fun DrawScope.drawGrain(brush: ShaderBrush, visual: DevelopVisual) {
     )
 }
 
-/** 前沿湿光：随显现前沿推进的软亮带，像药水正在浸湿乳剂（it-008 M1.2） */
+/** 前沿湿光：随显现前沿推进的软亮带，像药水正在浸湿乳剂（it-008 M1.2；现仅胶片） */
 private fun DrawScope.drawWetBand(mode: DevelopMode, progress: Float, reveal: Float) {
     val band = DevelopFx.wetBandAt(mode, progress, reveal)
     if (band.alpha <= 0.004f) return
@@ -250,18 +248,6 @@ private fun DrawScope.drawWetBand(mode: DevelopMode, progress: Float, reveal: Fl
     withTransform({ rotate(band.angleDeg, pivot = center) }) {
         val s = size.width + size.height
         drawRect(brush, topLeft = Offset(-s, -s), size = Size(s * 2f, s * 2f))
-    }
-}
-
-/** 药液气泡：暗晕打底 + 白芯——白芯只在暗部可辨、暗晕在亮部可辨（it-008 终验实测） */
-private fun DrawScope.drawBubbles(progress: Float) {
-    for (i in 0 until DevelopFx.BUBBLE_COUNT) {
-        val b = DevelopFx.bubbleAt(i, progress)
-        if (b.alpha <= 0.004f) continue
-        val radius = b.radius * size.width
-        val center = Offset(b.x * size.width, b.y * size.height)
-        drawCircle(color = Color.Black.copy(alpha = b.alpha * 0.26f), radius = radius * 1.6f, center = center)
-        drawCircle(color = Color.White.copy(alpha = b.alpha), radius = radius, center = center)
     }
 }
 
