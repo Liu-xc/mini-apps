@@ -90,6 +90,7 @@ import com.leo.darkroom.card.TitleSizeOption
 import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.result.PhotoViewer
+import com.leo.darkroom.ui.theme.SelectChip
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
 import com.leo.darkroom.ui.theme.pressScale
@@ -608,44 +609,6 @@ private fun FrameSwatch(frame: FrameStyle) {
             color = Color(palette.hairline),
             topLeft = Offset(m * 4.4f, size.height - m - 4.dp.toPx()),
             size = Size(size.width - m * 8f, 1.6.dp.toPx()),
-        )
-    }
-}
-
-/** 通用选择 chip（it-010）：字体/字号用；选中=ink 底反白，非仅颜色编码 */
-@Composable
-private fun SelectChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = editorialColors()
-    val interaction = remember { MutableInteractionSource() }
-    Box(
-        modifier
-            .pressScale(interaction)
-            .height(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) colors.ink else colors.surface)
-            .border(
-                BorderStroke(1.dp, if (selected) colors.ink else colors.hairline),
-                RoundedCornerShape(10.dp),
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = LocalIndication.current,
-                role = Role.RadioButton,
-                onClick = onClick,
-            )
-            .semantics { this.selected = selected },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = if (selected) colors.paper else colors.ink,
-            maxLines = 1,
         )
     }
 }

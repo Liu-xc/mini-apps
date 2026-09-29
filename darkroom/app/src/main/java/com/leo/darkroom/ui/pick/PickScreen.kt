@@ -32,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Tune
@@ -103,6 +105,7 @@ fun PickScreen(
     )
     // it-011 收尾：点按成品=全屏大图（保存/编辑从查看器动作进，而非直跳编辑页）
     var viewerOpen by remember { mutableStateOf(false) }
+    var panelOpen by remember { mutableStateOf(false) }
     var viewerBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var viewerPhoto by remember { mutableStateOf<com.leo.darkroom.data.AlbumPhoto?>(null) }
 
@@ -168,11 +171,88 @@ fun PickScreen(
             EditorialEntrance(delayMs = 48, enabled = playEntrance) {
                 Column {
                     Spacer(Modifier.height(10.dp))
+                    // it-011 收尾 2：专业相机式快捷面板——摘要胶囊点开，快速换模式与速度
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = panelOpen,
+                        enter = androidx.compose.animation.expandVertically() +
+                            androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() +
+                            androidx.compose.animation.fadeOut(),
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.hairline),
+                        ) {
+                            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                                Text("显影模式", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    DevelopMode.entries.forEach { mode ->
+                                        ModeChip(
+                                            mode = mode,
+                                            selected = state.mode == mode,
+                                            onClick = { vm.setMode(mode) },
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(12.dp))
+                                Text("显影速度", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    com.leo.darkroom.develop.DevelopSpeed.entries.forEach { speed ->
+                                        com.leo.darkroom.ui.theme.SelectChip(
+                                            label = "${speed.label} ${speed.durationMs / 1000}s",
+                                            selected = state.speed == speed,
+                                            onClick = { vm.setSpeed(speed) },
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                            }
+                        }
+                    }
                     Row(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        // 摘要胶囊：当前配置一览，点开/收起面板
+                        Surface(
+                            onClick = { panelOpen = !panelOpen },
+                            shape = RoundedCornerShape(22.dp),
+                            color = colors.surface,
+                            border = BorderStroke(1.dp, colors.hairline),
+                            modifier = Modifier.weight(1f).height(44.dp),
+                        ) {
+                            Row(
+                                Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "${state.mode.label} · ${state.speed.label} ${state.speed.durationMs / 1000}s",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colors.ink,
+                                    maxLines = 1,
+                                )
+                                Spacer(Modifier.weight(1f))
+                                Icon(
+                                    if (panelOpen) Icons.Outlined.KeyboardArrowDown
+                                    else Icons.Outlined.KeyboardArrowUp,
+                                    contentDescription = if (panelOpen) "收起配置" else "展开配置",
+                                    tint = colors.inkFaint,
+                                )
+                            }
+                        }
                         IconButton(
                             onClick = {
                                 state.album.getOrNull(pagerState.currentPage)
@@ -181,19 +261,6 @@ fun PickScreen(
                             modifier = Modifier.size(44.dp),
                         ) {
                             Icon(Icons.Outlined.Refresh, contentDescription = "重播显影", tint = colors.ink)
-                        }
-                        Row(
-                            Modifier.weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            DevelopMode.entries.forEach { mode ->
-                                ModeChip(
-                                    mode = mode,
-                                    selected = state.mode == mode,
-                                    onClick = { vm.setMode(mode) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
                         }
                         IconButton(
                             onClick = { cameraLauncher.launch(cameraUri()) },
@@ -204,7 +271,7 @@ fun PickScreen(
                     }
                     Spacer(Modifier.height(7.dp))
                     Text(
-                        state.mode.note + " · 点按成片可编辑导出",
+                        state.mode.note + " · 点按成片看大图，重播可用新速度",
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.inkFaint,
                     )
