@@ -108,8 +108,9 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
 
         Spacer(Modifier.height(6.dp))
 
-        // 翻页主体
-        EditorialEntrance(delayMs = 24, enabled = true) {
+        // 翻页主体（weight 必须挂在入场组件本身——挂在其内容上对 Column 无效，
+        // 曾把底部配置胶囊挤出屏外，it-012 收尾实锤修复）
+        EditorialEntrance(delayMs = 24, enabled = true, modifier = Modifier.weight(1f)) {
             GalleryPager(
                 vm, state, pagerState,
                 onOpenViewer = { photo, bmp ->
@@ -117,7 +118,7 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                     viewerBitmap = bmp
                     viewerOpen = true
                 },
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
             )
         }
 

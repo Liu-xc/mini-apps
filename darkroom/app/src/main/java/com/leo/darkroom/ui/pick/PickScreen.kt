@@ -142,7 +142,9 @@ fun PickScreen(
         Spacer(Modifier.height(12.dp))
 
         when {
-            state.albumGranted != true -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+            state.albumGranted != true -> EditorialEntrance(
+                delayMs = 24, enabled = playEntrance, modifier = Modifier.weight(1f),
+            ) {
                 AlbumEmptyHint(
                     title = "相册是暗房的入口",
                     body = if (state.albumGranted == false)
@@ -151,31 +153,37 @@ fun PickScreen(
                         "授权后在这里浏览照片，点开任意一张，开始显影。",
                     action = if (state.albumGranted == false) "再试一次" else "打开相册",
                     onAction = { albumPermissionLauncher.launch(albumPermission()) },
-                    modifier = Modifier.weight(1f),
                 )
             }
 
-            state.albumLoading && state.album.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth()) {
-                CircularProgressIndicator(
-                    color = colors.accent,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+            state.albumLoading && state.album.isEmpty() -> EditorialEntrance(
+                delayMs = 0, enabled = false, modifier = Modifier.weight(1f),
+            ) {
+                Box(Modifier.fillMaxSize()) {
+                    CircularProgressIndicator(
+                        color = colors.accent,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
             }
 
-            state.album.isEmpty() -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+            state.album.isEmpty() -> EditorialEntrance(
+                delayMs = 24, enabled = playEntrance, modifier = Modifier.weight(1f),
+            ) {
                 AlbumEmptyHint(
                     title = "相册里还没有照片",
                     body = "拍一张回来，它会是第一张相纸。",
                     action = "现在拍一张",
                     onAction = { cameraLauncher.launch(cameraUri()) },
-                    modifier = Modifier.weight(1f),
                 )
             }
 
-            else -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+            else -> EditorialEntrance(
+                delayMs = 24, enabled = playEntrance, modifier = Modifier.weight(1f),
+            ) {
                 androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                     columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(108.dp),
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),

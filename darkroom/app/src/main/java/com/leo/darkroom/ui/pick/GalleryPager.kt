@@ -39,13 +39,10 @@ import com.leo.darkroom.DarkroomViewModel.UiState
 import com.leo.darkroom.card.CardLayout
 import com.leo.darkroom.card.CardSpec
 import com.leo.darkroom.data.AlbumPhoto
-import com.leo.darkroom.develop.EjectStyle
 import com.leo.darkroom.platform.Haptics
 import com.leo.darkroom.ui.develop.DevelopCard
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
-import kotlin.math.PI
-import kotlin.math.sin
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -141,7 +138,7 @@ private fun GalleryCard(
                 playing = true
                 eject.snapTo(1f)
                 progress.snapTo(0f)
-                eject.animateTo(0f, tween(EditorialMotion.EJECT_MS, easing = EditorialMotion.ejectEase))
+                eject.animateTo(0f, tween(240))
                 progress.animateTo(1f, tween(speedMs, easing = LinearEasing))
                 playing = false
                 vm.markGalleryPlayed(photo.id)
@@ -165,23 +162,13 @@ private fun GalleryCard(
         Box(
             Modifier
                 .graphicsLayer {
-                    when (mode.eject) {
-                        EjectStyle.SLOT_RISE -> {
-                            translationY = eject.value * layout.height
-                            rotationZ = sin((1f - eject.value) * PI.toFloat()) * 1.15f
-                        }
-
-                        EjectStyle.FILM_WIND -> {
-                            translationX = eject.value * layout.width
-                            rotationZ = sin((1f - eject.value) * PI.toFloat()) * 0.8f
-                        }
-
-                        EjectStyle.SCREEN_WAKE -> {
-                            val wake = 1f - eject.value
-                            scaleX = 0.96f + 0.04f * wake
-                            scaleY = 0.96f + 0.04f * wake
-                        }
-                    }
+                    // it-012 收尾：画册内不做位移出纸（翻页手势已把卡送到位，再从底部
+                    // 升起会读成「先跳下去」）——原地小亮相：alpha + 0.97→1 缩放，
+                    // 位移动画只属于显影台
+                    val t = 1f - eject.value
+                    alpha = 0.4f + 0.6f * t
+                    scaleX = 0.97f + 0.03f * t
+                    scaleY = 0.97f + 0.03f * t
                 }
                 .shadow(8.dp, RectangleShape)
                 .clickable(enabled = bitmap != null) {
@@ -201,7 +188,7 @@ private fun GalleryCard(
                 Box(
                     Modifier
                         .graphicsLayer {
-                            translationY = eject.value * layout.height
+                            alpha = 0.4f + 0.6f * (1f - eject.value)
                         }
                         .background(colors.surface, RectangleShape)
                         .size(
