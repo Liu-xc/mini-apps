@@ -112,3 +112,8 @@
 - **typing 三点/气泡入场**：无 API Key 无法实测流式对话，未做端到端验证——组件行为由代码保证（与既有 EmptyState/AnimatedVisibility 同基础设施），留待 Leo 配 Key 后体验。
 - 走查遗留：视觉接口恢复后建议对 #14–#18 补一轮逐页截图评审；`/tmp/wardrobe-motion-audit/` 的 976 帧与脚本为临时产物，未入库。
 - **验收差异说明**：提案验收中「新组件单测覆盖关键行为」一项未做——`PressableScale`/`BubbleIn`/`TypingDots` 均为纯视觉 modifier/容器（无分支逻辑可断言），且仓库单测基建无 Robolectric/compose-ui-test（为两个视觉组件引入 UI 测试框架属架构决策，超出本迭代范围）；其行为正确性由上述像素级实测覆盖（按压旋转/忙录态已实测，气泡入场随 typing 同留待配 Key 体验）。既有 83 项单测全部通过（无回归）。
+
+### 修订一 · 锁定竖屏（2026-09-29，Leo 体验包反馈）
+
+- MainActivity 加 `android:screenOrientation="portrait"`：转屏导致的 Activity 重建会重放动画、丢滚动/输入状态，与动效体感直接相悖；个人手机应用明确锁竖屏。
+- 验证：模拟器 `user_rotation=1` + 自动旋转开下截图仍 1080×2400 竖屏。体验包 `wardrobe-0.5.0-demo-20260929-it058r2.apk`（8765 端口，换名防浏览器缓存）。
