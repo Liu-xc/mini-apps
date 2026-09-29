@@ -47,7 +47,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
 
     val grain: Bitmap by lazy { GrainNoise.bitmap() }
 
-    enum class Screen { PICK, DEVELOP, RESULT, SETTINGS }
+    enum class Screen { PICK, DEVELOP, RESULT, SETTINGS, PAGER }
     enum class SavedKind { NONE, IMAGE, VIDEO }
 
     data class UiState(
@@ -82,6 +82,10 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         val playedIds: Set<Long> = emptySet(),
         /** it-011 收尾：沉浸相册的会话级退出标记（退出回选图首页，可再进；不持久化） */
         val galleryDismissed: Boolean = false,
+        /** it-012：画册模式（PAGER）的起始页（网格点击进来定） */
+        val albumInitialPage: Int = 0,
+        /** it-012：成片返回栈——从画册进的回画册，否则回相册网格 */
+        val resultFromPager: Boolean = false,
         /** it-011 收尾：成片页双态——false=成片查看（默认，仅关键操作），true=编辑（全部细项） */
         val resultEditing: Boolean = false,
     )
@@ -173,8 +177,15 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         if (_state.value.albumGranted == true && _state.value.album.isNotEmpty()) loadAlbum(false)
     }
 
-    suspend fun albumThumbnail(photo: com.leo.darkroom.data.AlbumPhoto): android.graphics.Bitmap? =
-        albums.thumbnail(photo)
+    suspend fun albumThumbnail(
+        photo: com.leo.darkroom.data.AlbumPhoto,
+        size: Int = 1080,
+    ): android.graphics.Bitmap? = albums.thumbnail(photo, size)
+
+    /** it-012：网格点缩略图进画册模式，从该页起翻 */
+    fun openAlbumPager(index: Int) {
+        _state.update { it.copy(albumInitialPage = index, screen = Screen.PAGER) }
+    }
 
     fun markGalleryPlayed(id: Long) {
         galleryPlayback.markPlayed(id)
@@ -219,6 +230,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 error = null,
                 message = null,
                 resultEditing = toEdit,
+                resultFromPager = true,
             )
         }
     }
@@ -299,6 +311,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 shakeHint = true,
                 exporting = false,
                 resultEditing = false,
+                resultFromPager = false,
                 exportProgress = 0f,
                 error = null,
             )
@@ -564,21 +577,16 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
     // —— 导航 ——
 
     fun backToPick() {
+        // it-012 交互动线：画册的返回回网格；成片的返回——从画册进的回画册，否则回网格
         fixedJob?.cancel()
         loopJob?.cancel()
         clock.reset()
-        _state.update {
-            it.copy(
-                screen = Screen.PICK,
-                photo = null,
-                progress = 0f,
-                playing = false,
-                exporting = false,
-                savedImageUri = null,
-                savedVideoUri = null,
-                lastSavedKind = SavedKind.NONE,
-                error = null,
-            )
+        _state.update { s ->
+            when (s.screen) {
+                Screen.PAGER -> s.copy(screen = Screen.PICK)
+                Screen.RESULT -> if (s.resultFromPager) s.copy(screen = Screen.PAGER) else s.copy(screen = Screen.PICK)
+                else -> s.copy(screen = Screen.PICK)
+            }
         }
     }
 

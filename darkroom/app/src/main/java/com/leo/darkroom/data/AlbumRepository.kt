@@ -22,19 +22,19 @@ data class AlbumPhoto(
     val dateText: String,
 )
 
-/** 缩略图进程内 LRU（it-011）：按 MediaStore id 缓存解码结果， pager 翻回即取 */
+/** 缩略图进程内 LRU（it-011；it-012 双尺寸键：网格 256 与画册 1080 互不污染） */
 object ThumbCache {
-    private const val MAX_ENTRIES = 24
-    private val cache = object : LinkedHashMap<Long, Bitmap>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Bitmap>?): Boolean = size > MAX_ENTRIES
+    private const val MAX_ENTRIES = 36
+    private val cache = object : LinkedHashMap<Pair<Long, Int>, Bitmap>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Int>, Bitmap>?): Boolean = size > MAX_ENTRIES
     }
 
     @Synchronized
-    fun get(id: Long): Bitmap? = cache[id]
+    fun get(id: Long, size: Int): Bitmap? = cache[id to size]
 
     @Synchronized
-    fun put(id: Long, bitmap: Bitmap) {
-        cache[id] = bitmap
+    fun put(id: Long, size: Int, bitmap: Bitmap) {
+        cache[id to size] = bitmap
     }
 }
 
@@ -89,9 +89,9 @@ class AlbumRepository(private val context: Context) {
     /** 相册缩略图（约 1080px，够 1080 宽卡片直用）；带进程内缓存 */
     suspend fun thumbnail(photo: AlbumPhoto, size: Int = 1080): Bitmap? =
         withContext(Dispatchers.IO) {
-            ThumbCache.get(photo.id) ?: runCatching {
+            ThumbCache.get(photo.id, size) ?: runCatching {
                 context.contentResolver.loadThumbnail(photo.uri, Size(size, size), null)
-            }.getOrNull()?.also { ThumbCache.put(photo.id, it) }
+            }.getOrNull()?.also { ThumbCache.put(photo.id, size, it) }
         }
 
     companion object {

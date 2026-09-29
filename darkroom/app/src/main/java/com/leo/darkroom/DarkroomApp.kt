@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.leo.darkroom.ui.develop.DevelopScreen
+import com.leo.darkroom.ui.pick.AlbumPagerScreen
 import com.leo.darkroom.ui.pick.PickScreen
 import com.leo.darkroom.ui.result.ResultScreen
 import com.leo.darkroom.ui.settings.SettingsScreen
@@ -74,6 +75,7 @@ fun DarkroomApp(vm: DarkroomViewModel = viewModel()) {
                     onEntrancePlayed = { pickEntrancePlayed = true },
                 )
                 DarkroomViewModel.Screen.DEVELOP -> DevelopScreen(vm, state)
+                DarkroomViewModel.Screen.PAGER -> AlbumPagerScreen(vm, state)
                 DarkroomViewModel.Screen.RESULT -> ResultScreen(vm, state)
                 DarkroomViewModel.Screen.SETTINGS -> SettingsScreen(vm, state)
             }

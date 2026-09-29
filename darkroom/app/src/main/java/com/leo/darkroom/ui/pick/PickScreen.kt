@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,6 +29,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,11 +54,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.asImageBitmap
@@ -73,10 +78,10 @@ import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.EditorialEntrance
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
+import com.leo.darkroom.ui.theme.pressScale
 
-/** W1（it-011 双态）：授权后是沉浸式相册显影——大卡横滑翻阅、首次跑显影动画；
- * 未授权/相册为空时回退原选图布局（Photo Picker/拍照/样片全量可用）。 */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+/** W1 = 相册（it-012 IA 重构）：进去就是照片墙——小图网格浏览，点缩略图进画册模式；
+ * 顶行只有 拍照 与 设置 两个图标；未授权/空相册给一个安静的引导态（不是表单）。 */
 @Composable
 fun PickScreen(
     vm: DarkroomViewModel,
@@ -85,34 +90,23 @@ fun PickScreen(
     onEntrancePlayed: () -> Unit,
 ) {
     val colors = editorialColors()
-    val context = LocalContext.current
-    val pickLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia(),
-    ) { uri: Uri? -> vm.onPhotoPicked(uri) }
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture(),
     ) { ok -> vm.onCameraResult(ok) }
     val cameraUri = remember { { vm.prepareCamera() } }
-    // it-011：相册运行时权限（ADR-008）——用户点击引导卡时才请求，不冷启动硬弹
     val albumPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> vm.onAlbumPermissionResult(granted) }
 
-    val galleryMode = state.albumGranted == true && !state.galleryDismissed &&
-            (state.album.isNotEmpty() || state.albumLoading)
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
-        pageCount = { state.album.size.coerceAtLeast(1) },
-    )
-    // it-011 收尾：点按成品=全屏大图（保存/编辑从查看器动作进，而非直跳编辑页）
-    var viewerOpen by remember { mutableStateOf(false) }
-    var panelOpen by remember { mutableStateOf(false) }
-    var viewerBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var viewerPhoto by remember { mutableStateOf<com.leo.darkroom.data.AlbumPhoto?>(null) }
-
-    // 首次冷入场编排只放一次（it-008 M2.3）：flag 由导航壳跨屏持有，
-    // 从 W2/W4 返回与 Activity 重建都不重放（基线「二次进入走快路径」）。
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         if (playEntrance) onEntrancePlayed()
+        // 已授权过（如重装后系统保留）则直接加载相册
+        if (state.albumGranted == null &&
+            context.checkSelfPermission(albumPermission()) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            vm.onAlbumPermissionResult(true)
+        }
     }
 
     Column(
@@ -121,6 +115,7 @@ fun PickScreen(
             .pageInsets()
             .padding(20.dp),
     ) {
+        // 顶行：标签 + 拍照 + 设置（仅此三个元素）
         EditorialEntrance(delayMs = 0, enabled = playEntrance) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -132,10 +127,11 @@ fun PickScreen(
                     color = colors.inkFaint,
                 )
                 Spacer(Modifier.weight(1f))
-                if (galleryMode) {
-                    IconButton(onClick = vm::exitGallery, modifier = Modifier.size(44.dp)) {
-                        Icon(Icons.Outlined.Close, contentDescription = "退出相册浏览", tint = colors.inkFaint)
-                    }
+                IconButton(
+                    onClick = { cameraLauncher.launch(cameraUri()) },
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Icon(Icons.Outlined.PhotoCamera, contentDescription = "现在拍一张", tint = colors.inkFaint)
                 }
                 IconButton(onClick = vm::openSettings, modifier = Modifier.size(44.dp)) {
                     Icon(Icons.Outlined.Tune, contentDescription = "设置", tint = colors.inkFaint)
@@ -143,393 +139,145 @@ fun PickScreen(
             }
         }
 
-        if (galleryMode) {
-            // —— 沉浸相册态：大卡翻页 + 底部模式/重播/拍照 ——
-            EditorialEntrance(delayMs = 24, enabled = playEntrance) {
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (state.album.isNotEmpty()) {
-                        GalleryPager(
-                            vm, state, pagerState,
-                            onOpenViewer = { photo, bmp -> viewerPhoto = photo; viewerBitmap = bmp; viewerOpen = true },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                        Text(
-                            "${pagerState.currentPage + 1} / ${state.album.size}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colors.inkFaint,
-                            modifier = Modifier.align(Alignment.TopEnd),
-                        )
-                    } else {
-                        CircularProgressIndicator(
-                            color = colors.accent,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-                }
-            }
+        Spacer(Modifier.height(12.dp))
 
-            EditorialEntrance(delayMs = 48, enabled = playEntrance) {
-                Column {
-                    Spacer(Modifier.height(10.dp))
-                    // it-011 收尾 2：专业相机式快捷面板——摘要胶囊点开，快速换模式与速度
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = panelOpen,
-                        enter = androidx.compose.animation.expandVertically() +
-                            androidx.compose.animation.fadeIn(),
-                        exit = androidx.compose.animation.shrinkVertically() +
-                            androidx.compose.animation.fadeOut(),
-                    ) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                            color = colors.surface,
-                            border = BorderStroke(1.dp, colors.hairline),
-                        ) {
-                            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                                Text("显影模式", style = MaterialTheme.typography.titleSmall, color = colors.ink)
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    DevelopMode.entries.forEach { mode ->
-                                        ModeChip(
-                                            mode = mode,
-                                            selected = state.mode == mode,
-                                            onClick = { vm.setMode(mode) },
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(12.dp))
-                                Text("显影速度", style = MaterialTheme.typography.titleSmall, color = colors.ink)
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    com.leo.darkroom.develop.DevelopSpeed.entries.forEach { speed ->
-                                        com.leo.darkroom.ui.theme.SelectChip(
-                                            label = "${speed.label} ${speed.durationMs / 1000}s",
-                                            selected = state.speed == speed,
-                                            onClick = { vm.setSpeed(speed) },
-                                            modifier = Modifier.weight(1f),
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(4.dp))
-                            }
-                        }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        // 摘要胶囊：当前配置一览，点开/收起面板
-                        Surface(
-                            onClick = { panelOpen = !panelOpen },
-                            shape = RoundedCornerShape(22.dp),
-                            color = colors.surface,
-                            border = BorderStroke(1.dp, colors.hairline),
-                            modifier = Modifier.weight(1f).height(44.dp),
-                        ) {
-                            Row(
-                                Modifier.fillMaxSize().padding(horizontal = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    "${state.mode.label} · ${state.speed.label} ${state.speed.durationMs / 1000}s",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = colors.ink,
-                                    maxLines = 1,
-                                )
-                                Spacer(Modifier.weight(1f))
-                                Icon(
-                                    if (panelOpen) Icons.Outlined.KeyboardArrowDown
-                                    else Icons.Outlined.KeyboardArrowUp,
-                                    contentDescription = if (panelOpen) "收起配置" else "展开配置",
-                                    tint = colors.inkFaint,
-                                )
-                            }
-                        }
-                        IconButton(
-                            onClick = {
-                                state.album.getOrNull(pagerState.currentPage)
-                                    ?.let { vm.replayGalleryCard(it.id) }
-                            },
-                            modifier = Modifier.size(44.dp),
-                        ) {
-                            Icon(Icons.Outlined.Refresh, contentDescription = "重播显影", tint = colors.ink)
-                        }
-                        IconButton(
-                            onClick = { cameraLauncher.launch(cameraUri()) },
-                            modifier = Modifier.size(44.dp),
-                        ) {
-                            Icon(Icons.Outlined.PhotoCamera, contentDescription = "现在拍一张", tint = colors.ink)
-                        }
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Text(
-                        state.mode.note + " · 点按成片看大图，重播可用新速度",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.inkFaint,
-                    )
-                    Spacer(Modifier.height(10.dp))
-                }
-            }
-        } else {
-            // —— 回退态：原有选图布局 + 相册权限引导（it-011）——
-            Column(
-                Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                EditorialEntrance(delayMs = 24, enabled = playEntrance) {
-                    Column {
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "显影",
-                            style = MaterialTheme.typography.displayLarge,
-                            color = colors.ink,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(Modifier.height(7.dp))
-                        Text(
-                            "把这一刻，慢慢洗成一张可以带走的相纸。",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.inkFaint,
-                        )
-                    }
-                }
-
-                if (state.albumGranted != true || state.galleryDismissed) {
-                    EditorialEntrance(delayMs = 36, enabled = playEntrance) {
-                        Column {
-                            Spacer(Modifier.height(18.dp))
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
-                                color = colors.surface,
-                                border = BorderStroke(1.dp, colors.hairline),
-                            ) {
-                                Column(Modifier.padding(16.dp)) {
-                                    Text(
-                                        "沉浸式相册浏览",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = colors.ink,
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        when {
-                                            state.albumGranted == false ->
-                                                "还没拿到相册权限——可以再试一次，或继续用下面的入口选图。"
-
-                                            state.galleryDismissed ->
-                                                "沉浸式相册浏览还在这里，随时回来。"
-
-                                            else ->
-                                                "授权读取相册后，首页变成可以滑动的相纸墙：左右滑照片，每一张都在你眼前显影。"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colors.inkFaint,
-                                    )
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(
-                                        onClick = {
-                                            if (state.albumGranted == true) vm.enterGallery()
-                                            else albumPermissionLauncher.launch(albumPermission())
-                                        },
-                                        modifier = Modifier.fillMaxWidth().height(46.dp),
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = colors.ink,
-                                            contentColor = colors.paper,
-                                        ),
-                                    ) {
-                                        Text(
-                                            when {
-                                                state.albumGranted == false -> "再试一次"
-                                                state.galleryDismissed -> "回到沉浸相册"
-                                                else -> "开启相册权限"
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                EditorialEntrance(delayMs = 48, enabled = playEntrance) {
-                    Column {
-                        Spacer(Modifier.height(18.dp))
-                        Button(
-                            onClick = {
-                                pickLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                                )
-                            },
-                            enabled = !state.loadingPhoto,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.ink,
-                                contentColor = colors.paper,
-                            ),
-                        ) {
-                            Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (state.loadingPhoto) "正在读取照片…" else "从相册挑一张")
-                        }
-
-                        TextButton(
-                            onClick = { cameraLauncher.launch(cameraUri()) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            colors = ButtonDefaults.textButtonColors(contentColor = colors.ink),
-                        ) {
-                            Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("现在拍一张")
-                        }
-                    }
-                }
-
-                // it-007 US-14 显影模式：拍立得 / 数码相机 / 胶片
-                EditorialEntrance(delayMs = 60, enabled = playEntrance) {
-                    Column {
-                        Spacer(Modifier.height(14.dp))
-                        Text("显影模式", style = MaterialTheme.typography.titleMedium, color = colors.ink)
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            DevelopMode.entries.forEach { mode ->
-                                ModeChip(
-                                    mode = mode,
-                                    selected = state.mode == mode,
-                                    onClick = { vm.setMode(mode) },
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(7.dp))
-                        Text(
-                            state.mode.note,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.inkFaint,
-                        )
-                    }
-                }
-
-                EditorialEntrance(delayMs = 72, enabled = playEntrance) {
-                    Column {
-                        Spacer(Modifier.height(18.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("先从一张样片开始", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
-                            Spacer(Modifier.weight(1f))
-                            Text("离线可试", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
-                        }
-                        Spacer(Modifier.height(12.dp))
-
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            itemsIndexed(SampleArt.titles) { index, title ->
-                                val bitmap = remember(context, index) { SampleArt.load(context, index, 512) }
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val pressed by interactionSource.collectIsPressedAsState()
-                                val scale by animateFloatAsState(
-                                    targetValue = if (pressed) 0.97f else 1f,
-                                    animationSpec = EditorialMotion.pop(),
-                                    label = "samplePress",
-                                )
-                                Surface(
-                                    onClick = { vm.onSamplePicked(index) },
-                                    interactionSource = interactionSource,
-                                    modifier = Modifier
-                                        .width(112.dp)
-                                        .graphicsLayer {
-                                            scaleX = scale
-                                            scaleY = scale
-                                        },
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = colors.cardPaper,
-                                    border = BorderStroke(1.dp, colors.cardHairline),
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.padding(7.dp),
-                                    ) {
-                                        Image(
-                                            bitmap = remember(bitmap) { bitmap.asImageBitmap() },
-                                            contentDescription = title,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(98.dp)
-                                                .clip(RoundedCornerShape(2.dp)),
-                                        )
-                                        Spacer(Modifier.height(7.dp))
-                                        Text(
-                                            title,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = colors.cardInk,
-                                            maxLines = 1,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(24.dp))
-                    }
-                }
-            }
-        }
-
-        EditorialEntrance(delayMs = 96, enabled = playEntrance) {
-            Column {
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "全程离线 · 照片不上传",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.inkFaint,
+        when {
+            state.albumGranted != true -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+                AlbumEmptyHint(
+                    title = "相册是暗房的入口",
+                    body = if (state.albumGranted == false)
+                        "还没拿到相册权限——可以再试一次。"
+                    else
+                        "授权后在这里浏览照片，点开任意一张，开始显影。",
+                    action = if (state.albumGranted == false) "再试一次" else "打开相册",
+                    onAction = { albumPermissionLauncher.launch(albumPermission()) },
+                    modifier = Modifier.weight(1f),
                 )
             }
+
+            state.albumLoading && state.album.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth()) {
+                CircularProgressIndicator(
+                    color = colors.accent,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+
+            state.album.isEmpty() -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+                AlbumEmptyHint(
+                    title = "相册里还没有照片",
+                    body = "拍一张回来，它会是第一张相纸。",
+                    action = "现在拍一张",
+                    onAction = { cameraLauncher.launch(cameraUri()) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            else -> EditorialEntrance(delayMs = 24, enabled = playEntrance) {
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(108.dp),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    gridItemsIndexed(state.album) { index, photo ->
+                        AlbumThumb(vm, photo, index)
+                    }
+                }
+            }
         }
 
-        if (viewerOpen && viewerBitmap != null && viewerPhoto != null) {
-            val photo = viewerPhoto!!
-            val bmp = viewerBitmap!!
-            com.leo.darkroom.ui.result.PhotoViewer(
-                image = bmp.asImageBitmap(),
-                contentDescription = "相册照片大图",
-                onClose = { viewerOpen = false },
-                actions = {
-                    Button(
-                        onClick = {
-                            viewerOpen = false
-                            vm.openGalleryResult(photo, bmp, toEdit = false)
-                            vm.exportImage(share = false)
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = colors.ink,
-                            contentColor = colors.paper,
-                        ),
-                    ) { Text("存图片") }
-                    OutlinedButton(
-                        onClick = {
-                            viewerOpen = false
-                            vm.openGalleryResult(photo, bmp, toEdit = true)
-                        },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.ink),
-                    ) { Text("编辑") }
-                },
+        EditorialEntrance(delayMs = 48, enabled = playEntrance) {
+            Text(
+                "全程离线 · 照片不上传",
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.inkFaint,
+                modifier = Modifier.padding(top = 10.dp),
             )
+        }
+    }
+}
+
+/** 相册缩略格（it-012）：小图 + 统一按压反馈，点按进画册模式 */
+@Composable
+private fun AlbumThumb(vm: DarkroomViewModel, photo: com.leo.darkroom.data.AlbumPhoto, index: Int) {
+    val colors = editorialColors()
+    val bitmap by produceState<android.graphics.Bitmap?>(null, photo.id) {
+        value = vm.albumThumbnail(photo, 256)
+    }
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        Modifier
+            .height(140.dp)
+            .pressScale(interaction)
+            .background(colors.surface)
+            .clickable(
+                interactionSource = interaction,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                enabled = bitmap != null,
+            ) { vm.openAlbumPager(index) },
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = remember(bitmap) { bitmap!!.asImageBitmap() },
+                contentDescription = "照片 ${index + 1}",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+/** 未授权/空相册的安静引导态（DESIGN §5.8：图形 + 行动按钮） */
+@Composable
+private fun AlbumEmptyHint(
+    title: String,
+    body: String,
+    action: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = editorialColors()
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Canvas(Modifier.size(72.dp)) {
+                // 一张未显影的相纸：白框 + 乳白成像区 + 石墨日期点
+                drawRoundRect(
+                    color = colors.surface,
+                    topLeft = Offset(size.width * 0.14f, size.height * 0.04f),
+                    size = Size(size.width * 0.72f, size.height * 0.92f),
+                    cornerRadius = CornerRadius(6.dp.toPx()),
+                )
+                drawRect(
+                    color = colors.hairline,
+                    topLeft = Offset(size.width * 0.24f, size.height * 0.14f),
+                    size = Size(size.width * 0.52f, size.height * 0.48f),
+                )
+                drawCircle(
+                    color = colors.accent,
+                    radius = 3.dp.toPx(),
+                    center = Offset(size.width * 0.32f, size.height * 0.76f),
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, color = colors.ink)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                body,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.inkFaint,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Spacer(Modifier.height(18.dp))
+            Button(
+                onClick = onAction,
+                modifier = Modifier.height(46.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.ink,
+                    contentColor = colors.paper,
+                ),
+            ) { Text(action) }
         }
     }
 }
@@ -542,103 +290,3 @@ private fun albumPermission(): String =
         @Suppress("DEPRECATION")
         android.Manifest.permission.READ_EXTERNAL_STORAGE
     }
-
-/**
- * 显影模式选择（it-007 US-14）：三枚等宽 chip，选中态同时用边框与字重表达，
- * 微型示意图是 Canvas 画的形体，不用 emoji（DESIGN §5 反例 2）。
- * it-008 M2.4：边框宽与色 150ms 过渡，选中瞬间示意图 pop 一下；字重不动画（过渡会抖）。
- */
-@Composable
-private fun ModeChip(
-    mode: DevelopMode,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = editorialColors()
-    val borderWidth by animateDpAsState(
-        targetValue = if (selected) 1.5.dp else 1.dp,
-        animationSpec = tween(150),
-        label = "chipBorderWidth",
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (selected) colors.ink else colors.hairline,
-        animationSpec = tween(150),
-        label = "chipBorderColor",
-    )
-    val glyphScale = remember { Animatable(1f) }
-    LaunchedEffect(selected) {
-        if (selected) {
-            glyphScale.snapTo(1f)
-            glyphScale.animateTo(1.08f, tween(90))
-            glyphScale.animateTo(1f, EditorialMotion.pop())
-        }
-    }
-    Surface(
-        onClick = onClick,
-        modifier = modifier.height(66.dp),
-        shape = RoundedCornerShape(10.dp),
-        color = colors.surface,
-        border = BorderStroke(borderWidth, borderColor),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Canvas(
-                Modifier
-                    .size(22.dp)
-                    .graphicsLayer {
-                        scaleX = glyphScale.value
-                        scaleY = glyphScale.value
-                    },
-            ) { drawModeGlyph(mode, colors) }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                mode.label,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) colors.ink else colors.inkFaint,
-            )
-        }
-    }
-}
-
-/** 三种卡面的缩微剪影：相纸白框 / 屏幕 + OSD / 齿孔片条 */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawModeGlyph(
-    mode: DevelopMode,
-    colors: com.leo.darkroom.ui.theme.EditorialColors,
-) {
-    val w = size.width
-    val h = size.height
-    when (mode) {
-        DevelopMode.POLAROID -> {
-            // 白框相纸：成像区在上、底边更宽
-            drawRect(colors.ink, topLeft = Offset(w * 0.16f, h * 0.03f), size = Size(w * 0.68f, h * 0.94f))
-            drawRect(colors.paper, topLeft = Offset(w * 0.23f, h * 0.10f), size = Size(w * 0.54f, h * 0.50f))
-        }
-
-        DevelopMode.DIGITAL -> {
-            // 深色机身 + 亮屏 + 底部 OSD 一横
-            drawRect(colors.ink, topLeft = Offset(w * 0.08f, h * 0.12f), size = Size(w * 0.84f, h * 0.74f))
-            drawRect(colors.paper, topLeft = Offset(w * 0.15f, h * 0.19f), size = Size(w * 0.70f, h * 0.44f))
-            drawRect(
-                colors.paper,
-                topLeft = Offset(w * 0.28f, h * 0.72f),
-                size = Size(w * 0.44f, h * 0.06f),
-            )
-        }
-
-        DevelopMode.FILM -> {
-            // 片条：深底 + 中间片格 + 上下两排齿孔
-            drawRect(colors.ink, topLeft = Offset(0f, h * 0.18f), size = Size(w, h * 0.64f))
-            drawRect(colors.paper, topLeft = Offset(w * 0.07f, h * 0.33f), size = Size(w * 0.86f, h * 0.34f))
-            for (i in 0..3) {
-                val x = w * 0.08f + i * w * 0.24f
-                drawRect(colors.paper, topLeft = Offset(x, h * 0.22f), size = Size(w * 0.13f, h * 0.07f))
-                drawRect(colors.paper, topLeft = Offset(x, h * 0.71f), size = Size(w * 0.13f, h * 0.07f))
-            }
-        }
-    }
-}
