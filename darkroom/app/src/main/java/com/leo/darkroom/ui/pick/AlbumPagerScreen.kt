@@ -61,6 +61,8 @@ import com.leo.darkroom.ui.theme.EditorialEntrance
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.SelectChip
 import com.leo.darkroom.ui.theme.editorialColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * 画册模式（it-012，原沉浸相册独立成屏）：相册网格点缩略图进入，从该页起翻；
@@ -228,13 +230,39 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
         }
     }
 
-    // 大图查看器（存图 / 编辑）
-    if (viewerOpen && viewerBitmap != null && viewerPhoto != null) {
+    // 大图查看器（it-012 收尾 3）：放大的是整张成品卡（相纸/日期/脚注全套），不是裸照片
+    val viewerCardArt by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(
+        null, viewerPhoto, state.spec, state.mode, state.photoLook,
+    ) {
+        val p = viewerPhoto ?: return@produceState
+        val src = viewerBitmap ?: return@produceState
+        value = withContext(Dispatchers.Default) {
+            val w = 1440f
+            val layout = com.leo.darkroom.card.CardLayout.solve(w, mode = state.mode)
+            android.graphics.Bitmap.createBitmap(
+                w.toInt(), layout.height.toInt(), android.graphics.Bitmap.Config.ARGB_8888,
+            ).also { bmp ->
+                com.leo.darkroom.card.PhotoCardPainter.paint(
+                    canvas = android.graphics.Canvas(bmp),
+                    cardWidthPx = w,
+                    photo = src,
+                    spec = state.spec,
+                    visual = com.leo.darkroom.develop.DevelopSpec.visualAt(state.mode, 1f),
+                    mode = state.mode,
+                    grain = vm.grain,
+                    look = state.photoLook,
+                )
+            }
+        }
+    }
+
+    if (viewerOpen && viewerPhoto != null) {
         val photo = viewerPhoto!!
         val bmp = viewerBitmap!!
+        val image = (viewerCardArt ?: bmp).asImageBitmap()
         PhotoViewer(
-            image = bmp.asImageBitmap(),
-            contentDescription = "相册照片大图",
+            image = image,
+            contentDescription = "成品卡大图",
             onClose = { viewerOpen = false },
             actions = {
                 Button(

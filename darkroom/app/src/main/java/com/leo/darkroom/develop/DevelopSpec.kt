@@ -102,7 +102,7 @@ object DevelopSpec {
         warmth = -0.38f * latent - 0.18f * emerge + 0.64f * fix,
         // it-008 三次修正：真实显影中影像本身是锐的，糊的只是白浊层——
         // 起手仅极轻柔焦（0.016→末态 0.006），去掉旧版 0.05 的「晕开扩散」观感
-        blurFraction = 0.016f - 0.004f * latent - 0.004f * emerge - 0.002f * fix,
+        blurFraction = 0.016f - 0.004f * latent - 0.004f * emerge - 0.010f * fix,
         // it-008 二次修正：白浊层全程渐次变薄、定影段仍在收白；
         // it-009 早期提速：起手 11% 已透、潜影段快开（15% 处 ≈30%）——前期不再是空白
         reveal = (0.11f + 0.18f * latent + 0.51f * emerge + 0.20f * fix).coerceAtMost(1f),
@@ -162,7 +162,7 @@ object DevelopSpec {
         contrast = 0.80f + 0.06f * latent + 0.14f * emerge + 0.10f * fix,
         brightness = 0.70f + 0.12f * latent + 0.15f * emerge + 0.03f * fix,
         warmth = -0.30f * latent - 0.15f * emerge + 0.55f * fix,
-        blurFraction = 0.035f - 0.010f * latent - 0.018f * emerge - 0.005f * fix,
+        blurFraction = 0.035f - 0.010f * latent - 0.018f * emerge - 0.013f * fix,
         reveal = (0.20f + 0.34f * latent + 0.46f * emerge).coerceAtMost(1f),
         grain = 0.60f - 0.14f * latent - 0.16f * emerge - 0.05f * fix,
         vignette = 0.40f - 0.06f * latent - 0.12f * emerge - 0.04f * fix,
