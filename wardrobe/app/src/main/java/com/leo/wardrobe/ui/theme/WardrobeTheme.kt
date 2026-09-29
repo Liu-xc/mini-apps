@@ -1,5 +1,6 @@
 package com.leo.wardrobe.ui.theme
 
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,6 +22,7 @@ val LocalAppDarkTheme = staticCompositionLocalOf { false }
  * 全局主题：Material 3 × 黑白灰时装编辑风 token（specs/05-design-system.md）。
  * 动效基调见 [EditorialMotion]；Expressive motionScheme 待 material3 1.5 稳定后接入（ADR-004）。
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun WardrobeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -103,6 +105,9 @@ fun WardrobeTheme(
     CompositionLocalProvider(
         LocalEditorialColors provides palette,
         LocalAppDarkTheme provides darkTheme,
+        // it-073：全站禁用 Android 12+ 滚动 overscroll 拉伸（「弹簧绳」）效果——
+        // 到头即停，Leo 偏好；fling/吸附行为不受影响
+        LocalOverscrollConfiguration provides null,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

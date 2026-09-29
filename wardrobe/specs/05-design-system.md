@@ -56,6 +56,8 @@
 ## 动效清单（统一弹簧基调：EditorialMotion）
 
 > material3 1.4.0 稳定版未公开 Expressive motionScheme（ADR-004），全局动效由 `EditorialMotion` 统一弹簧参数承担：`smooth`（高阻尼丝滑）/`pop`（轻过冲）/`bouncy`（弹跳）。
+>
+> **滚动 overscroll（it-073）**：全站禁用 Android 12+ 的拉伸（"弹簧绳"）效果——主题根 `LocalOverscrollConfiguration provides null`，列表/网格/pager 到头即停；fling 与吸附不受影响。
 
 | # | 动效 | 实现要点 | 触发处 |
 |---|---|---|---|
