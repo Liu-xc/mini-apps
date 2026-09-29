@@ -4,6 +4,10 @@
 
 ## 2026-09-29
 
+- **fix(wardrobe)**: it-064 四处布局修正——W1 垂直预算压缩（鞋槽初始一屏完整可见）；W8 撤销 hero 共享元素修复切换不丝滑（it-058 引入的回归）+ 卡组与筛选行缓冲；W3 网格底内衬 96→76dp 消除 FAB 下空白带；筛选行渐隐默认（起点）不再渲染，详 [it-064](wardrobe/specs/iterations/it-064-w1-w3-w8-layout-fixes.md)。
+
+- **feat(darkroom)**: it-011 沉浸式相册显影——授权后首页变成可左右滑动的相纸墙：首次（本次启动内）翻到的照片自动跑一遍当前模式的出纸+显影动画，已播过的翻回直显成品；显影中点按跳过、成品点按直达成片页（日期章取拍摄日期、创作选项沿用）、重播按钮手动重跑；未授权/拒绝回退原选图布局（引导卡点击才发起权限，ADR-008 推翻零相册权限）；MediaStore 分页+缩略图 LRU。67 测绿（+GalleryPlaybackTest）。详 [it-011](darkroom/specs/iterations/it-011-immersive-album.md)。
+
 - **fix(darkroom)**: it-010 收尾——三档显影时长整体缩短三分之一（慢洗 12s→8s、标准 8s→5.4s、快显 4s→2.7s，Leo 反馈），刻度条/导出时长随 durationMs 派生自动跟随，单测锁值。版本 0.3.1。详 [it-010](darkroom/specs/iterations/it-010-craft-options-and-tidy.md) 验证记录。
 
 - **feat(darkroom)**: it-010 小而美布局收口与创作选项系统——拍立得可选四款相纸（经典白/暖米/墨框/灰板，配色真源 CardPalette.forFrame、打印对比单测锁）、标题字体（衬线/黑体）×字号（小/标准/大）、卡脚脚注自定义（留空不印，替代水印开关并迁移旧偏好）；W3 section 统一「标题左+当前值右」+ pressScale 全选择项、W1 头部一行化、W4 去水印行；选项与显影模式同语义跨会话保留。64 测绿 + 视觉走查 8/10（P0=0，P1 已修）。详 [it-010](darkroom/specs/iterations/it-010-craft-options-and-tidy.md)。

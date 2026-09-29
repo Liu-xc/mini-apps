@@ -48,7 +48,9 @@ fun FadingScrollRow(
 ) {
     val state = rememberScrollState()
     // 读在组合期：滚动/内容变化都会重组，draw 块只负责画
-    val fadeActive = state.maxValue > 0 && state.value < state.maxValue
+    // it-064 修4：起点（未滚动）也不渲染——默认状态在「筛选」钮旁形成一段底色遮挡
+    // （Leo 反馈）；滑离起点才出现、滑到尽头即隐（两端干净，滑程中提示可滑）
+    val fadeActive = state.maxValue > 0 && state.value > 0 && state.value < state.maxValue
     Box(
         modifier.drawWithContent {
             drawContent()

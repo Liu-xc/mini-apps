@@ -335,8 +335,8 @@ fun OutfitScreen(
                     .verticalScroll(slotScroll)
                     // it-042 C8：行卡视口底缘渐隐（缓解拦腰裁切，下方还有内容的提示）
                     .fadingBottomEdge(active = { slotScroll.value < slotScroll.maxValue })
-                    // it-045：顶栏下缘→内容 20dp 全站节奏（行底 4 + 16）
-                    .padding(start = 12.dp, end = 12.dp, top = 16.dp),
+                    // it-064 修1：top 16→12——四区一屏预算（鞋槽初始完整可见，Leo 实测需上滚）
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (activeCategories.isEmpty()) {
@@ -356,11 +356,11 @@ fun OutfitScreen(
                             catItems = catItems, pagerStates = pagerStates, vm = vm,
                             onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                             coach = coachPhase,
-                            aspectOf = { 1f },
+                            aspectOf = { 1.03f }, // it-064 修1：1.0→1.03 一屏预算微收
                             onAdd = { zone -> addSheetCats = addableCats(zone) },
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp)) // it-064 修1：分区间 8→6
                     // 上身区：外套 | 上装 | 连衣裙
                     StaggeredEntrance(index = 1, animate = !entranceDone) {
                         ZoneRow(
@@ -368,11 +368,11 @@ fun OutfitScreen(
                             activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
                             onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                             coach = coachPhase,
-                            aspectOf = { 0.78f },
+                            aspectOf = { 0.8f }, // it-064 修1：0.78→0.80 一屏预算微收
                             onAdd = { zone -> addSheetCats = addableCats(zone) },
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp)) // it-064 修1：分区间 8→6
                     // 腿行：包(左挂) | 下装（窄长） | 配饰(右挂)
                     StaggeredEntrance(index = 2, animate = !entranceDone) {
                         ZoneRow(
@@ -380,11 +380,11 @@ fun OutfitScreen(
                             activeCats = activeCategories, catItems = catItems, pagerStates = pagerStates, vm = vm,
                             onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                             coach = coachPhase,
-                            aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.6f else 0.85f },
+                            aspectOf = { if (it == WardrobeCategory.BOTTOM) 0.63f else 0.85f }, // it-064 修1：0.6→0.63 一屏预算微收
                             onAdd = { zone -> addSheetCats = addableCats(zone) },
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp)) // it-064 修1：分区间 8→6
                     // 脚区：鞋
                     StaggeredEntrance(index = 3, animate = !entranceDone) {
                         ZoneRow(
@@ -392,9 +392,8 @@ fun OutfitScreen(
                             catItems = catItems, pagerStates = pagerStates, vm = vm,
                             onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                             coach = coachPhase,
-                            // it-061 修1：2.6→2.2——透明素材 Trim 后鞋图 ≈1.0-1.3 宽高比，
-                        // 扁格略增高更贴内容比例（靴类竖长物可见高度 +18%），一屏预算内
-                        aspectOf = { 2.2f },
+                            // it-061 修1 2.6→2.2（Trim 后贴内容比例）；it-064 修1 2.2→2.3（一屏预算微收）
+                        aspectOf = { 2.3f },
                             onAdd = { zone -> addSheetCats = addableCats(zone) },
                         )
                     }
@@ -586,7 +585,7 @@ private fun AddSlotSheet(
                 .padding(bottom = 28.dp),
         ) {
             Text("添加单品", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp)) // it-064 修1：分区间 8→6
             cats.forEach { cat ->
                 val n = catItems[cat]?.size ?: 0
                 Row(

@@ -49,7 +49,6 @@ import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.EmptyState
 import com.leo.wardrobe.ui.components.FilterChipsRow
 import com.leo.wardrobe.ui.components.TagRow
-import com.leo.wardrobe.ui.components.sharedPhoto
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.detail.OutfitThumb
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -139,8 +138,9 @@ fun RecordsScreen(
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        // it-045：无标签行时 6+14=20 直接落顶栏节奏；有标签时保持 14 的段间距
-                        .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 8.dp),
+                        // it-064 修2b：top 14→20——卡组不可裁剪（it-048 甩卡真实飞行），
+                        // 与筛选行之间留缓冲带，飞行溢出不再直接压住 tag 行
+                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
                 ) {
                     // it-048：不得加 clipToBounds——甩卡是真实飞行（it-047 全路径），裁剪会把
                     // 卡片在容器边距处切掉（it-031 旧库时代的包裹已随自研内核删除）
@@ -152,7 +152,8 @@ fun RecordsScreen(
                             items = filtered,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(380.dp),
+                                // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
+                                .height(368.dp),
                             // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
                             // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
                         ) { outfit ->
@@ -320,15 +321,14 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
                 if (effect != null) {
                     // 用户导入的成品穿搭图：衬纸 Fit 完整展示（it-042 C2——原全幅 Crop 在宽盒里
                     // 把竖图人物头部裁掉，与同页网格缩略（0.86 近原比）两种呈现打架；it-011 C5 同语言）
-                    // it-058 C2：W8 → W7 共享元素（05 动效#3）；hero 恒为首图，与 W7 轮播 page 0 对齐
+                    // it-064 修2a：撤销 it-058 C2 的 hero 共享元素——卡组高频切换时 SharedTransition
+                    // 的 bounds 跟踪与甩卡飞行互相干扰（实测切换不丝滑的根因），恢复整页转场
                     com.leo.wardrobe.ui.components.PhotoCard(
                         file = vm.imageFileOf(effect.file),
                         contentDescription = "穿搭成品图",
                         corner = 0.dp,
                         mat = true,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .sharedPhoto("outfit-photo-${outfit.id}-0"),
+                        modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                     // 人体叙事拼贴：淡色人形轮廓底 + 缺失品类虚线空槽（it-011 O7）

@@ -315,8 +315,9 @@ fun WardrobeScreen(
                         // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
                         .fadingBottomEdge(active = { gridState.canScrollForward }),
                     state = gridState,
-                    // it-063：bottom 12 → 96——末卡静止位整卡（含标签行）脱离 FAB 区
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 96.dp),
+                    // it-063 bottom 12→96（FAB 避让）；it-064 修3：96→76——FAB 仅占右下角，
+                    // 全宽 96 的空白带过度（Leo：屏幕利用率不高），收到 FAB 上缘 +4dp
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 76.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {

@@ -55,7 +55,7 @@
 |---|---|---|---|
 | 1 | 槽位轮播 | ~~HorizontalPager + graphicsLayer 缩放形变~~ → it-003 起为 3×3 迷你格内 HorizontalPager（吸附换衣保留；迷你尺寸下取消缩放/透明形变）；it-047 参数收敛：2 处 `HorizontalPager`（`SlotGrid.kt` 槽位、`OutfitDetailScreen.kt` W7 轮播）显式 `PagerDefaults.flingBehavior(snapAnimationSpec = EditorialMotion.smooth())`、`beyondViewportPageCount = 1`（1.7.0+ 参数名），`SlotGrid.kt` 序号跳页 `animateScrollToPage` 同传 `animationSpec = EditorialMotion.smooth()` | W1、W7 |
 | 2 | 🎲 老虎机 | 逐槽位 `animateScrollToPage` 随机目标（it-047 显式 `animationSpec = EditorialMotion.smooth()`），槽间 100ms stagger；落定轻弹 scale 1→1.03→1 已落地（it-047：`snapshotFlow { settledPage }` 触发，`tween(80)` 上行、`EditorialMotion.pop()` 回落；启动 1.5s 内不弹，入场恢复不产生动效） | W1 |
-| 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图、穿搭格→W7 成品图，无缝放大。**it-058 起真正接线**：W1 槽位/W3 网格挂 `item-photo-${id}`（仅 pager 当前页挂 key，防预取页抢匹配）；W8 hero 挂 `outfit-photo-${id}-0` 与 W7 轮播 page 0 对齐（W7 仅当前页挂 key；停在他页返回时无匹配即整页转场，不错位） | W1→W5、W3→W5、W8→W7 |
+| 3 | 共享元素 | `SharedTransitionLayout` + `Modifier.sharedElement`：卡片照片→W5 大图。**it-058 接线、it-064 收窄**：W1 槽位/W3 网格挂 `item-photo-${id}`（仅 pager 当前页挂 key，防预取页抢匹配）；~~W8 hero→W7 轮播~~ it-064 修2a 撤销——卡组高频切换与 SharedTransition bounds 跟踪互相干扰（切换不丝滑回归），该路径恢复整页转场 | W1→W5、W3→W5 |
 | 4 | 复制成功 | 按钮内容 AnimatedContent morph 成 ✓，同时 Canvas 自绘彩屑粒子（15-20 粒，砖红/墨黑/米白三色，重力下落 600ms） | W6 |
 | 5 | 滑动删除 | Material3 `SwipeToDismissBox`，背景显现删除图标，删除后 `animateItem` 淡出回落 | W3 |
 | 6 | 切角色 | 数据区 `Crossfade`，角色名 `slideInVertically`+fade | W2 确认后 |
@@ -204,6 +204,13 @@ Material `primary` 在浅色为 `#111111`（`onPrimary=#FFFFFF`），深色为 `
 - 选中 Chip/Tab 使用黑白反差，不用品牌色铺底；导航文字仍保持中性色。
 - 心愿品类占位、年度回顾分布条、数据包状态符号、复制纸屑和导出长图装饰统一为灰阶。
 - 沿用现有 EditorialMotion、减弱动态和 Confirm 触感，不新增色彩闪烁或音效。
+
+## it-064 四处布局修正（2026-09-29）
+
+- **W1 一屏预算**：内容列 top 12dp、分区 6dp、aspect 帽 1.03/上身 0.80/下装 0.63/鞋 2.3——鞋槽初始视口内完整可见（窄设备临界转正）。
+- **W8 卡组**：容器与筛选行缓冲 20dp、高度 368dp；撤销 W8/W7 共享元素（见动效 #3 收窄）。
+- **W3 底部**：网格底内衬 76dp（FAB 上缘 +4dp，原 96dp 全宽空白带过度）。
+- **筛选行渐隐起点隐藏**：`FadingScrollRow` 仅在滑离起点后渲染渐隐带（默认无遮挡，滑到尽头隐去不变）——it-036「可滑提示」的默认态让位于干净首屏。
 
 ## it-061 槽位显示与导出减负（2026-09-29）
 
