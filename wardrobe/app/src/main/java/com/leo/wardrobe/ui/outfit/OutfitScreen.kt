@@ -392,7 +392,9 @@ fun OutfitScreen(
                             catItems = catItems, pagerStates = pagerStates, vm = vm,
                             onOpenItem = onOpenItem, onAddItem = onAddItem, onOpenWishlist = onOpenWishlist,
                             coach = coachPhase,
-                            aspectOf = { 2.6f },
+                            // it-061 修1：2.6→2.2——透明素材 Trim 后鞋图 ≈1.0-1.3 宽高比，
+                        // 扁格略增高更贴内容比例（靴类竖长物可见高度 +18%），一屏预算内
+                        aspectOf = { 2.2f },
                             onAdd = { zone -> addSheetCats = addableCats(zone) },
                         )
                     }

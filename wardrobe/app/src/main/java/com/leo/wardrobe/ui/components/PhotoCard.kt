@@ -62,6 +62,9 @@ fun PhotoCard(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(file)
                     .crossfade(220)
+                    // it-061 修1：衬纸承图先去透明边——透明素材内容充满格，
+                    // 非透明图（成品图）在 Transformation 内原样返回零影响
+                    .transformations(TrimAlphaTransformation())
                     .build(),
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,

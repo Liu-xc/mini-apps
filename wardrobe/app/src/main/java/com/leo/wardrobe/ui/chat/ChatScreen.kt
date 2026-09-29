@@ -363,16 +363,14 @@ fun ChatScreen(
     }
 
     // it-055 US-58：推荐卡长图导出——复用 W6 面板（existingOutfit=null，与搭配页/心愿同先例）
-    // it-056：presetSelections=顾问场景预选，面板内以记忆为底、预选覆盖同 key
+    // it-061 修3：面板默认全空（Leo「不做任何预设」），对话预选不再带入
     exportVm?.let { vmRef ->
-        exportRequest?.let { (items, presetSelections) ->
+        exportRequest?.let { (items, _) ->
             com.leo.wardrobe.ui.outfit.ExportSheet(
                 vm = vmRef,
                 items = items,
                 existingOutfit = null,
                 refPhotoFile = vmRef.currentPerson.value?.refImageFile,
-                presetSelections = presetSelections,
-                replaceSavedSelections = true, // it-057：对话入口净初值，防上次场景残留
                 onDismiss = { exportRequest = null },
             )
         }

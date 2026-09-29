@@ -19,19 +19,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -66,7 +72,7 @@ import java.io.File
  * coach=true 时首次进入做 ~150ms 左右微移示意（纯视觉位移，不触碰 pager 状态）。
  * aspect 为宽/高比，由着装位决定（帽近方、上身竖长、下装通栏、鞋扁平）。
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SlotCell(
     category: WardrobeCategory,
@@ -86,6 +92,8 @@ fun SlotCell(
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
     val flipScope = rememberCoroutineScope()  // it-031：名称条计数可点翻页
+    // it-061 修2：品类清单直选 sheet
+    var pickerOpen by remember { mutableStateOf(false) }
 
     // it-047 #9（05 #2）：落定轻弹 scale 1→1.03→1——任何落定（手动换衣/序号翻页/老虎机）触发；
     // 启动 1.5s 内不弹（入场恢复选中位不产生动效，DESIGN §3 二次进入走快路径）。
@@ -304,27 +312,13 @@ fun SlotCell(
                                 modifier = Modifier
                                     // it-033：与 ✕ 拉开 8dp（end），start 4dp 隔开名称列
                                     .padding(start = 4.dp, end = 8.dp)
-                                    .clickable {
-                                        if (items.size > 1) {
-                                            flipScope.launch {
-                                                // it-046：末页回卷即时落位——反向 animateScrollToPage
-                                                // 会扫过全部页，观感断裂
-                                                val next = (pagerState.currentPage + 1) % items.size
-                                                if (next == 0) {
-                                                    pagerState.scrollToPage(0)
-                                                } else {
-                                                    pagerState.animateScrollToPage(
-                                                        next,
-                                                        animationSpec = EditorialMotion.smooth(),
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    // it-061 修2：n/m 点开品类清单直选（Leo：来回滑找太累），
+                                    // 取代原循环翻页（列表是其超集）；触控热区由整行覆盖层承载同前
+                                    .clickable { if (items.size > 1) pickerOpen = true }
                                     .semantics {
                                         // it-033：序号角标补 a11y（实际 n/m）
                                         contentDescription =
-                                            "第 ${pagerState.currentPage + 1} 件，共 ${items.size} 件，点按切换"
+                                            "第 ${pagerState.currentPage + 1} 件，共 ${items.size} 件，点按打开品类清单"
                                     },
                             )
                             if (onRemove != null) {
@@ -349,6 +343,85 @@ fun SlotCell(
                                     .clickable { onRemove() }
                                     .semantics { contentDescription = "移除该格" },
                             )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // it-061 修2：品类清单直选（Leo 反馈「以列表直接选，不用来回滑」）——
+    // 该品类全部衣物（缩略图+名称+当前高亮+愿望标），点选 scrollToPage 直达。
+    if (pickerOpen) {
+        ModalBottomSheet(onDismissRequest = { pickerOpen = false }) {
+            Text(
+                "${category.label} · 共 ${items.size} 件",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            ) {
+                itemsIndexed(items, key = { _, it -> it.id }) { index, item ->
+                    val selected = pagerState.currentPage == index
+                    Surface(
+                        onClick = {
+                            pickerOpen = false
+                            flipScope.launch {
+                                // it-046：末页回卷即时落位——反向 animateScrollToPage 会扫过全部页
+                                if (index == 0) pagerState.scrollToPage(0)
+                                else pagerState.animateScrollToPage(
+                                    index,
+                                    animationSpec = EditorialMotion.smooth(),
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        } else {
+                            Color.Transparent
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        ) {
+                            PhotoCard(
+                                file = imageFileOf(item.imageFile).takeIf { item.imageFile.isNotEmpty() },
+                                contentDescription = null,
+                                corner = 8.dp,
+                                mat = true,
+                                matColor = Color(0xFFF2F3F5),
+                                modifier = Modifier.size(52.dp),
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    item.name.ifBlank { category.label },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = editorialColors().ink,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (item.isWishSlot) {
+                                    Text(
+                                        "想买 · 未录入",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = editorialColors().inkFaint,
+                                    )
+                                }
+                            }
+                            if (selected) {
+                                Icon(
+                                    Icons.Rounded.CheckCircle,
+                                    contentDescription = "当前选中",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     }
                 }

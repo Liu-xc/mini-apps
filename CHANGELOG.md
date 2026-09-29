@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(wardrobe)**: it-061 鞋槽显示修复与导出表单减负——透明素材先裁 alpha 边再 Fit（鞋/帽槽内容充满格，鞋槽 2.6→2.2）；槽位 n/m 点开品类清单 BottomSheet 直选（替代循环翻页）；W6 画面设定默认折叠、五维默认全空（去记忆与对话预选），详 [it-061](wardrobe/specs/iterations/it-061-slot-display-and-export-slim.md)。
+
 - **fix(wardrobe)**: it-062 顾问两页顶栏同色 + 会话列表预览 Markdown 扁平化——W12/W13 `TopAppBar` 默认纯白 surface 落在纸面背景上形成割裂白条，改显式 `ec.paper` 同底；列表预览此前直接显示 `##`/`-`/`**` 原始标记，新增 `markdownPreviewText()`（与正文渲染同口径的扁平化，旧索引残留句中 ` - ` 折叠为 ` · `，data 层不动）。`MarkdownPreviewTextTest` 6 例 + 全量单测绿，AVD 演示模式种旧格式数据实测两页同色、预览干净。详 [it-062](wardrobe/specs/iterations/it-062-chat-topbar-and-list-preview.md)。
 
 - **feat(darkroom)**: it-009 显影早期提速与成片页主视觉——三模式曲线去前期死区（8% 即有可察觉淡影，单测锁死），拍立得出纸后 1 秒内影调即开始浮现；W3 预览宽度优先放大（4:5 照片区约 75% 屏宽，46% 屏高限幅），点按预览进全屏大图（暗底 Fit、点按/返回关闭、OpenInFull 角标）。60 测绿，AVD 实测早帧影调展开翻倍。详 [it-009](darkroom/specs/iterations/it-009-pacing-and-result-preview.md)。

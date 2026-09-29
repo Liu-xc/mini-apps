@@ -30,6 +30,8 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Star
@@ -75,7 +77,6 @@ import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.ConfettiBurst
-import com.leo.wardrobe.ui.components.StaggeredEntrance
 import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
@@ -96,22 +97,16 @@ fun ExportSheet(
     items: List<Item>,
     existingOutfit: Outfit?,
     refPhotoFile: String? = null,
-    // it-056：调用方带来的五维预选（如顾问推荐的场景），打开时以持久化记忆为底、覆盖同 key；
-    // 空 map 时四处既有调用行为与此前完全一致
-    presetSelections: Map<String, String> = emptyMap(),
-    // it-057：对话入口传 true——初始值只反映本次推荐，不叠加历史记忆，
-    // 避免上一套的「办公室」残留在新推荐的表单里冒充本次场景
-    replaceSavedSelections: Boolean = false,
+    // it-061 修3（Leo：「默认置空，不做任何预设」）：五维不再恢复持久化记忆，
+    // 也不再消费对话推荐预选（it-056/057 的带入取消）——每次打开面板全空，
+    // 强需求才展开设置；exportSelections 的 VM/Store 层保留但 UI 不再读写
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val savedNote by vm.personNote.collectAsState()
-    val savedSelections by vm.exportSelections.collectAsState()
-    val savedSelectionsReady by vm.exportSelectionsReady.collectAsState()
     val savedCustomPrompt by vm.customPrompt.collectAsState()
 
     var selections by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var selectionsInit by remember { mutableStateOf(false) }
     var personNote by remember { mutableStateOf("") }
     var customPrompt by remember { mutableStateOf("") }
     var promptEdit by remember { mutableStateOf<String?>(null) } // 用户手改覆盖，维度变化时重置
@@ -125,31 +120,12 @@ fun ExportSheet(
     var collected by remember { mutableStateOf(false) }
     var confettiTrigger by remember { mutableIntStateOf(0) }
     var composeJob by remember { mutableStateOf<Job?>(null) }
-    // it-051：永远展示五维当前值；只展开正在编辑的一行，避免把“场景”藏在泛化折叠入口中。
+    // it-051：只展开正在编辑的一行；it-061 修3：整卡默认折叠，强需求才展开
     var activeDimensionKey by remember { mutableStateOf<String?>(null) }
-    var resolvedInitialDimension by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(savedNote) { if (personNote.isBlank() && savedNote.isNotBlank()) personNote = savedNote }
     LaunchedEffect(savedCustomPrompt) { if (customPrompt.isBlank() && savedCustomPrompt.isNotBlank()) customPrompt = savedCustomPrompt }
-    // it-012：恢复上次维度选择——等 DataStore 首发射完成（ready）或值非空才 init，
-    // 避免首帧空 map 把记忆标记为已初始化而永久丢弃（R2 实测竞态 bug）
-    // it-056：init 时叠加调用方预选（覆盖同 key、保留其余记忆），顾问场景等语境随推荐带入
-    // it-057：replaceSavedSelections=true（对话入口）时不叠加记忆——表单只反映本次推荐
-    LaunchedEffect(savedSelections, savedSelectionsReady, presetSelections) {
-        if (!selectionsInit && (savedSelectionsReady || savedSelections.isNotEmpty())) {
-            val base = if (replaceSavedSelections) emptyMap() else savedSelections
-            val merged = base + presetSelections
-            if (merged.isNotEmpty()) selections = merged
-            selectionsInit = true
-        }
-    }
-    // 首次打开且尚未选择场景时，直接呈现“场景”候选；已有选择则保持紧凑、可扫读的常态。
-    LaunchedEffect(selectionsInit, selections) {
-        if (selectionsInit && !resolvedInitialDimension) {
-            activeDimensionKey = PromptPresets.SCENE.key.takeIf { selections[it] == null }
-            resolvedInitialDimension = true
-        }
-    }
 
     /** it-013：自定义要求追加在生成文案末尾；it-017：附参考照时先追加形象还原要求（it-017 修订：prompt 已在长图顶部） */
     fun promptWithCustom(includeItems: Boolean): String {
@@ -177,7 +153,6 @@ fun ExportSheet(
     LaunchedEffect(items) { regenerate() }
     LaunchedEffect(selections, personNote, customPrompt, attachRef) {
         promptEdit = null
-        vm.setExportSelections(selections)
         regenerate()
     }
     // 人物描述持久化（去抖）
@@ -263,90 +238,121 @@ fun ExportSheet(
                         }
                     }
 
-                    // it-017：附形象参考照开关——仅该角色已设置照片时出现；默认开，关闭只影响本次
-                    if (refPhotoFile != null) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            ) {
-                                Icon(
-                                    Icons.Rounded.Face,
-                                    contentDescription = null,
-                                    tint = editorialColors().accent,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "附形象参考照",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = editorialColors().ink,
-                                    )
-                                    Text(
-                                        "生图更像本人 · 关闭仅本次有效",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = editorialColors().inkFaint,
-                                    )
-                                }
-                                Switch(checked = attachRef, onCheckedChange = { attachRef = it })
-                            }
-                        }
-                    }
-
-                    Text(
-                        "画面设定",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = editorialColors().ink,
-                        modifier = Modifier.padding(top = 10.dp),
-                    )
+                    // it-061 修3（Leo：「这几个选项应该都被隐藏掉，折叠起来」）：
+                    // 画面设定默认折叠为一行可选项，强需求才展开五维与参考照开关
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        onClick = { settingsOpen = !settingsOpen },
+                        shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
                         border = BorderStroke(1.dp, editorialColors().hairline),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                     ) {
-                        Column {
-                            PromptPresets.dimensions.forEachIndexed { index, dim ->
-                                // it-058 C7（05 动效#10 兑现）：sheet 弹出后设定行轻错峰淡入
-                                StaggeredEntrance(index = index, animate = true) {
-                                    DimensionSettingRow(
-                                        dim = dim,
-                                        selectedValue = selections[dim.key],
-                                        expanded = activeDimensionKey == dim.key,
-                                        isPrimary = dim.key == PromptPresets.SCENE.key,
-                                        allowCustom = dim.key == PromptPresets.SCENE.key, // it-057：场景可自定义
-                                        onToggle = {
-                                            activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
-                                        },
-                                        onSelect = { opt ->
-                                            selections = if (selections[dim.key] == opt) {
-                                                selections - dim.key
-                                            } else {
-                                                selections + (dim.key to opt)
-                                            }
-                                        },
-                                    )
-                                }
-                                if (index != PromptPresets.dimensions.lastIndex) {
-                                    HorizontalDivider(
-                                        color = editorialColors().hairline,
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                    )
-                                }
-                            }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        ) {
+                            Text(
+                                "画面设定",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = editorialColors().ink,
+                            )
+                            Text(
+                                if (selections.isEmpty()) "可选 · 未设置" else "已设 ${selections.size} 项",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = editorialColors().inkFaint,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Icon(
+                                if (settingsOpen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                contentDescription = if (settingsOpen) "收起画面设定" else "展开画面设定",
+                                tint = editorialColors().inkFaint,
+                            )
                         }
                     }
-                    Text(
-                        "可只设场景；其余参数按需要补充。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = editorialColors().inkFaint,
-                        modifier = Modifier.padding(start = 2.dp),
-                    )
+                    AnimatedVisibility(
+                        visible = settingsOpen,
+                        enter = expandVertically(animationSpec = EditorialMotion.smooth()) + fadeIn(animationSpec = tween(120)),
+                        exit = shrinkVertically(animationSpec = EditorialMotion.smooth()) + fadeOut(animationSpec = tween(90)),
+                    ) {
+                        Column {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                                border = BorderStroke(1.dp, editorialColors().hairline),
+                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            ) {
+                                Column {
+                                    PromptPresets.dimensions.forEachIndexed { index, dim ->
+                                        DimensionSettingRow(
+                                            dim = dim,
+                                            selectedValue = selections[dim.key],
+                                            expanded = activeDimensionKey == dim.key,
+                                            isPrimary = dim.key == PromptPresets.SCENE.key,
+                                            allowCustom = dim.key == PromptPresets.SCENE.key, // it-057：场景可自定义
+                                            onToggle = {
+                                                activeDimensionKey = if (activeDimensionKey == dim.key) null else dim.key
+                                            },
+                                            onSelect = { opt ->
+                                                selections = if (selections[dim.key] == opt) {
+                                                    selections - dim.key
+                                                } else {
+                                                    selections + (dim.key to opt)
+                                                }
+                                            },
+                                        )
+                                        if (index != PromptPresets.dimensions.lastIndex) {
+                                            HorizontalDivider(
+                                                color = editorialColors().hairline,
+                                                modifier = Modifier.padding(horizontal = 16.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            // it-017：附形象参考照开关（it-061 修3 随画面设定一并折叠；
+                            // 默认开——不展开面板即维持默认行为）
+                            if (refPhotoFile != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Face,
+                                            contentDescription = null,
+                                            tint = editorialColors().accent,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                "附形象参考照",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = editorialColors().ink,
+                                            )
+                                            Text(
+                                                "生图更像本人 · 关闭仅本次有效",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = editorialColors().inkFaint,
+                                            )
+                                        }
+                                        Switch(checked = attachRef, onCheckedChange = { attachRef = it })
+                                    }
+                                }
+                            }
+                            Text(
+                                "可只设场景；其余参数按需要补充。",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = editorialColors().inkFaint,
+                                modifier = Modifier.padding(start = 2.dp, top = 4.dp),
+                            )
+                        }
+                    }
 
                     Text(
                         "补充信息",

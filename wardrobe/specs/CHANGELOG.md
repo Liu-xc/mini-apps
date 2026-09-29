@@ -5,6 +5,7 @@
 ## 未发布
 
 - **演示数据**：[it-060](iterations/it-060-mock-corpus-expansion.md) mock 衣橱扩充至 68 件单品、15 套穿搭，新增 32 张 RGBA 透明底单品 PNG，八品类均衡覆盖；同步产出可导入包并通过 validator。
+- **槽位与导出**：[it-061](iterations/it-061-slot-display-and-export-slim.md) 透明素材 Trim 显示/品类清单直选/W6 默认折叠全空。
 - **录入体验**：[it-059](iterations/it-059-quick-entry-form.md) W4 表单点选优先——颜色/常用标签预设 chips、名称自动命名、手动输入折叠二次交互；演示模式 Leo 预置人台形象参考照。
 - **交互体感**：[it-058](iterations/it-058-motion-polish.md) 上线体感专项——共享元素转场首次接线（W1/W3→W5、W8→W7）、全站照片灰阶占位、`pressScale` 按压反馈、随机一套忙碌态（Casino 旋转+防连点）、对话 typing 三点与气泡入场、W1/导出面板入场编排、Tab fade+微缩放、冷启动 splash 对齐（含深色）、动效清单三处勘误 + 新增 #14–#18。
 
