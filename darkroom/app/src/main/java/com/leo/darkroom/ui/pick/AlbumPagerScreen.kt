@@ -12,11 +12,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -204,58 +207,42 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 108.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = colors.surface.copy(alpha = 0.96f),
-                    border = BorderStroke(1.dp, colors.hairline),
+                    shape = RoundedCornerShape(24.dp),
+                    color = androidx.compose.ui.graphics.Color(0xE61A1A1A),
                 ) {
                     Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("动画模式", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                        Text("动画模式", style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xB3FBFBFA))
                         Spacer(Modifier.height(8.dp))
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             DevelopMode.entries.forEach { mode ->
-                                ModeChip(
-                                    mode = mode,
-                                    selected = state.mode == mode,
-                                    onClick = { vm.setMode(mode) },
-                                    modifier = Modifier.weight(1f),
-                                )
+                                DarkPill(mode.label, state.mode == mode) { vm.setMode(mode) }
                             }
                         }
                         if (state.mode == DevelopMode.POLAROID) {
                             Spacer(Modifier.height(12.dp))
-                            Text("相纸", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                            Text("相纸", style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xB3FBFBFA))
                             Spacer(Modifier.height(8.dp))
                             Row(
                                 Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 com.leo.darkroom.card.FrameStyle.entries.forEach { frame ->
-                                    SelectChip(
-                                        label = frame.label,
-                                        selected = state.spec.frame == frame,
-                                        onClick = { vm.setFrame(frame) },
-                                        modifier = Modifier.weight(1f),
-                                    )
+                                    DarkPill(frame.label, state.spec.frame == frame) { vm.setFrame(frame) }
                                 }
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        Text("动画速度", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                        Text("动画速度", style = MaterialTheme.typography.titleSmall, color = androidx.compose.ui.graphics.Color(0xB3FBFBFA))
                         Spacer(Modifier.height(8.dp))
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             DevelopSpeed.entries.forEach { speed ->
-                                SelectChip(
-                                    label = "${speed.label} ${speed.durationMs / 1000}s",
-                                    selected = state.speed == speed,
-                                    onClick = { vm.setSpeed(speed) },
-                                    modifier = Modifier.weight(1f),
-                                )
+                                DarkPill("${speed.label} ${speed.durationMs / 1000}s", state.speed == speed) { vm.setSpeed(speed) }
                             }
                         }
                     }
@@ -414,5 +401,35 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawModeGlyph(
                 drawRect(colors.paper, topLeft = Offset(x, h * 0.71f), size = Size(w * 0.13f, h * 0.07f))
             }
         }
+    }
+}
+
+
+/** 相机面板的暗底胶囊（it-012 收尾 7）：选中=亮底深字，未选=半透明白描边亮字 */
+@Composable
+private fun RowScope.DarkPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .weight(1f)
+            .height(40.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                if (selected) androidx.compose.ui.graphics.Color(0xFFFBFBFA)
+                else androidx.compose.ui.graphics.Color(0x14FFFFFF),
+            )
+            .border(
+                BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0x59FFFFFF)),
+                RoundedCornerShape(20.dp),
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) androidx.compose.ui.graphics.Color(0xFF1B1B1B)
+            else androidx.compose.ui.graphics.Color(0xE6FBFBFA),
+            maxLines = 1,
+        )
     }
 }

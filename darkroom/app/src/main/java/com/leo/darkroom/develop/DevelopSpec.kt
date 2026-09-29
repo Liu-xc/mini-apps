@@ -95,14 +95,14 @@ object DevelopSpec {
         phase = phaseAt(p),
         // it-009 早期提速：起手即有淡影透出（0.16），潜影段贡献加大——去掉前 ~15% 的纯白死区
         imageAlpha = 0.16f + 0.30f * latent + 0.54f * emerge,
-        saturation = 0.05f + 0.30f * latent + 0.50f * emerge + 0.15f * fix,
-        contrast = 0.88f + 0.04f * latent + 0.11f * emerge + 0.07f * fix,
-        brightness = 0.66f + 0.14f * latent + 0.19f * emerge + 0.01f * fix,
+        saturation = 0.02f + 0.16f * latent + 0.42f * emerge + 0.40f * fix,
+        contrast = 0.80f + 0.04f * latent + 0.10f * emerge + 0.14f * fix,
+        brightness = 0.60f + 0.12f * latent + 0.20f * emerge + 0.08f * fix,
         // 中途压向青冷、定影回正微暖（真实相纸先冷后暖）
         warmth = -0.38f * latent - 0.18f * emerge + 0.60f * fix,
         // it-008 三次修正：真实显影中影像本身是锐的，糊的只是白浊层——
         // 起手仅极轻柔焦（0.016→末态 0.006），去掉旧版 0.05 的「晕开扩散」观感
-        blurFraction = 0.016f - 0.004f * latent - 0.004f * emerge - 0.010f * fix,
+        blurFraction = 0.016f - 0.001f * latent - 0.003f * emerge - 0.010f * fix,
         // it-008 二次修正：白浊层全程渐次变薄、定影段仍在收白；
         // it-009 早期提速：起手 11% 已透、潜影段快开（15% 处 ≈30%）——前期不再是空白
         reveal = (0.11f + 0.18f * latent + 0.51f * emerge + 0.20f * fix).coerceAtMost(1f),
@@ -111,9 +111,9 @@ object DevelopSpec {
         // 定影段才落到纸感 0.20。旧版起手 0.45 的角部压暗让均匀浮现读成「中心晕开」
         vignette = 0.04f + 0.02f * latent + 0.04f * emerge + 0.02f * fix,
         // 染料分层：青层压红（早）→ 黄层压蓝（中）→ 品红层压绿（晚），定影后全部归位
-        redGain = 1f - 0.15f * bump(p, 0.10f, 0.38f, 0.88f),
-        greenGain = 1f - 0.06f * bump(p, 0.42f, 0.68f, 0.96f),
-        blueGain = 1f - 0.05f * bump(p, 0.28f, 0.55f, 0.92f),
+        redGain = 1f - 0.30f * bump(p, 0.10f, 0.38f, 0.88f),
+        greenGain = 1f - 0.16f * bump(p, 0.42f, 0.68f, 0.96f),
+        blueGain = 1f - 0.18f * bump(p, 0.28f, 0.55f, 0.92f),
         shadowLift = 0.012f + 0.038f * fix,
         // it-008 三次修正：影调显影顺序——亮部高光被压住最后才到位（0.62→0.94），
         // 暗部/中间调先从白浊层后显出，对表真实相纸「先见影、后见光」的浮现次序
