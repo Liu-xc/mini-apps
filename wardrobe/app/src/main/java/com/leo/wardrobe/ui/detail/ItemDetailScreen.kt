@@ -411,7 +411,8 @@ fun ItemDetailScreen(
                             vm,
                             related[index],
                             showDate = false,
-                            modifier = Modifier.width(150.dp),
+                            footerLabel = "穿搭记录 · 点开看整套",
+                            modifier = Modifier.width(184.dp),
                             onClick = { onOpenOutfit(related[index].id) },
                         )
                     }
@@ -468,6 +469,8 @@ fun OutfitThumb(
     outfit: Outfit,
     modifier: Modifier = Modifier,
     showDate: Boolean = true,
+    /** W5 关联卡专用目的地文案；记录网格保持日期信息，不混入重复提示。 */
+    footerLabel: String? = null,
     onClick: () -> Unit,
 ) {
     val data by vm.data.collectAsState()
@@ -499,6 +502,14 @@ fun OutfitThumb(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(0.86f),
+            )
+        }
+        footerLabel?.let { label ->
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = editorialColors().ink,
+                modifier = Modifier.padding(top = 6.dp, bottom = 2.dp),
             )
         }
         if (showDate) {

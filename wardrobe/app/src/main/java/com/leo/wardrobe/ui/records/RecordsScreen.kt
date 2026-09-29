@@ -200,8 +200,9 @@ fun RecordsScreen(
                                     //（park 右缘 = −end 内缩，几何恒等式）。top 8dp + 容器 top 20dp ≥ 上探
                                     // 28dp，静止卡组不盖筛选行；容器不可裁剪（it-048），甩卡真实飞出不受影响。
                                     .padding(end = 22.dp, top = 8.dp)
-                                    // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
-                                    .height(368.dp),
+                                    // it-072 W8：卡组仍是焦点，但首屏需同时露出“全部 N 套”与
+                                    // 第一行历史记录；收紧 50dp，不改变卡组手势、叠层与安全边距。
+                                    .height(318.dp),
                                 // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
                                 // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
                             ) { outfit ->
@@ -264,7 +265,7 @@ fun RecordsScreen(
 
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        "全部 ${filtered.size} 套",
+                        if (filterTag == null) "全部 ${filtered.size} 套" else "筛选 · ${filtered.size} 套",
                         style = MaterialTheme.typography.titleSmall,
                         color = editorialColors().inkFaint,
                         modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
@@ -410,4 +411,3 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
         }
     }
 }
-

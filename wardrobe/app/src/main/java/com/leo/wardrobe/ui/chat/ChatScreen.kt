@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -316,14 +318,15 @@ fun ChatScreen(
         }
         // 未配置时不渲染输入栏：历史可读、但不能误触写入会话（it-050）。
         if (!canChat) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("配置 API Key 后可发起对话", style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint)
-                TextButton(onClick = onOpenSettings) { Text("去配置") }
-            }
+            // it-072 W13：只读空态已有一次说明；底部改为唯一、具名的主恢复动作，
+            // 避免正文式“去配置”与重复提示分散下一步，显式 48dp 满足触控基线。
+            Button(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+            ) { Text("去配置 API Key") }
         } else Row(
             Modifier
                 .fillMaxWidth()

@@ -361,6 +361,22 @@ fun ExportSheet(
                             )
                         }
                     }
+                    // it-072 W6：放大角标不能是首次用户唯一的核对线索；复用既有
+                    // previewExpanded 全幅可滚动态，具名次 CTA 让“查看”目的明确。
+                    if (composedFile != null) {
+                        OutlinedButton(
+                            onClick = { previewExpanded = true },
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.Fullscreen,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.size(8.dp))
+                            Text("查看完整长图")
+                        }
+                    }
 
                     // it-061 修3（Leo：「这几个选项应该都被隐藏掉，折叠起来」）：
                     // 画面设定默认折叠为一行可选项，强需求才展开五维与参考照开关
