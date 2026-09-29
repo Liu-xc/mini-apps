@@ -17,6 +17,16 @@ class DevelopSpecTest {
     }
 
     @Test
+    fun `every mode shows a ghost early without a dead window`() {
+        // it-009：8% 进度时三种模式都应有可察觉的淡影——前期不许回到纯白死区
+        DevelopMode.entries.forEach { mode ->
+            val v = DevelopSpec.visualAt(mode, 0.08f)
+            assertTrue("$mode imageAlpha", v.imageAlpha > 0.28f)
+            assertTrue("$mode reveal", v.reveal > 0.19f)
+        }
+    }
+
+    @Test
     fun `visualAt is deterministic and monotone in key params`() {
         val a = DevelopSpec.visualAt(0.42f)
         val b = DevelopSpec.visualAt(0.42f)

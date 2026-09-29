@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(darkroom)**: it-009 显影早期提速与成片页主视觉——三模式曲线去前期死区（8% 即有可察觉淡影，单测锁死），拍立得出纸后 1 秒内影调即开始浮现；W3 预览宽度优先放大（4:5 照片区约 75% 屏宽，46% 屏高限幅），点按预览进全屏大图（暗底 Fit、点按/返回关闭、OpenInFull 角标）。60 测绿，AVD 实测早帧影调展开翻倍。详 [it-009](darkroom/specs/iterations/it-009-pacing-and-result-preview.md)。
+
 - **fix(darkroom)**: it-008 三次修正——拍立得显影对表真实相纸：暗角改为成片特征（起手近无、定影段落 0.20，旧版起手 0.45 的角部压暗使均匀浮现读成「中心晕开」）；柔焦 0.05→0.016（影像全程锐利，糊的只是白浊层）；影调次序显影（highlightGain 0.62→0.94，暗部先现、高光最后到位）；白浊层早期微偏冷回中性（修掉 or 0xFFFFFF 淹没冷调的死代码）。按住药水条 seek 采 23–97% 六帧像素级复核：径向坡降 −40→−9 luma、暗/亮密度比单调收敛、末态 ESF 2px 锐利。版本 0.2.3。详 [it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) 验证记录。
 
 - **feat(wardrobe)**: it-060 演示 mock 数据扩容——内置衣橱从 36 件单品/9 套穿搭扩至 68 件/15 套，补齐八品类与季节/场合组合，新增 32 张 RGBA 透明底 PNG；素材包 validator PASS（0 警告），详 [it-060](wardrobe/specs/iterations/it-060-mock-corpus-expansion.md)。

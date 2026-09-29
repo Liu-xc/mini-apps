@@ -93,18 +93,19 @@ object DevelopSpec {
         fix: Float,
     ): DevelopVisual = DevelopVisual(
         phase = phaseAt(p),
-        imageAlpha = 0.10f + 0.25f * latent + 0.65f * emerge,
+        // it-009 早期提速：起手即有淡影透出（0.16），潜影段贡献加大——去掉前 ~15% 的纯白死区
+        imageAlpha = 0.16f + 0.30f * latent + 0.54f * emerge,
         saturation = 0.05f + 0.30f * latent + 0.50f * emerge + 0.15f * fix,
-        contrast = 0.85f + 0.05f * latent + 0.12f * emerge + 0.08f * fix,
-        brightness = 0.60f + 0.15f * latent + 0.22f * emerge + 0.03f * fix,
+        contrast = 0.88f + 0.04f * latent + 0.11f * emerge + 0.07f * fix,
+        brightness = 0.66f + 0.14f * latent + 0.19f * emerge + 0.01f * fix,
         // 中途压向青冷、定影回正微暖（真实相纸先冷后暖）
         warmth = -0.38f * latent - 0.18f * emerge + 0.64f * fix,
         // it-008 三次修正：真实显影中影像本身是锐的，糊的只是白浊层——
         // 起手仅极轻柔焦（0.016→末态 0.006），去掉旧版 0.05 的「晕开扩散」观感
         blurFraction = 0.016f - 0.004f * latent - 0.004f * emerge - 0.002f * fix,
-        // it-008 二次修正：白浊层全程渐次变薄（4%→15%→78%→100%），
-        // 对表真实拍立得「整张从白里逐步浮现」——不再 70% 就全透
-        reveal = (0.04f + 0.11f * latent + 0.63f * emerge + 0.22f * fix).coerceAtMost(1f),
+        // it-008 二次修正：白浊层全程渐次变薄、定影段仍在收白；
+        // it-009 早期提速：起手 11% 已透、潜影段快开（15% 处 ≈30%）——前期不再是空白
+        reveal = (0.11f + 0.18f * latent + 0.51f * emerge + 0.20f * fix).coerceAtMost(1f),
         grain = 0.55f - 0.12f * latent - 0.15f * emerge - 0.08f * fix,
         // it-008 三次修正：暗角是成片特征、不是显影特征——起手近乎无（0.04），
         // 定影段才落到纸感 0.20。旧版起手 0.45 的角部压暗让均匀浮现读成「中心晕开」
@@ -128,13 +129,14 @@ object DevelopSpec {
         fix: Float,
     ): DevelopVisual = DevelopVisual(
         phase = phaseAt(p),
-        imageAlpha = 0.06f + 0.34f * latent + 0.60f * emerge,
+        // it-009 早期提速：开机即见首批格子亮起
+        imageAlpha = 0.10f + 0.36f * latent + 0.54f * emerge,
         saturation = 0.40f + 0.28f * latent + 0.27f * emerge + 0.05f * fix,
         contrast = 0.88f + 0.05f * latent + 0.11f * emerge + 0.06f * fix,
-        brightness = 0.72f + 0.13f * latent + 0.13f * emerge + 0.02f * fix,
+        brightness = 0.76f + 0.10f * latent + 0.12f * emerge + 0.02f * fix,
         warmth = 0f,
         blurFraction = 0.030f - 0.014f * latent - 0.014f * emerge - 0.002f * fix,
-        reveal = (0.18f + 0.42f * latent + 0.40f * emerge).coerceAtMost(1f),
+        reveal = (0.24f + 0.40f * latent + 0.36f * emerge).coerceAtMost(1f),
         // 颗粒是传感器噪点：起手明显，成像后收得很小
         grain = 0.50f - 0.20f * latent - 0.15f * emerge - 0.05f * fix,
         vignette = 0.16f - 0.04f * latent - 0.06f * emerge - 0.02f * fix,
@@ -154,13 +156,14 @@ object DevelopSpec {
         fix: Float,
     ): DevelopVisual = DevelopVisual(
         phase = phaseAt(p),
-        imageAlpha = 0.14f + 0.31f * latent + 0.55f * emerge,
+        // it-009 早期提速：片盒卷出后负片底灰尽快可见
+        imageAlpha = 0.20f + 0.33f * latent + 0.47f * emerge,
         saturation = 0.12f + 0.23f * latent + 0.45f * emerge + 0.20f * fix,
         contrast = 0.80f + 0.06f * latent + 0.14f * emerge + 0.10f * fix,
         brightness = 0.70f + 0.12f * latent + 0.15f * emerge + 0.03f * fix,
         warmth = -0.30f * latent - 0.15f * emerge + 0.55f * fix,
         blurFraction = 0.035f - 0.010f * latent - 0.018f * emerge - 0.005f * fix,
-        reveal = (0.12f + 0.30f * latent + 0.58f * emerge).coerceAtMost(1f),
+        reveal = (0.20f + 0.34f * latent + 0.46f * emerge).coerceAtMost(1f),
         grain = 0.60f - 0.14f * latent - 0.16f * emerge - 0.05f * fix,
         vignette = 0.40f - 0.06f * latent - 0.12f * emerge - 0.04f * fix,
         shadowLift = 0.015f + 0.035f * fix,

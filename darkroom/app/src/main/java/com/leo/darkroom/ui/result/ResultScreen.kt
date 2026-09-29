@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
@@ -46,18 +47,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -79,8 +87,16 @@ import kotlinx.coroutines.withContext
 fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     val colors = editorialColors()
     val photo = state.photo
-    val previewHeight = 250.dp
-    val previewWidth = previewHeight * (state.exportFormat.width.toFloat() / state.exportFormat.height)
+    // it-009：成品是主视觉——宽度优先给足（竖幅吃 94% 可用宽），高度以 46% 屏高限幅
+    val configuration = LocalConfiguration.current
+    val availableWidth = (configuration.screenWidthDp.dp - 40.dp)
+    var previewWidth = minOf(availableWidth * 0.94f, 384.dp)
+    var previewHeight = previewWidth * (state.exportFormat.height.toFloat() / state.exportFormat.width)
+    val maxPreviewHeight = configuration.screenHeightDp.dp * 0.46f
+    if (previewHeight > maxPreviewHeight) {
+        previewHeight = maxPreviewHeight
+        previewWidth = previewHeight * (state.exportFormat.width.toFloat() / state.exportFormat.height)
+    }
     val density = LocalDensity.current
     val previewWidthPx = with(density) { previewWidth.roundToPx() }.coerceAtLeast(180)
     val previewHeightPx = with(density) { previewHeight.roundToPx() }.coerceAtLeast(180)
@@ -149,10 +165,12 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         LaunchedEffect(Unit) {
             if (entrance.value < 1f) entrance.animateTo(1f, EditorialMotion.pop())
         }
+        // it-009：点按成品进全屏大图查看
+        var viewerOpen by remember { mutableStateOf(false) }
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .height(260.dp),
+                .height(previewHeight),
             contentAlignment = Alignment.Center,
         ) {
             val maxW = maxWidth
@@ -162,16 +180,41 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                     translationY = (1f - entrance.value) * 16.dp.toPx()
                 },
             ) {
+                val imageModifier = Modifier
+                    .width(previewWidth.coerceAtMost(maxW))
+                    .height(previewHeight)
+                    .clip(RoundedCornerShape(4.dp))
                 if (artwork.value != null) {
-                    Image(
-                        bitmap = artwork.value!!,
-                        contentDescription = "${state.exportFormat.label}成片预览",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .width(previewWidth.coerceAtMost(maxW))
                             .height(previewHeight)
-                            .clip(RoundedCornerShape(4.dp)),
-                    )
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable { viewerOpen = true },
+                    ) {
+                        Image(
+                            bitmap = artwork.value!!,
+                            contentDescription = "${state.exportFormat.label}成片预览",
+                            contentScale = ContentScale.Fit,
+                            modifier = imageModifier,
+                        )
+                        // 大图入口角标（视觉 16dp，热区随卡面整块可点）
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(30.dp)
+                                .background(colors.surface.copy(alpha = 0.9f), RoundedCornerShape(15.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Outlined.OpenInFull,
+                                contentDescription = "查看大图",
+                                tint = colors.inkFaint,
+                                modifier = Modifier.size(15.dp),
+                            )
+                        }
+                    }
                 } else {
                     Box(
                         Modifier
@@ -190,7 +233,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("成片预览", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
             Spacer(Modifier.weight(1f))
-            Text("风格与编辑同步到图片和视频", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+            Text("点按可查看大图", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -410,6 +453,41 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             TextButton(onClick = vm::backToPick, modifier = Modifier.fillMaxWidth()) { Text("再洗一张") }
         }
         Spacer(Modifier.height(20.dp))
+
+        // it-009 全屏大图：暗底 Fit 全屏，点按任意处关闭（返回键同）
+        if (viewerOpen) {
+            artwork.value?.let { art ->
+                Dialog(
+                    onDismissRequest = { viewerOpen = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color(0xF0151515))
+                            .clickable { viewerOpen = false },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            bitmap = art,
+                            contentDescription = "${state.exportFormat.label}大图",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 8.dp, vertical = 28.dp),
+                        )
+                        Text(
+                            "点按任意处关闭",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0x99FBFBFA),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 16.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
