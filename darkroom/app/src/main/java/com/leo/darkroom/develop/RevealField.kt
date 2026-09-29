@@ -37,7 +37,20 @@ object RevealField {
         if (reveal.coerceIn(0f, 1f) >= 0.999f) return IntArray(width * height)
 
         val amount = reveal.coerceIn(0f, 1f)
-        val pale = if (kind == RevealKind.BLOCKS) SCREEN_OFF else PALE
+        // it-008 三次修正：拍立得白浊层早期微偏冷（真实 opacifier 带青蓝底色），
+        // 随消散回中性；胶片乳剂底保持中性浅灰。按通道直接拼 RGB（alpha 由上层 shl 24 合入）。
+        // 幅度对表终验：满幕 B−R ≈ +11，复合到像面 ≈ +6~9——可感知的微冷而非滤色
+        val pale = when (kind) {
+            RevealKind.BLOCKS -> SCREEN_OFF
+            RevealKind.CHEMICAL -> {
+                val w = (1f - amount).coerceIn(0f, 1f)
+                (((0xE7 - (6f * w).toInt()).coerceIn(0, 255)) shl 16) or
+                    (((0xE7 + (1f * w).toInt()).coerceIn(0, 255)) shl 8) or
+                    ((0xE2 + (5f * w).toInt()).coerceIn(0, 255))
+            }
+
+            RevealKind.SWEEP -> PALE
+        }
         val edgeColor = if (kind == RevealKind.BLOCKS) SCREEN_EDGE else EDGE
         val pixels = IntArray(width * height)
         var index = 0
