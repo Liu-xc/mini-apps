@@ -5,6 +5,19 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// it-067 / ADR-027：版本号自动生成——VERSION_BASE.<wardrobe 提交数>，脏树加 -dirty
+val versionBase = "0.5.0"
+fun gitOut(vararg args: String): String? = try {
+    providers.exec {
+        workingDir = rootProject.projectDir // wardrobe/，pathspec "." 自此限定衣橱范围
+        commandLine("git", *args)
+    }.standardOutput.asText.get().trim()
+} catch (_: Exception) {
+    null // 无 git / 非仓库（如源码 zip 构建）→ 回退基线常量，不阻断构建
+}
+val wardrobeCommits = gitOut("rev-list", "--count", "HEAD", "--", ".")?.toIntOrNull()
+val treeDirty = gitOut("status", "--porcelain", "--", ".")?.isNotEmpty() == true
+
 android {
     namespace = "com.leo.wardrobe"
     compileSdk = 35
@@ -13,8 +26,15 @@ android {
         applicationId = "com.leo.wardrobe"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = wardrobeCommits ?: 5
+        versionName = buildString {
+            append(versionBase)
+            if (wardrobeCommits != null) {
+                append('.')
+                append(wardrobeCommits)
+                if (treeDirty) append("-dirty")
+            }
+        }
         vectorDrawables { useSupportLibrary = true }
         // it-045：-PdemoDefault=true 出「演示数据体验包」——新装即进演示模式；
         // 常规构建恒为 false，行为与 it-015 完全一致（设置页/5 连点仍可双向切换）

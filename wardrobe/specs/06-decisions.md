@@ -153,3 +153,9 @@
 - **决策**（2026-09-28）：Mock 环境允许用户**主动**保存测试 Key 后真实直连模型；Key、厂商/模型偏好与真实衣橱分别使用独立 Keystore alias、SharedPreferences 与 DataStore keys，绝不互读。默认无 Key 时 W12/W13 一律只读。Mock 真调以完整请求、工具定义、Mock 数据版本、模型及测试 Key 摘要作 SHA-256 指纹，完成态写入私有 cacheDir；TTL 7 天，最多 100 条/50 MB，失败或取消不缓存，W11 可二次确认清除。
 - **理由**：把真实回归权限限制在用户显式保存的测试连接，同时保留真实数据与凭证隔离；缓存对工具回合和最终回答分别重放，不篡改 AgentRunner 的会话/工具契约。
 - **后果**：演示模式不再是绝对零外呼，而是「无 Key 零外呼、已主动配置才外呼」；缓存命中可能不反映厂商最新回答，故仅限 Mock 测试环境并以低调状态标识。所有 Key/缓存/会话索引均不进数据包。
+
+## ADR-027 构建版本号自动生成：VERSION_BASE + wardrobe 提交数（发布/构建）
+- **背景**：版本号停更二次复发——ADR-021（2026-09-21）把首发对齐到 0.5.0（versionCode 5）后，it-020~it-066 数十次迭代再未 bump，设置页永远「版本 0.5.0」，装机构建无法辨识「是哪一版」（CHANGELOG 的 it-XXX 不进 APK）；ADR-021 记过的坑原样重演，证明人肉 bump 必忘。
+- **决策**（2026-09-29，it-067）：`versionName = VERSION_BASE.<wardrobe 提交数>`（如 `0.5.0.105`）——VERSION_BASE=0.5.0 为手动基线（对外声明新 release 序列时只抬它，提交数后缀继续单调）；提交数取 `git rev-list --count HEAD -- .`（workingDir 限定 wardrobe/，只随衣橱代码增长）；工作树有未提交改动加 `-dirty`（如 `0.5.0.105-dirty`）。`versionCode = 提交数`（单调递增整数，5→105 为合法升级）。git 不可用回退 0.5.0/5，构建不失败。实现于 wardrobe/app/build.gradle.kts 配置期 `providers.exec`。
+- **理由**：提交数与代码状态一一对应、零人工维护；限定 wardrobe/ 使版本只随衣橱代码动；`-dirty` 让自测期「装的哪版」也诚实。
+- **后果**：版本号形制不再是整洁的 `0.5.0`，设置页版本行变长（Text 换行，实测无布局问题）；GitHub Releases 打 tag 仍以 VERSION_BASE 为准（如 `wardrobe-v0.6.0`），APK 内 versionName 带提交数尾巴属预期；上应用市场需精确版本序列时可切回手动 bump（versionCode 从当前提交数起接）。回退路径极端场景（git 缺失的拷贝源码覆盖装过自动生成版的设备）versionCode=5 会拒绝覆盖装，个人自用接受。darkroom/eats 沿用各自手动版本（darkroom 0.5.11 随发版 bump、eats 0.1.0 未发版），推广另开迭代。

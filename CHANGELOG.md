@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **chore(wardrobe)**: it-067 构建版本号自动生成——`versionName = 0.5.0.<wardrobe 提交数>`（git rev-list 限定衣橱范围，未提交改动加 `-dirty`）、`versionCode = 提交数`，设置页/回顾页「装的哪版」可辨识，销记「版本号停更」二次复发；ADR-027。详 [it-067](wardrobe/specs/iterations/it-067-auto-versioning.md)。
+
 - **chore(dev)**: 模拟器分治——每应用固定 AVD（wardrobe_test / darkroom_qa）+ `tools/emu.sh` 设备绑定脚本（up/install/launch/cap/uadump，序列号按 AVD 名解析不硬编码端口），并行会话不再互抢模拟器/前台；LESSONS 旧「共用 AVD 重聚焦重试」兜底规则替换为新不变量。详 [it-002](specs/iterations/it-002-emu-device-split.md)。
 
 - **fix(darkroom)**: it-012 收尾 10——v0.5.10 两处发版回归热修：画册底衬误用文字色 inkFaint 铺成深灰 slab（改固定浅暖灰 0xE2DCCC+去 8dp 卡阴影）、PhotoViewer 半透明透底致顶栏深字隐形（改不透明 0xFF151515，实测顶栏区 std=0）；中段灰雾收敛（contrast/brightness 起手抬高、模糊提前收清）；自此恢复发版前模拟器全量自测（独立 darkroom_qa AVD，序列/查看器/浮层子代理验收全过），v0.5.11 出包。

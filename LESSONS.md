@@ -29,6 +29,8 @@
 - **每应用独占 AVD（wardrobe_* / darkroom_*），设备命令一律走 `tools/emu.sh` 或 `adb -s`，序列号按 AVD 名解析不硬编码**——裸 `adb`/`gradlew installDebug` 会打到所有在线设备，并行会话互抢前台、串包、截图混对方画面；`emulator-端口` 随启停漂移只是显示名，绑定看 AVD 名。· [specs/it-002](specs/iterations/it-002-emu-device-split.md) · 2026-09
 - **走查采集前先显式复位持久化偏好并核对选中态（uiautomator dump 的 note/标签即证据）**——上一会话留下的偏好（显影模式等）会让整轮连拍全程拍错对象；另：夜模式切换后等 Activity 重建完再操作，重建风暴+连拍曾把 App 打成 ANR，冻结帧会被误读成 App 缺陷（force-stop 重走即可销项），uiautomator dump 在 ANR 后也会返回旧对话框帧。· [darkroom it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) · 2026-09
 
+- **同一坑第二次出现就别再靠「下次记得」，直接上机制兜底**——版本号停更（ADR-021 记过 0.1.0 停更对齐）在 0.5.0 上原样复发，人肉 bump 必忘；构建版本身份改从 git 提交数自动生成，零维护。· [wardrobe it-067](wardrobe/specs/iterations/it-067-auto-versioning.md) · 2026-09
+
 ### 架构与数据
 
 - **解析外部/持久化数据：未知字段一律忽略不崩**——向前兼容是硬要求，收紧解析前先确认不破坏旧数据。· [libs/agent 00-architecture](libs/agent/specs/00-architecture.md) · 2026-09
