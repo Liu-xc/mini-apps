@@ -202,6 +202,13 @@ Material `primary` 在浅色为 `#111111`（`onPrimary=#FFFFFF`），深色为 `
 - 心愿品类占位、年度回顾分布条、数据包状态符号、复制纸屑和导出长图装饰统一为灰阶。
 - 沿用现有 EditorialMotion、减弱动态和 Confirm 触感，不新增色彩闪烁或音效。
 
+## it-059 录入表单点选优先（2026-09-29）
+
+- **主区零打字**：W4 录入主区全部点选——品类（既有）、颜色（新：13 预设 chips 单选，自由文本值以附加选中 chip 回显、可点除）、常用标签（新：10 预设 chips 多选 + 已选自定义 chip 回显）；名称降级为非必填（留空保存自动命名「颜色+品类」，如「米色上装」，supportingText 预告）。保存条件只剩照片必填。
+- **折叠二次交互**：「补充细节（描述 · 自定义颜色与标签）」Surface 折叠行（surfaceVariant@34% + hairline，与 W6 画面设定任务卡同语言），展开为 `EditorialMotion.smooth` 高度过渡 + 短淡入（it-051 折叠语言）；内含描述文本框、自定义颜色输入、自定义标签 TagInput；已填内容以「已填」小标提示不展开也可见。
+- **chips 触控**：颜色/标签 chips 高 44dp（it-033 基线内）；品类维持 48dp。
+- **演示人物数据**：mock Leo 角色预置人台风格形象参考照（`assets/mock/person-ref.png`，PIL 绘制的黑白灰 dress form）；导出面板「附形象参考照」开关在演示模式直接可体验，长图拼贴含人台。`MOCK_ASSET_REVISION` 随资产变更 bump（it-059）。
+
 ## it-054 顾问 Markdown 与穿搭卡片（2026-09-28）
 
 - **Markdown 声部**：标题使用现有 Serif Title/Section 层级；正文使用 Sans Body；列表标记、引用竖线和链接只使用 `accentContent`，不引入新颜色。

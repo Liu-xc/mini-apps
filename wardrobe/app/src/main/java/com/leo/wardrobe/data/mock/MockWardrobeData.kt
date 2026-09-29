@@ -45,7 +45,8 @@ object MockWardrobeData {
         )
 
         val persons = listOf(
-            Person(P1, "我", "👨", createdAt = ago(60)),
+            // it-059：P1 带形象参考照（与 assets/mock/wardrobe.json 的 Leo 对齐，人台演示图）
+            Person(P1, "我", "👨", refImageFile = "person-ref.png", createdAt = ago(60)),
             Person(P2, "小满", "👧", createdAt = ago(58)),
         )
 

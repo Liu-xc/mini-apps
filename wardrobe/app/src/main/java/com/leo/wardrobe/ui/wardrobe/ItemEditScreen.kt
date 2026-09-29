@@ -2,6 +2,12 @@
 
 package com.leo.wardrobe.ui.wardrobe
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,11 +76,16 @@ import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.components.rememberPhotoPicker
+import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import java.io.File
 
 /**
- * W4 添加/编辑衣物（US-01/02/13）：照片必填 + 名称/品类/颜色/描述/标签。
+ * W4 添加/编辑衣物（US-01/02/13）：照片必填 + 品类/颜色/标签点选录入。
+ *
+ * it-059 点选优先（Leo 反馈「表单太长有压力」）：主区全部点选完成（品类/颜色/常用标签 chips），
+ * 名称留空自动命名（颜色+品类），手动输入（描述/自定义颜色/自定义标签）折叠进「补充细节」
+ * 二次交互展开——录一件衣物可以零打字。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -91,11 +104,13 @@ fun ItemEditScreen(
     var cutoutFile by remember { mutableStateOf<String?>(null) }
     var cutting by remember { mutableStateOf(false) }
     var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
+    var nameTouched by remember(existing?.id) { mutableStateOf(existing != null) } // it-059：编辑态视为已定名
     var category by remember(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
     var color by remember(existing?.id) { mutableStateOf(existing?.color ?: "") }
     var desc by remember(existing?.id) { mutableStateOf(existing?.desc ?: "") }
     var tags by remember(existing?.id) { mutableStateOf(existing?.tags ?: emptyList()) }
     var photoMissing by remember { mutableStateOf(false) }
+    var detailOpen by remember { mutableStateOf(false) } // it-059：补充细节折叠区
     val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
 
     fun runCutout(src: String) {
@@ -136,7 +151,14 @@ fun ItemEditScreen(
     }
 
     val hasPhoto = importedFile != null || existing != null
-    val saveReady = hasPhoto && name.isNotBlank()
+
+    // it-059：名称自动兜底——用户没动过名称时，跟随颜色/品类生成默认名（如「米色上装」）
+    val autoName = buildString {
+        if (color.isNotBlank()) append(color)
+        append(category.label)
+    }
+    val effectiveName = name.ifBlank { autoName }
+    val saveReady = hasPhoto
 
     // it-011 O3：吸底保存两态（与 eats it-004 同模式）；顶栏只留关闭
     fun doSave() {
@@ -144,7 +166,7 @@ fun ItemEditScreen(
             photoMissing = true
         } else {
             // 采用抠图版则保存它并删原图（原图即弃）；否则抠图版必为 null
-            vm.saveItem(existing, cutoutFile ?: importedFile, name, category, color, desc, tags) { ok ->
+            vm.saveItem(existing, cutoutFile ?: importedFile, effectiveName, category, color, desc, tags) { ok ->
                 if (ok) {
                     haptics.confirm()
                     if (cutoutFile != null) importedFile?.let(vm::deletePhotoFile)
@@ -167,12 +189,7 @@ fun ItemEditScreen(
         },
         // it-012 重构：与 eats it-005 同构——中性灰原因 + 全宽两态；点击未就绪按钮 toast 缺什么
         bottomBar = {
-            val reason = when {
-                !hasPhoto && name.isBlank() -> "选照片、填名称后可保存"
-                !hasPhoto -> "还差一张照片"
-                name.isBlank() -> "填名称后可保存"
-                else -> null
-            }
+            val reason = if (!hasPhoto) "还差一张照片" else null
             Surface(shadowElevation = 8.dp) {
                 Column(
                     Modifier
@@ -191,11 +208,7 @@ fun ItemEditScreen(
                         OutlinedButton(
                             onClick = {
                                 haptics.error()
-                                when {
-                                    !hasPhoto && name.isBlank() -> vm.toast("先选照片、再填名称")
-                                    !hasPhoto -> vm.toast("还差一张照片")
-                                    else -> vm.toast("名称必填")
-                                }
+                                vm.toast("先选一张照片")
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text(if (existing == null) "保存" else "更新") }
@@ -395,13 +408,20 @@ fun ItemEditScreen(
                 }
             }
 
+            // it-059：名称降级为「自动命名 + 可选改」——留空保存自动用 颜色+品类
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = {
+                    name = it
+                    nameTouched = true
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("名称 *") },
-                placeholder = { Text("如：白色牛津纺衬衫") },
+                label = { Text("名称") },
+                placeholder = { Text(if (nameTouched || autoName.isEmpty()) "如：白色牛津纺衬衫" else "留空自动命名「$autoName」") },
+                supportingText = if (name.isBlank() && autoName.isNotEmpty()) {
+                    { Text("留空将自动命名为「$autoName」", style = MaterialTheme.typography.labelSmall) }
+                } else null,
             )
 
             Text("品类", style = MaterialTheme.typography.labelMedium, color = editorialColors().inkFaint)
@@ -431,25 +451,126 @@ fun ItemEditScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = color,
-                onValueChange = { color = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("颜色") },
-                placeholder = { Text("如：白色") },
+            // it-059：颜色改预设 chips 点选（原纯文本框）——自由文本值以附加 chip 回显
+            val presetColors = listOf(
+                "白色", "黑色", "灰色", "米色", "卡其", "军绿",
+                "藏青", "蓝色", "浅蓝", "棕色", "红色", "黄色", "粉色",
             )
+            val extraColor = color.takeIf { it.isNotBlank() && it !in presetColors }
+            Text("颜色", style = MaterialTheme.typography.labelMedium, color = editorialColors().inkFaint)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                presetColors.forEach { c ->
+                    FilterChip(
+                        selected = color == c,
+                        onClick = { color = if (color == c) "" else c },
+                        modifier = Modifier.height(44.dp),
+                        label = { Text(c) },
+                    )
+                }
+                if (extraColor != null) {
+                    FilterChip(
+                        selected = true,
+                        onClick = { color = "" },
+                        modifier = Modifier.height(44.dp),
+                        label = { Text("$extraColor ✕") },
+                    )
+                }
+            }
 
-            OutlinedTextField(
-                value = desc,
-                onValueChange = { desc = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("描述（会拼进生图文案）") },
-                placeholder = { Text("如：宽松棉质、纽扣领") },
-            )
-
+            // it-059：常用标签 chips 多选（原手输 TagInput 主入口折叠）——已选自定义标签同样回显
+            val presetTags = listOf("通勤", "休闲", "运动", "约会", "度假", "居家", "简约", "冬", "早秋", "夏")
+            val extraTags = tags.filter { it !in presetTags }
             Text("标签", style = MaterialTheme.typography.labelMedium, color = editorialColors().inkFaint)
-            TagInput(tags = tags, onChange = { tags = it })
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                presetTags.forEach { t ->
+                    FilterChip(
+                        selected = t in tags,
+                        onClick = { tags = if (t in tags) tags - t else tags + t },
+                        modifier = Modifier.height(44.dp),
+                        label = { Text(t) },
+                    )
+                }
+                extraTags.forEach { t ->
+                    FilterChip(
+                        selected = true,
+                        onClick = { tags = tags - t },
+                        modifier = Modifier.height(44.dp),
+                        label = { Text("$t ✕") },
+                    )
+                }
+            }
+
+            // it-059：补充细节折叠区——描述/自定义颜色/自定义标签的二次交互
+            Surface(
+                onClick = { detailOpen = !detailOpen },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                border = BorderStroke(1.dp, editorialColors().hairline),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Icon(
+                        if (detailOpen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                        contentDescription = null,
+                        tint = editorialColors().inkFaint,
+                    )
+                    Text(
+                        "补充细节（描述 · 自定义颜色与标签）",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = editorialColors().ink,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (desc.isNotBlank() || extraColor != null || extraTags.isNotEmpty()) {
+                        Text(
+                            "已填",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = editorialColors().inkFaint,
+                        )
+                    }
+                }
+            }
+            // it-051 折叠语言：smooth 高度过渡 + 短淡入（走框架动画缩放，减弱动态自动瞬时）
+            AnimatedVisibility(
+                visible = detailOpen,
+                enter = expandVertically(animationSpec = EditorialMotion.smooth()) + fadeIn(animationSpec = tween(120)),
+                exit = shrinkVertically(animationSpec = EditorialMotion.smooth()) + fadeOut(animationSpec = tween(90)),
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    OutlinedTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("描述（会拼进生图文案）") },
+                        placeholder = { Text("如：宽松棉质、纽扣领") },
+                    )
+                    OutlinedTextField(
+                        value = if (extraColor != null) color else "",
+                        onValueChange = { color = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("自定义颜色") },
+                        placeholder = { Text("如：燕麦色") },
+                    )
+                    Column {
+                        Text(
+                            "自定义标签",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = editorialColors().inkFaint,
+                        )
+                        TagInput(tags = tags, onChange = { tags = it })
+                    }
+                }
+            }
 
             Spacer(Modifier.height(32.dp))
         }
