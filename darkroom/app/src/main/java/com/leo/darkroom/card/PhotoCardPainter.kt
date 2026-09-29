@@ -144,20 +144,19 @@ object PhotoCardPainter {
                 color = palette.hairline
             },
         )
-        // 深色卡面（数码屏/片基）在深色页底上补一圈外框，否则整张卡会糊进背景
-        if (mode != DevelopMode.POLAROID) {
-            canvas.drawRect(
-                0f,
-                0f,
-                cardWidthPx,
-                layout.height,
-                Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = (cardWidthPx * 0.0018f).coerceAtLeast(1f)
-                    color = palette.hairline
-                },
-            )
-        }
+        // 外缘一圈极细 hairline（it-014，全模式）：深色卡防糊进深色页底；拍立得浅纸卡
+        // 与纸底仅差 ~7/255，同样要靠这圈线把边界立起来（与 DevelopCard 同参数）
+        canvas.drawRect(
+            0f,
+            0f,
+            cardWidthPx,
+            layout.height,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = (cardWidthPx * 0.0018f).coerceAtLeast(1f)
+                color = palette.hairline
+            },
+        )
     }
 
     /** 胶片齿孔：14 孔等距穿孔（几何由 CardLayout.sprocketHoles 单一真源给出） */

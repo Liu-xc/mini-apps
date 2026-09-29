@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(darkroom)**: it-014 拍立得卡面外缘 hairline 立边——浅纸卡与纸底仅差 ~7/255 边界不可见，全模式卡外缘统一 1px hairline（`palette.hairline`、cardWidth×0.0018，预览/导出两端同参数；深色卡既有外框不变），亮/深主题与查看器实测到位。版本 0.5.13。详 [it-014](darkroom/specs/iterations/it-014-polaroid-card-hairline.md)。
+
 - **fix(wardrobe)**: it-069 P2 机械细项打包——W1 空组合按钮禁用/随机单件轻提示/顶栏触控 48dp；W3/W8 筛选 rememberSaveable 跨 Tab 保持；W7 顶栏日期并入 updatedAt；W5 卡下重复文案废止、W8 随机按钮并入 W1 形制、W10 折叠符号与「→/↗」残留清理、ChatList 时间戳全站格式、W2 emoji 行 FlowRow；W6 重拼进度角标+手改重置提示、W13 流式可预输入。91 测绿。详 [it-069](wardrobe/specs/iterations/it-069-p2-mechanical-package.md)。
 
 - **feat(wardrobe)**: it-068 穿搭详情放开调整单品 + 成品图标注——有成品图也可换季改一件（it-049 限制解除，不再逼用户创建副本丢打卡/评论）；单品变更后成品图区标注「成品图为调整前组合」（`Outfit.effectStale` 持久、旧快照兼容），录入新成品图即解除。91 测绿（+2 兼容/解除守门测）。详 [it-068](wardrobe/specs/iterations/it-068-outfit-edit-with-effect-annotation.md)。

@@ -161,15 +161,14 @@ fun DevelopCard(
                 size = Size(layout.photo.width, layout.photo.height),
                 style = Stroke(width = (cardWidthPx * 0.0015f).coerceAtLeast(1f)),
             )
-            // 深色卡面在深色页底上补一圈外框，否则整张卡会糊进背景
-            if (mode != DevelopMode.POLAROID) {
-                drawRect(
-                    color = Color(palette.hairline),
-                    topLeft = Offset.Zero,
-                    size = Size(cardWidthPx, layout.height),
-                    style = Stroke(width = (cardWidthPx * 0.0018f).coerceAtLeast(1f)),
-                )
-            }
+            // 外缘一圈极细 hairline（it-014，全模式）：深色卡防糊进深色页底；拍立得浅纸卡
+            // 与纸底仅差 ~7/255，同样要靠这圈线把边界立起来
+            drawRect(
+                color = Color(palette.hairline),
+                topLeft = Offset.Zero,
+                size = Size(cardWidthPx, layout.height),
+                style = Stroke(width = (cardWidthPx * 0.0018f).coerceAtLeast(1f)),
+            )
         }
     }
 }
