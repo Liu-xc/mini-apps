@@ -29,6 +29,20 @@ cd darkroom
 - minSdk 31 / target 35 / Kotlin 2.1.21 / Compose BOM 2025.06.01 / M3 1.4.0；零第三方依赖。
 - 分发：APK 不入 git，走 `~/Documents/mini-apps-apk`（见根 README）。
 
+## 模拟器（设备分治）
+
+显影独占 `darkroom_*` AVD（主用 `darkroom_qa`），衣橱独占 `wardrobe_*`，两应用可同时各开一台模拟器、互不抢前台：
+
+```bash
+tools/emu.sh up        # 启动/复用显影专属模拟器，打印序列号
+tools/emu.sh install   # assembleDebug 并安装到本应用设备
+tools/emu.sh launch    # 拉起应用；走查卡住用 restart 复位
+tools/emu.sh cap       # 截图（uadump 出无障碍树）
+tools/emu.sh serial    # 打印序列号，裸 adb 用 adb -s $(tools/emu.sh serial) ...
+```
+
+序列号按 AVD 名解析、不硬编码 `emulator-端口号`（端口随启停漂移）；多设备在线时不要裸用 `adb install` / `./gradlew installDebug`。约定与踩坑史见 [specs/it-002](../specs/iterations/it-002-emu-device-split.md)。
+
 ## 架构一句话
 
 `DevelopClock`（唯一进度真源）→ `DevelopMode` 分派下的 `DevelopSpec.visualAt(mode, p)`（确定性画面映射）→

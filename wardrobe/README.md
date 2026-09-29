@@ -42,9 +42,23 @@
 # 产物: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-安装到连接的设备：`./gradlew installDebug` 或 `adb install -r app/build/outputs/apk/debug/app-debug.apk`。
+安装/运行到模拟器用 **`tools/emu.sh`**（见下节）。多设备在线时不要裸用 `adb install` / `./gradlew installDebug`——会装到**所有**设备，和显影并行开发时会串包。
 
 单元测试：`./gradlew test`
+
+## 模拟器（设备分治）
+
+衣橱独占 `wardrobe_*` AVD（主用 `wardrobe_test`），显影独占 `darkroom_*`，两应用可同时各开一台模拟器、互不抢前台：
+
+```bash
+tools/emu.sh up        # 启动/复用衣橱专属模拟器，打印序列号
+tools/emu.sh install   # assembleDebug 并安装到本应用设备
+tools/emu.sh launch    # 拉起应用；走查卡住用 restart 复位
+tools/emu.sh cap       # 截图（uadump 出无障碍树）
+tools/emu.sh serial    # 打印序列号，裸 adb 用 adb -s $(tools/emu.sh serial) ...
+```
+
+序列号按 AVD 名解析、不硬编码 `emulator-端口号`（端口随启停漂移）。约定与踩坑史见 [specs/it-002](../specs/iterations/it-002-emu-device-split.md)。
 
 ## 素材署名
 
