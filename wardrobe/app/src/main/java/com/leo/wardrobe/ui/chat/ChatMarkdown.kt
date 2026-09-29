@@ -153,6 +153,41 @@ private fun MarkdownInlineText(
 private val BULLET = Regex("^[-*]\\s+")
 private val ORDERED = Regex("^(\\d+)\\.\\s+(.+)$")
 
+// it-062：预览扁平化用的块级标记（口径对齐上方 MarkdownLine 的解析子集）
+private val PREVIEW_HR = Regex("^([-*_])\\1{2,}$")
+private val PREVIEW_HEADING = Regex("^#{1,6}\\s+")
+private val PREVIEW_ITEM = Regex("^([-*+]\\s+|\\d{1,3}[.、]\\s+)")
+private val PREVIEW_QUOTE = Regex("^>\\s?")
+private val PREVIEW_COLLAPSED_ITEM = Regex("\\s+[-*+]\\s+")
+
+/**
+ * it-062：W12 会话列表预览——与 [MarkdownText] 同口径解析后压成单行纯文本。
+ * 列表项行以 ` · ` 连接、普通行以空格连接；句中残留的 ` - `（旧索引把换行压成
+ * 空格后遗留的列表标记）折叠为 ` · `，老数据不迁移即显示干净。幂等：干净文本再进一次不变。
+ */
+fun markdownPreviewText(markdown: String): String {
+    val parts = mutableListOf<Pair<String, Boolean>>() // 行文本, 是否列表项
+    markdown.lineSequence().forEach { raw ->
+        val line = raw.trim()
+        if (line.isBlank() || PREVIEW_HR.matches(line)) return@forEach
+        val body = line.replaceFirst(PREVIEW_HEADING, "").replaceFirst(PREVIEW_QUOTE, "")
+        val itemMarker = PREVIEW_ITEM.find(body)
+        val text = cleanInlineMarkdown(
+            if (itemMarker != null) body.substring(itemMarker.value.length) else body,
+        )
+        if (text.isNotBlank()) parts += text to (itemMarker != null)
+    }
+    val builder = StringBuilder()
+    parts.forEachIndexed { index, (text, isItem) ->
+        if (index > 0) builder.append(if (isItem || parts[index - 1].second) " · " else " ")
+        builder.append(text)
+    }
+    return builder.toString()
+        .replace(PREVIEW_COLLAPSED_ITEM, " · ")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+}
+
 private fun inlineMarkdown(text: String, bodyColor: Color, accentColor: Color): AnnotatedString =
     AnnotatedString.Builder().apply {
         var index = 0

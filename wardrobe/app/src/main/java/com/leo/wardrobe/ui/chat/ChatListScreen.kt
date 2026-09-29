@@ -23,10 +23,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +55,8 @@ fun ChatListScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("穿搭顾问") },
+            // it-062：默认 surface 纯白与纸面背景割裂，顶栏铺纸面色与页面同底
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = ec.paper),
             actions = {
                 if (canChat && sessions.isNotEmpty()) {
                     androidx.compose.material3.IconButton(onClick = { vm.createSession(onOpenSession) }) {
@@ -106,6 +110,8 @@ fun ChatListScreen(
 @Composable
 private fun SessionCard(session: ChatSessionSummary, onClick: () -> Unit) {
     val ec = editorialColors()
+    // it-062：预览走 Markdown 解析口径扁平化，不裸露 ##/- 等标记（旧索引数据同样干净）
+    val preview = remember(session.preview) { markdownPreviewText(session.preview) }
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = ec.surface),
@@ -113,7 +119,7 @@ private fun SessionCard(session: ChatSessionSummary, onClick: () -> Unit) {
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(session.title, style = MaterialTheme.typography.titleMedium, color = ec.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(session.preview.ifBlank { "还没有消息" }, style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(preview.ifBlank { "还没有消息" }, style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
                 SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(session.updatedAt)),
                 style = MaterialTheme.typography.labelSmall,

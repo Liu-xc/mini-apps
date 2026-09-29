@@ -51,6 +51,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -175,6 +176,8 @@ fun ChatScreen(
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("穿搭顾问") },
+            // it-062：默认 surface 纯白与纸面背景割裂，顶栏铺纸面色与页面同底
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = ec.paper),
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
