@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **fix(darkroom)**: it-012 收尾 2——画册画质修复：页图弃用 loadThumbnail（系统低质 512px 缩略，上屏即糊），改 ImageDecoder 原图降采样 1440 长边（软件位图，导出端可画）；网格小图仍走 256 缩略；缓存分两层控内存。版本 0.5.2。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。
+
 - **fix(darkroom)**: it-012 收尾——画册卡改原地亮相（去掉画册语境下读成「先跳下去」的出纸位移，位移动画只属显影台）；修 weight 挂在组件内容里对 Column 无效的布局 bug（翻页器吃满高度把动画模式/速度配置胶囊挤出屏外，首页网格同型错误一并修）。版本 0.5.1。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。
 
 - **feat(darkroom)**: it-012 相册优先 IA 重构——首页改为纯照片墙（小图网格 + 拍照/设置两枚图标，表单按钮全清），点缩略图进「画册模式」独立屏（翻页显影、动画完停留、快捷面板+重播）；返回栈理顺（画册↔网格、成片按来源回）；未授权/空相册为安静引导态；拍照保留经典显影台路径；ThumbCache 双尺寸键。67 测绿。版本 0.5.0。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。

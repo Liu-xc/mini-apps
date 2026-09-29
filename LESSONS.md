@@ -24,6 +24,7 @@
 - **超时判罚用「静默超时」（无输出时长），别用总时长**——LLM/agent 合法长思考可达数十分钟，总时长硬中断会把「想得久」误判成「挂死」。· [xiangqi it-001](xiangqi/specs/iterations/it-001-arena-mvp.md) · 2026-09
 - **spec/文档不钉死易漂移的数字（测试用例数等）**——以 CI/测试套件实际结果为准，写死必漂移。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
 - **「本地全绿」≠「CI 绿」**——CI 配置入库后必须看首跑结果，未实跑的流水线视同未验证。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
+- **`loadThumbnail` 返回的是系统存的低质缩略（常见 512px JPEG）**——凡上屏宽度 >600px 或位图还要再进导出/视频管线的场景，必须 ImageDecoder 解码原图并 setTargetSize 降采样（记得 ALLOCATOR_SOFTWARE，android.graphics.Canvas 画不了硬件位图）；纯小图网格才用 loadThumbnail。· [darkroom it-012](darkroom/specs/iterations/it-012-album-first-ia.md) · 2026-09
 - **Compose 的 `Modifier.weight` 只对直接父级 Column/Row 生效**——写在自定义组件的 content lambda 里能编译（外层作用域词法解析）但布局上无效，且失败模式阴险：不带 weight 的兄弟（如 pager）会吃满剩余高度、把底栏顶出屏幕，观感像「控件消失」——weight 一律挂到组件自身的 modifier 参数上，逐屏核对底栏可见性。· [darkroom it-012](darkroom/specs/iterations/it-012-album-first-ia.md) · 2026-09
 - **多会话共用一台 AVD 走查：重聚焦 → 操作 → 快截图，焦点被抢就整链重试**——并发会话随时切前台，`am start` 拉回自家应用后再 tap，tap 后 1–2s 内截图，落屏前先核对画面是不是自己的 App，单次不中重试而非改代码。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09
 - **走查采集前先显式复位持久化偏好并核对选中态（uiautomator dump 的 note/标签即证据）**——上一会话留下的偏好（显影模式等）会让整轮连拍全程拍错对象；另：夜模式切换后等 Activity 重建完再操作，重建风暴+连拍曾把 App 打成 ANR，冻结帧会被误读成 App 缺陷（force-stop 重走即可销项），uiautomator dump 在 ANR 后也会返回旧对话框帧。· [darkroom it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) · 2026-09

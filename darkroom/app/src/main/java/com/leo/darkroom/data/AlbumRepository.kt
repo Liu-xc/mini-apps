@@ -3,6 +3,7 @@ package com.leo.darkroom.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.graphics.ImageDecoder
 import android.provider.MediaStore
 import android.util.Size
 import kotlinx.coroutines.Dispatchers
@@ -22,20 +23,37 @@ data class AlbumPhoto(
     val dateText: String,
 )
 
-/** 缩略图进程内 LRU（it-011；it-012 双尺寸键：网格 256 与画册 1080 互不污染） */
+/** 图片进程内 LRU（it-011；it-012 收尾 2 分两层）：
+ *  小图层=网格缩略（loadThumbnail 256，轻）；页图层=画册/导出用的原图降采样（1440 长边，
+ *  软件位图——android.graphics 渲染端画不了硬件位图），条数少防内存超标。 */
 object ThumbCache {
-    private const val MAX_ENTRIES = 36
-    private val cache = object : LinkedHashMap<Pair<Long, Int>, Bitmap>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Int>, Bitmap>?): Boolean = size > MAX_ENTRIES
+    private const val SMALL_MAX = 24
+    private const val PAGE_MAX = 6
+
+    private val small = lru(SMALL_MAX)
+    private val page = lru(PAGE_MAX)
+
+    private fun lru(max: Int) = object : LinkedHashMap<Pair<Long, Int>, Bitmap>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Long, Int>, Bitmap>?): Boolean = size > max
     }
 
     @Synchronized
-    fun get(id: Long, size: Int): Bitmap? = cache[id to size]
+    fun getSmall(id: Long): Bitmap? = small[id to 256]
 
     @Synchronized
-    fun put(id: Long, size: Int, bitmap: Bitmap) {
-        cache[id to size] = bitmap
+    fun putSmall(id: Long, bitmap: Bitmap) {
+        small[id to 256] = bitmap
     }
+
+    @Synchronized
+    fun getPage(id: Long): Bitmap? = page[id to PAGE_KEY]
+
+    @Synchronized
+    fun putPage(id: Long, bitmap: Bitmap) {
+        page[id to PAGE_KEY] = bitmap
+    }
+
+    const val PAGE_KEY = 0
 }
 
 /**
@@ -86,12 +104,34 @@ class AlbumRepository(private val context: Context) {
             photos
         }
 
-    /** 相册缩略图（约 1080px，够 1080 宽卡片直用）；带进程内缓存 */
-    suspend fun thumbnail(photo: AlbumPhoto, size: Int = 1080): Bitmap? =
+    /** 网格缩略（256px）——小图场景够用，走系统缩略 */
+    suspend fun gridThumb(photo: AlbumPhoto): Bitmap? = withContext(Dispatchers.IO) {
+        ThumbCache.getSmall(photo.id) ?: runCatching {
+            context.contentResolver.loadThumbnail(photo.uri, Size(256, 256), null)
+        }.getOrNull()?.also { ThumbCache.putSmall(photo.id, it) }
+    }
+
+    /**
+     * 画册页图（it-012 收尾 2：画质修复）：loadThumbnail 返回系统存的低质缩略（常见 512px JPEG），
+     * 上千像素卡面与全屏大图均糊——改 ImageDecoder 解码原图并降采样到 1440 长边；
+     * 强制软件位图（导出端 android.graphics.Canvas 画不了硬件位图）。
+     */
+    suspend fun pageImage(photo: AlbumPhoto, longEdge: Int = 1440): Bitmap? =
         withContext(Dispatchers.IO) {
-            ThumbCache.get(photo.id, size) ?: runCatching {
-                context.contentResolver.loadThumbnail(photo.uri, Size(size, size), null)
-            }.getOrNull()?.also { ThumbCache.put(photo.id, size, it) }
+            ThumbCache.getPage(photo.id) ?: runCatching {
+                val source = ImageDecoder.createSource(context.contentResolver, photo.uri)
+                ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                    val maxEdge = maxOf(info.size.width, info.size.height)
+                    if (maxEdge > longEdge) {
+                        val scale = maxEdge.toFloat() / longEdge
+                        decoder.setTargetSize(
+                            (info.size.width / scale).toInt().coerceAtLeast(1),
+                            (info.size.height / scale).toInt().coerceAtLeast(1),
+                        )
+                    }
+                }
+            }.getOrNull()?.also { ThumbCache.putPage(photo.id, it) }
         }
 
     companion object {

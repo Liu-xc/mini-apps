@@ -179,8 +179,9 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
 
     suspend fun albumThumbnail(
         photo: com.leo.darkroom.data.AlbumPhoto,
-        size: Int = 1080,
-    ): android.graphics.Bitmap? = albums.thumbnail(photo, size)
+        size: Int = 1440,
+    ): android.graphics.Bitmap? =
+        if (size <= 512) albums.gridThumb(photo) else albums.pageImage(photo, size)
 
     /** it-012：网格点缩略图进画册模式，从该页起翻 */
     fun openAlbumPager(index: Int) {

@@ -55,6 +55,13 @@ W3 成片（查看态 ⇄ 编辑态）      相册落库
    修复：weight 挂到 `EditorialEntrance(modifier=…)` 本身；首页网格/引导态/loading 同型错误一并修。
    （教训入根 LESSONS.md）
 
+**收尾修正 2（2026-09-29，Leo 真机三验「画质相当之差，显影完还是预览图画质」）**：
+画册页图此前走 `loadThumbnail`——它返回的是系统存的低质缩略（常见 512px JPEG），上千像素卡面与
+全屏大图全部发糊。改双路解码：网格继续 256 缩略（loadThumbnail 够用）；画册/导出改
+`ImageDecoder` 解码**原图并降采样到 1440 长边**，强制 `ALLOCATOR_SOFTWARE`（导出端
+android.graphics.Canvas 画不了硬件位图）；缓存分两层（小图 24 条 / 页图 6 条防内存超标）。
+导出画质同步受益（导出用的就是页图位图）。版本 0.5.2。
+
 ## 影响范围
 
 - 代码：`ui/pick/PickScreen.kt`（重写为网格）、`ui/pick/AlbumPagerScreen.kt`（新）、
