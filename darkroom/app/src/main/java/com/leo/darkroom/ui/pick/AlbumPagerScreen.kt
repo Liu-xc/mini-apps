@@ -11,7 +11,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
+import com.leo.darkroom.card.FrameStyle
 import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpeed
 import com.leo.darkroom.ui.pageInsets
@@ -128,53 +132,6 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
         EditorialEntrance(delayMs = 48, enabled = true) {
             Column {
                 Spacer(Modifier.height(10.dp))
-                AnimatedVisibility(
-                    visible = panelOpen,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut(),
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                        color = colors.surface,
-                        border = BorderStroke(1.dp, colors.hairline),
-                    ) {
-                        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                            Text("动画模式", style = MaterialTheme.typography.titleSmall, color = colors.ink)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                DevelopMode.entries.forEach { mode ->
-                                    ModeChip(
-                                        mode = mode,
-                                        selected = state.mode == mode,
-                                        onClick = { vm.setMode(mode) },
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            Text("动画速度", style = MaterialTheme.typography.titleSmall, color = colors.ink)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                DevelopSpeed.entries.forEach { speed ->
-                                    SelectChip(
-                                        label = "${speed.label} ${speed.durationMs / 1000}s",
-                                        selected = state.speed == speed,
-                                        onClick = { vm.setSpeed(speed) },
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(4.dp))
-                        }
-                    }
-                }
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -230,6 +187,83 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
         }
     }
 
+    // it-012 收尾 6：配置面板=相机式浮层——半透明蒙层盖在照片上，点蒙层收起
+    if (panelOpen) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { panelOpen = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(androidx.compose.ui.graphics.Color(0x59000000))
+                    .clickable { panelOpen = false },
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 108.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = colors.surface.copy(alpha = 0.96f),
+                    border = BorderStroke(1.dp, colors.hairline),
+                ) {
+                    Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                        Text("动画模式", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            DevelopMode.entries.forEach { mode ->
+                                ModeChip(
+                                    mode = mode,
+                                    selected = state.mode == mode,
+                                    onClick = { vm.setMode(mode) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                        if (state.mode == DevelopMode.POLAROID) {
+                            Spacer(Modifier.height(12.dp))
+                            Text("相纸", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                com.leo.darkroom.card.FrameStyle.entries.forEach { frame ->
+                                    SelectChip(
+                                        label = frame.label,
+                                        selected = state.spec.frame == frame,
+                                        onClick = { vm.setFrame(frame) },
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Text("动画速度", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            DevelopSpeed.entries.forEach { speed ->
+                                SelectChip(
+                                    label = "${speed.label} ${speed.durationMs / 1000}s",
+                                    selected = state.speed == speed,
+                                    onClick = { vm.setSpeed(speed) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 大图查看器（it-012 收尾 3）：放大的是整张成品卡（相纸/日期/脚注全套），不是裸照片
     val viewerCardArt by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(
         null, viewerPhoto, state.spec, state.mode, state.photoLook,
@@ -272,8 +306,8 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         vm.exportImage(share = false)
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.ink,
-                        contentColor = colors.paper,
+                        containerColor = androidx.compose.ui.graphics.Color(0xFFFBFBFA),
+                        contentColor = androidx.compose.ui.graphics.Color(0xFF1B1B1B),
                     ),
                 ) { Text("存图片") }
                 OutlinedButton(
@@ -281,7 +315,10 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         viewerOpen = false
                         vm.openGalleryResult(photo, bmp, toEdit = true)
                     },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.ink),
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xB3FBFBFA)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = androidx.compose.ui.graphics.Color(0xFFF2F2F0),
+                    ),
                 ) { Text("编辑") }
             },
         )
