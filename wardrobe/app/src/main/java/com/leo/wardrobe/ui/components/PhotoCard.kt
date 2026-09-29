@@ -38,6 +38,8 @@ fun PhotoCard(
 ) {
     if (!mat) {
         // it-058 C1：灰阶占位兜住解码期（crossfade 只管占位→成图渐入，无占位即白块闪现）
+        // it-071：error 同占位——文件缺失/解码失败落灰底（imageFileOf 已不再主线程 stat）
+        val fallback = ColorPainter(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(file)
@@ -45,9 +47,8 @@ fun PhotoCard(
                 .build(),
             contentDescription = contentDescription,
             contentScale = contentScale,
-            placeholder = ColorPainter(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-            ),
+            placeholder = fallback,
+            error = fallback,
             modifier = modifier.clip(RoundedCornerShape(corner)),
         )
         return
@@ -68,6 +69,9 @@ fun PhotoCard(
                     .build(),
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,
+                // it-071：失败画透明，让衬纸底色兜出（灰底会盖掉 it-011 的衬纸语义）
+                placeholder = ColorPainter(Color.Transparent),
+                error = ColorPainter(Color.Transparent),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(2.dp), // it-012：扁槽（鞋）内照片占比提升

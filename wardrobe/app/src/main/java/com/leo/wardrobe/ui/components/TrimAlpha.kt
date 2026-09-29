@@ -19,6 +19,10 @@ class TrimAlphaTransformation : Transformation {
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
         val w = input.width
         val h = input.height
+        // it-071 快速短路：9 个采样点（4 角 + 4 边中 + 中心）全部不透明 → 非透明素材，
+        // 跳过全图 IntArray 分配与行/列两趟扫描（真照片/不透明 WebP 冷解码零扫描）。
+        // 透明素材必有贴边透明区，四角/边中必有透明点 → 仍走全扫描，裁剪语义不变。
+        if (likelyOpaque(input)) return input
         val pixels = IntArray(w * h)
         input.getPixels(pixels, 0, w, 0, 0, w, h)
 
@@ -50,6 +54,20 @@ class TrimAlphaTransformation : Transformation {
         val b = if (h - 1 - bottom > marginY) bottom + 1 else h
         if (l == 0 && t == 0 && r == w && b == h) return input
         return Bitmap.createBitmap(input, l, t, r - l, b - t)
+    }
+
+    /** 9 点采样全不透明 → 大概率非透明素材。只看边缘可达的点：裁剪包围盒由贴边透明区决定。 */
+    private fun likelyOpaque(b: Bitmap): Boolean {
+        val w = b.width - 1
+        val h = b.height - 1
+        val mx = w / 2
+        val my = h / 2
+        val xs = intArrayOf(0, w, 0, w, mx, mx, 0, w, mx)
+        val ys = intArrayOf(0, 0, h, h, 0, h, my, my, my)
+        for (i in xs.indices) {
+            if (b.getPixel(xs[i], ys[i]) ushr 24 <= ALPHA_TOLERANCE) return false
+        }
+        return true
     }
 
     private companion object {

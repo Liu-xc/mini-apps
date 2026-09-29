@@ -123,6 +123,8 @@ fun WardrobeScreen(
             .filter { filterTag == null || filterTag!! in it.tags }
             .filter { categoryTab == null || it.category == categoryTab }
     }
+    // it-071：排序提出组合期（原在 LazyGrid content lambda 内每次重组重跑）
+    val sorted = remember(filtered) { filtered.sortedBy { it.category.ordinal } }
     val tags by remember(allItems, data.outfits) {
         mutableStateOf(if (personId != null) data.tagsUsedIn(personId) else emptyList())
     }
@@ -332,8 +334,7 @@ fun WardrobeScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
-                    val sorted = filtered.sortedBy { it.category.ordinal }
-                    itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
+                    itemsIndexed(sorted, key = { _, it -> it.id }, contentType = { _, _ -> "item" }) { index, item ->
                         StaggeredEntrance(index = index, animate = !entranceDone) {
                             ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
                         }

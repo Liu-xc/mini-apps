@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -50,7 +51,8 @@ fun BodyCollage(
     onEmptySlotClick: ((List<WardrobeCategory>) -> Unit)? = null,
     onItemClick: ((Item) -> Unit)? = null,
 ) {
-    val byCat = items.groupBy { it.category }
+    // it-071 P2：按 items 记忆分组，重组不再每次重跑 groupBy
+    val byCat = remember(items) { items.groupBy { it.category } }
     val hat = byCat[WardrobeCategory.HAT]?.firstOrNull()
     val torso = listOf(
         WardrobeCategory.OUTERWEAR,
@@ -199,9 +201,12 @@ private fun BodySlot(
     onClick: (() -> Unit)? = null,
 ) {
     val interaction = onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier
+    // it-071 P2：ImageRequest 记忆——它没有 equals，原每次组合新造实例会被 Coil 当新请求
+    val ctx = LocalContext.current
+    val request = remember(ctx, file) { ImageRequest.Builder(ctx).data(file).crossfade(180).build() }
     Box(modifier = modifier.clip(shape).then(interaction), contentAlignment = Alignment.Center) {
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(file).crossfade(180).build(),
+            model = request,
             contentDescription = label,
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize().padding(3.dp),

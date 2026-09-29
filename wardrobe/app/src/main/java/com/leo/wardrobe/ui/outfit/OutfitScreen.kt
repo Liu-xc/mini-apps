@@ -179,27 +179,39 @@ fun OutfitScreen(
      * it-015 修订（Leo）：组合只含「已加入的品类」——移除即清记忆、加入即写记忆，
      * 不再对未加入品类回退第一件；上身件数由用户增删决定（夏天可只 1 件短袖）。
      */
-    val activeCategories: List<WardrobeCategory> = WardrobeCategory.entries.filter {
-        slotSel.containsKey(it.name) && catItems[it].orEmpty().isNotEmpty()
+    // it-071 P1：推导全部 remember 化——savedOutfitFor/savedWishOutfitFor 是全量扫描，
+    // 原先每次体级重组（槽位翻页动画、提示条等）都重跑；键相等即跳过，结构相等级联短路。
+    val activeCategories: List<WardrobeCategory> = remember(slotSel, catItems) {
+        WardrobeCategory.entries.filter {
+            slotSel.containsKey(it.name) && catItems[it].orEmpty().isNotEmpty()
+        }
     }
-    val currentItemsFromMemory: List<Item> = activeCategories.mapNotNull { c ->
-        val items = catItems[c].orEmpty()
-        items.firstOrNull { it.id == slotSel[c.name] } ?: items.firstOrNull()
+    val currentItemsFromMemory: List<Item> = remember(activeCategories, slotSel, catItems) {
+        activeCategories.mapNotNull { c ->
+            val items = catItems[c].orEmpty()
+            items.firstOrNull { it.id == slotSel[c.name] } ?: items.firstOrNull()
+        }
     }
-    val currentIdsFromMemory = currentItemsFromMemory.map { it.id }
+    val currentIdsFromMemory = remember(currentItemsFromMemory) { currentItemsFromMemory.map { it.id } }
     // it-019：当前组合中的愿望单品（剥前缀即真实 WishItem id）
-    val currentWishIds = currentItemsFromMemory
-        .filter { it.isWishSlot }
-        .map { it.id.removePrefix(WISH_SLOT_PREFIX) }
-    val hasWishInMix = currentWishIds.isNotEmpty()
-    val savedOutfit = if (personId != null && !hasWishInMix) vm.savedOutfitFor(currentIdsFromMemory) else null
-    val savedWishOutfit: WishOutfit? = if (personId != null && hasWishInMix) {
-        vm.savedWishOutfitFor(
-            currentItemsFromMemory.filter { !it.isWishSlot }.map { it.id },
-            currentWishIds,
-        )
-    } else {
-        null
+    val currentWishIds = remember(currentItemsFromMemory) {
+        currentItemsFromMemory
+            .filter { it.isWishSlot }
+            .map { it.id.removePrefix(WISH_SLOT_PREFIX) }
+    }
+    val hasWishInMix = remember(currentWishIds) { currentWishIds.isNotEmpty() }
+    val savedOutfit = remember(currentIdsFromMemory, hasWishInMix, personId) {
+        if (personId != null && !hasWishInMix) vm.savedOutfitFor(currentIdsFromMemory) else null
+    }
+    val savedWishOutfit: WishOutfit? = remember(currentItemsFromMemory, currentWishIds, hasWishInMix, personId) {
+        if (personId != null && hasWishInMix) {
+            vm.savedWishOutfitFor(
+                currentItemsFromMemory.filter { !it.isWishSlot }.map { it.id },
+                currentWishIds,
+            )
+        } else {
+            null
+        }
     }
 
     // it-036（走查 P2）：混入心愿开关开启、但当前槽位组合里没有任何愿望件——

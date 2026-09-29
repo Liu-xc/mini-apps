@@ -46,7 +46,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             data.currentPersonOrFirst(savedId)?.let { data.itemsOf(it.id) }.orEmpty()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun imageFileOf(name: String): File? = container.imageStore.file(name)?.takeIf { it.exists() }
+    /** it-071：不再主线程 stat——文件缺失交给 Coil 兜底（与 AppViewModel.imageFileOf 同口径）。 */
+    fun imageFileOf(name: String): File? = container.imageStore.file(name)
 
     /** it-050：当前打开的会话由 W13 路由提供；目录负责历史列表与旧会话迁移。 */
     private var sessionId = ""

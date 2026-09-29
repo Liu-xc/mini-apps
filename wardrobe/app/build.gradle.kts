@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    // it-071 P3 / ADR-028：release 开 R8 + 基线 profile 链路
+    id("androidx.baselineprofile")
 }
 
 // it-067 / ADR-027：版本号自动生成——VERSION_BASE.<wardrobe 提交数>，脏树加 -dirty
@@ -49,7 +51,11 @@ android {
         // it-016：release 只保留真机 ABI，onnxruntime .so 体积减半（debug 保留 x86_64 供模拟器评审）
         release {
             ndk { abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a")) }
-            isMinifyEnabled = false
+            // it-071 P3 / ADR-028：R8 代码+资源收缩首开；个人分发用 debug keystore 签名
+            // （与既有 debug 装机同签名可直接覆盖升级，不新增密钥管理面；不可上架 Google Play）
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -110,6 +116,11 @@ dependencies {
     implementation(libs.lottie.compose)
     // 本地「好久没穿」提醒（it-018 阶段C，ADR-019）
     implementation(libs.androidx.work.runtime.ktx)
+
+    // it-071 P3 / ADR-028：安装时读取 baseline profile（AOT 编译热路径）
+    implementation(libs.androidx.profileinstaller)
+    // 基线 profile 产出（:baselineprofile 场景生成，merge 进 release 资产）
+    baselineProfile(project(":baselineprofile"))
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

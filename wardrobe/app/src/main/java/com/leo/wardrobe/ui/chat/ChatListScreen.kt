@@ -112,6 +112,8 @@ private fun SessionCard(session: ChatSessionSummary, onClick: () -> Unit) {
     val ec = editorialColors()
     // it-062：预览走 Markdown 解析口径扁平化，不裸露 ##/- 等标记（旧索引数据同样干净）
     val preview = remember(session.preview) { markdownPreviewText(session.preview) }
+    // it-071 P2：SimpleDateFormat 每次组合新建有分配开销，记忆复用（同 OutfitThumb 先例）
+    val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()) }
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = ec.surface),
@@ -122,7 +124,7 @@ private fun SessionCard(session: ChatSessionSummary, onClick: () -> Unit) {
             Text(preview.ifBlank { "还没有消息" }, style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
                 // it-069 修4：并入全站 yyyy/MM/dd 日期口径（it-036 C12），保留时分
-                SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(session.updatedAt)),
+                dateFormat.format(Date(session.updatedAt)),
                 style = MaterialTheme.typography.labelSmall,
                 color = ec.inkFaint,
             )

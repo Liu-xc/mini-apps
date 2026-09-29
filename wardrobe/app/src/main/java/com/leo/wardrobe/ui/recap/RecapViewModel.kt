@@ -97,7 +97,8 @@ class RecapViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun imageFileOf(name: String): File? = container.imageStore.file(name)?.takeIf { it.exists() }
+    /** it-071：不再主线程 stat——文件缺失交给 Coil 兜底（与 AppViewModel.imageFileOf 同口径）。 */
+    fun imageFileOf(name: String): File? = container.imageStore.file(name)
 
     /** 存相册（Pictures/Wardrobe，复用导出门面） */
     fun saveRecapImage(file: File): Boolean = container.share.saveToGallery(file)

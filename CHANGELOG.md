@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **feat(wardrobe)**: it-071 全应用滚动性能优化——P0 W3 直修（imageFileOf 组合期 `File.exists()` 归零、TrimAlpha 不透明快速短路、网格 sorted hoist + contentType）；P1 结构（记录页单容器 LazyGrid 真懒化、CountUp/ScrollFade 读点入 draw、OutfitScreen 屏级派生 remember、心愿行删行级阴影）；P2 组合期清理；P3 release 开 R8+资源收缩 + debug-keystore 签名 + 基线 profile 链路（ADR-028，25,098 条规则）。同协议对照：Slow UI thread 68→29（−57%）、p95 150→93~125、UI 线程相位 8.2→0.8ms；模拟器 janky% 仍 ~95%（软件渲染 GPU 顶上限），真机复验为最终判据。91 测绿 + R8 冒烟全页通过。详 [it-071](wardrobe/specs/iterations/it-071-scroll-performance.md)。
+
 - **feat(wardrobe)**: it-070 穿搭视图切换 · 主题设置 · 右滑归入——W7「成品图 / 单品布局」两段切换（有成品图才显示、默认成品图、会话内记住，US-48 编辑交互不变）；W11 新增「外观」卡三选一（跟随系统/亮色/暗色，`theme_mode` 持久化即点即生效，`LocalAppDarkTheme` 收敛 recap/长图局部取色）；carddeck 右滑改两段式归入（拖拽 1:1 单调跟手 + smoothstep 归入、上一张盖过顶卡，废止旧 crossfade 倒车）并修冷启动首滑不提交（三重门读进 snapshotFlow 计算块，防观察者饿死）。91 测绿 + eats 构建绿。详 [it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md)。
 
 - **fix(darkroom)**: it-014 拍立得卡面外缘 hairline 立边——浅纸卡与纸底仅差 ~7/255 边界不可见，全模式卡外缘统一 1px hairline（`palette.hairline`、cardWidth×0.0018，预览/导出两端同参数；深色卡既有外框不变），亮/深主题与查看器实测到位。版本 0.5.13。详 [it-014](darkroom/specs/iterations/it-014-polaroid-card-hairline.md)。

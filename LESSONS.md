@@ -49,6 +49,8 @@
 - **`snapshotFlow` 只对「计算块内读过的状态」的变更重触发**——门/条件必须一并读进块内（如 `Triple(offset, gateA, gateB)`），在 collect 体外读则「终值恰在门关闭期写入、门随后翻开」永远唤不醒流，观察者饿死（冷启动首滑提交丢失实测，直到二次按下才被兜底路径补上）。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
 - **「跟手段 1:1 + 终点在起点另一侧」的归入动画必须两段式**——单段插值跟随手指再收敛到左侧终点必中途倒车（插值导数中途变号）；先跟至分界点 `min(阈值, 0.55·归入距离)` 再 smoothstep 归入，单调无回拉。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
 - **别把 `animator_duration_scale` 当 Compose 动画的减速旋钮**——它只缩放 ValueAnimator，Compose 的 animateTo/spring 不吃；排查「动画慢/提交延迟」先排除这个假因（本仓曾据此误判），慢放验证走录屏逐帧或程序化插桩。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
+- **懒网格别钉「固定高度 + `userScrollEnabled=false` 再套外层 `verticalScroll`」**——视口被撑成全数据集，懒加载整页失效、所有卡一次性组合常驻，页面滚动在拖一棵已全量组合的树；改单容器 LazyGrid，页头做 span 项。· [wardrobe it-071](wardrobe/specs/iterations/it-071-scroll-performance.md) · 2026-09
+- **`androidx.baselineprofile` 插件会自建 benchmarkRelease/nonMinifiedRelease 测试变体（debug 默认禁用，不存在 plain `release`）**——在测试模块手写 `buildType=="release"` 过滤会把它们全关，生成任务秒级空跑且只报 “No baseline profile rules were generated”；变体交给插件，别手筛。· [wardrobe it-071](wardrobe/specs/iterations/it-071-scroll-performance.md) · 2026-09
 
 ### Agent 协作与工具
 
@@ -58,4 +60,5 @@
 - **DataStore/Flow 首读可能晚于用户点击，回填旧快照会把刚选的值冲回去**——即时选择先写会话态，启动回填只做一次且「用户已选则不回填」；常驻 `collect` 更是持续回冲源。· [darkroom it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md) · 2026-09
 - **`cmd uimode night` 切了但 UI 没变：先查 `mGlobalConfiguration` 是否含 `night`，再 force-stop 冷启应用**——配置变更偶发不重建 Activity，热重启下 `isSystemInDarkTheme` 会拿旧值；冷启后仍未变才去查应用主题链路。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09
 - **screencap 可能连续返回同一旧合成帧——「连拍取第二张」对 screencap 不成立，判新旧看帧内状态栏时钟与当前时间是否一致**；定界面状态以 `uiautomator dump`（content-desc 即状态证据）与 `dumpsys window | grep mCurrentFocus`（焦点归属）为判据，截图只作辅证。**旧帧最常见根因是 AVD 熄屏**（帧冻结在熄屏时刻）——取帧前 `svc power stayon true` + `KEYCODE_WAKEUP`。· [wardrobe it-066](wardrobe/specs/iterations/it-066-export-loop-closure.md) · 2026-09
+- **判 Gradle 绿不绿别看管道退出码**——`./gradlew … | tail` 返回的是 `tail` 的 0，BUILD FAILED 照样 0 且旧 test-results 会伪装成「全绿」；用 `${pipestatus[1]}` 或 grep `BUILD SUCCESSFUL` 作判据。· [wardrobe it-071](wardrobe/specs/iterations/it-071-scroll-performance.md) · 2026-09
 - **验证 200ms 级动效：screenrecord 帧率不稳（2–4fps）拍不到中间态——先把系统动画缩放调 5× 慢放再录**，转场拉长到 1s+ 后低帧率也能抓 3–5 帧；判读不靠肉眼靠像素（纹理块轨迹判别共享元素 vs 整页 fade：前者有「两态之外」的中间位置/尺寸帧），视觉模型通道失效时的兜底。· [wardrobe it-058](wardrobe/specs/iterations/it-058-motion-polish.md) · 2026-09

@@ -135,10 +135,11 @@ fun WishlistScreen(
     var deleteOutfitTarget by remember { mutableStateOf<WishOutfit?>(null) }
 
     val personId = person?.id
-    val wishes = if (personId != null) data.wishItemsOf(personId) else emptyList()
-    val wishOutfits = if (personId != null) data.wishOutfitsOf(personId) else emptyList()
-    val unpurchased = wishes.filter { !it.purchased }
-    val purchased = wishes.filter { it.purchased }
+    // it-071 P2：派生 remember 化——wishItemsOf/wishOutfitsOf 是全量扫描，原先每次重组重跑
+    val wishes = remember(data, personId) { if (personId != null) data.wishItemsOf(personId) else emptyList() }
+    val wishOutfits = remember(data, personId) { if (personId != null) data.wishOutfitsOf(personId) else emptyList() }
+    val unpurchased = remember(wishes) { wishes.filter { !it.purchased } }
+    val purchased = remember(wishes) { wishes.filter { it.purchased } }
 
     Scaffold(
         topBar = {
@@ -311,8 +312,11 @@ private fun WishItemsSection(
 ) {
     var categoryFilter by remember { mutableStateOf<WardrobeCategory?>(null) }
     var purchasedOpen by remember { mutableStateOf(false) }
-    val filtered = if (categoryFilter == null) unpurchased else unpurchased.filter { it.category == categoryFilter }
-    val grouped = filtered.groupBy { it.category }
+    // it-071 P2：筛选/分组 remember 化
+    val filtered = remember(unpurchased, categoryFilter) {
+        if (categoryFilter == null) unpurchased else unpurchased.filter { it.category == categoryFilter }
+    }
+    val grouped = remember(filtered) { filtered.groupBy { it.category } }
 
     if (unpurchased.isEmpty() && purchased.isEmpty()) {
         EmptyState(
@@ -416,7 +420,8 @@ private fun WishRow(wish: WishItem, fileOf: (String) -> File?, onClick: () -> Un
         shape = MaterialTheme.shapes.large,
         color = editorialColors().surface,
         tonalElevation = 1.dp,
-        shadowElevation = 2.dp,
+        // it-071 P1：列表行去 shadowElevation——每行一层软阴影在快滑时逐帧重绘成本高，
+        // DESIGN.md 阴影「极轻或无」基线下 tonal 1dp 已足够分层
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.large)
@@ -547,7 +552,7 @@ private fun WishOutfitsSection(
                 shape = MaterialTheme.shapes.large,
                 color = editorialColors().surface,
                 tonalElevation = 1.dp,
-                shadowElevation = 2.dp,
+                // it-071 P1：同 WishRow——列表行去 shadow，tonal 分层保留
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.large)
@@ -561,10 +566,11 @@ private fun WishOutfitsSection(
                             .background(editorialColors().accent.copy(alpha = 0.10f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        val preview = w.previewImages.firstOrNull()?.let { vm.imageFileOf(it.file) }
-                        if (preview != null) {
+                        // it-071：按「有无预览条目」分支（文件存在性交由 Coil 兜底，不再主线程 stat）
+                        val previewEntry = w.previewImages.firstOrNull()
+                        if (previewEntry != null) {
                             AsyncImage(
-                                model = preview,
+                                model = vm.imageFileOf(previewEntry.file),
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.size(72.dp),
@@ -984,8 +990,9 @@ private fun WishOutfitDetailSheet(
     onDismiss: () -> Unit,
 ) {
     val data by vm.data.collectAsState()
-    val ownedMembers = wishOutfit.itemIds.mapNotNull { data.itemById(it) }
-    val wishMembers = wishOutfit.wishItemIds.mapNotNull { data.wishItemById(it) }
+    // it-071 P2：成员映射 remember 化
+    val ownedMembers = remember(wishOutfit, data) { wishOutfit.itemIds.mapNotNull { data.itemById(it) } }
+    val wishMembers = remember(wishOutfit, data) { wishOutfit.wishItemIds.mapNotNull { data.wishItemById(it) } }
     val readyToPromote = wishMembers.isEmpty() && ownedMembers.isNotEmpty()
     val previewPicker = rememberPhotoPicker { uri -> if (uri != null) vm.importPreviewImage(wishOutfit.id, uri) }
 
@@ -1068,17 +1075,15 @@ private fun WishOutfitDetailSheet(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     wishOutfit.previewImages.forEach { img ->
-                        val f = vm.imageFileOf(img.file)
-                        if (f != null) {
-                            AsyncImage(
-                                model = f,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-                            )
-                        }
+                        // it-071：文件存在性交由 Coil 兜底，不再主线程 stat 后分支
+                        AsyncImage(
+                            model = vm.imageFileOf(img.file),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                        )
                     }
                 }
             }

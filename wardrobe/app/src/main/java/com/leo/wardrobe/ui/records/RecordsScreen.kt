@@ -16,12 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import com.leo.wardrobe.ui.components.StaggeredEntrance
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material3.Icon
@@ -29,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,196 +81,238 @@ fun RecordsScreen(
     val tags = remember(personId, data) {
         if (personId != null) data.tagsUsedIn(personId) else emptyList()
     }
+    // it-047 #5：真实抽取后才 Confirm（size≤1 直接返回不算抽中落定；
+    // null=并发幂等门拦截，避免双震）；isDrawing 挡双击窗口内第二次点击
+    val startRandom: () -> Unit = {
+        val c = deck
+        if (c != null && !c.isDrawing) {
+            scope.launch {
+                val drew = c.drawRandom()
+                if (drew != null && c.size > 1) haptics.confirm()
+            }
+        }
+    }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 6.dp),
-        ) {
-            Text(
-                "穿搭记录 · ${person?.name ?: ""}",
-                style = MaterialTheme.typography.headlineMedium,
-                color = editorialColors().ink,
-                modifier = Modifier.weight(1f),
-            )
-            RandomButton(
+    Column(Modifier.fillMaxSize()) {
+        // it-071 P1：原「外层 verticalScroll + 固定高度不可滚网格」反模式废除——
+        // 网格视口曾被钉成全数据集高度，懒加载失效（全部卡一次性组合常驻）。
+        // 现网格自身即页面滚动容器，卡组/筛选行等页头以 span-2 item 进网格。
+        if (outfits.isEmpty() || filtered.isEmpty()) {
+            RecordsTopBar(
+                name = person?.name ?: "",
                 deck = deck,
                 hasItems = filtered.isNotEmpty(),
-                onClick = {
-                    val c = deck ?: return@RandomButton
-                    if (c.isDrawing) return@RandomButton // 双击窗口内第二次点击：不再起新抽取
-                    scope.launch {
-                        val drew = c.drawRandom()
-                        // it-047 #5：真实抽取后才 Confirm（size≤1 直接返回不算抽中落定；
-                        // null=并发幂等门拦截，避免双震）
-                        if (drew != null && c.size > 1) haptics.confirm()
+                // it-045：顶栏下缘→内容 20dp（标题行底 6 + 空态/筛选顶 14）
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 6.dp),
+                onRandom = startRandom,
+            )
+            if (tags.isNotEmpty()) {
+                FilterChipsRow(
+                    options = tags,
+                    selected = filterTag,
+                    onSelect = { filterTag = it },
+                    fadeAtStart = true,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp),
+                )
+            }
+            if (outfits.isEmpty()) {
+                EmptyState(
+                    title = "还没有穿搭记录",
+                    hint = "在搭配页「保存这套」，或生成效果图后「录入成品图」，就会出现在这里",
+                    // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
+                    actionLabel = "去搭配一套",
+                    onAction = onGoOutfit,
+                )
+            } else {
+                EmptyState(
+                    title = "该标签下没有穿搭",
+                    hint = "换一个标签，或清除筛选",
+                    // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
+                    actionLabel = "清除筛选",
+                    onAction = { filterTag = null },
+                )
+            }
+        } else {
+            // it-028：首屏瀑布入场（specs/05 #7），仅首进播放（DESIGN.md §3 预算）
+            var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(900)
+                entranceDone = true
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                // 原页头与网格的纵向节奏折算（arrangement 16 + 各 item top）：
+                // 标题→筛选 20 / 筛选→卡组 20 / 卡组→计数 18；首行格 +6 属折算余量（验证记录注明）
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 30.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    RecordsTopBar(
+                        name = person?.name ?: "",
+                        deck = deck,
+                        hasItems = filtered.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        onRandom = startRandom,
+                    )
+                }
+                if (tags.isNotEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        FilterChipsRow(
+                            options = tags,
+                            selected = filterTag,
+                            onSelect = { filterTag = it },
+                            // it-065 修3：无行尾固定钮，起点即给「右侧还有内容」轻提示
+                            fadeAtStart = true,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
                     }
-                },
-            )
-        }
+                }
 
-        if (tags.isNotEmpty()) {
-            FilterChipsRow(
-                options = tags,
-                selected = filterTag,
-                onSelect = { filterTag = it },
-                // it-065 修3：无行尾固定钮，起点即给「右侧还有内容」轻提示（W3 因筛选钮维持起点干净）
-                fadeAtStart = true,
-                // it-045：顶栏下缘→内容 20dp 全站节奏（标题行底 6 + 14）
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp),
-            )
-        }
-
-        when {
-            outfits.isEmpty() -> EmptyState(
-                title = "还没有穿搭记录",
-                hint = "在搭配页「保存这套」，或生成效果图后「录入成品图」，就会出现在这里",
-                // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
-                actionLabel = "去搭配一套",
-                onAction = onGoOutfit,
-            )
-            filtered.isEmpty() -> EmptyState(
-                title = "该标签下没有穿搭",
-                hint = "换一个标签，或清除筛选",
-                // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
-                actionLabel = "清除筛选",
-                onAction = { filterTag = null },
-            )
-            else -> {
                 // ---- 卡组：快速浏览 + 随机翻（it-007/it-010；it-011 增 ‹n/m› 卡序） ----
                 // it-031 C6：翻页器移出拼贴区放卡下方居中（审查 P0：胶囊浮层压住帽行）；
                 // it-033：胶囊整体保持外置居中不回退，但拆左右两半边独立翻页热区
                 // ‹=上一张、›=下一张，各 48×48dp（≥44dp 基线），中心 n/m 纯展示
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        // it-064 修2b：top 14→20——卡组不可裁剪（it-048 甩卡真实飞行），
-                        // 与筛选行之间留缓冲带，飞行溢出不再直接压住 tag 行
-                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
-                ) {
-                    // it-048：不得加 clipToBounds——甩卡是真实飞行（it-047 全路径），裁剪会把
-                    // 卡片在容器边距处切掉（it-031 旧库时代的包裹已随自研内核删除）
-                    Box(
-                        Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            // 无筛选行时标题与卡组原间距 26=6+20，折算 top=10；有筛选行 20 → top=4
+                            .padding(top = if (tags.isEmpty()) 10.dp else 4.dp, bottom = 8.dp),
                     ) {
-                        val controller = CardDeck(
-                            items = filtered,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                // it-065 修1（覆盖 it-064 修2b② 的 start 内缩）：层叠几何
-                                // base(k)=(s·(V-1-k), -s·(V-1-k))——顶卡比深层卡右偏 28dp（V=3×14dp）。
-                                // it-064 只收 start 等于收窄卡宽、不挪右缘（内容右缘恒=页边距+style 内衬），
-                                // 顶卡右缘恒溢出屏 2dp、停驻上一张贴屏左缘；改为 end 22dp 吸收右偏：
-                                // 静止层叠恰好落进 20dp 页面栅格（深层左缘=页左边距、顶卡右缘=页右边距，
-                                // 居中且两侧对称可见安全边距），停驻上一张右缘=屏 −22dp 恒在屏外
-                                //（park 右缘 = −end 内缩，几何恒等式）。top 8dp + 容器 top 20dp ≥ 上探
-                                // 28dp，静止卡组不盖筛选行；容器不可裁剪（it-048），甩卡真实飞出不受影响。
-                                .padding(end = 22.dp, top = 8.dp)
-                                // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
-                                .height(368.dp),
-                            // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
-                            // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
-                        ) { outfit ->
-                            OutfitDeckCard(vm, outfit) {
-                                // it-047 #8③：抽取进行中卡面点击忽略
-                                if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
-                            }
-                        }
-                        deck = controller
-                    }
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        androidx.compose.material3.Surface(
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 3.dp,
+                        // it-048：不得加 clipToBounds——甩卡是真实飞行（it-047 全路径），裁剪会把
+                        // 卡片在容器边距处切掉（it-031 旧库时代的包裹已随自研内核删除）
+                        Box(
+                            Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // it-033：左半边 = 上一张（48×48dp 热区）
-                                Box(
-                                    Modifier
-                                        .size(48.dp)
-                                        .clickable { deck?.previous() }
-                                        .semantics { contentDescription = "上一张" },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "‹",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = editorialColors().ink,
-                                    )
+                            val controller = CardDeck(
+                                items = filtered,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    // it-065 修1（覆盖 it-064 修2b② 的 start 内缩）：层叠几何
+                                    // base(k)=(s·(V-1-k), -s·(V-1-k))——顶卡比深层卡右偏 28dp（V=3×14dp）。
+                                    // it-064 只收 start 等于收窄卡宽、不挪右缘（内容右缘恒=页边距+style 内衬），
+                                    // 顶卡右缘恒溢出屏 2dp、停驻上一张贴屏左缘；改为 end 22dp 吸收右偏：
+                                    // 静止层叠恰好落进 20dp 页面栅格（深层左缘=页左边距、顶卡右缘=页右边距，
+                                    // 居中且两侧对称可见安全边距），停驻上一张右缘=屏 −22dp 恒在屏外
+                                    //（park 右缘 = −end 内缩，几何恒等式）。top 8dp + 容器 top 20dp ≥ 上探
+                                    // 28dp，静止卡组不盖筛选行；容器不可裁剪（it-048），甩卡真实飞出不受影响。
+                                    .padding(end = 22.dp, top = 8.dp)
+                                    // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
+                                    .height(368.dp),
+                                // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
+                                // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
+                            ) { outfit ->
+                                OutfitDeckCard(vm, outfit) {
+                                    // it-047 #8③：抽取进行中卡面点击忽略
+                                    if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
                                 }
-                                DeckCounter(
-                                    deck = deck,
-                                    total = filtered.size,
-                                    modifier = Modifier.padding(horizontal = 2.dp),
-                                )
-                                // it-033：右半边 = 下一张（48×48dp 热区）
-                                Box(
-                                    Modifier
-                                        .size(48.dp)
-                                        .clickable { deck?.next() }
-                                        .semantics { contentDescription = "下一张" },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        "›",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = editorialColors().ink,
+                            }
+                            // it-071 P2：组合期写状态改 SideEffect（原直写在组合期，多一次重组）
+                            SideEffect { deck = controller }
+                        }
+                        Row(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Surface(
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 3.dp,
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // it-033：左半边 = 上一张（48×48dp 热区）
+                                    Box(
+                                        Modifier
+                                            .size(48.dp)
+                                            .clickable { deck?.previous() }
+                                            .semantics { contentDescription = "上一张" },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            "‹",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = editorialColors().ink,
+                                        )
+                                    }
+                                    DeckCounter(
+                                        deck = deck,
+                                        total = filtered.size,
+                                        modifier = Modifier.padding(horizontal = 2.dp),
                                     )
+                                    // it-033：右半边 = 下一张（48×48dp 热区）
+                                    Box(
+                                        Modifier
+                                            .size(48.dp)
+                                            .clickable { deck?.next() }
+                                            .semantics { contentDescription = "下一张" },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            "›",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = editorialColors().ink,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // ---- 全量网格（保留总览能力） ----
-                Text(
-                    "全部 ${filtered.size} 套",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = editorialColors().inkFaint,
-                    modifier = Modifier.padding(start = 20.dp, top = 10.dp, bottom = 4.dp),
-                )
-                // 卡组与网格各自滚动会打架：网格用固定高度嵌在整体滚动里
-                // it-028：首屏瀑布入场（specs/05 #7），仅首进播放（DESIGN.md §3 预算）
-                var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-                androidx.compose.runtime.LaunchedEffect(Unit) {
-                    kotlinx.coroutines.delay(900)
-                    entranceDone = true
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        "全部 ${filtered.size} 套",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = editorialColors().inkFaint,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
+                    )
                 }
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(((filtered.size + 1) / 2 * 300).dp),
-                    userScrollEnabled = false,
-                ) {
-                    itemsIndexed(filtered, key = { _, it -> it.id }) { index, outfit ->
-                        StaggeredEntrance(index = index, animate = !entranceDone) {
-                            Column(Modifier.padding(top = 4.dp)) {
-                                OutfitThumb(vm, outfit, modifier = Modifier.fillMaxWidth()) {
-                                    onOpenOutfit(outfit.id)
-                                }
-                                if (outfit.tags.isNotEmpty()) {
-                                    Row(Modifier.padding(top = 4.dp)) { TagRow(outfit.tags.take(3)) }
-                                }
+                itemsIndexed(
+                    filtered,
+                    key = { _, it -> it.id },
+                    contentType = { _, _ -> "outfit" },
+                ) { index, outfit ->
+                    StaggeredEntrance(index = index, animate = !entranceDone) {
+                        Column(Modifier.padding(top = 4.dp)) {
+                            OutfitThumb(vm, outfit, modifier = Modifier.fillMaxWidth()) {
+                                onOpenOutfit(outfit.id)
+                            }
+                            if (outfit.tags.isNotEmpty()) {
+                                Row(Modifier.padding(top = 4.dp)) { TagRow(outfit.tags.take(3)) }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+/**
+ * 标题行 + 随机一套（空态分支与网格页头共用；it-071 页头以 span-2 item 进网格）。
+ */
+@Composable
+private fun RecordsTopBar(
+    name: String,
+    deck: CardDeckController<Outfit>?,
+    hasItems: Boolean,
+    onRandom: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Text(
+            "穿搭记录 · $name",
+            style = MaterialTheme.typography.headlineMedium,
+            color = editorialColors().ink,
+            modifier = Modifier.weight(1f),
+        )
+        RandomButton(deck = deck, hasItems = hasItems, onClick = onRandom)
     }
 }
 

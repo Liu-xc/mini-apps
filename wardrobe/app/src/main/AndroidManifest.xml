@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- it-018 阶段C：好久没穿提醒（API 33+ 运行时请求；开机后周期任务恢复） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -54,5 +55,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- it-071 P3 / ADR-028：基线 profile 采集口（shell 可读；API 29+ 生效，
+             低版本平台忽略该标签，无副作用） -->
+        <profileable
+            android:shell="true"
+            tools:targetApi="29" />
     </application>
 </manifest>

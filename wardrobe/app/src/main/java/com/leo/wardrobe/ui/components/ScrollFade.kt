@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -52,21 +53,25 @@ fun FadingScrollRow(
     content: @Composable RowScope.() -> Unit,
 ) {
     val state = rememberScrollState()
-    // 读在组合期：滚动/内容变化都会重组，draw 块只负责画
+    // it-071：渐隐判定移入 draw 期（同 fadingBottomEdge 先例）——滚动/内容变化只触发重绘，
+    // 不再在组合期读 state（原注释「读在组合期」废止）。
     // it-064 修4：起点（未滚动）默认不渲染（fadeAtStart=false）；
     // it-065 修3：fadeAtStart=true 的落点起点即渲染，滑到尽头即隐（两端策略见参数注释）
-    val fadeActive = state.maxValue > 0 &&
-        state.value < state.maxValue &&
-        (fadeAtStart || state.value > 0)
+    val brush = remember(fadeColor, opaqueStop) {
+        Brush.horizontalGradient(
+            colorStops = arrayOf(0f to Color.Transparent, opaqueStop.coerceIn(0.01f, 1f) to fadeColor),
+        )
+    }
     Box(
         modifier.drawWithContent {
             drawContent()
+            val fadeActive = state.maxValue > 0 &&
+                state.value < state.maxValue &&
+                (fadeAtStart || state.value > 0)
             if (fadeActive) {
                 val w = fadeWidth.toPx()
                 drawRect(
-                    brush = Brush.horizontalGradient(
-                        colorStops = arrayOf(0f to Color.Transparent, opaqueStop.coerceIn(0.01f, 1f) to fadeColor),
-                    ),
+                    brush = brush,
                     topLeft = Offset(size.width - w, 0f),
                     size = Size(w, size.height),
                 )
@@ -102,14 +107,18 @@ fun Modifier.fadingBottomEdge(
     active: () -> Boolean,
     fadeHeight: Dp = 28.dp,
     fadeColor: Color = editorialColors().paper,
-): Modifier = this.drawWithContent {
-    drawContent()
-    if (active()) {
-        val h = fadeHeight.toPx()
-        drawRect(
-            brush = Brush.verticalGradient(listOf(Color.Transparent, fadeColor)),
-            topLeft = Offset(0f, size.height - h),
-            size = Size(size.width, h),
-        )
+): Modifier {
+    // it-071：Brush 记忆复用，不再每次重绘分配（remember 须在组合期，draw 期只读引用）
+    val brush = remember(fadeColor) { Brush.verticalGradient(listOf(Color.Transparent, fadeColor)) }
+    return this.drawWithContent {
+        drawContent()
+        if (active()) {
+            val h = fadeHeight.toPx()
+            drawRect(
+                brush = brush,
+                topLeft = Offset(0f, size.height - h),
+                size = Size(size.width, h),
+            )
+        }
     }
 }

@@ -26,6 +26,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "wardrobe"
 include(":app")
+// it-071 P3 / ADR-028：基线 profile 生成模块（Macrobenchmark 场景 → 回灌 :app）
+include(":baselineprofile")
 
 // 公共本地存储 SDK（composite build，见 libs/store/specs/00-architecture.md）
 includeBuild("../libs/store")
