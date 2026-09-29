@@ -315,9 +315,10 @@ fun WardrobeScreen(
                         // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
                         .fadingBottomEdge(active = { gridState.canScrollForward }),
                     state = gridState,
-                    // it-063 bottom 12→96（FAB 避让）；it-064 修3：96→76——FAB 仅占右下角，
-                    // 全宽 96 的空白带过度（Leo：屏幕利用率不高），收到 FAB 上缘 +4dp
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 76.dp),
+                    // it-063 bottom 12→96（FAB 避让）；it-064 修3②：96→76 仍留大段空白
+                    // （Leo 复验未解决）——再收到 28dp：末卡几乎贴底，FAB 按 Material 浮层
+                    // 语义悬浮于内容上方（可遮末卡右下角，利用率优先）
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 28.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -336,7 +337,8 @@ fun WardrobeScreen(
                 onClick = { onEditItem(null) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = 16.dp),
+                    // it-064 修3②：16→12dp 更贴导航栏，压缩 FAB 下方的空白带
+                    .padding(end = 20.dp, bottom = 12.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ) {

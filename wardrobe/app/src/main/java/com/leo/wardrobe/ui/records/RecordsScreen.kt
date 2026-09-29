@@ -152,6 +152,11 @@ fun RecordsScreen(
                             items = filtered,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                // it-064 修2b②：层叠几何 base(k)=(s·(V-1-k), -s·(V-1-k))——
+                                // 顶卡向右上各偏 V-1=2 层 ×14dp=28dp（右贴屏边、上遮筛选行的根因）。
+                                // 容器不可裁剪（it-048），改为内缩起点：start 28dp 把整组左移抵消右偏、
+                                // top 8dp + 容器 top 20dp ≥ 上探 28dp，层叠保留、越界归零
+                                .padding(start = 28.dp, top = 8.dp)
                                 // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
                                 .height(368.dp),
                             // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /

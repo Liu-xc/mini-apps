@@ -33,6 +33,12 @@
 - **修 3（W3 米色空白）**：网格 contentPadding bottom 96→76dp（FAB 仅占右下角，全宽 96 空白带过度）。
 - **修 4（W3 筛选旁白遮挡）**：`FadingScrollRow` 的 fadeActive 增加 `value > 0`——起点（默认未滚）不渲染渐隐带，滑离起点才提示、滑到尽头即隐（两端干净）。
 
+### 修订二 · 问题 2/3 复修（Leo 复验未解决，2026-09-29）
+
+- **修2b②（真根因）**：it-064 首修的 6dp 缓冲不够——层叠几何实为 `base(k)=(s·(V-1-k), -s·(V-1-k))`（`libs/carddeck`）：顶卡向右且向上各偏 (V-1)×14dp=28dp，右偏越容器缘即「贴屏边」、上偏越容器顶即「遮筛选 tag」（首修只加了 6dp 自然无效）。修法：CardDeck modifier 内缩起点（`padding(start=28.dp, top=8.dp)` + 容器 top 20dp ≥ 上探 28dp）——层叠观感保留、越界归零。AVD 实测（视觉评审）：筛选行完整无遮挡、卡左右各留 20dp 对称、层叠不出屏。
+- **修3②**：76dp 仍留大段空白——再收到 **28dp**（末卡几乎贴底，FAB 按 Material 浮层语义悬浮于内容上、可遮末卡右下角：利用率优先，推翻 it-063「整卡脱离 FAB」的保守决策）；FAB bottom 16→12dp 压缩其下空白。
+- 构建/单测：89 项全绿。
+
 ## 验证记录
 
 - `./gradlew :app:testDebugUnitTest :app:assembleDebug -PdemoDefault=true`：**BUILD SUCCESSFUL，89 项单测全绿**。
