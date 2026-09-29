@@ -28,6 +28,8 @@
 - **Compose 的 `Modifier.weight` 只对直接父级 Column/Row 生效**——写在自定义组件的 content lambda 里能编译（外层作用域词法解析）但布局上无效，且失败模式阴险：不带 weight 的兄弟（如 pager）会吃满剩余高度、把底栏顶出屏幕，观感像「控件消失」——weight 一律挂到组件自身的 modifier 参数上，逐屏核对底栏可见性。· [darkroom it-012](darkroom/specs/iterations/it-012-album-first-ia.md) · 2026-09
 - **每应用独占 AVD（wardrobe_* / darkroom_*），设备命令一律走 `tools/emu.sh` 或 `adb -s`，序列号按 AVD 名解析不硬编码**——裸 `adb`/`gradlew installDebug` 会打到所有在线设备，并行会话互抢前台、串包、截图混对方画面；`emulator-端口` 随启停漂移只是显示名，绑定看 AVD 名。· [specs/it-002](specs/iterations/it-002-emu-device-split.md) · 2026-09
 - **走查采集前先显式复位持久化偏好并核对选中态（uiautomator dump 的 note/标签即证据）**——上一会话留下的偏好（显影模式等）会让整轮连拍全程拍错对象；另：夜模式切换后等 Activity 重建完再操作，重建风暴+连拍曾把 App 打成 ANR，冻结帧会被误读成 App 缺陷（force-stop 重走即可销项），uiautomator dump 在 ANR 后也会返回旧对话框帧。· [darkroom it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) · 2026-09
+- **成片/导出的「末态保真」必须精确归零，别留「极轻残留」**——blur 0.002×短边≈2px、黑位抬 13/255 这类「几乎看不见」的末态叠加，观感=蒙雾低清，会连环被误判成解码/缩略图问题；过程效果尽管猛，progress=1 一律数学上=单位阵。· [darkroom it-013](darkroom/specs/iterations/it-013-clean-pager-and-end-fidelity.md) · 2026-09
+- **报「画质差/像预览图」先做像素级对照定性再改码**（成片 vs 原图同管线参考：mean/std/laplacian/黑位四指标，高频合成考题图+真实照片双轨）——肉眼截图会把显影中段、截图压缩误读成质量缺陷，三轮猜因不如一组对照。· [darkroom it-013](darkroom/specs/iterations/it-013-clean-pager-and-end-fidelity.md) · 2026-09
 
 - **同一坑第二次出现就别再靠「下次记得」，直接上机制兜底**——版本号停更（ADR-021 记过 0.1.0 停更对齐）在 0.5.0 上原样复发，人肉 bump 必忘；构建版本身份改从 git 提交数自动生成，零维护。· [wardrobe it-067](wardrobe/specs/iterations/it-067-auto-versioning.md) · 2026-09
 

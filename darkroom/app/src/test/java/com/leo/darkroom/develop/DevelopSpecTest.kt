@@ -60,26 +60,45 @@ class DevelopSpecTest {
     fun `colorMatrix is 20 floats with identity-ish end state`() {
         val m = DevelopSpec.colorMatrix(DevelopSpec.visualAt(1f))
         assertEquals(20, m.size)
-        // 定影终态：饱和度=1（饱和矩阵=单位阵），亮度≈1.0、对比≈1.1、色温≈0
+        // it-013：定影终态 = 单位阵——成片=原片，色彩矩阵不给任何残留偏移
         // 行 3（alpha 行）必须是 [0,0,0,1,0]
         assertEquals(0f, m[15], 1e-6f)
         assertEquals(0f, m[16], 1e-6f)
         assertEquals(0f, m[17], 1e-6f)
         assertEquals(1f, m[18], 1e-6f)
         assertEquals(0f, m[19], 1e-6f)
-        // 对角线 = 亮度×对比×影调（染料层定影归位=1），R/B 再叠加色温残留
-        // （w=0.08 微暖是定影设计值）；影调层 = 分通道染料增益 × 高光压缩
+        // 对角线 = 亮度×对比×影调（染料层定影归位=1），R/B 再叠加色温残留——
+        // 末态全部归位后对角=1、偏移列=0
         val v = DevelopSpec.visualAt(1f)
         val g = v.brightness * v.contrast
         assertEquals(g * (1f + 0.1f * v.warmth) * v.redGain * v.highlightGain, m[0], 1e-3f)
         assertEquals(g * v.greenGain * v.highlightGain, m[6], 1e-3f)
         assertEquals(g * (1f - 0.1f * v.warmth) * v.blueGain * v.highlightGain, m[12], 1e-3f)
-        // 染料全部归位、窄动态生效（暗部被抬起）
+        // 染料全部归位、窄动态归位（it-013：末态不抬暗部、不压高光）
         assertEquals(1f, v.redGain, 1e-6f)
         assertEquals(1f, v.greenGain, 1e-6f)
         assertEquals(1f, v.blueGain, 1e-6f)
-        assertTrue(v.shadowLift > 0.01f)
-        assertTrue(v.highlightGain < 1f)
+        assertEquals(0f, v.shadowLift, 1e-6f)
+        assertEquals(1f, v.highlightGain, 1e-6f)
+        assertEquals(1f, m[0], 1e-3f)
+        assertEquals(0f, m[4], 1e-3f)
+    }
+
+    @Test
+    fun `polaroid and digital end states are original-photo fidelity`() {
+        // it-013：相纸感（柔焦/颗粒/暗角/窄动态）只属于显影过程；
+        // 末态必须与原图一致——成片画质不劣于原图是硬验收
+        listOf(DevelopMode.POLAROID, DevelopMode.DIGITAL).forEach { mode ->
+            val v = DevelopSpec.visualAt(mode, 1f)
+            assertEquals("$mode end blur", 0f, v.blurFraction, 1e-6f)
+            assertEquals("$mode end grain", 0f, v.grain, 1e-6f)
+            assertEquals("$mode end vignette", 0f, v.vignette, 1e-6f)
+            assertEquals("$mode end shadowLift", 0f, v.shadowLift, 1e-6f)
+            assertEquals("$mode end highlightGain", 1f, v.highlightGain, 1e-6f)
+            assertEquals("$mode end warmth", 0f, v.warmth, 1e-6f)
+        }
+        // 胶片保留颗粒/片基影调身份，但末态同样不允许柔焦
+        assertEquals(0f, DevelopSpec.visualAt(DevelopMode.FILM, 1f).blurFraction, 1e-6f)
     }
 
     @Test
@@ -91,9 +110,9 @@ class DevelopSpecTest {
         // 起点与终点染料均归位（不给首帧/末帧色偏）
         assertEquals(1f, DevelopSpec.visualAt(0f).redGain, 1e-6f)
         assertEquals(1f, DevelopSpec.visualAt(1f).blueGain, 1e-6f)
-        // 中途色温压向青冷，定影回正微暖
+        // 中途色温压向青冷，定影回正无偏（it-013：末态不给残留色偏）
         assertTrue(DevelopSpec.visualAt(0.70f).warmth < 0f)
-        assertTrue(DevelopSpec.visualAt(1f).warmth > 0f)
+        assertEquals(0f, DevelopSpec.visualAt(1f).warmth, 1e-6f)
     }
 
     @Test
