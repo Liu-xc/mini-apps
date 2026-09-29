@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **feat(wardrobe)**: it-063 W3 衣橱页 chrome 减负——新增入口全宽按钮改右下角 56dp 墨色 FAB（网格落到底部导航，静止位 96dp 净空）；品类行渐隐带宽 28→44dp 提前封满（被裁图标彻底消隐，不再贴「筛选」）；卡右上菜单钮 40% 黑底圆改 26dp 纸底 hairline 描边印刷点（MoreHoriz）；底部死区白块消除。亮暗两模式像素实测 + 独占 AVD 交互验证全过，it-037「CTA 不覆盖卡片」验收由本迭代替代。详 [it-063](wardrobe/specs/iterations/it-063-wardrobe-chrome-slim.md)。
+
 - **feat(wardrobe)**: it-061 鞋槽显示修复与导出表单减负——透明素材先裁 alpha 边再 Fit（鞋/帽槽内容充满格，鞋槽 2.6→2.2）；槽位 n/m 点开品类清单 BottomSheet 直选（替代循环翻页）；W6 画面设定默认折叠、五维默认全空（去记忆与对话预选），详 [it-061](wardrobe/specs/iterations/it-061-slot-display-and-export-slim.md)。
 
 - **fix(wardrobe)**: it-062 顾问两页顶栏同色 + 会话列表预览 Markdown 扁平化——W12/W13 `TopAppBar` 默认纯白 surface 落在纸面背景上形成割裂白条，改显式 `ec.paper` 同底；列表预览此前直接显示 `##`/`-`/`**` 原始标记，新增 `markdownPreviewText()`（与正文渲染同口径的扁平化，旧索引残留句中 ` - ` 折叠为 ` · `，data 层不动）。`MarkdownPreviewTextTest` 6 例 + 全量单测绿，AVD 演示模式种旧格式数据实测两页同色、预览干净。详 [it-062](wardrobe/specs/iterations/it-062-chat-topbar-and-list-preview.md)。

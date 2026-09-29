@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +29,12 @@ import com.leo.wardrobe.ui.theme.editorialColors
  * 只加边缘渐隐，不改 chips 本体形制与热区（it-033 触控基线不回退）。
  *
  * 落点：W3 品类 chips 行、W8 标签筛选条（FilterChipsRow）、W10 品类 chips 行。
+ *
+ * it-063 修1勘误：fadeColor 维持 paper——页面真实底色由 windowBackground(@color/paper)
+ * 决定（实测 #F7F7F5），paper 才是正确对齐值；缺陷真因是带宽 28dp < 品类图标 44dp，
+ * 图标前段全亮直到硬切（「一部分还透出」）。[opaqueStop]：渐隐在带宽该比例处提前
+ * 到达全遮盖（默认 1f 保持原线性；元素比带宽宽的落点（W3 44dp 图标）用 <1 提前封满，
+ * 带尾留纯底色）。
  */
 @Composable
 fun FadingScrollRow(
@@ -36,6 +43,7 @@ fun FadingScrollRow(
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
     fadeWidth: Dp = 28.dp,
     fadeColor: Color = editorialColors().paper,
+    opaqueStop: Float = 1f,
     content: @Composable RowScope.() -> Unit,
 ) {
     val state = rememberScrollState()
@@ -47,7 +55,9 @@ fun FadingScrollRow(
             if (fadeActive) {
                 val w = fadeWidth.toPx()
                 drawRect(
-                    brush = Brush.horizontalGradient(listOf(Color.Transparent, fadeColor)),
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(0f to Color.Transparent, opaqueStop.coerceIn(0.01f, 1f) to fadeColor),
+                    ),
                     topLeft = Offset(size.width - w, 0f),
                     size = Size(w, size.height),
                 )
@@ -74,6 +84,9 @@ fun FadingScrollRow(
  *
  * 判定 lambda 在 draw 期求值：滚动状态读取只触发重绘，不引发组合帧重组。
  * 落点：W1 槽位滚动列、W3 衣橱卡网格。
+ *
+ * it-063 修1勘误：fadeColor 维持 paper（页面底色由 windowBackground 决定，实测
+ * 与 paper 一致），渐隐带在无内容处与底色零差、不显带。
  */
 @Composable
 fun Modifier.fadingBottomEdge(

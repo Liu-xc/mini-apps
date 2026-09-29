@@ -39,10 +39,12 @@
 - **`LaunchedEffect(Unit)` 驱动的一次性入场动画，Activity 重建会整段重放**——进度已过半却还在「出纸」多半是它；改由状态标志（如 `UiState.ejecting`）驱动，重建后直接落位。· [darkroom it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md) · 2026-09
 - **自研/手动驱动的动画不在官方动画跟踪内**——`isAnimationRunning` 这类官方标志会恒 false，判断「在动」须自带标志（try-finally 维护）。· [wardrobe it-048](wardrobe/specs/iterations/it-048-hotfix-deck-clip-continuity.md) · 2026-09
 - **驱动 UI 的忙碌态别用 `Job.isActive` 推导**——Job 生命周期不是 Compose 状态，写 job 引用只触发一次重组，后续帧不跟随（实测图标不转）；用显式 `mutableStateOf<Boolean>` + try/finally 复位。· [wardrobe it-058](wardrobe/specs/iterations/it-058-motion-polish.md) · 2026-09
+- **遮罩/渐隐色必须以落点容器实测底色为准，别按框架默认推导**——本仓页面真底是 activity `windowBackground=@color/paper`（实测 #F7F7F5/#111110），想当然取 M3 `surface` 深色下差 10/255 成可见脏带；改色前先像素采样。· [wardrobe it-063](wardrobe/specs/iterations/it-063-wardrobe-chrome-slim.md) · 2026-09
 
 ### Agent 协作与工具
 
 - **连续取帧别每次都 `am start`**——反复启动会重建 Activity、重放一次性动画，制造「进度不动/动画卡住」的假 bug；取帧只用 `screencap`，`am start` 只在拉前台时用一次。· [darkroom it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md) · 2026-09
+- **视觉模型评审的提示词里严禁出现预期值/预期结论**——模型会把喂进去的期望（尺寸、颜色、间距）镜像复述成「实测结果」，被带偏的评审比不评更危险；评审提示词只描述要看的区域，结论以像素采样 + 中性提示词双轨为准（it-063 靠此既纠了评审、也推翻了自己的错误初判）。· [wardrobe it-063](wardrobe/specs/iterations/it-063-wardrobe-chrome-slim.md) · 2026-09
 - **浏览器/IAB 截图可能拿到旧帧**——关键状态截图连拍两次，取第二张。· [travel-rpg scenes 报告](reports/2026-09-24-travel-rpg-scenes/README.md) · 2026-09
 - **DataStore/Flow 首读可能晚于用户点击，回填旧快照会把刚选的值冲回去**——即时选择先写会话态，启动回填只做一次且「用户已选则不回填」；常驻 `collect` 更是持续回冲源。· [darkroom it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md) · 2026-09
 - **`cmd uimode night` 切了但 UI 没变：先查 `mGlobalConfiguration` 是否含 `night`，再 force-stop 冷启应用**——配置变更偶发不重建 Activity，热重启下 `isSystemInDarkTheme` 会拿旧值；冷启后仍未变才去查应用主题链路。· [wardrobe it-055](wardrobe/specs/iterations/it-055-chat-card-detail-and-export.md) · 2026-09

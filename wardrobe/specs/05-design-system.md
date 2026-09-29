@@ -117,15 +117,16 @@
 - **落点**：W3 📊/🌟 = 48dp、卡 ⋮ = 48dp；W4 品类 chips = 48dp、行距 ≥8dp；W5 标签 chips = 44dp；W8 分页胶囊左右半边 = 48dp；评论删除 × = 48dp；W1 名称条 ✕ = 28×44dp（窄格名称列预算优先，高度达标即可）。
 - 与「形状与间距」的 it-028 44dp 条目一脉相承：it-033 把推荐值提到 48dp；W3 卡 ⋮ 自此按 48dp 落地，DESIGN.md §2.5 给媒体卡悬浮角标的 36dp 例外档对它不再适用（例外档保留给其余仍受版面约束的媒体卡角标）。截断基线（名称先缩字号→两行→省略、卡片标题 maxLines/minLines=2）见 spec 02 的 it-033 注记。
 
-## 筛选行渐隐与分段控件（it-036）
+## 筛选行渐隐与分段控件（it-036；it-063 增补带宽规则）
 
 - **横向筛选行右缘渐隐（全站规范）**：所有横向可滑的筛选/chips 行（W3 品类、W8 标签、W10 品类）右缘叠 **24–32dp**（落地 28dp）`Brush.horizontalGradient(透明 → 页面底色 paper)` 渐隐，暗示右侧还有内容可滑；**仅内容超出一屏时显示、滑到尽头自动隐去**（一屏放下不画，避免误导）。渐隐止于滚动容器右缘，行尾固定按钮（W3「筛选」）排在渐隐之外，不叠按钮底板。共享实现：`ui/components/ScrollFade.kt :: FadingScrollRow`。只加边缘渐隐，chips 本体形制/热区归 it-033 基线管。
+- **带宽盖过被裁元素（it-063，Leo 反馈「有一部分还透出的」）**：带宽 ≥ 被裁元素宽度，否则元素前段全亮直到硬切；元素宽于默认 28dp 的落点按元素宽取带宽并配 `opaqueStop < 1` 提前封满（W3 品类图标 44dp 圆钮：`fadeWidth=44dp, opaqueStop=0.8`，带尾 ~9dp 纯底色，残影距行尾固定钮 ≥17dp 消隐）。渐隐色必须与落点容器真实底色一致——页面级 = `paper`（activity `windowBackground=@color/paper` 实测为准，勿想当然取 M3 surface）。
 - **分段控件全站统一为 W9 连体规格**：等分 N 段、`SegmentedButtonDefaults.itemShape` 相连圆角、M3 默认选中填充（选中段容器填充 + 勾选图标），同高同圆角；共享实现 `ui/components/SegmentedToggle.kt :: SegmentedToggleRow`——W9 顶栏「今年/累计」与 W10「想买单品/心愿穿搭」两页共用同一 composable。新页面做二/三档切换一律复用本组件，不再另起「两个 FilterChip 并排」的伪分段形制。
 
 ## it-037～039 交互与颜色收尾
 
 - **底部导航选中态**：选中项使用 pill + 强调图标，文字始终使用中性色；与 W2「浅底 + 使用中」一样避免重复叠加状态符号。
-- **固定操作入口**：W3 全宽底部 CTA 与滚动内容分区布局，卡片不进入其点击区域；操作热区至少 48dp。
+- **固定操作入口**：~~W3 全宽底部 CTA 与滚动内容分区布局~~（it-063 替代：W3 新增入口改右下角 56dp FAB，静止位净空由网格 `contentPadding.bottom=96dp` 保证，滚动穿过属标准语义，详见 spec 02 it-063 注记）；操作热区至少 48dp。
 - **名称与标签滚动**：W1 窄槽名称一行省略且保持完整 a11y 名称；共享 TagInput 两个横向行在可继续滚动时使用 `FadingScrollRow` 右缘 28dp 渐隐。
 - **对比度语义色**：`EditorialColors.accent` 与 `accentContent` 均为中性黑/白，Material `primary`/`secondary` 用于实心动作底色。浅色固定 `primary=#111111`、按钮字白色；深色使用 `#F2F2EF` 并配炭黑纸/深色容器。次级文字 token 调为浅色 `#6B6B67`、深色 `#A6A6A0`。
 

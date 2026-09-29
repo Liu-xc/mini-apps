@@ -3,6 +3,7 @@ package com.leo.wardrobe.ui.wardrobe
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,25 +13,23 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import com.leo.wardrobe.ui.components.StaggeredEntrance
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
@@ -38,6 +37,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -234,11 +234,15 @@ fun WardrobeScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // it-036 C11：横滑区右缘 28dp 渐隐（透明→页面底色），可滑才显示；
+            // it-036 C11：横滑区右缘渐隐（透明→页面底色），可滑才显示；
             // 渐隐止于滚动容器右缘，与右侧固定「筛选」钮不重叠（无需不透底板）
+            // it-063 修1：带宽 28→44dp 盖过整枚图标 + 0.8 提前封满——带尾 ~9dp 已是
+            // 纯底色，被裁图标在距「筛选」≥17dp 处彻底消隐，不再贴身
             FadingScrollRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                fadeWidth = 44.dp,
+                opaqueStop = 0.8f,
             ) {
                 FilterChip(
                     selected = categoryTab == null,
@@ -278,60 +282,65 @@ fun WardrobeScreen(
             )
         }
 
-        if (allItems.isEmpty()) {
-            EmptyState(
-                title = "衣橱还空着",
-                hint = "点下方「添加衣物」拍照录入第一件",
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 24.dp),
-            )
-        } else if (filtered.isEmpty()) {
-            EmptyState(
-                title = "该筛选下没有衣物",
-                hint = "换个品类或标签试试",
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 24.dp),
-            )
-        } else {
+        // it-063 修2/3：新增入口 FAB 化——网格（含空态）占满内容区落到底部导航，
+        // FAB 浮于右下角；替代 it-037 全宽按钮（滚动中穿过 FAB 属标准 Material 语义，
+        // 静止位净空由网格 contentPadding.bottom=96 保证）
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (allItems.isEmpty()) {
+                EmptyState(
+                    title = "衣橱还空着",
+                    hint = "点右下角 ＋ 拍照录入第一件",
+                    modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+                )
+            } else if (filtered.isEmpty()) {
+                EmptyState(
+                    title = "该筛选下没有衣物",
+                    hint = "换个品类或标签试试",
+                    modifier = Modifier.fillMaxSize().padding(top = 24.dp),
+                )
+            } else {
             // it-011 C6：两列卡片网格——首屏 4–6 件直达浏览；去行内品类小标，
             // 「全部」下保留品类小节标题；滑动删除改长按删除（网格里滑动会让位滚动）
             // it-028：首屏瀑布入场落地（specs/05 #7），rememberSaveable 保证仅首进播放（DESIGN.md §3 预算）
-            var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
-            androidx.compose.runtime.LaunchedEffect(Unit) {
-                kotlinx.coroutines.delay(900)
-                entranceDone = true
-            }
-            val gridState = rememberLazyGridState()
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
-                    .fadingBottomEdge(active = { gridState.canScrollForward }),
-                state = gridState,
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
-                val sorted = filtered.sortedBy { it.category.ordinal }
-                itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
-                    StaggeredEntrance(index = index, animate = !entranceDone) {
-                        ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
+                var entranceDone by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(900)
+                    entranceDone = true
+                }
+                val gridState = rememberLazyGridState()
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
+                        .fadingBottomEdge(active = { gridState.canScrollForward }),
+                    state = gridState,
+                    // it-063：bottom 12 → 96——末卡静止位整卡（含标签行）脱离 FAB 区
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    // it-012：去品类小节标题（R2：单件品类占整行打断节奏），按品类序平铺
+                    val sorted = filtered.sortedBy { it.category.ordinal }
+                    itemsIndexed(sorted, key = { _, it -> it.id }) { index, item ->
+                        StaggeredEntrance(index = index, animate = !entranceDone) {
+                            ItemCard(vm, item, onEdit = { onEditItem(item.id) }, onDelete = { pendingDelete = item }, onOpenDetail = { onOpenItem(item.id) })
+                        }
                     }
                 }
             }
-        }
-        Button(
-            onClick = { onEditItem(null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .heightIn(min = 48.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Icon(Icons.Rounded.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("添加衣物")
+            // it-063 修2：全宽「＋ 添加衣物」→ 56dp FAB（DESIGN.md §2.1 accent/FAB 级强调）；
+            // primary/onPrimary 承旧按钮墨色对，右缘 20dp 与卡列对齐、底 16dp 悬于导航栏上
+            FloatingActionButton(
+                onClick = { onEditItem(null) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 16.dp),
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = "添加衣物")
+            }
         }
     }
 
@@ -439,7 +448,9 @@ private fun ItemCard(
                     .sharedPhoto("item-photo-${item.id}"),
             )
             // it-012：··· 显式入口（P0：替代零提示长按）
-            // it-033：触控热区 48dp（外层点击盒），视觉圆钮保持 28dp/图标 18dp
+            // it-063 修4：降噪重绘——28dp 40% 黑底圆+白 MoreVert → 26dp paper 圆片 +
+            // hairline 描边 + ink ···（印刷点语言，浅色下融入衬纸、深色下自带对比，
+            // 不透明圆片保证任意照片底可读）；热区维持 it-033 显式 48dp 不回退
             Box(Modifier.align(Alignment.TopEnd)) {
                 Box(
                     Modifier
@@ -449,18 +460,16 @@ private fun ItemCard(
                 ) {
                     Box(
                         Modifier
-                            .size(28.dp)
-                            .background(
-                                androidx.compose.ui.graphics.Color(0x66000000),
-                                androidx.compose.foundation.shape.CircleShape,
-                            ),
+                            .size(26.dp)
+                            .background(editorialColors().paper, CircleShape)
+                            .border(1.dp, editorialColors().hairline, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            Icons.Rounded.MoreVert,
+                            Icons.Rounded.MoreHoriz,
                             contentDescription = "编辑或删除",
-                            tint = androidx.compose.ui.graphics.Color.White,
-                            modifier = Modifier.size(18.dp),
+                            tint = editorialColors().ink,
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
