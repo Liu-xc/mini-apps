@@ -60,6 +60,9 @@ data class Outfit(
     val effectImages: List<OutfitImage> = emptyList(),
     val createdAt: Long = 0L,
     val updatedAt: Long = 0L,
+    /** it-068：单品调整后成品图仍是调整前组合的效果（录入新成品图即解除）；
+     *  旧快照缺字段读入默认 false，向后兼容 */
+    val effectStale: Boolean = false,
 )
 
 @Serializable

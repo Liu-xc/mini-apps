@@ -166,16 +166,16 @@ fun OutfitDetailScreen(
                             expanded = actionMenuOpen,
                             onDismissRequest = { actionMenuOpen = false },
                         ) {
-                            if (outfit.effectImages.isEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text("调整单品") },
-                                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
-                                    onClick = {
-                                        actionMenuOpen = false
-                                        enterItemEdit()
-                                    },
-                                )
-                            }
+                            // it-068：放开「调整单品」——有成品图也可换季改一件（Leo 拍板），
+                            // 防误导改由成品图区「调整前组合」标注承担（it-049 限制解除）
+                            DropdownMenuItem(
+                                text = { Text("调整单品") },
+                                leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
+                                onClick = {
+                                    actionMenuOpen = false
+                                    enterItemEdit()
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text("编辑标签") },
                                 leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
@@ -280,6 +280,17 @@ fun OutfitDetailScreen(
                             )
                         }
                     }
+                }
+                // it-068：单品调整后的旧效果标注——防误导轻注记（不抢主体、灰阶、录入新成品图即解除）
+                if (outfit.effectStale) {
+                    Text(
+                        "成品图为调整前组合",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = editorialColors().inkFaint,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(top = 2.dp),
+                    )
                 }
             } else {
                 Box {

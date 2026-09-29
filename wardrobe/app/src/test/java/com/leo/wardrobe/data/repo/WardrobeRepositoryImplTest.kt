@@ -10,6 +10,7 @@ import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.WardrobeData
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -113,6 +114,30 @@ class WardrobeRepositoryImplTest {
         val files = r.data.value.outfits.first { it.id == o.id }.effectImages.map { it.file }
         assertEquals(listOf("e2.webp"), files)
         assertEquals(listOf("e1.webp"), images.deleted)
+    }
+
+    @Test
+    fun addEffectImageClearsEffectStale() = runTest {
+        // it-068：单品调整后 effectStale 置位（VM 落库形态），录入新成品图即解除
+        val r = repo()
+        val p = r.ensureDefaultPerson()
+        r.upsertItem(Item("i1", p.id, WardrobeCategory.TOP, "T恤", imageFile = "a.webp"))
+        val o = r.createOutfit(p.id, listOf("i1"))
+        r.addEffectImage(o.id, "e1.webp")
+        r.updateOutfit(r.data.value.outfits.first { it.id == o.id }.copy(effectStale = true))
+        assertTrue(r.data.value.outfits.first { it.id == o.id }.effectStale)
+
+        r.addEffectImage(o.id, "e2.webp")
+
+        assertFalse(r.data.value.outfits.first { it.id == o.id }.effectStale)
+    }
+
+    @Test
+    fun legacyOutfitJsonWithoutEffectStaleReadsFalse() {
+        // it-068：旧快照缺 effectStale 字段读入默认 false（向后兼容，specs/03）
+        val legacy = """{"id":"o1","personId":"p1","itemIds":["i1"],"tags":[],"effectImages":[],"createdAt":1,"updatedAt":1}"""
+        val o = kotlinx.serialization.json.Json.decodeFromString<Outfit>(legacy)
+        assertFalse(o.effectStale)
     }
 
     @Test

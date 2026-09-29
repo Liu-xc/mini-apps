@@ -333,8 +333,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 onDone(false)
                 return@launchSafely
             }
-            repo.updateOutfit(outfit.copy(itemIds = validIds, updatedAt = System.currentTimeMillis()))
-            toast("穿搭已更新")
+            // it-068：单品变更且已有成品图 → 成品图变成「调整前组合」的旧效果（录入新图即解除）
+            val stale = outfit.effectImages.isNotEmpty()
+            repo.updateOutfit(
+                outfit.copy(
+                    itemIds = validIds,
+                    effectStale = stale,
+                    updatedAt = System.currentTimeMillis(),
+                ),
+            )
+            toast(if (stale) "穿搭已更新 · 成品图为调整前组合" else "穿搭已更新")
             onDone(true)
         }
     }

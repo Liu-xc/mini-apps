@@ -63,6 +63,7 @@
 | itemIds | List\<String\> | 组成的单品（可跨品类任意组合，允许同类多件如外套+上装） |
 | tags | List\<String\> | 风格/季节/场合标签 |
 | effectImages | List\<OutfitImage\> | 成品效果图（值对象，按加入顺序） |
+| effectStale | Boolean | it-068：单品调整后成品图仍是调整前组合的效果（默认 false；录入新成品图即清） |
 | createdAt / updatedAt | Long | |
 
 ### OutfitImage（值对象）
