@@ -179,12 +179,6 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         Icon(Icons.Outlined.Refresh, contentDescription = "重播显影", tint = colors.ink)
                     }
                 }
-                Spacer(Modifier.height(7.dp))
-                Text(
-                    state.mode.note + " · 点按成片看大图",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.inkFaint,
-                )
                 Spacer(Modifier.height(6.dp))
             }
         }

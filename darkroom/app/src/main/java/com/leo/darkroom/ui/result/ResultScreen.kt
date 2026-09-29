@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.OpenInFull
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Button
@@ -164,29 +163,17 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "返回", tint = colors.ink)
             }
             Spacer(Modifier.width(4.dp))
-            Column {
-                Text(
-                    if (state.resultEditing) "编辑成片" else "成片",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.ink,
-                )
-                Text(
-                    if (state.resultEditing) "改完点「完成」返回成片" else "一张可以带走的回忆",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.inkFaint,
-                )
-            }
+            Text(
+                if (state.resultEditing) "编辑成片" else "成片",
+                style = MaterialTheme.typography.titleLarge,
+                color = colors.ink,
+            )
             Spacer(Modifier.weight(1f))
             if (state.resultEditing) {
                 TextButton(onClick = vm::closeResultEdit) {
                     Text("完成", style = MaterialTheme.typography.titleSmall, color = colors.ink)
                 }
             } else {
-                Text(
-                    "PRINTED",
-                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
-                    color = colors.inkFaint,
-                )
                 TextButton(onClick = vm::openResultEdit) {
                     Text("编辑", style = MaterialTheme.typography.titleSmall, color = colors.ink)
                 }
@@ -234,22 +221,6 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                             contentScale = ContentScale.Fit,
                             modifier = imageModifier,
                         )
-                        // 大图入口角标（视觉 16dp，热区随卡面整块可点）
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(6.dp)
-                                .size(30.dp)
-                                .background(colors.surface.copy(alpha = 0.9f), RoundedCornerShape(15.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                Icons.Outlined.OpenInFull,
-                                contentDescription = "查看大图",
-                                tint = colors.inkFaint,
-                                modifier = Modifier.size(15.dp),
-                            )
-                        }
                     }
                 } else {
                     Box(
@@ -266,11 +237,13 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         }
 
         Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("成片预览", style = MaterialTheme.typography.labelSmall, color = colors.inkFaint)
-            Spacer(Modifier.weight(1f))
-            Text("点按可查看大图", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
-        }
+        Text(
+            "点按成片查看大图",
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.inkFaint,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
 if (state.resultEditing) {
         // it-012 收尾 5：编辑表单收成一张分组卡（照片/卡面全部细项，去碎片感）
         Surface(

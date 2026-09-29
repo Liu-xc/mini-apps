@@ -195,14 +195,6 @@ fun PickScreen(
             }
         }
 
-        EditorialEntrance(delayMs = 48, enabled = playEntrance) {
-            Text(
-                "全程离线 · 照片不上传",
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.inkFaint,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-        }
     }
 }
 

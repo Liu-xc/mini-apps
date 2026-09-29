@@ -81,6 +81,12 @@ fun DarkroomApp(vm: DarkroomViewModel = viewModel()) {
             }
         }
 
+        // 保存反馈只属于发起保存的当前场景；离开后立即收起，避免遮挡设置或下一次操作。
+        LaunchedEffect(state.screen) {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            if (state.message != null) vm.clearMessage()
+        }
+
         // 消息 snackbar（保存成功 → 可分享）
         state.message?.let { message ->
             val canShare = state.lastSavedKind != DarkroomViewModel.SavedKind.NONE

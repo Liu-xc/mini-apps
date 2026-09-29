@@ -29,8 +29,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
@@ -44,6 +46,10 @@ import com.leo.darkroom.ui.theme.editorialColors
 @Composable
 fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
     val colors = editorialColors()
+    val context = LocalContext.current
+    val versionName = remember(context) {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "-"
+    }
 
     Column(
         Modifier
@@ -114,7 +120,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
             )
             ToggleRow(
                 title = "甩一甩加速",
-                subtitle = "显影中甩动手机推进进度（真机有效）",
+                subtitle = "显影中甩动手机推进进度",
                 checked = state.shakeEnabled,
                 onCheckedChange = vm::setShakeEnabled,
             )
@@ -126,7 +132,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
         SectionCard {
             Text("关于", style = MaterialTheme.typography.titleMedium, color = colors.ink, modifier = Modifier.padding(bottom = 6.dp))
             Text(
-                "显影 DARKROOM 0.5.11",
+                "显影 DARKROOM $versionName",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.ink,
             )
