@@ -4,6 +4,7 @@
 
 ## 未发布
 
+- **槽位清单**：[it-072](iterations/it-072-slot-picker-discoverability.md) 品类清单直选可发现性升级——名称条整条可点/长按/图标计数组三通道，长按 toast 读全名废止（清单两行全名承接 US-39）。
 - **演示数据**：[it-060](iterations/it-060-mock-corpus-expansion.md) mock 衣橱扩充至 68 件单品、15 套穿搭，新增 32 张 RGBA 透明底单品 PNG，八品类均衡覆盖；同步产出可导入包并通过 validator。
 - **布局修正**：[it-064](iterations/it-064-w1-w3-w8-layout-fixes.md) W1 一屏鞋槽/W8 丝滑回归修复/W3 底部与筛选遮挡。
 - **槽位与导出**：[it-061](iterations/it-061-slot-display-and-export-slim.md) 透明素材 Trim 显示/品类清单直选/W6 默认折叠全空。

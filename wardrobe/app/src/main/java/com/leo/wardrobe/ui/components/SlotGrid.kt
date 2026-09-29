@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -67,8 +68,9 @@ import java.io.File
 
 /**
  * 着装位卡片（it-005 人体布局；it-011 O6 可发现性）：
- * 格内 HorizontalPager 左右滑换衣；卡底名称条=名称优先（加粗），右侧纯序号「n/n」可点翻页
- * （it-031 C5 rev2，品类由格位+图片承载）、✕ 移除该格；空品类为 ＋ 占位。
+ * 格内 HorizontalPager 左右滑换衣；卡底名称条=名称优先（加粗），右侧「⊞ n/m」清单入口
+ * （it-061 直选 + it-072 可发现性升级：名称条整条可点、长按照片区同开清单；单击照片仍进详情）、
+ * ✕ 移除该格；空品类为 ＋ 占位。
  * coach=true 时首次进入做 ~150ms 左右微移示意（纯视觉位移，不触碰 pager 状态）。
  * aspect 为宽/高比，由着装位决定（帽近方、上身竖长、下装通栏、鞋扁平）。
  */
@@ -86,8 +88,6 @@ fun SlotCell(
     coach: Boolean = false,
     /** it-015 修订：移除该格（非空时显示 ✕）；null = 不提供移除 */
     onRemove: (() -> Unit)? = null,
-    /** it-042 C4：长按照片区读完整名称（窄槽单行省略的可见兜底）；null = 不提供 */
-    onLongPress: ((Item) -> Unit)? = null,
 ) {
     // 首次 coach：左右各晃一下，暗示可滑动（it-011 O6）
     val coachOffset = remember { Animatable(0f) }
@@ -188,10 +188,12 @@ fun SlotCell(
                             .graphicsLayer { if (wished) alpha = 0.72f }
                             // it-058 C3：按压缩放反馈（与进详情点击同一元素）
                             .pressScale(0.975f)
-                            // it-042 C4：单击进详情不变；长按补全名提示（窄槽「鼠尾…」兜底）
+                            // it-042 C4：单击进详情；it-072：长按从「toast 读全名」升级为打开品类清单
+                            // （清单内名称两行完整可见，是全名兜底的超集；US-39 路径随之修订）
                             .combinedClickable(
                                 onClick = { onCardTap(item) },
-                                onLongClick = { onLongPress?.invoke(item) },
+                                onLongClickLabel = "打开品类清单",
+                                onLongClick = { if (items.size > 1) pickerOpen = true },
                             ),
                     ) {
                         // it-011 C5：统一浅底衬纸，完整呈现衣物轮廓
@@ -281,14 +283,21 @@ fun SlotCell(
                                     },
                             )
                         }
-                        // it-031 C5 rev2：名称优先（名称加粗主位 + 纯序号角标可点循环翻页 + ✕ 移除该格）
+                        // it-031 C5 rev2：名称优先（名称加粗主位 + 纯序号角标 + ✕ 移除该格）
                         // it-039：固定清晰字号单行显示，超长名称省略；语义保留完整名称。
                         // ✕ 视觉放大 10→16dp、与角标拉开 8dp；触控节点由下方覆盖层补足到 28×44dp（≥44dp 高）。
+                        // it-072：名称条整条可点=打开品类清单（it-061 直选的可发现性升级）；
+                        // items==1 不挂 clickable——点击穿透进详情，不给单件槽位假入口。
                         Row(
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .background(Color(0x8C000000))
+                                .then(
+                                    if (items.size > 1) Modifier.clickable(
+                                        onClickLabel = "打开品类清单",
+                                    ) { pickerOpen = true } else Modifier
+                                )
                                 .padding(horizontal = 4.dp, vertical = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -304,21 +313,28 @@ fun SlotCell(
                                     .weight(1f)
                                     .semantics { contentDescription = itemName },
                             )
+                            if (items.size > 1) {
+                                // it-072：清单图标——名称条「有列表可开」的显性视觉暗示
+                                Icon(
+                                    Icons.Rounded.GridView,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
                             Text(
                                 "${pagerState.currentPage + 1}/${items.size}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White,
                                 maxLines = 1,
                                 modifier = Modifier
-                                    // it-033：与 ✕ 拉开 8dp（end），start 4dp 隔开名称列
+                                    // it-033：与 ✕ 拉开 8dp（end），start 4dp 隔开名称列（兼作与图标间距）
                                     .padding(start = 4.dp, end = 8.dp)
-                                    // it-061 修2：n/m 点开品类清单直选（Leo：来回滑找太累），
-                                    // 取代原循环翻页（列表是其超集）；触控热区由整行覆盖层承载同前
-                                    .clickable { if (items.size > 1) pickerOpen = true }
+                                    // it-061 修2：n/m 计数（点击打开清单由 it-072 名称条整条承载）
                                     .semantics {
-                                        // it-033：序号角标补 a11y（实际 n/m）
+                                        // it-033：序号角标 a11y（实际 n/m）
                                         contentDescription =
-                                            "第 ${pagerState.currentPage + 1} 件，共 ${items.size} 件，点按打开品类清单"
+                                            "第 ${pagerState.currentPage + 1} 件，共 ${items.size} 件"
                                     },
                             )
                             if (onRemove != null) {
@@ -403,7 +419,8 @@ fun SlotCell(
                                     item.name.ifBlank { category.label },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = editorialColors().ink,
-                                    maxLines = 1,
+                                    // it-072：1→2 行——清单承载 US-39 全名可见兜底（长按开清单替代原 toast）
+                                    maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 if (item.isWishSlot) {

@@ -719,7 +719,6 @@ private fun OutfitSlot(
         aspect = aspect,
         coach = coach,
         onRemove = onRemove,
-        // it-042 C4：长按走统一 toast 通道读全名
-        onLongPress = { vm.toast(it.name) },
+        // it-072：长按已内建为打开品类清单（SlotCell），原 toast 读全名路径废止（US-39 修订）
     )
 }
