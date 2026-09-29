@@ -71,8 +71,8 @@ fun GalleryPager(
         state = pagerState,
         modifier = modifier,
         beyondViewportPageCount = 1,
-        pageSpacing = 16.dp,
-        contentPadding = PaddingValues(horizontal = 44.dp),
+        pageSpacing = 0.dp,
+        contentPadding = PaddingValues(0.dp),
     ) { page ->
         val photo = state.album.getOrNull(page) ?: return@HorizontalPager
         GalleryCard(

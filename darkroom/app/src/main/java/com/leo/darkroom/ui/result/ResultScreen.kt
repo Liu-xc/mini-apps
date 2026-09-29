@@ -272,7 +272,14 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             Text("点按可查看大图", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
         }
 if (state.resultEditing) {
-        Spacer(Modifier.height(8.dp))
+        // it-012 收尾 5：编辑表单收成一张分组卡（照片/卡面全部细项，去碎片感）
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = colors.surface,
+            border = BorderStroke(1.dp, colors.hairline),
+        ) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("照片风格", style = MaterialTheme.typography.titleMedium, color = colors.ink)
             Spacer(Modifier.weight(1f))
@@ -462,6 +469,8 @@ if (state.resultEditing) {
                     placeholder = "留空则不印",
                     onValueChange = vm::setFooter,
                 )
+            }
+        }
             }
         }
 

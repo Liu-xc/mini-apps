@@ -36,11 +36,12 @@ data class CardPalette(
     companion object {
         /** Neutral light paper and graphite print; fixed across interface themes. */
         val Default = CardPalette(
-            paper = 0xFFFBFBFA.toInt(),
-            ink = 0xFF191919.toInt(),
-            inkFaint = 0xFF626262.toInt(),
-            accent = 0xFF414141.toInt(),
-            hairline = 0xFFDEDEDC.toInt(),
+            // it-012 收尾 5：默认相纸改真实拍立得的暖白纸感（冷白+死黑读作廉价）
+            paper = 0xFFFAF9F4.toInt(),
+            ink = 0xFF211F1B.toInt(),
+            inkFaint = 0xFF7A7466.toInt(),
+            accent = 0xFF524D40.toInt(),
+            hairline = 0xFFE6E2D6.toInt(),
         )
 
         /** 胶片齿孔：物理穿孔恒为近黑，不随界面主题翻色 */

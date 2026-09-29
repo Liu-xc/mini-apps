@@ -126,7 +126,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
         SectionCard {
             Text("关于", style = MaterialTheme.typography.titleMedium, color = colors.ink, modifier = Modifier.padding(bottom = 6.dp))
             Text(
-                "显影 DARKROOM 0.5.4",
+                "显影 DARKROOM 0.5.5",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.ink,
             )
