@@ -2,6 +2,10 @@
 
 > AGENTS.md 迭代流程第⑥步要求的变更流水；本文件于 it-001 建立（此前仓库未落地该约定）。
 
+## Unreleased
+
+- **fix(darkroom)**: it-012 收尾 10——v0.5.10 两处发版回归热修：画册底衬误用文字色 inkFaint 铺成深灰 slab（改固定浅暖灰 0xE2DCCC+去 8dp 卡阴影）、PhotoViewer 半透明透底致顶栏深字隐形（改不透明 0xFF151515，实测顶栏区 std=0）；中段灰雾收敛（contrast/brightness 起手抬高、模糊提前收清）；自此恢复发版前模拟器全量自测（独立 darkroom_qa AVD，序列/查看器/浮层子代理验收全过），v0.5.11 出包。
+
 ## 2026-09-29
 
 - **feat(wardrobe)**: it-066 导出回程锚点、长图放大核对与空态行动按钮——W1 回程提示条（复制长图后引导录回成品图、未收藏自动建穿搭、愿望组合护栏、会话级状态）；W6 长图预览原位全幅展开（Prompt 可读、自滚、角标收起，销账 it-017/it-042 C5 挂账）；W8/W3 空态补「去搭配一套 / 清除筛选」（DESIGN.md §5.8）。89 测绿 + 演示包构建过，W6 双态 AVD 实证。详 [it-066](wardrobe/specs/iterations/it-066-export-loop-closure.md)。

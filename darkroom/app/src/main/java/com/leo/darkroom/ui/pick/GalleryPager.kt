@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -154,9 +155,12 @@ private fun GalleryCard(
         }
     }
 
-    // it-012 收尾 9：卡纸分层靠底衬色调（比相纸深一档），不靠投影/描边
+    // it-012 收尾 9：卡纸分层靠底衬色调（比相纸深一档），不靠投影/描边。
+    // 0.5.11 勘误：底衬是固定的浅暖灰 token（不随相纸换色，也绝不能用文字色
+    // inkFaint——0.5.10 那样铺出来就是两块深灰 slab）
+    val pagerBackdrop = Color(0xFFE2DCCC)
     BoxWithConstraints(
-        modifier.background(colors.inkFaint),
+        modifier.background(pagerBackdrop),
         contentAlignment = Alignment.Center,
     ) {
         val layout = CardLayout.solve(
@@ -175,7 +179,6 @@ private fun GalleryCard(
                     scaleX = 0.97f + 0.03f * t
                     scaleY = 0.97f + 0.03f * t
                 }
-                .shadow(8.dp, RectangleShape)
                 .clickable(enabled = bitmap != null) {
                     if (playing) skipToResult() else bitmap?.let(onOpenViewer)
                 },

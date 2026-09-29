@@ -79,3 +79,16 @@ highlightGain 0.98、warmth 收敛；显影过程动画不变。版本 0.5.4。
   `DarkroomViewModel.kt`（PAGER/albumInitialPage/resultFromPager/backToPick 动线）、
   `DarkroomApp.kt`（PAGER 分支）、`data/AlbumRepository.kt`（ThumbCache 双尺寸）。
 - spec：02（W1/画册线框重写）、01（US-18 AC 更新）、03（UiState 新字段）。
+
+
+## 收尾修正 10（v0.5.11 · 模拟器实测闭环）
+
+用户实机截图反馈「问题很大」+ 质疑未自测即发版，本轮起恢复**发版前模拟器全量自测**：
+
+- **v0.5.10 回归（已修）**：画册底衬误用文字色 `inkFaint(0x7A7466)` 铺满 → 卡上下两块深灰 slab。改为固定浅暖灰 `0xE2DCCC`（不随相纸换色），并移除卡片残留 8dp 阴影，分层纯靠色调。
+- **查看器透底（已修）**：`PhotoViewer` 半透明 `0xF0151515` 让画册浅色顶栏透出、深字压深底（对比 1.03:1 近隐形）。改不透明 `0xFF151515`，实测顶栏区 std=0、按钮浅色可读。
+- **中段灰雾收敛**：拍立得分支 contrast 起手 0.80→0.88、brightness 0.60→0.68、blur 潜影期提前收清，消除「先糊成一团再变好」。
+- **验证记录（emulator-5560 · darkroom_qa AVD）**：序列帧内容浮现曲线 lum-std 2.5→14.6→46.5；成片=源图+3% 纸白（mountain 源 [113,86,69] → 成片 [121,92,77]）；底衬实测 (226,220,204)；查看器/浮层子代理验收 PASS。
+- **测试数据坑**：多图同秒 adb push → DATE_ADDED 并列、顺序随机，纯色测试图会被误判「成片无内容」；先采样网格缩略图确认内容图再测序列。
+- **环境**：并行会话抢占模拟器 → 自建 `darkroom_qa` AVD（5560）独占验证。
+- **遗留**：首启 MediaProvider 索引未就绪时相册空态不重试（记 P2 待办）；浮层面板与手势条间留白观感待定。

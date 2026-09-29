@@ -36,7 +36,7 @@ fun PhotoViewer(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color(0xF0151515))
+                .background(Color(0xFF151515))
                 .clickable { onClose() },
             contentAlignment = Alignment.Center,
         ) {
