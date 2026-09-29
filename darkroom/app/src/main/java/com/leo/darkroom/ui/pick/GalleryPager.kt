@@ -156,7 +156,7 @@ private fun GalleryCard(
 
     // it-012 收尾 9：卡纸分层靠底衬色调（比相纸深一档），不靠投影/描边
     BoxWithConstraints(
-        modifier.background(colors.hairline),
+        modifier.background(colors.inkFaint),
         contentAlignment = Alignment.Center,
     ) {
         val layout = CardLayout.solve(
