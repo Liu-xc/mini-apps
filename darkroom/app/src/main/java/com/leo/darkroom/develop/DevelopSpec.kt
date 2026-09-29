@@ -99,17 +99,17 @@ object DevelopSpec {
         contrast = 0.88f + 0.04f * latent + 0.11f * emerge + 0.07f * fix,
         brightness = 0.66f + 0.14f * latent + 0.19f * emerge + 0.01f * fix,
         // 中途压向青冷、定影回正微暖（真实相纸先冷后暖）
-        warmth = -0.38f * latent - 0.18f * emerge + 0.64f * fix,
+        warmth = -0.38f * latent - 0.18f * emerge + 0.60f * fix,
         // it-008 三次修正：真实显影中影像本身是锐的，糊的只是白浊层——
         // 起手仅极轻柔焦（0.016→末态 0.006），去掉旧版 0.05 的「晕开扩散」观感
         blurFraction = 0.016f - 0.004f * latent - 0.004f * emerge - 0.010f * fix,
         // it-008 二次修正：白浊层全程渐次变薄、定影段仍在收白；
         // it-009 早期提速：起手 11% 已透、潜影段快开（15% 处 ≈30%）——前期不再是空白
         reveal = (0.11f + 0.18f * latent + 0.51f * emerge + 0.20f * fix).coerceAtMost(1f),
-        grain = 0.55f - 0.12f * latent - 0.15f * emerge - 0.08f * fix,
+        grain = 0.55f - 0.12f * latent - 0.15f * emerge - 0.22f * fix,
         // it-008 三次修正：暗角是成片特征、不是显影特征——起手近乎无（0.04），
         // 定影段才落到纸感 0.20。旧版起手 0.45 的角部压暗让均匀浮现读成「中心晕开」
-        vignette = 0.04f + 0.02f * latent + 0.04f * emerge + 0.10f * fix,
+        vignette = 0.04f + 0.02f * latent + 0.04f * emerge + 0.02f * fix,
         // 染料分层：青层压红（早）→ 黄层压蓝（中）→ 品红层压绿（晚），定影后全部归位
         redGain = 1f - 0.15f * bump(p, 0.10f, 0.38f, 0.88f),
         greenGain = 1f - 0.06f * bump(p, 0.42f, 0.68f, 0.96f),
@@ -117,7 +117,7 @@ object DevelopSpec {
         shadowLift = 0.012f + 0.038f * fix,
         // it-008 三次修正：影调显影顺序——亮部高光被压住最后才到位（0.62→0.94），
         // 暗部/中间调先从白浊层后显出，对表真实相纸「先见影、后见光」的浮现次序
-        highlightGain = 0.62f + 0.10f * latent + 0.16f * emerge + 0.06f * fix,
+        highlightGain = 0.62f + 0.10f * latent + 0.16f * emerge + 0.10f * fix,
         invert = 0f,
     )
 
@@ -138,7 +138,7 @@ object DevelopSpec {
         blurFraction = 0.030f - 0.014f * latent - 0.014f * emerge - 0.002f * fix,
         reveal = (0.24f + 0.40f * latent + 0.36f * emerge).coerceAtMost(1f),
         // 颗粒是传感器噪点：起手明显，成像后收得很小
-        grain = 0.50f - 0.20f * latent - 0.15f * emerge - 0.05f * fix,
+        grain = 0.50f - 0.20f * latent - 0.15f * emerge - 0.09f * fix,
         vignette = 0.16f - 0.04f * latent - 0.06f * emerge - 0.02f * fix,
         redGain = 1f,
         greenGain = 1f,
@@ -164,7 +164,7 @@ object DevelopSpec {
         warmth = -0.30f * latent - 0.15f * emerge + 0.55f * fix,
         blurFraction = 0.035f - 0.010f * latent - 0.018f * emerge - 0.013f * fix,
         reveal = (0.20f + 0.34f * latent + 0.46f * emerge).coerceAtMost(1f),
-        grain = 0.60f - 0.14f * latent - 0.16f * emerge - 0.05f * fix,
+        grain = 0.60f - 0.14f * latent - 0.16f * emerge - 0.22f * fix,
         vignette = 0.40f - 0.06f * latent - 0.12f * emerge - 0.04f * fix,
         shadowLift = 0.015f + 0.035f * fix,
         highlightGain = 1f - 0.05f * fix,

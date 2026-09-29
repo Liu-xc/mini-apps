@@ -68,6 +68,11 @@ android.graphics.Canvas 画不了硬件位图）；缓存分两层（小图 24 �
 全套，暗底 Fit），不再看裸照片；③编辑表单收纳重排（风格+相纸一张卡、排印+字段一张卡）待下轮
 带截图走查后落地（本轮不做盲改）。版本 0.5.3。
 
+**收尾修正 4（2026-09-29，Leo 澄清「不是锐度，是末态画质不像原图——疑缩略图」）**：
+位图源已是原图解码（1440），真凶是末态叠加的「相纸感」层——grain 0.20/vignette 0.20/
+highlightGain 0.94 的组合在观感上等同低质压缩。末态压至极轻：grain ≤0.08、vignette 0.12、
+highlightGain 0.98、warmth 收敛；显影过程动画不变。版本 0.5.4。
+
 ## 影响范围
 
 - 代码：`ui/pick/PickScreen.kt`（重写为网格）、`ui/pick/AlbumPagerScreen.kt`（新）、

@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **fix(darkroom)**: it-012 收尾 4——末态「相纸感」叠加压至极轻（grain 0.20→0.06、vignette 0.20→0.12、高光压缩 0.94→0.98、色温收敛）：显影完成的画面观感对齐原图质量（源已是 1440 原图解码，非缩略图）；过程动画不变。版本 0.5.4。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。
+
 - **fix(darkroom)**: it-012 收尾 3——末态柔焦归零（滚动中卡片全锐）；大图查看改为整张成品卡全屏放大（1440 宽渲染相纸/日期/脚注全套，不再是裸照片）；编辑表单收纳列入下轮。版本 0.5.3。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。
 
 - **fix(darkroom)**: it-012 收尾 2——画册画质修复：页图弃用 loadThumbnail（系统低质 512px 缩略，上屏即糊），改 ImageDecoder 原图降采样 1440 长边（软件位图，导出端可画）；网格小图仍走 256 缩略；缓存分两层控内存。版本 0.5.2。详 [it-012](darkroom/specs/iterations/it-012-album-first-ia.md)。
