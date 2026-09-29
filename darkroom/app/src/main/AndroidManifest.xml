@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- it-011 ADR-008：沉浸式相册显影需要读取相册——运行时权限，拒绝时降级原 Photo Picker 流。
+         API 33+ READ_MEDIA_IMAGES（34 起「选择照片」部分授权亦可读）；
+         API 31/32 走 READ_EXTERNAL_STORAGE（33 起系统自动忽略）。 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <!-- it-001 ADR-002 权限策略：选图走系统 Photo Picker、拍照走 TakePicture intent、
          成品落 MediaStore（API 29+ 分区存储无需权限）——全 App 零危险权限。
          VIBRATE 为 normal 权限（安装即授予，不弹窗），触感必需：

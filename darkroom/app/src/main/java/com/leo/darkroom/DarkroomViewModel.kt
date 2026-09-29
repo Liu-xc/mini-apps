@@ -42,6 +42,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
 
     val prefs = PrefsStore(application)
     private val photos = PhotoRepository(application)
+    private val albums = com.leo.darkroom.data.AlbumRepository(application)
     private val exporter = VideoExporter()
 
     val grain: Bitmap by lazy { GrainNoise.bitmap() }
@@ -72,6 +73,13 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         val savedVideoUri: Uri? = null,
         val lastSavedKind: SavedKind = SavedKind.NONE,
         val error: String? = null,
+        // —— 沉浸相册（it-011 US-18）——
+        /** null = 尚未请求过权限 */
+        val albumGranted: Boolean? = null,
+        val album: List<com.leo.darkroom.data.AlbumPhoto> = emptyList(),
+        val albumLoading: Boolean = false,
+        /** 本次启动内已显影过的相册图 id（翻回不重播，重播=手动移出） */
+        val playedIds: Set<Long> = emptySet(),
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -134,8 +142,79 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // —— 选图 ——
+    // —— 沉浸相册（it-011 US-18）——
 
+    private val galleryPlayback = com.leo.darkroom.develop.GalleryPlayback()
+
+    /** 权限结果回填：授予即加载首页；拒绝留在回退态（原 Photo Picker 流完整可用） */
+    fun onAlbumPermissionResult(granted: Boolean) {
+        _state.update { it.copy(albumGranted = granted) }
+        if (granted) loadAlbum(initial = true)
+    }
+
+    fun loadAlbum(initial: Boolean = false) {
+        if (_state.value.albumLoading) return
+        viewModelScope.launch {
+            _state.update { it.copy(albumLoading = true) }
+            val offset = if (initial) 0 else _state.value.album.size
+            val page = albums.recent(offset)
+            _state.update {
+                val merged = if (initial) page else (it.album + page).distinctBy { p -> p.id }
+                it.copy(album = merged, albumLoading = false)
+            }
+        }
+    }
+
+    fun loadMoreAlbum() {
+        if (_state.value.albumGranted == true && _state.value.album.isNotEmpty()) loadAlbum(false)
+    }
+
+    suspend fun albumThumbnail(photo: com.leo.darkroom.data.AlbumPhoto): android.graphics.Bitmap? =
+        albums.thumbnail(photo)
+
+    fun markGalleryPlayed(id: Long) {
+        galleryPlayback.markPlayed(id)
+        _state.update { it.copy(playedIds = galleryPlayback.snapshot()) }
+    }
+
+    /** 手动重播当前卡（it-011）：移出已播集合，卡面即重新出纸显影 */
+    fun replayGalleryCard(id: Long) {
+        galleryPlayback.replay(id)
+        _state.update { it.copy(playedIds = galleryPlayback.snapshot()) }
+    }
+
+    /** 沉浸相册点开成片：动画已在 W1 播完，直接进 W3 编辑/导出 */
+    fun openGalleryResult(photo: com.leo.darkroom.data.AlbumPhoto, bitmap: android.graphics.Bitmap) {
+        fixedJob?.cancel()
+        loopJob?.cancel()
+        _state.update {
+            it.copy(
+                screen = Screen.RESULT,
+                photo = bitmap,
+                photoLabel = "相册",
+                spec = CardSpec(
+                    dateText = photo.dateText.ifBlank { CardSpec.today() },
+                    footer = it.spec.footer,
+                    frame = it.spec.frame,
+                    titleFont = it.spec.titleFont,
+                    titleSize = it.spec.titleSize,
+                ),
+                photoLook = PhotoLook.ORIGINAL,
+                progress = 1f,
+                playing = false,
+                ejecting = false,
+                shakeHint = false,
+                exporting = false,
+                savedImageUri = null,
+                savedVideoUri = null,
+                lastSavedKind = SavedKind.NONE,
+                error = null,
+                message = null,
+            )
+        }
+    }
+
+    // —— 选图 ——
     fun onPhotoPicked(uri: Uri?) {
         if (uri == null) return
         viewModelScope.launch {

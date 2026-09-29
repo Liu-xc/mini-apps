@@ -70,6 +70,7 @@ Android 系统 CJK 字体族：Sans 使用 `FontFamily.SansSerif`（Noto Sans CJ
 | 9 | 前沿湿光 | `DevelopFx.wetBandAt`：**仅胶片 SWEEP**——与 RevealField.frontX 公式精确对位的湿边，白 ≤10%。拍立得不给（it-008 收尾修正：对角近似层与真实偏心前沿不重合，实机观感像胶水扩散、与「逐步浮现」语言冲突）；数码不给 | 显影中（仅胶片） |
 | 10 | W1 冷入场编排 | `EditorialEntrance`：5 组 stagger 24ms，每组 fade 240ms + rise 14dp；flag 由导航壳跨屏持有，二次进入/Activity 重建不重放 | 首次冷进入 W1 |
 | 11 | 阶段文案过场 | AnimatedContent fade 160ms + rise 6dp；百分比读数 tabular figures | 阶段切换（每会话 3 次） |
+| 13 | 相册卡显影（it-011） | 出纸+显影复用 W2 曲线真源；首见自动播、已播直显、滑走回正未播态；显影中点按=跳过、成品点按=进 W3；重播=移出 played 集 | 沉浸相册翻页/重播 |
 | 12 | 控件状态过渡 | 模式 chip 边框宽/色 150ms + 选中示意图 pop 1→1.08→1；样片卡按压 0.97 + 松手 pop 回弹；snackbar 编辑式（surface + hairline + 14dp 圆角） | chip 选择/样片按压/消息 |
 
 **出纸只放一次**（it-007 修正）：由 `UiState.ejecting` 驱动而不是 `LaunchedEffect(Unit)`——

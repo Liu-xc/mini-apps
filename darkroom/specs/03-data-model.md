@@ -50,6 +50,14 @@ it-007 增补字段：`redGain/greenGain/blueGain`（青/品红/黄分染料上�
 `invert`（负片反相 0..1，胶片模式自 1 归 0，4×5 矩阵可完整表达）。
 拍立得曲线给出分染料与窄动态；数码恒为 1/0/1（无染料、无窄动态）；胶片主要走 `invert`。
 
+## AlbumRepository（沉浸相册，it-011）
+
+`AlbumPhoto(id, uri, dateTakenMs, dateText)`——MediaStore Images 按 DATE_ADDED 倒序分页
+（60/页，近尾部预取），`dateTaken` 缺失回退 `dateAdded`；缩略图 `loadThumbnail(1080)` 走 IO，
+进程内 LRU（`ThumbCache`，24 张）。权限：READ_MEDIA_IMAGES（33+）/READ_EXTERNAL_STORAGE
+（≤32，maxSdkVersion），见 ADR-008。UiState 增 `albumGranted(Bool?)/album(List)/albumLoading/
+playedIds(Set<Long>)`；played 集语义 = 本次启动内已显影不重播、重播=移出（`GalleryPlayback`，单测锁）。
+
 ## RevealField（显现前沿，it-007 吸收原 ChemicalDiffusion）
 
 `alphaMask(kind, w, h, reveal, seed)` / `alphaAt(kind, x, y, reveal, seed)`，
