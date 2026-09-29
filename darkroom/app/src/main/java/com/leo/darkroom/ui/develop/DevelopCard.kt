@@ -47,6 +47,7 @@ import com.leo.darkroom.card.CardLayout
 import com.leo.darkroom.card.CardPalette
 import com.leo.darkroom.card.ChemicalMaskBitmap
 import com.leo.darkroom.card.CardSpec
+import com.leo.darkroom.card.TitleFontStyle
 import com.leo.darkroom.develop.DevelopFx
 import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.develop.DevelopSpec
@@ -74,8 +75,9 @@ fun DevelopCard(
 ) {
     val visual = DevelopSpec.visualAt(mode, progress)
     val layout = remember(cardWidthPx, mode) { CardLayout.solve(cardWidthPx, mode = mode) }
-    // 卡面印字配色与导出端共用 CardPalette（it-007 AC3：预览与成片不许错配）
-    val palette = remember(mode) { CardPalette.forMode(mode) }
+    // 卡面印字配色与导出端共用 CardPalette（it-007 AC3：预览与成片不许错配；
+    // it-010：拍立得按相纸框型分派）
+    val palette = remember(mode, spec.frame) { CardPalette.forMode(mode, spec.frame) }
     val textMeasurer = rememberTextMeasurer()
     val revealMask = remember(photo, mode, RevealField.bucket(mode.reveal, visual.reveal)) {
         photo?.let { ChemicalMaskBitmap.forPhoto(mode.reveal, it, visual.reveal) }
@@ -257,14 +259,15 @@ private fun DrawScope.drawTexts(
     textMeasurer: TextMeasurer,
     palette: CardPalette,
 ) {
-    // Editorial work title: upright serif, at most two lines with a calm ellipsis.
+    // Editorial work title: upright serif/sans by choice, at most two lines with a calm ellipsis.
     val title = spec.title.trim()
     if (title.isNotEmpty()) {
+        val effectiveSize = layout.titleSize * spec.titleSize.scale
         val style = TextStyle(
-            fontFamily = FontFamily.Serif,
+            fontFamily = if (spec.titleFont == TitleFontStyle.SANS) FontFamily.SansSerif else FontFamily.Serif,
             fontWeight = FontWeight.Medium,
-            fontSize = layout.titleSize.toSp(),
-            lineHeight = (layout.titleSize * 1.1f).toSp(),
+            fontSize = effectiveSize.toSp(),
+            lineHeight = (effectiveSize * 1.1f).toSp(),
             color = Color(palette.ink),
         )
         val result = textMeasurer.measure(
@@ -305,15 +308,20 @@ private fun DrawScope.drawTexts(
         )
     }
 
-    // 卡脚水印
-    if (spec.showWatermark) {
-        val style = TextStyle(
+    // 卡脚脚注（it-010：自定义文案，空 = 不印；超宽按域缩字）
+    val footer = spec.footer.trim()
+    if (footer.isNotEmpty()) {
+        var style = TextStyle(
             fontFamily = FontFamily.SansSerif,
             fontWeight = FontWeight.Medium,
             fontSize = layout.watermarkSize.toSp(),
             color = Color(palette.inkFaint),
         )
-        val result = textMeasurer.measure("显影 DARKROOM", style = style, maxLines = 1)
+        var result = textMeasurer.measure(footer, style = style, maxLines = 1)
+        if (result.size.width > layout.watermark.width && result.size.width > 0) {
+            style = style.copy(fontSize = (layout.watermarkSize * (layout.watermark.width / result.size.width)).toSp())
+            result = textMeasurer.measure(footer, style = style, maxLines = 1)
+        }
         drawText(
             result,
             topLeft = Offset(

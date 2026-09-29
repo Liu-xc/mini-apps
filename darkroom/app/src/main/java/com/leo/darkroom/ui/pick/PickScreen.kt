@@ -106,21 +106,19 @@ fun PickScreen(
                         Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column {
-                            Text(
-                                "DARKROOM",
-                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
-                                color = colors.inkFaint,
-                            )
-                            Text("私人暗房", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
-                        }
+                        // it-010：头部一行——micro 标签自释「私人暗房」，去掉第二行小字
+                        Text(
+                            "DARKROOM · 私人暗房",
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
+                            color = colors.inkFaint,
+                        )
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = vm::openSettings, modifier = Modifier.size(44.dp)) {
                             Icon(Icons.Outlined.Tune, contentDescription = "设置", tint = colors.inkFaint)
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         "显影",
                         style = MaterialTheme.typography.displayLarge,

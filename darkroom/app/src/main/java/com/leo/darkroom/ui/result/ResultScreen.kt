@@ -4,11 +4,14 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -55,6 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -73,12 +79,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.leo.darkroom.DarkroomViewModel
 import com.leo.darkroom.DarkroomViewModel.UiState
+import com.leo.darkroom.card.CardPalette
+import com.leo.darkroom.card.CardSpec
+import com.leo.darkroom.card.FrameStyle
 import com.leo.darkroom.card.PhotoCardPainter
 import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
+import com.leo.darkroom.card.TitleFontStyle
+import com.leo.darkroom.card.TitleSizeOption
+import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
+import com.leo.darkroom.ui.theme.pressScale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -92,7 +105,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     val availableWidth = (configuration.screenWidthDp.dp - 40.dp)
     var previewWidth = minOf(availableWidth * 0.94f, 384.dp)
     var previewHeight = previewWidth * (state.exportFormat.height.toFloat() / state.exportFormat.width)
-    val maxPreviewHeight = configuration.screenHeightDp.dp * 0.46f
+    val maxPreviewHeight = configuration.screenHeightDp.dp * 0.42f
     if (previewHeight > maxPreviewHeight) {
         previewHeight = maxPreviewHeight
         previewWidth = previewHeight * (state.exportFormat.width.toFloat() / state.exportFormat.height)
@@ -307,7 +320,96 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                 }
             }
         }
+        Spacer(Modifier.height(10.dp))
+
+        // —— 相纸框型（it-010 US-16，仅拍立得：数码/胶片没有相纸概念）——
+        if (state.mode == DevelopMode.POLAROID) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("相纸", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+                Spacer(Modifier.weight(1f))
+                Text(state.spec.frame.label, style = MaterialTheme.typography.bodySmall, color = colors.accent)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                FrameStyle.entries.forEach { frame ->
+                    val selected = state.spec.frame == frame
+                    val interaction = remember { MutableInteractionSource() }
+                    Column(
+                        modifier = Modifier
+                            .pressScale(interaction)
+                            .width(78.dp)
+                            .height(64.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.surface)
+                            .border(
+                                BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) colors.accent else colors.hairline),
+                                RoundedCornerShape(10.dp),
+                            )
+                            .clickable(
+                                enabled = !state.exporting,
+                                interactionSource = interaction,
+                                indication = LocalIndication.current,
+                                role = Role.RadioButton,
+                                onClick = { vm.setFrame(frame) },
+                            )
+                            .semantics { this.selected = selected }
+                            .padding(5.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        FrameSwatch(frame)
+                        Text(
+                            frame.label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (selected) colors.accent else colors.ink,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        // —— 标题字体与字号（it-010 US-17）——
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("标题字体", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+            Spacer(Modifier.weight(1f))
+            Text(
+                "${state.spec.titleFont.label} · ${state.spec.titleSize.label}",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.accent,
+            )
+        }
         Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TitleFontStyle.entries.forEach { font ->
+                SelectChip(
+                    label = font.label,
+                    selected = state.spec.titleFont == font,
+                    onClick = { vm.setTitleFont(font) },
+                    modifier = Modifier.weight(1.2f),
+                )
+            }
+            Box(
+                Modifier
+                    .width(1.dp)
+                    .height(28.dp)
+                    .background(colors.hairline),
+            )
+            TitleSizeOption.entries.forEach { size ->
+                SelectChip(
+                    label = size.label,
+                    selected = state.spec.titleSize == size,
+                    onClick = { vm.setTitleSize(size) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
@@ -330,31 +432,16 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                     onValueChange = vm::setDate,
                 )
                 HorizontalDivider(color = colors.hairline)
-                Row(
-                    Modifier
-                    .fillMaxWidth()
-                        .height(44.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("卡脚水印", style = MaterialTheme.typography.bodyMedium, color = colors.ink)
-                        Text("显影 DARKROOM", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
-                    }
-                    Switch(
-                        checked = state.spec.showWatermark,
-                        onCheckedChange = vm::setWatermark,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = colors.accent,
-                            checkedThumbColor = colors.surface,
-                            uncheckedTrackColor = colors.hairline,
-                            uncheckedThumbColor = colors.surface,
-                        ),
-                    )
-                }
+                CardEditLine(
+                    label = "脚注",
+                    value = state.spec.footer,
+                    placeholder = "留空则不印",
+                    onValueChange = vm::setFooter,
+                )
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("分享画幅", style = MaterialTheme.typography.titleMedium, color = colors.ink)
             Spacer(Modifier.weight(1f))
@@ -491,6 +578,75 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
     }
 }
 
+/** 相纸缩略示意（it-010）：纸色外框 + 中性灰成像区 + 底部墨点，配色取自 CardPalette 真源 */
+@Composable
+private fun FrameSwatch(frame: FrameStyle) {
+    val palette = remember(frame) { CardPalette.forFrame(frame) }
+    Canvas(
+        Modifier
+            .fillMaxWidth()
+            .height(30.dp),
+    ) {
+        val corner = 3.dp.toPx()
+        drawRoundRect(color = Color(palette.paper), cornerRadius = CornerRadius(corner, corner))
+        val m = 3.dp.toPx()
+        val photoH = size.height - m * 2f - 6.dp.toPx()
+        drawRect(
+            color = Color(0xFF8A8A87),
+            topLeft = Offset(m * 1.7f, m * 1.7f),
+            size = Size(size.width - m * 3.4f, photoH),
+        )
+        drawCircle(
+            color = Color(palette.inkFaint),
+            radius = 1.3.dp.toPx(),
+            center = Offset(m * 2.6f, size.height - m - 3.dp.toPx()),
+        )
+        drawRect(
+            color = Color(palette.hairline),
+            topLeft = Offset(m * 4.4f, size.height - m - 4.dp.toPx()),
+            size = Size(size.width - m * 8f, 1.6.dp.toPx()),
+        )
+    }
+}
+
+/** 通用选择 chip（it-010）：字体/字号用；选中=ink 底反白，非仅颜色编码 */
+@Composable
+private fun SelectChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = editorialColors()
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier
+            .pressScale(interaction)
+            .height(44.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) colors.ink else colors.surface)
+            .border(
+                BorderStroke(1.dp, if (selected) colors.ink else colors.hairline),
+                RoundedCornerShape(10.dp),
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
+            .semantics { this.selected = selected },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) colors.paper else colors.ink,
+            maxLines = 1,
+        )
+    }
+}
+
 @Composable
 private fun CardEditLine(
     label: String,
@@ -503,7 +659,7 @@ private fun CardEditLine(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(44.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = colors.inkFaint, modifier = Modifier.width(62.dp))

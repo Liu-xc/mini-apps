@@ -39,7 +39,7 @@ import com.leo.darkroom.ui.pageInsets
 import com.leo.darkroom.ui.theme.editorialColors
 
 /**
- * W4 设置页：显影速度档、甩一甩、水印默认值、关于。
+ * W4 设置页：显影速度档、甩一甩、关于（it-010：水印开关并入 W3 脚注）。
  */
 @Composable
 fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
@@ -104,7 +104,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
 
         Spacer(Modifier.height(14.dp))
 
-        // 互动
+        // 互动（it-010：水印开关由 W3 脚注输入取代——上一次脚注即默认值）
         SectionCard {
             Text(
                 "互动",
@@ -118,13 +118,6 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
                 checked = state.shakeEnabled,
                 onCheckedChange = vm::setShakeEnabled,
             )
-            HorizontalDivider(color = colors.hairline)
-            ToggleRow(
-                title = "水印默认开启",
-                subtitle = "新会话成片带「显影 DARKROOM」卡脚",
-                checked = state.spec.showWatermark,
-                onCheckedChange = vm::setWatermarkDefault,
-            )
         }
 
         Spacer(Modifier.height(14.dp))
@@ -133,7 +126,7 @@ fun SettingsScreen(vm: DarkroomViewModel, state: UiState) {
         SectionCard {
             Text("关于", style = MaterialTheme.typography.titleMedium, color = colors.ink, modifier = Modifier.padding(bottom = 6.dp))
             Text(
-                "显影 DARKROOM 0.2.4",
+                "显影 DARKROOM 0.3.0",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.ink,
             )

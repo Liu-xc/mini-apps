@@ -21,7 +21,10 @@
 |---|---|---|
 | title | String | ≤24 字，超长省略；空=只留日期章 |
 | dateText | String | ≤11 字符，形如 `1988 07 21`（可任意改） |
-| showWatermark | Boolean | 卡脚「显影 DARKROOM」显隐 |
+| footer | String | 卡脚脚注（it-010 替代 showWatermark）：≤24 字、超宽按域缩字；空=不印；默认「显影 DARKROOM」 |
+| frame | FrameStyle 枚举 | 相纸框型（it-010，仅拍立得生效）：CLASSIC/CREAM/NOIR/SLATE，配色真源 `CardPalette.forFrame` |
+| titleFont | TitleFontStyle 枚举 | SERIF（默认）/SANS |
+| titleSize | TitleSizeOption 枚举 | SMALL 0.85 / REGULAR 1.0 / LARGE 1.16（限幅 0.8–1.2，单测锁） |
 
 ## CardLayout（纯布局解，`solve(width, maxH?, mode)→rects`）
 
@@ -60,7 +63,11 @@ it-007 增补字段：`redGain/greenGain/blueGain`（青/品红/黄分染料上�
 | develop_speed | String(enum) | STANDARD |
 | develop_mode | String(enum) | POLAROID（it-007 US-14，W1 选择） |
 | shake_enabled | Boolean | true |
-| watermark_default | Boolean | true |
+| watermark_default | Boolean（legacy） | true；it-010 起由 footer_default 承接：false → 空脚注迁移 |
+| footer_default | String | 「显影 DARKROOM」；上一次 W3 脚注即默认（it-010 US-17） |
+| frame_style | String(enum) | CLASSIC（it-010 US-16） |
+| title_font | String(enum) | SERIF（it-010 US-17） |
+| title_size | String(enum) | REGULAR（it-010 US-17） |
 
 ## 落库产物
 

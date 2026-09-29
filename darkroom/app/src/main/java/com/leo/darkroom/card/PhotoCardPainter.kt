@@ -49,22 +49,51 @@ data class CardPalette(
         /**
          * 模式对应的卡面印字配色（it-007 M3）：拍立得是浅相纸，
          * 数码/胶片是深机身与片基，文字翻成浅色——预览与导出共用，杜绝错配。
+         * it-010：拍立得的相纸框型由 [frame] 分派（[FrameStyle]），其余模式无相纸概念。
          */
-        fun forMode(mode: DevelopMode): CardPalette = when (mode) {
-            DevelopMode.POLAROID -> Default
-            DevelopMode.DIGITAL -> CardPalette(
-                paper = 0xFF1A1A1A.toInt(),
+        fun forMode(mode: DevelopMode, frame: FrameStyle = FrameStyle.CLASSIC): CardPalette =
+            when (mode) {
+                DevelopMode.POLAROID -> forFrame(frame)
+                DevelopMode.DIGITAL -> CardPalette(
+                    paper = 0xFF1A1A1A.toInt(),
+                    ink = 0xFFF2F2F0.toInt(),
+                    inkFaint = 0xFFB9B9B6.toInt(),
+                    accent = 0xFFD0D0CE.toInt(),
+                    hairline = 0xFF3A3A3A.toInt(),
+                )
+                DevelopMode.FILM -> CardPalette(
+                    paper = 0xFF232323.toInt(),
+                    ink = 0xFFF2F2F0.toInt(),
+                    inkFaint = 0xFFB9B9B6.toInt(),
+                    accent = 0xFFD0D0CE.toInt(),
+                    hairline = 0xFF3A3A3A.toInt(),
+                )
+            }
+
+        /** 四款相纸（it-010）：印字对比均 ≥ 打印可读线；成片是实物，不随界面主题翻色 */
+        fun forFrame(frame: FrameStyle): CardPalette = when (frame) {
+            FrameStyle.CLASSIC -> Default
+            FrameStyle.CREAM -> CardPalette(
+                paper = 0xFFF4EEE2.toInt(),
+                ink = 0xFF3B3428.toInt(),
+                inkFaint = 0xFF8A7F6C.toInt(),
+                accent = 0xFF6E6350.toInt(),
+                hairline = 0xFFE4DAC7.toInt(),
+            )
+            FrameStyle.NOIR -> CardPalette(
+                paper = 0xFF141414.toInt(),
                 ink = 0xFFF2F2F0.toInt(),
                 inkFaint = 0xFFB9B9B6.toInt(),
                 accent = 0xFFD0D0CE.toInt(),
                 hairline = 0xFF3A3A3A.toInt(),
             )
-            DevelopMode.FILM -> CardPalette(
-                paper = 0xFF232323.toInt(),
-                ink = 0xFFF2F2F0.toInt(),
-                inkFaint = 0xFFB9B9B6.toInt(),
-                accent = 0xFFD0D0CE.toInt(),
-                hairline = 0xFF3A3A3A.toInt(),
+            FrameStyle.SLATE -> CardPalette(
+                // it-010 走查修正：纸面加深一档，与经典白在缩略上拉开明度差
+                paper = 0xFFD4D4CE.toInt(),
+                ink = 0xFF262624.toInt(),
+                inkFaint = 0xFF66665F.toInt(),
+                accent = 0xFF46463F.toInt(),
+                hairline = 0xFFBEBEB8.toInt(),
             )
         }
     }
@@ -91,7 +120,7 @@ object PhotoCardPainter {
         look: PhotoLook = PhotoLook.ORIGINAL,
     ) {
         val layout = CardLayout.solve(cardWidthPx, mode = mode)
-        val palette = CardPalette.forMode(mode)
+        val palette = CardPalette.forMode(mode, spec.frame)
         val paper = Paint().apply { color = palette.paper }
         canvas.drawRect(0f, 0f, cardWidthPx, layout.height, paper)
         // 相纸/片基不是纯色平涂：极轻的确定性纸纹压在纸面与印字之下（it-007 M2）
@@ -217,7 +246,7 @@ object PhotoCardPainter {
         paint(canvas, layout.card.width, photo, spec, visual, mode, grain, look)
         canvas.restore()
 
-        if (spec.showWatermark && format == ShareFormat.STORY) {
+        if (spec.footer.isNotBlank() && format == ShareFormat.STORY) {
             val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = if (darkCard) 0xD9191919.toInt() else 0xD9FBFBFA.toInt()
                 textSize = widthPx * 0.025f
@@ -468,8 +497,13 @@ object PhotoCardPainter {
         if (title.isNotEmpty()) {
             val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.ink
-                textSize = layout.titleSize
-                typeface = Typeface.create(Typeface.SERIF, 500, false)
+                // it-010：字体与字号可选（衬线/黑体 × 小/标准/大），字号限幅防溢出
+                textSize = layout.titleSize * spec.titleSize.scale
+                typeface = Typeface.create(
+                    if (spec.titleFont == TitleFontStyle.SANS) Typeface.SANS_SERIF else Typeface.SERIF,
+                    500,
+                    false,
+                )
             }
             val titleLayout = StaticLayout.Builder.obtain(
                 title,
@@ -511,17 +545,21 @@ object PhotoCardPainter {
             canvas.drawText(date, layout.stamp.right - w, baseline, sp)
         }
 
-        // 卡脚水印
-        if (spec.showWatermark) {
+        // 卡脚脚注（it-010：自定义文案，空 = 不印）
+        val footer = spec.footer.trim()
+        if (footer.isNotEmpty()) {
             val wp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = palette.inkFaint
                 textSize = layout.watermarkSize
                 typeface = Typeface.create(Typeface.SANS_SERIF, 500, false)
             }
-            val text = "显影 DARKROOM"
-            val w = wp.measureText(text)
+            var w = wp.measureText(footer)
+            if (w > layout.watermark.width && w > 0f) {
+                wp.textSize = layout.watermarkSize * (layout.watermark.width / w)
+                w = wp.measureText(footer)
+            }
             val baseline = layout.watermark.centerY + layout.watermarkSize * 0.35f
-            canvas.drawText(text, layout.watermark.right - w, baseline, wp)
+            canvas.drawText(footer, layout.watermark.right - w, baseline, wp)
         }
     }
 }

@@ -6,10 +6,13 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.leo.darkroom.card.CardSpec
+import com.leo.darkroom.card.FrameStyle
 import com.leo.darkroom.card.GrainNoise
 import com.leo.darkroom.card.PhotoCardPainter
 import com.leo.darkroom.card.PhotoLook
 import com.leo.darkroom.card.ShareFormat
+import com.leo.darkroom.card.TitleFontStyle
+import com.leo.darkroom.card.TitleSizeOption
 import com.leo.darkroom.data.PhotoRepository
 import com.leo.darkroom.data.PrefsStore
 import com.leo.darkroom.develop.DevelopClock
@@ -83,6 +86,9 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
     /** 用户是否已在本次进程内选过显影模式（挡启动期 DataStore 回填） */
     private var modeChosen = false
 
+    /** 用户是否已改过创作选项（脚注/相纸/字体——it-010，同 modeChosen 语义） */
+    private var optionsChosen = false
+
     init {
         viewModelScope.launch {
             prefs.speed.collect { speed ->
@@ -103,9 +109,26 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
             }
         }
         viewModelScope.launch {
-            prefs.watermarkDefault.collect { v ->
+            // 创作选项默认值（it-010）只在启动时读一次，与模式同语义：
+            // W3 的 setter 是即时真源，晚到的旧快照不许冲掉用户刚选的值
+            prefs.footerDefault.first().let { v ->
                 _state.update { s ->
-                    if (s.screen == Screen.PICK) s.copy(spec = s.spec.copy(showWatermark = v)) else s
+                    if (!optionsChosen && s.screen == Screen.PICK) s.copy(spec = s.spec.copy(footer = v)) else s
+                }
+            }
+            prefs.frameDefault.first().let { v ->
+                _state.update { s ->
+                    if (!optionsChosen && s.screen == Screen.PICK) s.copy(spec = s.spec.copy(frame = v)) else s
+                }
+            }
+            prefs.titleFontDefault.first().let { v ->
+                _state.update { s ->
+                    if (!optionsChosen && s.screen == Screen.PICK) s.copy(spec = s.spec.copy(titleFont = v)) else s
+                }
+            }
+            prefs.titleSizeDefault.first().let { v ->
+                _state.update { s ->
+                    if (!optionsChosen && s.screen == Screen.PICK) s.copy(spec = s.spec.copy(titleSize = v)) else s
                 }
             }
         }
@@ -160,7 +183,11 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 photoLabel = label,
                 spec = CardSpec(
                     dateText = CardSpec.today(),
-                    showWatermark = it.spec.showWatermark,
+                    // 创作选项跨会话携带（it-010）：上一次的脚注/相纸/字体/字号即本次起点
+                    footer = it.spec.footer,
+                    frame = it.spec.frame,
+                    titleFont = it.spec.titleFont,
+                    titleSize = it.spec.titleSize,
                 ),
                 photoLook = PhotoLook.ORIGINAL,
                 progress = 0f,
@@ -264,8 +291,37 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         _state.update { it.copy(spec = it.spec.copy(dateText = date.take(11))) }
     }
 
-    fun setWatermark(show: Boolean) {
-        _state.update { it.copy(spec = it.spec.copy(showWatermark = show)) }
+    // —— 创作选项（it-010 US-16/17）：会话即时生效，并作为下一次会话默认持久化 ——
+
+    fun setFooter(text: String) {
+        optionsChosen = true
+        _state.update { it.copy(spec = it.spec.copy(footer = text.take(24))) }
+        viewModelScope.launch { prefs.setFooterDefault(text.take(24)) }
+    }
+
+    fun setFrame(frame: FrameStyle) {
+        optionsChosen = true
+        _state.update {
+            if (it.exporting) it else it.copy(
+                spec = it.spec.copy(frame = frame),
+                savedImageUri = null,
+                savedVideoUri = null,
+                lastSavedKind = SavedKind.NONE,
+            )
+        }
+        viewModelScope.launch { prefs.setFrameDefault(frame) }
+    }
+
+    fun setTitleFont(font: TitleFontStyle) {
+        optionsChosen = true
+        _state.update { it.copy(spec = it.spec.copy(titleFont = font)) }
+        viewModelScope.launch { prefs.setTitleFontDefault(font) }
+    }
+
+    fun setTitleSize(size: TitleSizeOption) {
+        optionsChosen = true
+        _state.update { it.copy(spec = it.spec.copy(titleSize = size)) }
+        viewModelScope.launch { prefs.setTitleSizeDefault(size) }
     }
 
     fun setExportFormat(format: ShareFormat) {
@@ -304,8 +360,6 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setShakeEnabled(enabled: Boolean) = viewModelScope.launch { prefs.setShakeEnabled(enabled) }
-
-    fun setWatermarkDefault(enabled: Boolean) = viewModelScope.launch { prefs.setWatermarkDefault(enabled) }
 
     // —— 导出 ——
 
