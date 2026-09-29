@@ -80,6 +80,10 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         val albumLoading: Boolean = false,
         /** 本次启动内已显影过的相册图 id（翻回不重播，重播=手动移出） */
         val playedIds: Set<Long> = emptySet(),
+        /** it-011 收尾：沉浸相册的会话级退出标记（退出回选图首页，可再进；不持久化） */
+        val galleryDismissed: Boolean = false,
+        /** it-011 收尾：成片页双态——false=成片查看（默认，仅关键操作），true=编辑（全部细项） */
+        val resultEditing: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -183,8 +187,12 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         _state.update { it.copy(playedIds = galleryPlayback.snapshot()) }
     }
 
-    /** 沉浸相册点开成片：动画已在 W1 播完，直接进 W3 编辑/导出 */
-    fun openGalleryResult(photo: com.leo.darkroom.data.AlbumPhoto, bitmap: android.graphics.Bitmap) {
+    /** 沉浸相册点开成片：动画已在 W1 播完，直接进 W3（it-011 收尾：默认成片查看态） */
+    fun openGalleryResult(
+        photo: com.leo.darkroom.data.AlbumPhoto,
+        bitmap: android.graphics.Bitmap,
+        toEdit: Boolean = false,
+    ) {
         fixedJob?.cancel()
         loopJob?.cancel()
         _state.update {
@@ -210,8 +218,24 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 lastSavedKind = SavedKind.NONE,
                 error = null,
                 message = null,
+                resultEditing = toEdit,
             )
         }
+    }
+
+    // —— 成片页双态（it-011 收尾：显影完成默认成片查看，编辑是显式动作）——
+
+    fun openResultEdit() = _state.update { it.copy(resultEditing = true) }
+
+    fun closeResultEdit() = _state.update { it.copy(resultEditing = false) }
+
+    // —— 沉浸相册进出（it-011 收尾：会话级退出/再进）——
+
+    fun exitGallery() = _state.update { it.copy(galleryDismissed = true) }
+
+    fun enterGallery() {
+        _state.update { it.copy(galleryDismissed = false) }
+        if (_state.value.album.isEmpty()) loadAlbum(initial = true)
     }
 
     // —— 选图 ——
@@ -274,6 +298,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
                 ejecting = true,
                 shakeHint = true,
                 exporting = false,
+                resultEditing = false,
                 exportProgress = 0f,
                 error = null,
             )
@@ -355,7 +380,7 @@ class DarkroomViewModel(application: Application) : AndroidViewModel(application
         Haptics.confirm(getApplication())
         fixedJob = viewModelScope.launch {
             delay(750)
-            _state.update { it.copy(screen = Screen.RESULT) }
+            _state.update { it.copy(screen = Screen.RESULT, resultEditing = false) }
             loopJob?.cancel()
         }
     }

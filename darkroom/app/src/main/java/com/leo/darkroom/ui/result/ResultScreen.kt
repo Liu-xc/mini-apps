@@ -89,6 +89,7 @@ import com.leo.darkroom.card.TitleFontStyle
 import com.leo.darkroom.card.TitleSizeOption
 import com.leo.darkroom.develop.DevelopMode
 import com.leo.darkroom.ui.pageInsets
+import com.leo.darkroom.ui.result.PhotoViewer
 import com.leo.darkroom.ui.theme.EditorialMotion
 import com.leo.darkroom.ui.theme.editorialColors
 import com.leo.darkroom.ui.theme.pressScale
@@ -146,6 +147,10 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         }
     }
 
+    androidx.activity.compose.BackHandler(enabled = state.resultEditing) {
+        vm.closeResultEdit()
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -159,15 +164,32 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             }
             Spacer(Modifier.width(4.dp))
             Column {
-                Text("成片", style = MaterialTheme.typography.titleLarge, color = colors.ink)
-                Text("一张可以带走的回忆", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
+                Text(
+                    if (state.resultEditing) "编辑成片" else "成片",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.ink,
+                )
+                Text(
+                    if (state.resultEditing) "改完点右上角完成" else "一张可以带走的回忆",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.inkFaint,
+                )
             }
             Spacer(Modifier.weight(1f))
-            Text(
-                "PRINTED",
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
-                color = colors.inkFaint,
-            )
+            if (state.resultEditing) {
+                TextButton(onClick = vm::closeResultEdit) {
+                    Text("完成", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                }
+            } else {
+                Text(
+                    "PRINTED",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.1.sp),
+                    color = colors.inkFaint,
+                )
+                TextButton(onClick = vm::openResultEdit) {
+                    Text("编辑", style = MaterialTheme.typography.titleSmall, color = colors.ink)
+                }
+            }
         }
 
         Spacer(Modifier.height(10.dp))
@@ -248,6 +270,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             Spacer(Modifier.weight(1f))
             Text("点按可查看大图", style = MaterialTheme.typography.bodySmall, color = colors.inkFaint)
         }
+if (state.resultEditing) {
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("照片风格", style = MaterialTheme.typography.titleMedium, color = colors.ink)
@@ -479,6 +502,10 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
         }
 
         Spacer(Modifier.height(12.dp))
+}
+
+        // —— 成片查看态（it-011 收尾）：只保留关键路径操作 ——
+        if (!state.resultEditing) {
         if (state.exporting) {
             LinearProgressIndicator(
                 progress = { state.exportProgress },
@@ -540,39 +567,15 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
             TextButton(onClick = vm::backToPick, modifier = Modifier.fillMaxWidth()) { Text("再洗一张") }
         }
         Spacer(Modifier.height(20.dp))
+        }
 
-        // it-009 全屏大图：暗底 Fit 全屏，点按任意处关闭（返回键同）
         if (viewerOpen) {
             artwork.value?.let { art ->
-                Dialog(
-                    onDismissRequest = { viewerOpen = false },
-                    properties = DialogProperties(usePlatformDefaultWidth = false),
-                ) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .background(Color(0xF0151515))
-                            .clickable { viewerOpen = false },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            bitmap = art,
-                            contentDescription = "${state.exportFormat.label}大图",
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 28.dp),
-                        )
-                        Text(
-                            "点按任意处关闭",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0x99FBFBFA),
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 16.dp),
-                        )
-                    }
-                }
+                PhotoViewer(
+                    image = art,
+                    contentDescription = "${state.exportFormat.label}大图",
+                    onClose = { viewerOpen = false },
+                )
             }
         }
     }

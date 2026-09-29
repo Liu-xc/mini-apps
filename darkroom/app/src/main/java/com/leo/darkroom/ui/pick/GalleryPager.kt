@@ -60,6 +60,7 @@ fun GalleryPager(
     vm: DarkroomViewModel,
     state: UiState,
     pagerState: PagerState,
+    onOpenViewer: (AlbumPhoto, Bitmap) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // 近尾部预取下一页相册索引
@@ -85,6 +86,7 @@ fun GalleryPager(
             speedMs = state.speed.durationMs.toInt(),
             isCurrent = pagerState.currentPage == page,
             shouldAnimate = pagerState.currentPage == page && photo.id !in state.playedIds,
+            onOpenViewer = { bmp -> onOpenViewer(photo, bmp) },
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -99,6 +101,7 @@ private fun GalleryCard(
     speedMs: Int,
     isCurrent: Boolean,
     shouldAnimate: Boolean,
+    onOpenViewer: (Bitmap) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = editorialColors()
@@ -182,7 +185,7 @@ private fun GalleryCard(
                 }
                 .shadow(8.dp, RectangleShape)
                 .clickable(enabled = bitmap != null) {
-                    if (playing) skipToResult() else bitmap?.let { vm.openGalleryResult(photo, it) }
+                    if (playing) skipToResult() else bitmap?.let(onOpenViewer)
                 },
         ) {
             if (bitmap != null) {

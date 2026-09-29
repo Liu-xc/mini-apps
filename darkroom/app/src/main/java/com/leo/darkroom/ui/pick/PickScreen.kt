@@ -31,6 +31,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Tune
@@ -40,13 +41,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,10 +96,15 @@ fun PickScreen(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> vm.onAlbumPermissionResult(granted) }
 
-    val galleryMode = state.albumGranted == true && (state.album.isNotEmpty() || state.albumLoading)
+    val galleryMode = state.albumGranted == true && !state.galleryDismissed &&
+            (state.album.isNotEmpty() || state.albumLoading)
     val pagerState = androidx.compose.foundation.pager.rememberPagerState(
         pageCount = { state.album.size.coerceAtLeast(1) },
     )
+    // it-011 收尾：点按成品=全屏大图（保存/编辑从查看器动作进，而非直跳编辑页）
+    var viewerOpen by remember { mutableStateOf(false) }
+    var viewerBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var viewerPhoto by remember { mutableStateOf<com.leo.darkroom.data.AlbumPhoto?>(null) }
 
     // 首次冷入场编排只放一次（it-008 M2.3）：flag 由导航壳跨屏持有，
     // 从 W2/W4 返回与 Activity 重建都不重放（基线「二次进入走快路径」）。
@@ -120,6 +129,11 @@ fun PickScreen(
                     color = colors.inkFaint,
                 )
                 Spacer(Modifier.weight(1f))
+                if (galleryMode) {
+                    IconButton(onClick = vm::exitGallery, modifier = Modifier.size(44.dp)) {
+                        Icon(Icons.Outlined.Close, contentDescription = "退出相册浏览", tint = colors.inkFaint)
+                    }
+                }
                 IconButton(onClick = vm::openSettings, modifier = Modifier.size(44.dp)) {
                     Icon(Icons.Outlined.Tune, contentDescription = "设置", tint = colors.inkFaint)
                 }
@@ -131,7 +145,11 @@ fun PickScreen(
             EditorialEntrance(delayMs = 24, enabled = playEntrance) {
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     if (state.album.isNotEmpty()) {
-                        GalleryPager(vm, state, pagerState, Modifier.fillMaxSize())
+                        GalleryPager(
+                            vm, state, pagerState,
+                            onOpenViewer = { photo, bmp -> viewerPhoto = photo; viewerBitmap = bmp; viewerOpen = true },
+                            modifier = Modifier.fillMaxSize(),
+                        )
                         Text(
                             "${pagerState.currentPage + 1} / ${state.album.size}",
                             style = MaterialTheme.typography.labelSmall,
@@ -218,7 +236,7 @@ fun PickScreen(
                     }
                 }
 
-                if (state.albumGranted != true) {
+                if (state.albumGranted != true || state.galleryDismissed) {
                     EditorialEntrance(delayMs = 36, enabled = playEntrance) {
                         Column {
                             Spacer(Modifier.height(18.dp))
@@ -236,16 +254,25 @@ fun PickScreen(
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        if (state.albumGranted == false)
-                                            "还没拿到相册权限——可以再试一次，或继续用下面的入口选图。"
-                                        else
-                                            "授权读取相册后，首页变成可以滑动的相纸墙：左右滑照片，每一张都在你眼前显影。",
+                                        when {
+                                            state.albumGranted == false ->
+                                                "还没拿到相册权限——可以再试一次，或继续用下面的入口选图。"
+
+                                            state.galleryDismissed ->
+                                                "沉浸式相册浏览还在这里，随时回来。"
+
+                                            else ->
+                                                "授权读取相册后，首页变成可以滑动的相纸墙：左右滑照片，每一张都在你眼前显影。"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = colors.inkFaint,
                                     )
                                     Spacer(Modifier.height(12.dp))
                                     Button(
-                                        onClick = { albumPermissionLauncher.launch(albumPermission()) },
+                                        onClick = {
+                                            if (state.albumGranted == true) vm.enterGallery()
+                                            else albumPermissionLauncher.launch(albumPermission())
+                                        },
                                         modifier = Modifier.fillMaxWidth().height(46.dp),
                                         shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.buttonColors(
@@ -253,7 +280,13 @@ fun PickScreen(
                                             contentColor = colors.paper,
                                         ),
                                     ) {
-                                        Text(if (state.albumGranted == false) "再试一次" else "开启相册权限")
+                                        Text(
+                                            when {
+                                                state.albumGranted == false -> "再试一次"
+                                                state.galleryDismissed -> "回到沉浸相册"
+                                                else -> "开启相册权限"
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -400,6 +433,36 @@ fun PickScreen(
                     color = colors.inkFaint,
                 )
             }
+        }
+
+        if (viewerOpen && viewerBitmap != null && viewerPhoto != null) {
+            val photo = viewerPhoto!!
+            val bmp = viewerBitmap!!
+            com.leo.darkroom.ui.result.PhotoViewer(
+                image = bmp.asImageBitmap(),
+                contentDescription = "相册照片大图",
+                onClose = { viewerOpen = false },
+                actions = {
+                    Button(
+                        onClick = {
+                            viewerOpen = false
+                            vm.openGalleryResult(photo, bmp, toEdit = false)
+                            vm.exportImage(share = false)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.ink,
+                            contentColor = colors.paper,
+                        ),
+                    ) { Text("存图片") }
+                    OutlinedButton(
+                        onClick = {
+                            viewerOpen = false
+                            vm.openGalleryResult(photo, bmp, toEdit = true)
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.ink),
+                    ) { Text("编辑") }
+                },
+            )
         }
     }
 }
