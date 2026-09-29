@@ -74,9 +74,11 @@ object DevelopFx {
     )
 
     /**
-     * 显现前沿的软亮带：胶片 SWEEP 与 RevealField.frontX 公式精确对位
-     * （frontX = -0.22 + reveal·1.40）；拍立得 CHEMICAL 用左下入口向右上
-     * 推进的对角近似（reveal 语义相同）。数码 BLOCKS 恒为零强度。
+     * 显现前沿的软亮带：仅胶片 SWEEP——与 RevealField.frontX 公式精确对位
+     * （frontX = -0.22 + reveal·1.40），是冲洗前沿本身的湿边。
+     * 拍立得不给（it-008 收尾修正，Leo 实机反馈）：对角近似层与真实偏心前沿
+     * 不重合，观感像一层胶水在照片上扩散，和「逐步浮现」的显影语言冲突；
+     * 数码 BLOCKS 恒为零强度。
      */
     fun wetBandAt(mode: DevelopMode, progress: Float, reveal: Float): WetBand {
         val p = progress.coerceIn(0f, 1f)
@@ -87,11 +89,7 @@ object DevelopFx {
                 angleDeg = 0f,
             )
 
-            RevealKind.CHEMICAL -> WetBand(
-                position = reveal.coerceIn(0f, 1f),
-                alpha = 0.09f * activityEnvelope(p),
-                angleDeg = -45f,
-            )
+            RevealKind.CHEMICAL -> WetBand(0f, 0f, 0f)
 
             RevealKind.BLOCKS -> WetBand(0f, 0f, 0f)
         }

@@ -60,11 +60,14 @@ class DevelopFxTest {
     }
 
     @Test
-    fun `wet band is silent for digital and after 85 percent`() {
-        val digital = DevelopFx.wetBandAt(DevelopMode.DIGITAL, 0.5f, 0.5f)
-        assertEquals(0f, digital.alpha)
-        val late = DevelopFx.wetBandAt(DevelopMode.POLAROID, 0.9f, 0.9f)
-        assertEquals(0f, late.alpha)
+    fun `wet band is silent for polaroid and digital, any progress`() {
+        // it-008 收尾修正：拍立得不叠加湿光层（观感像胶水扩散，见 wetBandAt 注释）
+        for (p in listOf(0.05f, 0.3f, 0.5f, 0.7f, 0.85f)) {
+            assertEquals(0f, DevelopFx.wetBandAt(DevelopMode.POLAROID, p, p).alpha)
+            assertEquals(0f, DevelopFx.wetBandAt(DevelopMode.DIGITAL, p, p).alpha)
+        }
+        // 胶片在中段保持湿边强度
+        assertTrue(DevelopFx.wetBandAt(DevelopMode.FILM, 0.5f, 0.5f).alpha > 0.05f)
     }
 
     @Test

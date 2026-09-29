@@ -67,7 +67,7 @@ Android 系统 CJK 字体族：Sans 使用 `FontFamily.SansSerif`（Noto Sans CJ
 | 6 | 槽口/卡片位移 | graphicsLayer 直写（1:1 跟手） | 刻度条拖动 |
 | 7 | 成片分享预览 | 使用最终导出布局即时预览；相纸卡走中性暗底、深色卡（数码/胶片）走亮场 | 选择 1:1 / 4:5 / 9:16 |
 | 8 | 药液气泡 | `DevelopFx.bubbleAt` progress 确定性纯函数：12 个种子气泡自下而上浮起 + 横向微摆，暗晕打底 + 白芯（亮暗背景都可辨），峰值 16%；包络 15%–85%，倒放严格可逆 | 显影中（拍立得/胶片；数码无药水不给） |
-| 9 | 前沿湿光 | `DevelopFx.wetBandAt`：胶片 SWEEP 与 RevealField.frontX 公式精确对位、拍立得 CHEMICAL 左下入料口对角近似，白 ≤10% 软亮带随前沿推进 | 同上（数码不给） |
+| 9 | 前沿湿光 | `DevelopFx.wetBandAt`：**仅胶片 SWEEP**——与 RevealField.frontX 公式精确对位的湿边，白 ≤10%。拍立得不给（it-008 收尾修正：对角近似层与真实偏心前沿不重合，实机观感像胶水扩散、与「逐步浮现」语言冲突）；数码不给 | 显影中（仅胶片） |
 | 10 | W1 冷入场编排 | `EditorialEntrance`：5 组 stagger 24ms，每组 fade 240ms + rise 14dp；flag 由导航壳跨屏持有，二次进入/Activity 重建不重放 | 首次冷进入 W1 |
 | 11 | 阶段文案过场 | AnimatedContent fade 160ms + rise 6dp；百分比读数 tabular figures | 阶段切换（每会话 3 次） |
 | 12 | 控件状态过渡 | 模式 chip 边框宽/色 150ms + 选中示意图 pop 1→1.08→1；样片卡按压 0.97 + 松手 pop 回弹；snackbar 编辑式（surface + hairline + 14dp 圆角） | chip 选择/样片按压/消息 |
@@ -75,7 +75,7 @@ Android 系统 CJK 字体族：Sans 使用 `FontFamily.SansSerif`（Noto Sans CJ
 **出纸只放一次**（it-007 修正）：由 `UiState.ejecting` 驱动而不是 `LaunchedEffect(Unit)`——
 Activity 被系统重建时显影可能已过半，重放出纸会让进行中的会话又「吐」一次纸。
 
-预算对表（it-008 修订）：交互反馈即时 ✓；一屏自主运动 ≤1 ✓——显影中的自主运动仍聚焦卡片一处：气泡与湿光都画在照片区内、由 progress 驱动，是「照片正在显影」这一个过程的两面，非第二个运动源；入场编排仅 W1 首次冷进入（stagger 24ms × 5 组，>200ms 编排只允许首屏）+ W3 亮相一次，返回/二次进入走快路径 ✓；无彩屑（保存成功仅 snackbar）✓；定影光泽扫 600ms 属庆祝预算（≤900ms），只挂在定影落定 ✓；减弱动态 = 出纸瞬时落位 + 显影直接跳定影 + 全部过程/入场动效瞬时（`EditorialMotion.reduceMotion`）✓。
+预算对表（it-008 修订）：交互反馈即时 ✓；一屏自主运动 ≤1 ✓——显影中的自主运动仍聚焦卡片一处：气泡与湿光都画在照片区内、由 progress 驱动，是「照片正在显影」这一个过程的两面，非第二个运动源（拍立得的湿光层已于收尾修正中移除——它不是前沿本身时就成了第二层「胶水」，胶片的湿边因与前沿精确对位而保留）；入场编排仅 W1 首次冷进入（stagger 24ms × 5 组，>200ms 编排只允许首屏）+ W3 亮相一次，返回/二次进入走快路径 ✓；无彩屑（保存成功仅 snackbar）✓；定影光泽扫 600ms 属庆祝预算（≤900ms），只挂在定影落定 ✓；减弱动态 = 出纸瞬时落位 + 显影直接跳定影 + 全部过程/入场动效瞬时（`EditorialMotion.reduceMotion`）✓。
 
 **过程动效真源（it-008）**：`develop/DevelopFx.kt` 是气泡/湿光/包络的纯函数单一真源
 （`(mode, progress) → 参数`，确定性、85% 后全归零）；导出端不画过程动效——成片在

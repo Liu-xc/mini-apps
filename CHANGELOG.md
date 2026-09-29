@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **fix(darkroom)**: it-008 收尾修正——移除拍立得的前沿湿光带：对角近似层与真实偏心前沿不重合，实机观感像「一层胶水扩散」，与「逐步浮现」的显影语言冲突；胶片湿边（与 SWEEP 前沿精确对位、属前沿本身）与药液气泡保留。单测锁死拍立得/数码湿光恒零；版本 0.2.1。详 [it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) 验证记录。
+
 - **feat(darkroom)**: it-008 显影过程动效精修与上架级质感收口——显影中段新增 progress 确定性的药液气泡（暗晕+白芯、种子驱动、倒放可逆）与前沿湿光带（胶片与 RevealField 前沿公式精确对位），定影落定并发 600ms 对角光泽扫，阶段文案 fade+rise 过场、百分比 tabular figures；上架收口：应用图标重绘为石墨底灰阶「显影中」构图（告别 it-006 前的墨绿+橙旧身份）、窗口底色对齐 paper token 消灭冷启动闪变、W1 首次冷入场五组 stagger 编排（导航壳持 flag 二次进入不重放）、W3 成片亮相入场、模式 chip/样片卡/snackbar 全部消灭瞬跳；新增 `DevelopFx` 纯函数真源 +7 单测（63 绿）。详 [it-008](darkroom/specs/iterations/it-008-store-polish-motion.md)。
 
 - **feat(wardrobe)**: it-058 交互体感上线专项——共享元素转场首次真正接线（W1 槽位/W3 网格→W5 详情、W8 hero→W7 轮播，此前 spec 声称但来源端从未挂 key）；全站照片灰阶占位消除白块闪现（Coil placeholder + crossfade）；新增 `pressScale` 按压反馈（照片卡/主 CTA，减弱动态不缩放）；随机一套忙碌态（Casino 旋转+防连点）；对话页 typing 三点呼吸与气泡入场；W1 四分区与导出面板设定行 stagger 入场；Tab 切换升 fade+微缩放层次；冷启动 splash 背景对齐 paper（含深色）；05 动效清单三处纸面承诺勘误（#3 接线/#8 空态自绘/#10 sheet stagger）并新增 #14–#18。动效走查方法：5 段录屏 709 帧 filmstrip + 视觉评审 + 源码钉死，详 [it-058](wardrobe/specs/iterations/it-058-motion-polish.md)。
