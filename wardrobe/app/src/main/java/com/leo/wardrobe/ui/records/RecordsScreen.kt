@@ -118,6 +118,8 @@ fun RecordsScreen(
                 options = tags,
                 selected = filterTag,
                 onSelect = { filterTag = it },
+                // it-065 修3：无行尾固定钮，起点即给「右侧还有内容」轻提示（W3 因筛选钮维持起点干净）
+                fadeAtStart = true,
                 // it-045：顶栏下缘→内容 20dp 全站节奏（标题行底 6 + 14）
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp),
             )
@@ -160,11 +162,15 @@ fun RecordsScreen(
                             items = filtered,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                // it-064 修2b②：层叠几何 base(k)=(s·(V-1-k), -s·(V-1-k))——
-                                // 顶卡向右上各偏 V-1=2 层 ×14dp=28dp（右贴屏边、上遮筛选行的根因）。
-                                // 容器不可裁剪（it-048），改为内缩起点：start 28dp 把整组左移抵消右偏、
-                                // top 8dp + 容器 top 20dp ≥ 上探 28dp，层叠保留、越界归零
-                                .padding(start = 28.dp, top = 8.dp)
+                                // it-065 修1（覆盖 it-064 修2b② 的 start 内缩）：层叠几何
+                                // base(k)=(s·(V-1-k), -s·(V-1-k))——顶卡比深层卡右偏 28dp（V=3×14dp）。
+                                // it-064 只收 start 等于收窄卡宽、不挪右缘（内容右缘恒=页边距+style 内衬），
+                                // 顶卡右缘恒溢出屏 2dp、停驻上一张贴屏左缘；改为 end 22dp 吸收右偏：
+                                // 静止层叠恰好落进 20dp 页面栅格（深层左缘=页左边距、顶卡右缘=页右边距，
+                                // 居中且两侧对称可见安全边距），停驻上一张右缘=屏 −22dp 恒在屏外
+                                //（park 右缘 = −end 内缩，几何恒等式）。top 8dp + 容器 top 20dp ≥ 上探
+                                // 28dp，静止卡组不盖筛选行；容器不可裁剪（it-048），甩卡真实飞出不受影响。
+                                .padding(end = 22.dp, top = 8.dp)
                                 // it-064 修2b：380→368——补偿 top 缓冲增量，整页高度不涨
                                 .height(368.dp),
                             // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /

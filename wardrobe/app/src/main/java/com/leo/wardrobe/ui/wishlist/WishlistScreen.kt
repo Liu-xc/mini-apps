@@ -325,10 +325,12 @@ private fun WishItemsSection(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
-            // it-036 C11：品类筛选行右缘 28dp 渐隐（透明→页面底色），可滑才显示
+            // it-036 C11：品类筛选行右缘 28dp 渐隐（透明→页面底色），可滑才显示；
+            // it-065 修3：无行尾固定钮，起点即提示右侧还有内容（fadeAtStart）
             FadingScrollRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
+                fadeAtStart = true,
             ) {
                 FilterChip(
                     selected = categoryFilter == null,

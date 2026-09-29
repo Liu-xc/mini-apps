@@ -231,6 +231,10 @@ fun ItemEditScreen(
             Modifier
                 .padding(padding)
                 .fillMaxSize()
+                // it-065 修4：内容列同步吃 IME inset——键盘弹出时吸底保存栏经 imePadding 抬升，
+                // 内容列若不跟随，最后一组字段会被保存栏压出「不可恢复的遮挡」；
+                // 静止态遮挡由 verticalScroll + 底部可达余量（下方 Spacer）保证可滚出完整可见
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 // it-045：顶栏下缘→内容 20dp 全站节奏
                 .padding(top = 20.dp, start = 20.dp, end = 20.dp),
@@ -572,7 +576,9 @@ fun ItemEditScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            // it-065 修4：32→48——最后一组表单字段（补充细节/自定义标签）滚到吸底保存栏
+            // 上方时留足可达余量，末行不再贴着保存栏被视口切成半截
+            Spacer(Modifier.height(48.dp))
         }
     }
 }

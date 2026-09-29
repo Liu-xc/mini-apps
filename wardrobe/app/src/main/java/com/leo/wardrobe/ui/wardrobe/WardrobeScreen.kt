@@ -73,7 +73,6 @@ import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.sharedPhoto
-import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.iconRes
 import com.leo.wardrobe.ui.components.WardrobeCategoryGrayscaleFilter
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -238,6 +237,8 @@ fun WardrobeScreen(
             // 渐隐止于滚动容器右缘，与右侧固定「筛选」钮不重叠（无需不透底板）
             // it-063 修1：带宽 28→44dp 盖过整枚图标 + 0.8 提前封满——带尾 ~9dp 已是
             // 纯底色，被裁图标在距「筛选」≥17dp 处彻底消隐，不再贴身
+            // it-065 修3：fadeAtStart 维持 false——行尾固定「筛选」钮旁不做起点渐隐
+            //（起点遮挡即 it-064 修4 消掉的问题；W8/W10 无固定钮的落点才开起点提示）
             FadingScrollRow(
                 modifier = Modifier.weight(1f),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -314,12 +315,12 @@ fun WardrobeScreen(
                     entranceDone = true
                 }
                 val gridState = rememberLazyGridState()
+                // it-065 修2：it-042 C8 的底缘渐隐废止——渐隐带会把 paper 底色盖回照片与标签上
+                // （Leo 实测米白遮挡）；末行可达由真实滚动边界 + contentPadding 保证
+                // （底 28dp，FAB 浮层语义，it-064 修3② 口径不变）。
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        // it-042 C8：卡网格视口底缘渐隐（与 W1 同语言，底缘行卡不再硬切）
-                        .fadingBottomEdge(active = { gridState.canScrollForward }),
+                    modifier = Modifier.fillMaxSize(),
                     state = gridState,
                     // it-063 bottom 12→96（FAB 避让）；it-064 修3②：96→76 仍留大段空白
                     // （Leo 复验未解决）——再收到 28dp：末卡几乎贴底，FAB 按 Material 浮层

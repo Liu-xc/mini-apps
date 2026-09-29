@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-065 穿搭卡组边界与全应用质感收口——W8 卡组静止层叠落进 20dp 页面栅格（end 22dp 吸收顶卡单侧 28dp 层叠偏移、停驻卡恒屏外，it-064 start 内缩口径废止）；W3 网格底缘渐隐废止（米白带盖照片/标签）；横滑渐隐起点策略 `fadeAtStart`（W8/W10 起点提示、W3 因筛选钮维持干净）；W4 吸底可达（imePadding + 48dp 余量）；「颜色」重复标题源码/实机均不复现。详 [it-065](wardrobe/specs/iterations/it-065-ui-polish-and-card-bounds.md)。
+
 - **chore(wardrobe)**: it-067 构建版本号自动生成——`versionName = 0.5.0.<wardrobe 提交数>`（git rev-list 限定衣橱范围，未提交改动加 `-dirty`）、`versionCode = 提交数`，设置页/回顾页「装的哪版」可辨识，销记「版本号停更」二次复发；ADR-027。详 [it-067](wardrobe/specs/iterations/it-067-auto-versioning.md)。
 
 - **chore(dev)**: 模拟器分治——每应用固定 AVD（wardrobe_test / darkroom_qa）+ `tools/emu.sh` 设备绑定脚本（up/install/launch/cap/uadump，序列号按 AVD 名解析不硬编码端口），并行会话不再互抢模拟器/前台；LESSONS 旧「共用 AVD 重聚焦重试」兜底规则替换为新不变量。详 [it-002](specs/iterations/it-002-emu-device-split.md)。

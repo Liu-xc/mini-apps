@@ -35,6 +35,10 @@ import com.leo.wardrobe.ui.theme.editorialColors
  * 图标前段全亮直到硬切（「一部分还透出」）。[opaqueStop]：渐隐在带宽该比例处提前
  * 到达全遮盖（默认 1f 保持原线性；元素比带宽宽的落点（W3 44dp 图标）用 <1 提前封满，
  * 带尾留纯底色）。
+ *
+ * it-065 修3：起点策略 [fadeAtStart]——无行尾固定钮的落点（W8 标签行 / W10 品类行）
+ * 初始即给「右侧还有内容」轻提示（true）；W3 品类行因行尾「筛选」固定钮维持 it-064
+ * 「起点干净」（false，滑离起点才渐隐），避免渐隐带在按钮旁制造底色遮挡。滑到尽头一律隐去。
  */
 @Composable
 fun FadingScrollRow(
@@ -44,13 +48,16 @@ fun FadingScrollRow(
     fadeWidth: Dp = 28.dp,
     fadeColor: Color = editorialColors().paper,
     opaqueStop: Float = 1f,
+    fadeAtStart: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val state = rememberScrollState()
     // 读在组合期：滚动/内容变化都会重组，draw 块只负责画
-    // it-064 修4：起点（未滚动）也不渲染——默认状态在「筛选」钮旁形成一段底色遮挡
-    // （Leo 反馈）；滑离起点才出现、滑到尽头即隐（两端干净，滑程中提示可滑）
-    val fadeActive = state.maxValue > 0 && state.value > 0 && state.value < state.maxValue
+    // it-064 修4：起点（未滚动）默认不渲染（fadeAtStart=false）；
+    // it-065 修3：fadeAtStart=true 的落点起点即渲染，滑到尽头即隐（两端策略见参数注释）
+    val fadeActive = state.maxValue > 0 &&
+        state.value < state.maxValue &&
+        (fadeAtStart || state.value > 0)
     Box(
         modifier.drawWithContent {
             drawContent()
