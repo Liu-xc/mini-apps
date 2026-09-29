@@ -171,7 +171,7 @@ fun ResultScreen(vm: DarkroomViewModel, state: UiState) {
                     color = colors.ink,
                 )
                 Text(
-                    if (state.resultEditing) "改完点右上角完成" else "一张可以带走的回忆",
+                    if (state.resultEditing) "改完点「完成」返回成片" else "一张可以带走的回忆",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.inkFaint,
                 )
@@ -281,7 +281,7 @@ if (state.resultEditing) {
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("照片风格", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+            Text("照片风格", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = colors.ink)
             Spacer(Modifier.weight(1f))
             Text(state.photoLook.note, style = MaterialTheme.typography.bodySmall, color = colors.accent)
         }
@@ -356,7 +356,7 @@ if (state.resultEditing) {
         // —— 相纸框型（it-010 US-16，仅拍立得：数码/胶片没有相纸概念）——
         if (state.mode == DevelopMode.POLAROID) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("相纸", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+                Text("相纸", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = colors.ink)
                 Spacer(Modifier.weight(1f))
                 Text(state.spec.frame.label, style = MaterialTheme.typography.bodySmall, color = colors.accent)
             }
@@ -406,7 +406,7 @@ if (state.resultEditing) {
 
         // —— 标题字体与字号（it-010 US-17）——
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("标题字体", style = MaterialTheme.typography.titleMedium, color = colors.ink)
+            Text("标题字体", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = colors.ink)
             Spacer(Modifier.weight(1f))
             Text(
                 "${state.spec.titleFont.label} · ${state.spec.titleSize.label}",
@@ -454,7 +454,7 @@ if (state.resultEditing) {
                     placeholder = "给这一刻起个名字",
                     onValueChange = vm::setTitle,
                 )
-                HorizontalDivider(color = colors.hairline)
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFC6C6C2))
                 CardEditLine(
                     label = "日期章",
                     value = state.spec.dateText,
@@ -462,7 +462,7 @@ if (state.resultEditing) {
                     tabularNumbers = true,
                     onValueChange = vm::setDate,
                 )
-                HorizontalDivider(color = colors.hairline)
+                HorizontalDivider(color = androidx.compose.ui.graphics.Color(0xFFC6C6C2))
                 CardEditLine(
                     label = "脚注",
                     value = state.spec.footer,

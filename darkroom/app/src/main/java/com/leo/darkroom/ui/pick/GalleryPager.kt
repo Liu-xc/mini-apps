@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -171,6 +172,7 @@ private fun GalleryCard(
                     scaleY = 0.97f + 0.03f * t
                 }
                 .shadow(8.dp, RectangleShape)
+                .border(1.dp, colors.hairline, RectangleShape)
                 .clickable(enabled = bitmap != null) {
                     if (playing) skipToResult() else bitmap?.let(onOpenViewer)
                 },

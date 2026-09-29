@@ -292,6 +292,7 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         vm.openGalleryResult(photo, bmp, toEdit = false)
                         vm.exportImage(share = false)
                     },
+                    modifier = Modifier.height(44.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = androidx.compose.ui.graphics.Color(0xFFFBFBFA),
                         contentColor = androidx.compose.ui.graphics.Color(0xFF1B1B1B),
@@ -302,6 +303,7 @@ fun AlbumPagerScreen(vm: DarkroomViewModel, state: UiState) {
                         viewerOpen = false
                         vm.openGalleryResult(photo, bmp, toEdit = true)
                     },
+                    modifier = Modifier.height(44.dp),
                     border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xB3FBFBFA)),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = androidx.compose.ui.graphics.Color(0xFFF2F2F0),

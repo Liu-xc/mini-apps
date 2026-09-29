@@ -14,8 +14,8 @@ android {
         // 覆盖更老设备的软件路径不在 MVP 范围
         minSdk = 31
         targetSdk = 35
-        versionCode = 19
-        versionName = "0.5.7"
+        versionCode = 20
+        versionName = "0.5.8"
         vectorDrawables { useSupportLibrary = true }
     }
 
