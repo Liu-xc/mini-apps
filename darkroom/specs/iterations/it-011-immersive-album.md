@@ -44,9 +44,11 @@ maxSdkVersion 声明）。拒绝路径完整可用（Photo Picker 零权限语�
 
 - `testDebugUnitTest assembleDebug installDebug` 通过；67 测全绿（+GalleryPlaybackTest 3：
   首见即播/标记生效、重播精确移除、快照一致）。
-- AVD 走查（Android 14，模拟器由并行会话间隙完成）：见下——授权前回退态与引导卡、`pm grant`
-  直授后沉浸态、翻页首播/翻回不重播、点按跳过、重播、点开成片（W3 携拍摄日期）、W3 返回相册、
-  未授权路径回归。（截图存 /tmp/dk-it011/）
+- 数据通路预验：相册播种（adb push 3 张样片至 Pictures）已被 MediaStore 索引（content query
+  实证），缩略图解码走 loadThumbnail 标准路径。
+- **AVD UI 走查待补**：验证窗口内模拟器被并行 wardrobe 会话持续占用（相机实拍流程，不宜打断），
+  授权前回退态/沉浸态翻页/跳过/重播/点开成片的实机走查未完成——待模拟器空出后补录，或以
+  Leo 真机实测反馈替代。编译期风险已由单测与既有真源复用（DevelopCard/ejectEase）压低。
 - 版本 0.4.0（versionCode 9，新玩法属 minor 功能级）。
 
 ## 影响范围
