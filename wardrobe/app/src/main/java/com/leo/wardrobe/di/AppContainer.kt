@@ -138,6 +138,6 @@ class AppContainer(private val context: Context) {
         )
 
     private companion object {
-        const val MOCK_ASSET_REVISION = "it-059"  // it-059：新增 person-ref.png（Leo 参考照）
+        const val MOCK_ASSET_REVISION = "it-060"  // it-060：扩充 32 件 mock 单品与透明素材
     }
 }

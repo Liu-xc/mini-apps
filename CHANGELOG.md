@@ -4,6 +4,7 @@
 
 ## 2026-09-29
 
+- **feat(wardrobe)**: it-060 演示 mock 数据扩容——内置衣橱从 36 件单品/9 套穿搭扩至 68 件/15 套，补齐八品类与季节/场合组合，新增 32 张 RGBA 透明底 PNG；素材包 validator PASS（0 警告），详 [it-060](wardrobe/specs/iterations/it-060-mock-corpus-expansion.md)。
 - **feat(wardrobe)**: it-059 录入表单点选化 + 演示人物数据——W4 主区零打字（颜色 13 预设 chips/常用标签 10 预设 chips，自由值附加 chip 回显），名称留空自动命名「颜色+品类」，描述/自定义输入折叠进「补充细节」二次交互；保存条件只剩照片必填；mock Leo 预置人台风格形象参考照（导出面板「附形象参考照」演示模式直接可体验），详 [it-059](wardrobe/specs/iterations/it-059-quick-entry-form.md)。
 
 - **fix(darkroom)**: it-008 二次修正——拍立得按真实过程重做：「左下入口偏心推进的药膜前沿 + 堆积暗边」（it-007 语义，实机即胶水扩散层）重写为**白浊阻光层均匀消散**（整张从白里逐步浮现，无方向、无暗边，仅 ≤5.5% 纸面噪点），reveal 曲线摊满全程不再 70% 全透；**药液气泡整体删除**（真实显影在夹层内看不见泡）。RevealField 真源一次改齐三渲染端；59 测绿；模拟器全程序列像素级复核（方向性亮度差较旧版缩小 28 倍、气泡检测全零）。版本 0.2.2。详 [it-008](darkroom/specs/iterations/it-008-store-polish-motion.md) 验证记录。

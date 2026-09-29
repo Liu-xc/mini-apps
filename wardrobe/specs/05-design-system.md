@@ -209,6 +209,11 @@ Material `primary` 在浅色为 `#111111`（`onPrimary=#FFFFFF`），深色为 `
 - **chips 触控**：颜色/标签 chips 高 44dp（it-033 基线内）；品类维持 48dp。
 - **演示人物数据**：mock Leo 角色预置人台风格形象参考照（`assets/mock/person-ref.png`，PIL 绘制的黑白灰 dress form）；导出面板「附形象参考照」开关在演示模式直接可体验，长图拼贴含人台。`MOCK_ASSET_REVISION` 随资产变更 bump（it-059）。
 
+## it-060 演示素材扩容（2026-09-29）
+
+- **透明单品资产门禁**：新增 mock 衣物统一为 RGBA PNG，最长边控制在 768px 以内；背景像素 alpha 必须为 0，主体边缘允许保留自然抗锯齿，不使用白底、灰底、棋盘格或单品级矩形衬纸。
+- **呈现规则不变**：W1/W3/W5/W6/W7/W8 继续沿用 it-049 的透明图层直接融入纸感/人体淡底；衣物本色保留原色，不受 it-052 全局黑白灰容器主题影响。
+
 ## it-054 顾问 Markdown 与穿搭卡片（2026-09-28）
 
 - **Markdown 声部**：标题使用现有 Serif Title/Section 层级；正文使用 Sans Body；列表标记、引用竖线和链接只使用 `accentContent`，不引入新颜色。

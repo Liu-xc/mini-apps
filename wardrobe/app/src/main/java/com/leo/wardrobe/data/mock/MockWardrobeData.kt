@@ -14,8 +14,10 @@ import com.leo.wardrobe.domain.model.WishOutfit
 import kotlinx.serialization.json.Json
 
 /**
- * 演示种子数据（it-015）：两个角色（覆盖角色隔离）、17 件衣物（八品类全覆盖，
- * 照片为 assets/mock 内置 thiings 素材）、5 套组合、3 条笔记。
+ * JVM 单测历史种子（it-015）：两个角色（覆盖角色隔离）、17 件衣物（八品类全覆盖，
+ * 照片为 assets/mock 内置 thiings 素材）、5 套组合、3 条笔记。正式演示模式的数据源是
+ * assets/mock/wardrobe.json（it-032 / it-060），因此这里保留小而稳定的测试夹具，避免单测
+ * 数量断言被演示素材扩容牵连。
  * 时间按「当前时刻 − N 天」相对生成，任何时候进入演示模式数据都「新鲜」；id 全确定，便于走查断言。
  */
 object MockWardrobeData {
