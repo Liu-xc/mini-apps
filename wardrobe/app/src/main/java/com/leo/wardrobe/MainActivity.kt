@@ -260,7 +260,7 @@ private fun WardrobeRoot() {
                 ) {
                     composable(Routes.HOME) {
                         CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-                            HomeTabs(vm, chatVm, nav, tab)
+                            HomeTabs(vm, chatVm, nav, tab, onGoOutfit = { tab = Tab.OUTFIT })
                         }
                     }
                     composable(Routes.ITEM_EDIT) { entry ->
@@ -366,6 +366,8 @@ private fun HomeTabs(
     chatVm: com.leo.wardrobe.ui.chat.ChatViewModel,
     nav: NavHostController,
     tab: Tab,
+    // it-066：空态「去搭配一套」的 Tab 切换回传（tab 为入参，赋值只能回传到 WardrobeRoot）
+    onGoOutfit: () -> Unit = {},
 ) {
     val openItem: (String) -> Unit = { nav.navigate(Routes.itemDetail(it)) }
     val editItem: (String?) -> Unit = { nav.navigate(Routes.itemEdit(it)) }
@@ -388,7 +390,12 @@ private fun HomeTabs(
                 onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
                 onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
             )
-            Tab.RECORDS -> RecordsScreen(vm = vm, onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) })
+            Tab.RECORDS -> RecordsScreen(
+                vm = vm,
+                onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
+                // it-066：空态「去搭配一套」直达（同 onGoRecords 先例）
+                onGoOutfit = onGoOutfit,
+            )
             Tab.WARDROBE -> WardrobeScreen(
                 vm = vm,
                 onEditItem = editItem,

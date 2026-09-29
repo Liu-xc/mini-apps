@@ -296,6 +296,12 @@ fun WardrobeScreen(
                 EmptyState(
                     title = "该筛选下没有衣物",
                     hint = "换个品类或标签试试",
+                    // it-066：空态行动按钮（DESIGN.md §5.8）——一键清品类 + 标签筛选
+                    actionLabel = "清除筛选",
+                    onAction = {
+                        categoryTab = null
+                        filterTag = null
+                    },
                     modifier = Modifier.fillMaxSize().padding(top = 24.dp),
                 )
             } else {

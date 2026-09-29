@@ -2,19 +2,26 @@
 
 package com.leo.wardrobe.ui.outfit
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -23,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,6 +41,8 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
@@ -68,9 +78,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.isWishSlot
@@ -176,6 +188,15 @@ fun ExportSheet(
 
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val screenH = LocalConfiguration.current.screenHeightDp
+    // it-066：长图预览原位展开核对（销账 it-017 已知限制 / it-042 C5 挂账）——
+    // 展开态表单收起、预览占满滚动区、自身纵向可滚；点按预览或角标收起。
+    // 不用 Dialog 叠 sheet（DESIGN.md §2.5 禁弹窗套弹窗）；模式切换 220ms crossfade
+    // + 0.985 微缩放（it-058 C4 同语言），走框架动画随系统「移除动画」降级。
+    var previewExpanded by remember { mutableStateOf(false) }
+    // 表单滚动位提在模式切换之外——收起时恢复原浏览位置（AnimatedContent 重建不丢）
+    val formScroll = rememberScrollState()
+    // 全幅核对态的预览纵向滚动位（模式内使用）
+    val previewScroll = rememberScrollState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Box {
             Column(
@@ -188,14 +209,78 @@ fun ExportSheet(
                 // （内容列经 weight 钉在动作栏之上，安全间距落在 contentPadding），
                 // 保证「文案（实时生成，可编辑）」整块可滚出到完整可见；
                 // 未滚到底时视口底缘叠 24dp 渐隐（透明→弹层背景色），提示下方还有内容
-                val scroll = rememberScrollState()
                 val sheetBg = MaterialTheme.colorScheme.surfaceContainer
+                AnimatedContent(
+                    targetState = previewExpanded,
+                    transitionSpec = {
+                        (fadeIn(tween(220)) + scaleIn(initialScale = 0.985f, animationSpec = tween(220)))
+                            .togetherWith(fadeOut(tween(160)))
+                    },
+                    label = "previewExpand",
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { expanded ->
+                    if (expanded) {
+                        // it-066：全幅核对态——预览占满可用高度、宽度铺满、自身纵向可滚
+                        Column(Modifier.fillMaxSize()) {
+                            Text(
+                                "导出生图素材",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = editorialColors().ink,
+                                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 8.dp),
+                            )
+                            Box(Modifier.weight(1f).fillMaxWidth()) {
+                                Column(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(previewScroll)
+                                        // 点按任意处收起（拖动仍为纵向滚动）
+                                        .clickable { previewExpanded = false },
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(composedFile)
+                                            .size(coil.size.Size.ORIGINAL) // 全幅解码，长图文字可读
+                                            .crossfade(220)
+                                            .build(),
+                                        contentDescription = "穿搭长图（点按收起）",
+                                        contentScale = ContentScale.FillWidth,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                // 收起角标：it-063 印刷点语言（纸底圆片 + hairline + ink 图标）；
+                                // 命中区 36dp（it-028 媒体卡角标例外）
+                                Box(
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(8.dp)
+                                        .size(36.dp)
+                                        .clickable { previewExpanded = false },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(26.dp)
+                                            .background(editorialColors().paper, CircleShape)
+                                            .border(1.dp, editorialColors().hairline, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.FullscreenExit,
+                                            contentDescription = "收起长图预览",
+                                            tint = editorialColors().ink,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
                 Column(
                     Modifier
-                        .weight(1f)
+                        .fillMaxSize()
                         .drawWithContent {
                             drawContent()
-                            if (scroll.value < scroll.maxValue) {
+                            if (formScroll.value < formScroll.maxValue) {
                                 val fadeH = 24.dp.toPx()
                                 drawRect(
                                     brush = Brush.verticalGradient(
@@ -206,7 +291,7 @@ fun ExportSheet(
                                 )
                             }
                         }
-                        .verticalScroll(scroll)
+                        .verticalScroll(formScroll)
                         .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -214,20 +299,39 @@ fun ExportSheet(
 
                     // 长图预览（it-012：高自适应屏高 42%；ContentScale.Fit 整图全貌一屏可见
                     // ——修历史空白 bug：内层 verticalScroll 的无限高度约束使 Coil 请求尺寸失效）
+                    // it-066：点按预览 → 原位全幅展开（右上角标同效）
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(max = (screenH * 0.42f).dp)
-                            .clip(RoundedCornerShape(16.dp)),
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable(enabled = composedFile != null) { previewExpanded = true },
                         contentAlignment = Alignment.Center,
                     ) {
                         if (composedFile != null) {
                             AsyncImage(
                                 model = composedFile,
-                                contentDescription = "穿搭长图",
+                                contentDescription = "穿搭长图（点按放大查看）",
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                            // 展开角标（视觉提示，命中由整块预览承担）
+                            Box(
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(26.dp)
+                                    .background(editorialColors().paper.copy(alpha = 0.92f), CircleShape)
+                                    .border(1.dp, editorialColors().hairline, CircleShape),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Rounded.Fullscreen,
+                                    contentDescription = null,
+                                    tint = editorialColors().ink,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
                         } else {
                             Text(
                                 if (composing) "正在按穿搭顺序拼长图…" else "暂无可拼合的单品照片",
@@ -432,6 +536,8 @@ fun ExportSheet(
                     }
                     // it-036 C8：原尾随 Spacer(6dp) 废止——动作栏安全余量统一走内容列 40dp 底距
                 }
+                    } // end collapsed branch（it-066 预览展开/收起双态）
+                }
 
                 // ---- it-012 底部固定动作栏：三个复制动作钉住，展开维度/滚动都推不走 ----
                 Surface(shadowElevation = 6.dp) {
@@ -454,6 +560,12 @@ fun ExportSheet(
                                             copied = true
                                             confettiTrigger++
                                             haptics.confirm()
+                                            // it-066：回程锚点——复制成功记住本次组合，W1 提示条
+                                            // 引导录回成品图；愿望组合护栏（不自动建正式穿搭，
+                                            // 与「收藏这套」置灰同语义）
+                                            if (items.none { it.isWishSlot }) {
+                                                vm.markExported(items.map { it.id })
+                                            }
                                             vm.toast("长图已复制，去生图 Agent 里粘贴")
                                         } else {
                                             vm.toast("复制失败，试试「分享」")

@@ -121,6 +121,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return prefs.slotSelections(personId).firstOrNull()?.get(category.name)
     }
 
+    /** it-066：本会话最近一次「复制长图」的组合（真实单品 id），W1 回程提示条用；
+     *  录入成品图成功后清空。会话级内存态，不持久化（进程重启自然消失，提案验收） */
+    private val _lastExportedItemIds = MutableStateFlow<List<String>?>(null)
+    val lastExportedItemIds: StateFlow<List<String>?> = _lastExportedItemIds.asStateFlow()
+
+    fun markExported(itemIds: List<String>) {
+        _lastExportedItemIds.value = itemIds.ifEmpty { null }
+    }
+
+    fun clearExportedMark() {
+        _lastExportedItemIds.value = null
+    }
+
     /** 生图文案的人物描述（全局记住，it-002） */
     val personNote: StateFlow<String> = prefs.personNote
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
@@ -344,11 +357,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         launchSafely {
             val target = outfit ?: run {
                 val person = currentPerson.value ?: return@launchSafely
-                repo.createOutfit(person.id, itemIds)
+                // it-066：回程录入可能带入复制时的组合——过滤已删除单品，防悬挂引用
+                val validIds = itemIds.filter { id -> repo.data.value.items.any { it.id == id } }
+                repo.createOutfit(person.id, validIds)
             }
             val file = container.imageStore.importFromUri(uri.toString())
             if (file == null) { toast("图片导入失败"); return@launchSafely }
             repo.addEffectImage(target.id, file)
+            // it-066：录入成功即清回程提示（本组合的闭环已接上）
+            clearExportedMark()
             toast("成品图已录入")
         }
     }

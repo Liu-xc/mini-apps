@@ -63,6 +63,8 @@ import kotlinx.coroutines.launch
 fun RecordsScreen(
     vm: AppViewModel,
     onOpenOutfit: (String) -> Unit,
+    /** it-066：打卡/记录空态「去搭配一套」→ 切搭配 Tab（接线先例 it-031 C10 onGoRecords） */
+    onGoOutfit: () -> Unit = {},
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
@@ -125,10 +127,16 @@ fun RecordsScreen(
             outfits.isEmpty() -> EmptyState(
                 title = "还没有穿搭记录",
                 hint = "在搭配页「保存这套」，或生成效果图后「录入成品图」，就会出现在这里",
+                // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
+                actionLabel = "去搭配一套",
+                onAction = onGoOutfit,
             )
             filtered.isEmpty() -> EmptyState(
                 title = "该标签下没有穿搭",
                 hint = "换一个标签，或清除筛选",
+                // it-066：空态行动按钮（DESIGN.md §5.8 基线补齐）
+                actionLabel = "清除筛选",
+                onAction = { filterTag = null },
             )
             else -> {
                 // ---- 卡组：快速浏览 + 随机翻（it-007/it-010；it-011 增 ‹n/m› 卡序） ----

@@ -20,11 +20,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.Casino
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
@@ -33,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.LinearEasing
@@ -41,6 +45,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,6 +76,7 @@ import com.leo.wardrobe.ui.components.StaggeredEntrance
 import com.leo.wardrobe.ui.components.fadingBottomEdge
 import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
+import com.leo.wardrobe.ui.components.rememberPhotoPicker
 import com.leo.wardrobe.ui.theme.EditorialMotion
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.Job
@@ -94,11 +100,21 @@ fun OutfitScreen(
     val data by vm.data.collectAsState()
     val slotSel by vm.slotSelections.collectAsState()
     val mixWishes by vm.mixWishes.collectAsState()
+    // it-066：本会话复制过长图的组合（真实单品 id）——W1 回程提示条的数据源
+    val lastExportedIds by vm.lastExportedItemIds.collectAsState()
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
     // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
     var addSheetCats by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
+
+    // it-066：回程提示条的相册入口——录入走 importEffectImage(null=自动建穿搭, 复制时的组合)
+    val pickReturnPhoto = rememberPhotoPicker { uri ->
+        if (uri != null) {
+            val ids = vm.lastExportedItemIds.value
+            if (ids != null) vm.importEffectImage(null, ids, uri)
+        }
+    }
 
     val personId = person?.id
     val allItems = if (personId != null) data.itemsOf(personId) else emptyList()
@@ -202,7 +218,9 @@ fun OutfitScreen(
             wishHintVisible = false
         }
     }
-    val showWishHint = wishHintVisible && mixWishes && !hasWishInMix && wishSlotItems.isNotEmpty()
+    // it-066：回程提示条在场时让位（两条同屏噪；回程条可操作性更高）
+    val showWishHint = wishHintVisible && mixWishes && !hasWishInMix && wishSlotItems.isNotEmpty() &&
+        lastExportedIds == null
 
     /** 区内可添加的品类：尚未加入组合、且衣橱里有该品类衣物 */
     fun addableCats(zone: List<WardrobeCategory>): List<WardrobeCategory> =
@@ -313,6 +331,46 @@ fun OutfitScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = editorialColors().accentContent,
                 )
+            }
+        }
+
+        // it-066：回程提示条——本会话成功「复制长图」后出现（US-09 入口增补）：
+        // 生图回来点此录回成品图，未收藏组合自动建穿搭（importEffectImage(null) 既有语义）；
+        // 愿望组合复制不写状态（护栏与 W6「收藏这套」置灰同语义）；录入成功后条自动消失。
+        if (lastExportedIds != null) {
+            Surface(
+                onClick = { pickReturnPhoto() },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                border = BorderStroke(1.dp, editorialColors().hairline),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 2.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.PhotoCamera,
+                        contentDescription = null,
+                        tint = editorialColors().inkFaint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        "刚复制过这套 · 生图回来录入成品图",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = editorialColors().ink,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = editorialColors().inkFaint,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
 
