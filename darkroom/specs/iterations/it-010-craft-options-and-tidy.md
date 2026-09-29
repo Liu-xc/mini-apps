@@ -54,6 +54,10 @@ watermark_default=false → 空串迁移）；会话内即时生效，换相纸�
   与照片风格对齐；W1 下三分之一留白偏空。
 - 版本 0.3.0（versionCode 7，选项系统属功能级）。
 
+**收尾调整（Leo 反馈，v0.3.1）**：三档显影时长整体缩短三分之一——慢洗 12s→8s、标准 8s→5.4s、
+快显 4s→2.7s（`DevelopClock.kt` 枚举常量 + DevelopClockTest 同步锁值）。刻度条/甩一甩/导出时长
+全部由 durationMs 派生，自动跟随；设置页秒数展示随之更新。版本 0.3.1（versionCode 8）。
+
 ## 影响范围
 
 - 代码：`card/CardSpec.kt`（+3 枚举、footer 替代 showWatermark）、`card/PhotoCardPainter.kt`

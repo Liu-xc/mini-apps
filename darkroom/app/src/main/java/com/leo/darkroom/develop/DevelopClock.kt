@@ -41,11 +41,11 @@ class DevelopClock(private val durationMs: Long) {
     }
 }
 
-/** 显影速度档位（it-001 US-2：慢洗 / 标准 / 快显） */
+/** 显影速度档位（it-001 US-2：慢洗 / 标准 / 快显；it-010 收尾整体 ×⅔ 提速） */
 enum class DevelopSpeed(val durationMs: Long, val label: String) {
-    SLOW(12_000L, "慢洗"),
-    STANDARD(8_000L, "标准"),
-    FAST(4_000L, "快显");
+    SLOW(8_000L, "慢洗"),
+    STANDARD(5_400L, "标准"),
+    FAST(2_700L, "快显");
 
     companion object {
         fun fromOrDefault(name: String?): DevelopSpeed =

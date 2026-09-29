@@ -4,6 +4,8 @@
 
 ## 2026-09-29
 
+- **fix(darkroom)**: it-010 收尾——三档显影时长整体缩短三分之一（慢洗 12s→8s、标准 8s→5.4s、快显 4s→2.7s，Leo 反馈），刻度条/导出时长随 durationMs 派生自动跟随，单测锁值。版本 0.3.1。详 [it-010](darkroom/specs/iterations/it-010-craft-options-and-tidy.md) 验证记录。
+
 - **feat(darkroom)**: it-010 小而美布局收口与创作选项系统——拍立得可选四款相纸（经典白/暖米/墨框/灰板，配色真源 CardPalette.forFrame、打印对比单测锁）、标题字体（衬线/黑体）×字号（小/标准/大）、卡脚脚注自定义（留空不印，替代水印开关并迁移旧偏好）；W3 section 统一「标题左+当前值右」+ pressScale 全选择项、W1 头部一行化、W4 去水印行；选项与显影模式同语义跨会话保留。64 测绿 + 视觉走查 8/10（P0=0，P1 已修）。详 [it-010](darkroom/specs/iterations/it-010-craft-options-and-tidy.md)。
 
 - **feat(wardrobe)**: it-063 W3 衣橱页 chrome 减负——新增入口全宽按钮改右下角 56dp 墨色 FAB（网格落到底部导航，静止位 96dp 净空）；品类行渐隐带宽 28→44dp 提前封满（被裁图标彻底消隐，不再贴「筛选」）；卡右上菜单钮 40% 黑底圆改 26dp 纸底 hairline 描边印刷点（MoreHoriz）；底部死区白块消除。亮暗两模式像素实测 + 独占 AVD 交互验证全过，it-037「CTA 不覆盖卡片」验收由本迭代替代。详 [it-063](wardrobe/specs/iterations/it-063-wardrobe-chrome-slim.md)。

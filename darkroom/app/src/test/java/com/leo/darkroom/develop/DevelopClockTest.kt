@@ -61,7 +61,8 @@ class DevelopClockTest {
         assertEquals(DevelopSpeed.SLOW, DevelopSpeed.fromOrDefault("SLOW"))
         assertEquals(DevelopSpeed.STANDARD, DevelopSpeed.fromOrDefault(null))
         assertEquals(DevelopSpeed.STANDARD, DevelopSpeed.fromOrDefault("nope"))
-        assertEquals(12_000L, DevelopSpeed.SLOW.durationMs)
-        assertEquals(4_000L, DevelopSpeed.FAST.durationMs)
+        assertEquals(8_000L, DevelopSpeed.SLOW.durationMs)
+        assertEquals(2_700L, DevelopSpeed.FAST.durationMs)
+        assertEquals(5_400L, DevelopSpeed.STANDARD.durationMs)
     }
 }
