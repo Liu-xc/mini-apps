@@ -99,7 +99,7 @@ object DevelopSpec {
         contrast = 0.80f + 0.04f * latent + 0.10f * emerge + 0.14f * fix,
         brightness = 0.60f + 0.12f * latent + 0.20f * emerge + 0.08f * fix,
         // 中途压向青冷、定影回正微暖（真实相纸先冷后暖）
-        warmth = -0.38f * latent - 0.18f * emerge + 0.60f * fix,
+        warmth = -0.20f * latent - 0.10f * emerge + 0.32f * fix,
         // it-008 三次修正：真实显影中影像本身是锐的，糊的只是白浊层——
         // 起手仅极轻柔焦（0.016→末态 0.006），去掉旧版 0.05 的「晕开扩散」观感
         blurFraction = 0.016f - 0.001f * latent - 0.003f * emerge - 0.010f * fix,
@@ -111,9 +111,9 @@ object DevelopSpec {
         // 定影段才落到纸感 0.20。旧版起手 0.45 的角部压暗让均匀浮现读成「中心晕开」
         vignette = 0.04f + 0.02f * latent + 0.04f * emerge + 0.02f * fix,
         // 染料分层：青层压红（早）→ 黄层压蓝（中）→ 品红层压绿（晚），定影后全部归位
-        redGain = 1f - 0.30f * bump(p, 0.10f, 0.38f, 0.88f),
-        greenGain = 1f - 0.16f * bump(p, 0.42f, 0.68f, 0.96f),
-        blueGain = 1f - 0.18f * bump(p, 0.28f, 0.55f, 0.92f),
+        redGain = 1f - 0.10f * bump(p, 0.10f, 0.38f, 0.88f),
+        greenGain = 1f - 0.05f * bump(p, 0.42f, 0.68f, 0.96f),
+        blueGain = 1f - 0.06f * bump(p, 0.28f, 0.55f, 0.92f),
         shadowLift = 0.012f + 0.038f * fix,
         // it-008 三次修正：影调显影顺序——亮部高光被压住最后才到位（0.62→0.94），
         // 暗部/中间调先从白浊层后显出，对表真实相纸「先见影、后见光」的浮现次序

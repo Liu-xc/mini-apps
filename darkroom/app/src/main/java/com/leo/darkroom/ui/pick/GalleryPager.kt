@@ -154,7 +154,11 @@ private fun GalleryCard(
         }
     }
 
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+    // it-012 收尾 9：卡纸分层靠底衬色调（比相纸深一档），不靠投影/描边
+    BoxWithConstraints(
+        modifier.background(colors.hairline),
+        contentAlignment = Alignment.Center,
+    ) {
         val layout = CardLayout.solve(
             with(density) { maxWidth.toPx() - 2.dp.toPx() },
             with(density) { maxHeight.toPx() },
@@ -172,7 +176,6 @@ private fun GalleryCard(
                     scaleY = 0.97f + 0.03f * t
                 }
                 .shadow(8.dp, RectangleShape)
-                .border(1.dp, colors.hairline, RectangleShape)
                 .clickable(enabled = bitmap != null) {
                     if (playing) skipToResult() else bitmap?.let(onOpenViewer)
                 },
