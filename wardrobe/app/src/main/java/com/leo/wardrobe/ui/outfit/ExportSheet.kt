@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -164,6 +165,8 @@ fun ExportSheet(
 
     LaunchedEffect(items) { regenerate() }
     LaunchedEffect(selections, personNote, customPrompt, attachRef) {
+        // it-069 修5：手改文案被维度变化重置时给提示（原静默丢失）
+        if (promptEdit != null) vm.toast("文案已按新设定重新生成")
         promptEdit = null
         regenerate()
     }
@@ -315,6 +318,23 @@ fun ExportSheet(
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier.fillMaxWidth(),
                             )
+                            // it-069 修5：重拼中的轻进度角标——旧长图仍在，角标提示「正在换」
+                            if (composing) {
+                                Box(
+                                    Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(8.dp)
+                                        .size(26.dp)
+                                        .background(editorialColors().paper.copy(alpha = 0.92f), CircleShape),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = editorialColors().ink,
+                                    )
+                                }
+                            }
                             // 展开角标（视觉提示，命中由整块预览承担）
                             Box(
                                 Modifier

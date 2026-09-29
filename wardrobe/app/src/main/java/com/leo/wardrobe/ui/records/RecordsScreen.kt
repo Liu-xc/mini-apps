@@ -24,10 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Casino
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,7 +68,8 @@ fun RecordsScreen(
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
-    var filterTag by remember { mutableStateOf<String?>(null) }
+    // it-069 修2：筛选状态 rememberSaveable——Tab 往返不丢（HomeTabs 切换销毁页面）
+    var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
@@ -296,6 +297,7 @@ private fun DeckCounter(
 /**
  * 「随机一套」按钮（it-047 #9：抽取状态读取收口在本组件内——
  * drawRandom 全程不触发 RecordsScreen 体级重组，只重绘按钮自身）。
+ * it-069 修4：形制并入 W1 顶栏同款 TextButton + 图标（原实底 Button 双轨废止）。
  */
 @Composable
 private fun RandomButton(
@@ -304,13 +306,14 @@ private fun RandomButton(
     onClick: () -> Unit,
 ) {
     val drawing = deck?.isDrawing == true
-    Button(
+    TextButton(
         onClick = onClick,
         enabled = deck != null && !drawing && hasItems,
     ) {
-        Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+        Icon(Icons.Rounded.Casino, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
         // it-036 C12：文案与 W1 统一为「随机一套」（it-011 R3-P1 的两套文案废止），图标沿用
-        Text("随机一套")
+        Text("随机一套", style = MaterialTheme.typography.titleSmall)
     }
 }
 

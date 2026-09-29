@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.leo.wardrobe.ui.outfit
 
@@ -242,7 +242,11 @@ private fun PersonEditDialog(
                     label = { Text("名字") },
                     singleLine = true,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // it-069 修4：8 枚 emoji 固定 Row（40dp×8 超窄屏）改 FlowRow 换行不溢出
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     EMOJI_CHOICES.forEach { e ->
                         Box(
                             modifier = Modifier

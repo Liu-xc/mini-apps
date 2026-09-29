@@ -121,7 +121,8 @@ private fun SessionCard(session: ChatSessionSummary, onClick: () -> Unit) {
             Text(session.title, style = MaterialTheme.typography.titleMedium, color = ec.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(preview.ifBlank { "还没有消息" }, style = MaterialTheme.typography.bodyMedium, color = ec.inkFaint, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(session.updatedAt)),
+                // it-069 修4：并入全站 yyyy/MM/dd 日期口径（it-036 C12），保留时分
+                SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(session.updatedAt)),
                 style = MaterialTheme.typography.labelSmall,
                 color = ec.inkFaint,
             )

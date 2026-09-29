@@ -92,8 +92,10 @@ fun WardrobeScreen(
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
-    var filterTag by remember { mutableStateOf<String?>(null) }
-    var categoryTab by remember { mutableStateOf<WardrobeCategory?>(null) }
+    // it-069 修2：筛选状态 rememberSaveable——HomeTabs 切换即销毁页面，Tab 往返不再丢筛选
+    var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    var categoryTabName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
+    val categoryTab = categoryTabName?.let { n -> WardrobeCategory.entries.firstOrNull { it.name == n } }
     var pendingDelete by remember { mutableStateOf<Item?>(null) }
     var filterSheetOpen by remember { mutableStateOf(false) }
     // it-015：演示模式入口——同一入口按当前模式进入/退出
@@ -247,13 +249,13 @@ fun WardrobeScreen(
             ) {
                 FilterChip(
                     selected = categoryTab == null,
-                    onClick = { categoryTab = null },
+                    onClick = { categoryTabName = null },
                     label = { Text("全部") },
                 )
                 WardrobeCategory.entries.forEach { c ->
                     val selected = categoryTab == c
                     Surface(
-                        onClick = { categoryTab = if (categoryTab == c) null else c },
+                        onClick = { categoryTabName = if (categoryTab == c) null else c.name },
                         shape = androidx.compose.foundation.shape.CircleShape,
                         color = if (selected) editorialColors().accent.copy(alpha = 0.15f)
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -300,7 +302,7 @@ fun WardrobeScreen(
                     // it-066：空态行动按钮（DESIGN.md §5.8）——一键清品类 + 标签筛选
                     actionLabel = "清除筛选",
                     onAction = {
-                        categoryTab = null
+                        categoryTabName = null
                         filterTag = null
                     },
                     modifier = Modifier.fillMaxSize().padding(top = 24.dp),

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -236,7 +237,11 @@ fun OutfitScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = { showPersonSheet = true }) {
+            TextButton(
+                onClick = { showPersonSheet = true },
+                // it-069 修4：顶栏 TextButton 触控提到 48dp（it-033 基线）
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) {
                 Text(
                     "${person?.emoji ?: ""} ${person?.name ?: ""}",
                     style = MaterialTheme.typography.headlineMedium,
@@ -250,6 +255,8 @@ fun OutfitScreen(
             }
             TextButton(
                 onClick = { vm.setMixWishes(!mixWishes) },
+                // it-069 修4：顶栏 TextButton 触控提到 48dp（it-033 基线）
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 // it-030：🌟 emoji → Material Star/StarBorder（DESIGN.md §5.2）
                 Icon(
@@ -280,19 +287,24 @@ fun OutfitScreen(
                     rolling = true
                     scope.launch {
                         try {
-                            pagerStates.entries.toList()
+                            val rollable = pagerStates.entries.toList()
                                 .sortedBy { it.key.ordinal }
                                 .filter { it.key in activeCategories && it.value.pageCount > 1 }
-                                .forEachIndexed { index, (_, state) ->
-                                    launch {
-                                        delay(index * 100L)
-                                        // it-047 #9：跳页弹簧显式收敛进 EditorialMotion（05 #2 老虎机）
-                                        state.animateScrollToPage(
-                                            Random.nextInt(state.pageCount),
-                                            animationSpec = EditorialMotion.smooth(),
-                                        )
-                                    }
+                            // it-069 修1：全部品类只有 1 件时不再静默——给轻提示
+                            if (rollable.isEmpty()) {
+                                vm.toast("每类只有一件，无需随机")
+                                return@launch
+                            }
+                            rollable.forEachIndexed { index, (_, state) ->
+                                launch {
+                                    delay(index * 100L)
+                                    // it-047 #9：跳页弹簧显式收敛进 EditorialMotion（05 #2 老虎机）
+                                    state.animateScrollToPage(
+                                        Random.nextInt(state.pageCount),
+                                        animationSpec = EditorialMotion.smooth(),
+                                    )
                                 }
+                            }
                         } finally {
                             // 略过尾停顿（最后槽落定即止），节奏与老虎机一致
                             rolling = false
@@ -300,6 +312,8 @@ fun OutfitScreen(
                     }
                 },
                 enabled = effectiveItems.isNotEmpty(),
+                // it-069 修4：顶栏 TextButton 触控提到 48dp（it-033 基线）
+                modifier = Modifier.heightIn(min = 48.dp),
             ) {
                 Icon(
                     Icons.Rounded.Casino,
@@ -469,7 +483,8 @@ fun OutfitScreen(
         ) {
             Button(
                 onClick = { exportItems = currentItemsFromMemory },
-                enabled = effectiveItems.isNotEmpty(),
+                // it-069 修1：组合为空即禁用（防打开空导出面板/保存空穿搭），替代「衣橱非空」旧判定
+                enabled = currentItemsFromMemory.isNotEmpty(),
                 // it-058 C3：主 CTA 按压反馈
                 modifier = Modifier.weight(1f).pressScale(0.96f),
             ) {
@@ -494,7 +509,8 @@ fun OutfitScreen(
                             haptics.confirm()
                         }
                     },
-                    enabled = effectiveItems.isNotEmpty(),
+                    // it-069 修1：同上——组合为空即禁用
+                    enabled = currentItemsFromMemory.isNotEmpty(),
                 ) {
                     Icon(
                         Icons.Rounded.Star,
@@ -520,7 +536,8 @@ fun OutfitScreen(
                             vm.saveOutfitDedup(currentIdsFromMemory)
                         }
                     },
-                    enabled = effectiveItems.isNotEmpty(),
+                    // it-069 修1：同上——组合为空即禁用（防创建空穿搭）
+                    enabled = currentItemsFromMemory.isNotEmpty(),
                 ) {
                     Icon(
                         if (savedOutfit != null) Icons.Rounded.Star else Icons.Rounded.StarBorder,

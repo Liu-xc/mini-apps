@@ -336,7 +336,7 @@ fun ChatScreen(
                 value = input,
                 onValueChange = { input = it },
                 placeholder = { Text("输入问题…") },
-                enabled = !running,
+                // it-069 修6：流式期间可继续打字（仅禁发送——发送钮已切停止态），预输入下一条
                 maxLines = 4,
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),

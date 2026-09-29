@@ -400,24 +400,20 @@ fun ItemDetailScreen(
                     color = editorialColors().ink,
                     modifier = Modifier.padding(top = 22.dp, bottom = 8.dp),
                 )
-                // it-011 R6-P1：放大为可点卡片，「点开看整套」预期明确
+                // it-011 R6-P1：放大为可点卡片；it-069 修4：去每卡重复「点开看整套 ›」
+                //（整卡可点不变，重复文案 3+ 次成噪）
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 8.dp),
                 ) {
                     items(related.size, key = { related[it].id }) { index ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                        OutfitThumb(
+                            vm,
+                            related[index],
+                            showDate = false,
                             modifier = Modifier.width(150.dp),
-                        ) {
-                            OutfitThumb(vm, related[index], showDate = false, onClick = { onOpenOutfit(related[index].id) })
-                            Text(
-                                "点开看整套 ›",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = editorialColors().inkFaint,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        }
+                            onClick = { onOpenOutfit(related[index].id) },
+                        )
                     }
                 }
             }

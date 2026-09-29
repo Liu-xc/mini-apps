@@ -140,7 +140,9 @@ fun OutfitDetailScreen(
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-        title = { Text("穿搭 · ${dateFormat.format(Date(outfit.createdAt))}") },
+        // it-069 修3：日期并入全站 updatedAt 口径（与列表缩略/评论一致）——
+        // 原 createdAt 会在编辑后与列表日期打架
+        title = { Text("穿搭 · ${dateFormat.format(Date(outfit.updatedAt))}") },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")

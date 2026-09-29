@@ -30,6 +30,9 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -364,8 +367,15 @@ private fun WishItemsSection(
             item(key = "purchased") {
                 Column {
                     Spacer(Modifier.height(8.dp))
+                    // it-069 修4：▾/▸ 文字符号 → Material 折叠图标（ExpandMore/Less，全站折叠语言统一）
                     TextButton(onClick = { purchasedOpen = !purchasedOpen }) {
-                        Text(if (purchasedOpen) "▾ 已购入 (${purchased.size})" else "▸ 已购入 (${purchased.size})")
+                        Icon(
+                            if (purchasedOpen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("已购入 (${purchased.size})")
                     }
                 }
             }
@@ -391,7 +401,7 @@ private fun WishItemsSection(
                                 color = editorialColors().inkFaint,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text("已在衣橱 →", style = MaterialTheme.typography.labelSmall, color = editorialColors().accentContent)
+                            Text("已在衣橱", style = MaterialTheme.typography.labelSmall, color = editorialColors().accentContent)  // it-069 修4：去「→」
                         }
                     }
                 }
@@ -827,7 +837,13 @@ private fun WishDetailSheet(
                 TextButton(onClick = {
                     if (!vm.share.openUrl(wish.url)) vm.toast("没有可打开该链接的应用")
                 }) {
-                    Text("${urlHost(wish.url)} ↗")
+                    // it-069 修4：「↗」混排 → Material 外链图标
+                    Text(urlHost(wish.url))
+                    Icon(
+                        Icons.Rounded.OpenInNew,
+                        contentDescription = "在浏览器打开",
+                        modifier = Modifier.size(14.dp),
+                    )
                 }
             }
             Spacer(Modifier.height(6.dp))
@@ -840,7 +856,7 @@ private fun WishDetailSheet(
             Button(
                 onClick = onPurchase,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text("✓ 已买到 → 收进衣橱", style = MaterialTheme.typography.titleMedium) }
+            ) { Text("✓ 已买到，收进衣橱", style = MaterialTheme.typography.titleMedium) }
         }
     }
 }
@@ -1027,7 +1043,7 @@ private fun WishOutfitDetailSheet(
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("→ 去预览") }
+                ) { Text("去预览") }  // it-069 修4：去「→」混排残留
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

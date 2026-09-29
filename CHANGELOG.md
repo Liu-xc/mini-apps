@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-069 P2 机械细项打包——W1 空组合按钮禁用/随机单件轻提示/顶栏触控 48dp；W3/W8 筛选 rememberSaveable 跨 Tab 保持；W7 顶栏日期并入 updatedAt；W5 卡下重复文案废止、W8 随机按钮并入 W1 形制、W10 折叠符号与「→/↗」残留清理、ChatList 时间戳全站格式、W2 emoji 行 FlowRow；W6 重拼进度角标+手改重置提示、W13 流式可预输入。91 测绿。详 [it-069](wardrobe/specs/iterations/it-069-p2-mechanical-package.md)。
+
 - **feat(wardrobe)**: it-068 穿搭详情放开调整单品 + 成品图标注——有成品图也可换季改一件（it-049 限制解除，不再逼用户创建副本丢打卡/评论）；单品变更后成品图区标注「成品图为调整前组合」（`Outfit.effectStale` 持久、旧快照兼容），录入新成品图即解除。91 测绿（+2 兼容/解除守门测）。详 [it-068](wardrobe/specs/iterations/it-068-outfit-edit-with-effect-annotation.md)。
 
 - **fix(darkroom)**: it-013 画册干净底面 + 显影末态原片保真——移除画册底衬米色 slab（背景回归全应用纸底，与 W2/W3 一致）；显影末态「相纸感」残留（柔焦 2px/黑位抬 13/颗粒/暗角/高光压缩）全部精确归零，成片=原片（像素对照：夜景 mean 误差 <1/255、黑位 p1 20→5、高频图锐度 5.3→90.6），显影中段动画不变；05 动效表立「末态保真铁律」。详 [it-013](darkroom/specs/iterations/it-013-clean-pager-and-end-fidelity.md)。
