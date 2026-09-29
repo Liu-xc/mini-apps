@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **feat(wardrobe)**: it-070 穿搭视图切换 · 主题设置 · 右滑归入——W7「成品图 / 单品布局」两段切换（有成品图才显示、默认成品图、会话内记住，US-48 编辑交互不变）；W11 新增「外观」卡三选一（跟随系统/亮色/暗色，`theme_mode` 持久化即点即生效，`LocalAppDarkTheme` 收敛 recap/长图局部取色）；carddeck 右滑改两段式归入（拖拽 1:1 单调跟手 + smoothstep 归入、上一张盖过顶卡，废止旧 crossfade 倒车）并修冷启动首滑不提交（三重门读进 snapshotFlow 计算块，防观察者饿死）。91 测绿 + eats 构建绿。详 [it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md)。
+
 - **fix(darkroom)**: it-014 拍立得卡面外缘 hairline 立边——浅纸卡与纸底仅差 ~7/255 边界不可见，全模式卡外缘统一 1px hairline（`palette.hairline`、cardWidth×0.0018，预览/导出两端同参数；深色卡既有外框不变），亮/深主题与查看器实测到位。版本 0.5.13。详 [it-014](darkroom/specs/iterations/it-014-polaroid-card-hairline.md)。
 
 - **fix(wardrobe)**: it-069 P2 机械细项打包——W1 空组合按钮禁用/随机单件轻提示/顶栏触控 48dp；W3/W8 筛选 rememberSaveable 跨 Tab 保持；W7 顶栏日期并入 updatedAt；W5 卡下重复文案废止、W8 随机按钮并入 W1 形制、W10 折叠符号与「→/↗」残留清理、ChatList 时间戳全站格式、W2 emoji 行 FlowRow；W6 重拼进度角标+手改重置提示、W13 流式可预输入。91 测绿。详 [it-069](wardrobe/specs/iterations/it-069-p2-mechanical-package.md)。

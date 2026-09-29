@@ -46,6 +46,9 @@
 - **自研/手动驱动的动画不在官方动画跟踪内**——`isAnimationRunning` 这类官方标志会恒 false，判断「在动」须自带标志（try-finally 维护）。· [wardrobe it-048](wardrobe/specs/iterations/it-048-hotfix-deck-clip-continuity.md) · 2026-09
 - **驱动 UI 的忙碌态别用 `Job.isActive` 推导**——Job 生命周期不是 Compose 状态，写 job 引用只触发一次重组，后续帧不跟随（实测图标不转）；用显式 `mutableStateOf<Boolean>` + try/finally 复位。· [wardrobe it-058](wardrobe/specs/iterations/it-058-motion-polish.md) · 2026-09
 - **遮罩/渐隐色必须以落点容器实测底色为准，别按框架默认推导**——本仓页面真底是 activity `windowBackground=@color/paper`（实测 #F7F7F5/#111110），想当然取 M3 `surface` 深色下差 10/255 成可见脏带；改色前先像素采样。· [wardrobe it-063](wardrobe/specs/iterations/it-063-wardrobe-chrome-slim.md) · 2026-09
+- **`snapshotFlow` 只对「计算块内读过的状态」的变更重触发**——门/条件必须一并读进块内（如 `Triple(offset, gateA, gateB)`），在 collect 体外读则「终值恰在门关闭期写入、门随后翻开」永远唤不醒流，观察者饿死（冷启动首滑提交丢失实测，直到二次按下才被兜底路径补上）。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
+- **「跟手段 1:1 + 终点在起点另一侧」的归入动画必须两段式**——单段插值跟随手指再收敛到左侧终点必中途倒车（插值导数中途变号）；先跟至分界点 `min(阈值, 0.55·归入距离)` 再 smoothstep 归入，单调无回拉。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
+- **别把 `animator_duration_scale` 当 Compose 动画的减速旋钮**——它只缩放 ValueAnimator，Compose 的 animateTo/spring 不吃；排查「动画慢/提交延迟」先排除这个假因（本仓曾据此误判），慢放验证走录屏逐帧或程序化插桩。· [wardrobe it-070](wardrobe/specs/iterations/it-070-card-view-toggle-theme-swipe.md) · 2026-09
 
 ### Agent 协作与工具
 

@@ -103,6 +103,14 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     val isDemo: Boolean get() = container.isDemo
 
+    /** it-070 US-61：外观三态（system|light|dark），选中即持久化并全应用立即生效 */
+    val themeMode: StateFlow<String> = prefs.themeMode
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "system")
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch { prefs.setThemeMode(mode) }
+    }
+
     /** 解析选中厂商为可实例化的 preset（自定义项就地构造；空 baseUrl 由调用方先拦） */
     fun resolvePreset(ui: ConnectionUi): ProviderPreset? =
         if (ui.presetId == CUSTOM_ID) {

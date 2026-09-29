@@ -8,6 +8,14 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+
+/**
+ * it-070 US-61：全局生效的深色判定（主题设置三态收敛后唯一取值处）。
+ * 局部预览/长图配色等直读 `isSystemInDarkTheme()` 的地方一律改读本 Local，
+ * 否则强制亮/暗时局部取色会跟系统走偏。
+ */
+val LocalAppDarkTheme = staticCompositionLocalOf { false }
 
 /**
  * 全局主题：Material 3 × 黑白灰时装编辑风 token（specs/05-design-system.md）。
@@ -92,7 +100,10 @@ fun WardrobeTheme(
         )
     }
 
-    CompositionLocalProvider(LocalEditorialColors provides palette) {
+    CompositionLocalProvider(
+        LocalEditorialColors provides palette,
+        LocalAppDarkTheme provides darkTheme,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = EditorialTypography,

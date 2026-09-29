@@ -183,8 +183,12 @@ class CardDeckController<T> internal constructor(
      * 不在官方动画跟踪内（drag block 执行中 dragStatus=Dragging，isAnimationRunning 恒
      * false），到达帧提交以 [flingInProgress] 挡飞越帧；快进结算（onDeckDown）以
      * [pendingFlingTarget] 获知飞行方向，不依赖未公开的 velocity API。
+     *
+     * it-070：必须是快照状态——普通 var 翻转不会唤醒 snapshotFlow，慢速拖过阈值松手的
+     * fling 末帧（offset 恰好 == 锚点，后续官方 settle 无写入）会饿死到达帧提交，
+     * 表现为回看落座但下标不动，直到下次按下竞态补提交（实测 1/8→延迟跳变）。
      */
-    internal var flingInProgress: Boolean = false
+    internal var flingInProgress: Boolean by mutableStateOf(false)
         private set
     internal var pendingFlingTarget: DeckAnchor = DeckAnchor.Rest
         private set
@@ -301,11 +305,16 @@ class CardDeckController<T> internal constructor(
     /**
      * 深度 [d] 的绘制位姿。全部由单一驱动量 [u]（顶卡位移 px）派生：
      * - u < 0（向前甩）：顶卡飞出，堆叠按 qL = -u/W 整体上移一层（晋升与飞出同源，无第二套动画）；
-     * - u > 0（向后甩/归入）：顶卡沿 qR = u/(0.45W) 归入第 1 层，上一张从左侧停驻位滑入，
-     *   最深层以 (1 - qR) 淡出（提交后它退出渲染，淡出使其无痕）；
+     * - u > 0（向后甩/归入）：两段式（it-070）——u ≤ 阈值段顶卡与手指 1:1 跟随（与左滑对称，
+     *   松手前无倒车）；阈值后沿 smoothstep 并入 tuck 终点（第 1 层），上一张从左侧停驻位滑入，
+     *   最深层以 (1 - qR) 淡出（提交后它退出渲染，淡出使其无痕）。终点仍是 base(1)，
+     *   提交瞬间零跳变不变；
      * - 堆叠层位姿 = base(d) → base(d±1) 的线性插值，base(k) = (s·(V-1-k), -s·(V-1-k))。
+     *
+     * it-070 病灶记录：旧式全程交叉淡化 x=(b0+u)(1-qR)+tuck·qR 的极值点在 u=(T-s)/2，
+     * **早于 100dp 阈值**——右滑必先右移约 T/4 再当指回拉，即「向右滑动画是错的」。
      */
-    internal fun placement(d: Int, u: Float, stackPx: Float): DeckPlacement {
+    internal fun placement(d: Int, u: Float, stackPx: Float, thresholdPx: Float): DeckPlacement {
         val w = widthPx.toFloat().coerceAtLeast(1f)
         val v = style.visibleCardsInStack
         val s = stackPx
@@ -323,10 +332,17 @@ class CardDeckController<T> internal constructor(
             d == 0 -> {
                 // 归入：终点 = 堆叠第 1 层（V=1 时无堆叠层，直接收出右边界）
                 val tuck = if (v > 1) base(1) else Offset(b0.x + w + s, b0.y)
+                // 跟手段上界 = 阈值（封顶 0.55T 保归入段不被挤没）：慢拖过阈值才开始回收，
+                // smoothstep 首尾导数为 0，与跟手段在交接处 C¹ 相接、落点速度归零
+                val followEnd = thresholdPx.coerceAtMost(tuckDist * 0.55f).coerceAtLeast(0f)
+                val rho = if (u <= followEnd) 0f else {
+                    val t = ((u - followEnd) / (tuckDist - followEnd)).coerceIn(0f, 1f)
+                    t * t * (3f - 2f * t)
+                }
                 DeckPlacement(
-                    x = (b0.x + u) * (1f - qR) + tuck.x * qR,
-                    y = b0.y * (1f - qR) + tuck.y * qR,
-                    rotationDeg = (u / style.rotationDivisor) * (1f - qR),
+                    x = (b0.x + u) * (1f - rho) + tuck.x * rho,
+                    y = b0.y * (1f - rho) + tuck.y * rho,
+                    rotationDeg = (u / style.rotationDivisor) * (1f - rho),
                     alpha = 1f,
                 )
             }
@@ -642,13 +658,19 @@ fun <T> CardDeck(
     // isAnimationRunning=程序化 animateTo/snapTo 在途；
     // flingInProgress=fling spring 动画在途（不在官方跟踪内，must 单独挡）——
     // 实测缺它：飞越锚点即提交、复位又被动画拉回、连环提交 4 张（1/5→5/5）。
+    // it-070：门状态必须读进 snapshotFlow 计算块——flow 只对「块内读过的状态」的变更重触发。
+    // 最终 offset 恒在 fling=true 的最后一帧写入（此时被门挡掉）；fling 翻 false 若不在
+    // 块内则唤醒不了本流，offset 又不再变化 → 观察者饿死、提交丢失（冷启动首滑实测：
+    // performFling END 落锚后无任何后续日志，直到二次按下才被 onDeckDown 补提交）。
     LaunchedEffect(controller) {
-        snapshotFlow { controller.drag.offset }.collect { u ->
-            if (u.isNaN() || pointerDown || controller.drag.isAnimationRunning ||
-                controller.flingInProgress
-            ) {
-                return@collect
-            }
+        snapshotFlow {
+            Triple(
+                controller.drag.offset,
+                pointerDown || controller.drag.isAnimationRunning,
+                controller.flingInProgress,
+            )
+        }.collect { (u, staticGate, flingGate) ->
+            if (u.isNaN() || staticGate || flingGate) return@collect
             val fw = controller.drag.anchors.positionOf(DeckAnchor.Forward)
             if (!fw.isNaN() && abs(u - fw) <= ARRIVE_TOLERANCE_PX) {
                 controller.tryCommit(DeckAnchor.Forward)
@@ -755,7 +777,9 @@ fun <T> CardDeck(
             rendered.forEach { (d, item) ->
                 val z = when (d) {
                     0 -> 3f
-                    -1 -> 2f
+                    // it-070：回看时上一张盖过顶卡滑入——归入全程可见（揭示即覆盖），
+                    // 且提交前后层级连续（4→3），不再有 2→3 的瞬间翻层
+                    -1 -> 4f
                     else -> 1f - d
                 }
                 Box(
@@ -769,6 +793,7 @@ fun <T> CardDeck(
                                 d = d,
                                 u = u,
                                 stackPx = style.stackedCardsOffset.toPx(),
+                                thresholdPx = thresholdPx,
                             )
                             translationX = p.x
                             translationY = p.y

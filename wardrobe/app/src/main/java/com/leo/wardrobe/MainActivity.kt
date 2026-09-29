@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -73,7 +74,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            WardrobeTheme {
+            // it-070 US-61：外观三态（跟随系统/亮色/暗色），选择持久化在 PrefsStore，
+            // DataStore 首读前一帧回落 SYSTEM=系统跟随，与旧行为一致无闪烁
+            val mode by (application as WardrobeApp).container.prefs.themeMode
+                .collectAsState(initial = com.leo.wardrobe.ui.theme.ThemeMode.SYSTEM.storage)
+            WardrobeTheme(
+                darkTheme = when (com.leo.wardrobe.ui.theme.ThemeMode.fromStorage(mode)) {
+                    com.leo.wardrobe.ui.theme.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                    com.leo.wardrobe.ui.theme.ThemeMode.LIGHT -> false
+                    com.leo.wardrobe.ui.theme.ThemeMode.DARK -> true
+                },
+            ) {
                 WardrobeRoot()
             }
         }

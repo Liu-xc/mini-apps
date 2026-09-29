@@ -24,6 +24,9 @@ class PrefsStore(private val context: Context, private val aiNamespace: String =
     private val keyCustomPrompt = stringPreferencesKey("custom_prompt")
     private val keyCoachSlots = booleanPreferencesKey("coach_slots_shown")
 
+    // it-070 US-61：外观主题三态（system|light|dark，默认跟随系统）
+    private val keyThemeMode = stringPreferencesKey("theme_mode")
+
     private fun slotKey(personId: String) = stringSetPreferencesKey("slots_$personId")
 
     val currentPersonId: Flow<String?> = context.store.data.map { it[keyPerson] }
@@ -63,6 +66,13 @@ class PrefsStore(private val context: Context, private val aiNamespace: String =
             if (itemId != null) current += "${category.name}=$itemId"
             prefs[key] = current
         }
+    }
+
+    /** it-070 US-61：外观主题模式（"system"|"light"|"dark"，未知值一律回落 system） */
+    val themeMode: Flow<String> = context.store.data.map { it[keyThemeMode] ?: "system" }
+
+    suspend fun setThemeMode(mode: String) {
+        context.store.edit { it[keyThemeMode] = mode }
     }
 
     /** 导出面板五维选择（it-011 O8：记住上次），存储格式 "key=value" */

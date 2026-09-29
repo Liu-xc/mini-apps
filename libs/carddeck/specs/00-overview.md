@@ -30,7 +30,10 @@ wardrobe `specs/06-decisions.md` ADR-025）。
   （Forward→Forward），旧模型把第二次甩出整单吞掉（实测「连续滑动滑不动」的直接根因）；
   `flingInProgress` 门必须独立存在——fling 的 spring animate 不在官方动画跟踪内
   （drag block 执行中 dragStatus=Dragging），缺它则飞越锚点即提交、复位被动画拉回、连环推进
-  （实测一次甩卡 1/5→5/5）。
+  （实测一次甩卡 1/5→5/5）。**门状态必须读进 `snapshotFlow` 计算块内**（it-070）：snapshotFlow
+  只对「块内读过的状态」的变更重触发——门在 collect 体外读时，fling 终帧（offset 落锚、
+  fling=true）被门挡掉后 fling 翻 false 唤醒不了流（offset 已不再变化）→ 观察者饿死、
+  冷启动首滑提交丢失，直到二次按下 `onDeckDown` 才补提交。
 - **按下快进结算** `onDeckDown(target)`（it-048）：手势按下瞬间若 `flingTarget()` 决策出甩出/归入
   （fling 飞行中按下取其决策目标；停在锚上的落定窗口按位置阈值），立即同级 `anchoredDrag`
   拿锁原子提交并复位——新手势从干净 Rest 起步拖「新顶卡」，连滑间隔小于飞行动画时长也逐张推进。
@@ -124,3 +127,23 @@ it-046 时对原三方库 1.1.4 反编译实证：飞卡默认 `spring(dampingRa
 验证（emulator-5554 实测）：单甩恰好 +1（1/5→2/5）；间隔 250ms 连滑两次恰好 +2（2/5→4/5）；
 `previous()` 回卷正常；`drawRandom` 抽取/按钮态/落点无回归；eats 连甩逐张推进；飞行帧卡片完整
 飞出屏幕无裁剪；双端单测绿、全程无崩溃。
+
+## 修订（2026-09-29，it-070 右滑归入两段式 + 提交观察者唤醒）
+
+消费方（wardrobe W8）报障「右滑回看动画是错的」，连带实测出冷启动首滑不提交，两处修在 SDK 内：
+
+1. **右滑归入两段式（Design K，`placement()` `d==0` 分支）**：旧全程 crossfade 让上一张在
+   手指段「先右移、再被终值拉回左侧起点」产生倒车（峰值在 `u=(T−s)/2`）。改为：拖拽段与手指
+   1:1 单调跟手，越过 100dp 阈值松手后先跟至 `followEnd = min(阈值Px, 0.55·埋入距离)`，
+   再以 smoothstep `ρ = t²(3−2t)` 混至埋入终点——单向、无回拉，提交瞬间零跳变。
+2. **上一张层级**：回看滑入的上一张 z 从与顶卡平齐抬高一层（`d==-1 → z=4f`，顶卡 3f），
+   从左侧滑入时明确盖过顶卡（旧版被顶卡压住一截）。
+3. **提交观察者唤醒**：到达帧观察者的三重门改为经 `snapshotFlow { Triple(offset,
+   pointerDown||isAnimationRunning, flingInProgress) }` **在计算块内读入**——snapshotFlow 只对
+   块内读过的状态变更重触发；门在 collect 体外读时 fling 终帧被挡、fling 翻 false 无法唤醒，
+   提交丢失（冷启动首滑实测：`performFling END` 落锚后无任何后续日志，直到二次按下才被
+   `onDeckDown` 补提交）。`flingInProgress` 需为 `mutableStateOf`（块内读取要求快照状态）。
+
+验证（emulator-5558 实测）：冷启动首滑即提交（1/8→8/8，commit 紧随 `performFling END`）；
+连续右滑/慢拖/左滑逐张推进无吞提交；PIL 逐帧核对右滑拖拽段右缘单调递增、松手后单向下潜；
+wardrobe + eats 双端构建绿。

@@ -5,7 +5,7 @@ package com.leo.wardrobe.ui.recap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.leo.wardrobe.ui.theme.LocalAppDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -114,7 +114,7 @@ fun DataPackageSection(
                     Text(
                         "演示模式下不可用，不触碰真实数据",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (LocalAppDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant
                         else Color(0xFF555550),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     )

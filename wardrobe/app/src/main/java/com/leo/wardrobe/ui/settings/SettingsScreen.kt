@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.leo.wardrobe.BuildConfig
 import com.leo.wardrobe.data.mock.DemoMode
 import com.leo.wardrobe.ui.components.CountUpText
+import com.leo.wardrobe.ui.components.SegmentedToggleRow
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.settings.SettingsViewModel.CheckState
 import com.leo.wardrobe.ui.theme.editorialColors
@@ -417,6 +418,34 @@ fun SettingsScreen(
                                 }
                             }
                     }
+                }
+            }
+
+            // ---------- 外观卡（it-070 US-61：跟随系统/亮色/暗色） ----------
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = ec.surface,
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("外观", style = MaterialTheme.typography.titleLarge, color = ec.ink)
+                    val mode by vm.themeMode.collectAsState()
+                    val modeLabels = listOf("跟随系统", "亮色", "暗色")
+                    val modeValues = listOf("system", "light", "dark")
+                    SegmentedToggleRow(
+                        selectedIndex = modeValues.indexOf(mode).coerceAtLeast(0),
+                        onSelect = { vm.setThemeMode(modeValues[it]) },
+                        count = modeLabels.size,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { i ->
+                        Text(modeLabels[i], style = MaterialTheme.typography.labelMedium, color = ec.ink)
+                    }
+                    Text(
+                        "选择后立即生效并记住",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ec.inkFaint,
+                    )
                 }
             }
 

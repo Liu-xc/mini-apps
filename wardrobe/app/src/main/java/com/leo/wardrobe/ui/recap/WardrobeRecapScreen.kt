@@ -10,7 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.leo.wardrobe.ui.theme.LocalAppDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -356,7 +356,7 @@ fun WardrobeRecapScreen(
                             style = MaterialTheme.typography.bodySmall,
                             // 对比 ≥4.5:1：浅色下 onSurfaceVariant(0x808D82) 仅 ~3:1，加深一档；
                             // 深色下 onSurfaceVariant(0x94A294) 对墨纸 ~7:1 直接可用
-                            color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (LocalAppDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant
                             else Color(0xFF555550),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
@@ -642,7 +642,7 @@ private fun ReminderSettings(
                     Text(
                         "演示模式不推送",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isSystemInDarkTheme()) MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (LocalAppDarkTheme.current) MaterialTheme.colorScheme.onSurfaceVariant
                         else Color(0xFF555550),
                     )
                 }

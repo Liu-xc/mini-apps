@@ -52,6 +52,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +67,7 @@ import com.leo.wardrobe.domain.model.outfitById
 import com.leo.wardrobe.ui.AppViewModel
 import com.leo.wardrobe.ui.components.CommentTimeline
 import com.leo.wardrobe.ui.components.PhotoCard
+import com.leo.wardrobe.ui.components.SegmentedToggleRow
 import com.leo.wardrobe.ui.components.TagInput
 import com.leo.wardrobe.ui.components.TagRow
 import com.leo.wardrobe.ui.components.rememberHaptics
@@ -104,6 +106,8 @@ fun OutfitDetailScreen(
     var showExport by remember { mutableStateOf(false) }
     var actionMenuOpen by remember { mutableStateOf(false) }
     var editingItems by remember(outfit.id) { mutableStateOf(false) }
+    // it-070 US-49：主视图切到「单品布局」的会话态（仅成品图存在时可切，默认成品图）
+    var showCollage by rememberSaveable(outfit.id) { mutableStateOf(false) }
     var draftItemIds by remember(outfit.id) { mutableStateOf(outfit.itemIds) }
     var pickerCategories by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
     var tagDraft by remember { mutableStateOf(outfit.tags) }
@@ -116,6 +120,8 @@ fun OutfitDetailScreen(
             draftItemIds = outfit.itemIds
             editingItems = true
         }
+        // it-070：调整单品的空槽/点选交互都在拼贴上，进编辑即切到单品布局
+        showCollage = true
         pickerCategories = categories
     }
 
@@ -220,8 +226,25 @@ fun OutfitDetailScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // 主视觉（it-011 O7）：成品图横滑优先；无成品图时人体叙事拼贴兜底，
-            // 「录入成品图」合并为拼贴右下角标，不再整行重复两个入口
-            if (outfit.effectImages.isNotEmpty()) {
+            // 「录入成品图」合并为拼贴右下角标，不再整行重复两个入口。
+            // it-070 US-49：有成品图时可切「单品布局」——两种视图主动对照查看；
+            // 无成品图时拼贴本就是唯一视图，不出开关
+            val hasEffectImages = outfit.effectImages.isNotEmpty()
+            if (hasEffectImages) {
+                SegmentedToggleRow(
+                    selectedIndex = if (showCollage) 1 else 0,
+                    onSelect = { showCollage = it == 1 },
+                    count = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { i ->
+                    Text(
+                        if (i == 0) "成品图" else "单品布局",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = editorialColors().ink,
+                    )
+                }
+            }
+            if (hasEffectImages && !showCollage) {
                 val pagerState = rememberPagerState(pageCount = { outfit.effectImages.size })
                 Box {
                     HorizontalPager(
