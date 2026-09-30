@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -146,13 +147,16 @@ fun GenerateWorkbench(
         mutableStateOf(OutfitImageGenerator.promptOf(items, scene = "", personNote = personNote))
     }
 
+    // it-077 十四次修订：就地换模型——本地连接态，切换即写偏好并生效（生成中锁定）
+    var conn by remember(connection) { mutableStateOf(connection) }
+
     // 高级参数面板（按模型记忆，拍板①）
     var paramValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var paramsExpanded by remember { mutableStateOf(false) }
-    val modelSpec = connection.modelSpec
-    LaunchedEffect(connection.model) {
-        val remembered = generator.lastParams()[connection.model].orEmpty()
-        val defaults = connection.modelSpec?.params?.associate { it.key to it.default.content }.orEmpty()
+    val modelSpec = conn.modelSpec
+    LaunchedEffect(conn.model) {
+        val remembered = generator.lastParams()[conn.model].orEmpty()
+        val defaults = conn.modelSpec?.params?.associate { it.key to it.default.content }.orEmpty()
         paramValues = defaults + remembered
     }
 
@@ -162,7 +166,8 @@ fun GenerateWorkbench(
         composedPreview = vm.imageComposer.composeToExportFile(items, prompt, person?.refImageFile)
     }
 
-    val modelTakesImages = (connection.modelSpec?.inputImages?.first ?: 1) > 0
+    val modelTakesImages = (conn.modelSpec?.inputImages?.first ?: 1) > 0
+    var modelMenu by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
 
     fun startGenerate() {
@@ -171,10 +176,10 @@ fun GenerateWorkbench(
         onPhaseChange(GeneratePhase.Running("提交生成请求…"))
         haptics.tick()
         job = scope.launch {
-            generator.saveLastParams(connection.model, paramValues)
+            generator.saveLastParams(conn.model, paramValues)
             when (
                 val r = generator.run(
-                    connection = connection,
+                    connection = conn,
                     prompt = prompt,
                     items = items,
                     personRefFile = person?.refImageFile,
@@ -203,12 +208,53 @@ fun GenerateWorkbench(
                 .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                "${connection.spec.displayName} · ${connection.model}" +
-                    (modelSpec?.costPerImage?.let { " · 参考价 ¥$it/张" } ?: ""),
-                style = MaterialTheme.typography.labelMedium,
-                color = ec.inkFaint,
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "${conn.spec.displayName}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = ec.inkFaint,
+                )
+                // it-077 十四次修订：模型行就地切换（设置页双卡曾让人选错行）
+                Box {
+                    TextButton(
+                        onClick = { if (phase !is GeneratePhase.Running) modelMenu = true },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            conn.model + (modelSpec?.costPerImage?.let { " · ¥$it/张" } ?: ""),
+                            color = ec.ink,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Icon(Icons.Rounded.ArrowDropDown, contentDescription = "切换模型", tint = ec.inkFaint)
+                    }
+                    DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
+                        conn.spec.imageModels.forEach { m ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(m.id + (m.costPerImage?.let { "  ¥$it/张" } ?: ""))
+                                        Text(m.tier, style = MaterialTheme.typography.labelMedium, color = ec.inkFaint)
+                                    }
+                                },
+                                leadingIcon = if (m.id == conn.model) {
+                                    { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null,
+                                onClick = {
+                                    modelMenu = false
+                                    if (m.id != conn.model) {
+                                        conn = OutfitImageGenerator.Connection(conn.spec, m.id)
+                                        scope.launch { generator.selectModel(m.id) }
+                                    }
+                                },
+                            )
+                        }
+                    }
+                }
+            }
 
             when (val p = phase) {
                 is GeneratePhase.Setup -> {
@@ -376,7 +422,7 @@ fun GenerateWorkbench(
                             shape = MaterialTheme.shapes.large,
                         ) { Text("生成效果图") }
                         Text(
-                            "照片将上传至 ${connection.spec.displayName} 用于本次生成，结果保存在本机。",
+                            "照片将上传至 ${conn.spec.displayName} 用于本次生成，结果保存在本机。",
                             style = MaterialTheme.typography.labelSmall,
                             color = ec.inkFaint,
                         )

@@ -44,6 +44,13 @@ class OutfitImageGenerator(private val container: AppContainer) {
         val modelSpec: ModelSpec? get() = spec.model(model)
     }
 
+    /** it-077 十四次修订：生成页就地换模型（设置页对话/生图双卡易选错行，生成页所见即所改） */
+    suspend fun selectModel(model: String) {
+        withContext(Dispatchers.IO) {
+            container.prefs.setAiImageConnection(container.prefs.aiImagePresetId.first(), model)
+        }
+    }
+
     sealed interface RunOutcome {
         /** 候选字节（App 内直接给 Coil 预览，不经临时 URL） */
         data class Candidates(val images: List<GeneratedImage>, val model: String) : RunOutcome
@@ -56,7 +63,7 @@ class OutfitImageGenerator(private val container: AppContainer) {
     }
 
     /** 未配置（厂商/模型缺或无 Key）返回 null——UI 据此引导去 W11 */
-    suspend fun connection(): Connection? {
+    suspend fun connection(): Connection? = withContext(Dispatchers.IO) {
         val presetId = container.prefs.aiImagePresetId.first()
         val modelSel = container.prefs.aiImageModel.first()
         val spec: ProviderSpec? = if (presetId == CUSTOM_IMAGE_ID) {
@@ -68,10 +75,10 @@ class OutfitImageGenerator(private val container: AppContainer) {
             com.leo.libs.agent.ModelCatalog.byId(presetId)
         }
         val model = spec?.imageModels?.let { models -> modelSel.ifBlank { models.firstOrNull()?.id } }
-        if (spec == null || model.isNullOrBlank()) return null
-        // 同一厂商一把 Key 双轨共用；无 Key 视为未配置
+        if (spec == null || model.isNullOrBlank()) return@withContext null
+        // 同一厂商一把 Key 双轨共用；无 Key 视为未配置（Keystore 读走 IO，主线程 ANR 保险）
         val hasKey = container.apiKeyStore.get(spec.id)?.isNotBlank() == true
-        return if (hasKey) Connection(spec, model) else null
+        if (hasKey) Connection(spec, model) else null
     }
 
     private fun imageModel(spec: ProviderSpec): ImageModel =
