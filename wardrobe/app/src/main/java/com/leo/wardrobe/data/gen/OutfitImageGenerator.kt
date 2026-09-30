@@ -183,18 +183,23 @@ class OutfitImageGenerator(private val container: AppContainer) {
     /**
      * 参考图装配：人物参考照在前、衣物在后（多图融合以最后一张定宽高比——衣物收尾）。
      * 衣物 WebP 统一转 JPEG（各家对 WebP 支持不一），≤1440px 由存储层天然满足。
+     * it-077 十一次修订：纯文生图模型（inputImages 上限 0）一张参考图都不带——
+     * 原实现人物照无条件附带，Z-Image-Turbo 收到 image 字段报 11235 Input image error。
      */
     private suspend fun buildRefs(personRefFile: String?, itemFiles: List<String>, connection: Connection): List<ImageRef> =
         withContext(Dispatchers.IO) {
+            val limit = inputLimit(connection)
+            val plan = refPlan(hasPerson = personRefFile != null, limit = limit)
             buildList {
-                personRefFile?.let { f -> fileToDataUri(f)?.let { add(ImageRef.DataUri(it)) } }
-                val limit = inputLimit(connection)
-                var garmentCount = if (personRefFile != null) 1 else 0
+                if (plan.attachPerson) {
+                    personRefFile?.let { f -> fileToDataUri(f)?.let { add(ImageRef.DataUri(it)) } }
+                }
+                var taken = 0
                 for (f in itemFiles) {
-                    if (garmentCount >= limit) break
+                    if (taken >= plan.garments) break
                     fileToDataUri(f)?.let {
                         add(ImageRef.DataUri(it))
-                        garmentCount++
+                        taken++
                     }
                 }
             }
@@ -219,5 +224,17 @@ class OutfitImageGenerator(private val container: AppContainer) {
         /** 生成 sheet 与顾问工具共用的提示词口径 */
         fun promptOf(items: List<Item>, scene: String, personNote: String): String =
             BuildTryOnPrompt.build(items, scene, personNote)
+
+        /**
+         * 参考图取舍（it-077 十一次修订，纯函数可测）：limit<=0（纯文生图）一张不带——
+         * 人物照曾无条件附带，Z-Image-Turbo 收到 image 字段报 11235 Input image error；
+         * 人物优先占 1 席，余量给衣物。
+         */
+        fun refPlan(hasPerson: Boolean, limit: Int): RefPlan =
+            if (limit <= 0) RefPlan(attachPerson = false, garments = 0)
+            else if (hasPerson) RefPlan(attachPerson = true, garments = limit - 1)
+            else RefPlan(attachPerson = false, garments = limit)
+
+        data class RefPlan(val attachPerson: Boolean, val garments: Int)
     }
 }

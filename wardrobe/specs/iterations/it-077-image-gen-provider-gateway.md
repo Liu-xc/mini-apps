@@ -138,6 +138,8 @@
 
 **2026-09-30 十次修订（Leo 反馈×9「底部按钮变形」）**：ExportSheet 动作栏「分享」钮自 it-014 起用 `contentPadding=PaddingValues(horizontal=10)` 覆盖了整个默认内边距——vertical 被**归零**，按钮高度塌成矮条与「存相册」不齐（九次修订后动作栏上移更显眼）。修：contentPadding 补 vertical=8、Row 加 `verticalAlignment=CenterVertically`。教训：**M3 按钮改 contentPadding 是整只 PaddingValues 覆盖不是合并——只写 horizontal 会把默认 vertical 抹成 0**，改窄按钮横向内距时必须同时显式给 vertical。
 
+**2026-09-30 十一次修订（Leo 真机实报「生成失败：HTTP 400 code 11235 Input image error」）**：根因=`OutfitImageGenerator.buildRefs` 人物参考照**无条件附带**，inputLimit 只拦衣物图——纯文生图模型（Z-Image-Turbo，inputImages 0..0）的请求照样带 image 字段被 SF 拒 11235。修法：抽纯函数 `refPlan(hasPerson, limit)`（companion，可 JVM 测）——limit<=0 一张不带；人物优先占 1 席余量给衣物；buildRefs 按 plan 装配。新增 RefPlanTest 5 例锁契约。
+
 ## 验证记录
 
 **2026-09-30：**
@@ -169,3 +171,5 @@
 **2026-09-30 九次修订验证：** 单测全绿；模拟器实测四步——①已配置：拼贴卡右上主色「生成效果图」角标 → 点击开生成 sheet 装配态 ✓；②W11 清除 Key（二次确认）→ ③未配置：拼贴卡角标**仍在**，浅色「· 去配置」样式 → ④点击落位 W11 设置页 ✓；成品图卡全程无角标 ✓。模拟器 Key 已回配。
 
 **2026-09-30 十次修订验证：** 模拟器实测「存相册/分享」两钮等高对齐（约 48dp），无压扁。
+
+**2026-09-30 十一次修订验证：** RefPlanTest 5 例 + 全量单测绿；Mac 直连真端点验证修复后请求形态——Z-Image-Turbo 不带 image 字段 200 OK 出图（Leo 报错同模型同账号）。
