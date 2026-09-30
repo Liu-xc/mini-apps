@@ -6,6 +6,8 @@
 
 - **chore(lottery)**: it-004新增独立Godot Android兼容工具与场景打包，OpenGL真实GLB/PBR/Jolt接触及连续10次回传/进退通过，修复场景退出进程与快速重进竞态；记录Vulkan模拟器呈现失败。正式APP仍0.2.0，机器模型待账号下载，剧场/皮肤未替换。
 
+- **feat(wardrobe)**: it-077 十三次修订（Leo「整个抽屉布局有大问题」）——预览/生成面板全屏化：FullscreenSheet（Dialog 全屏+✕/返回+Running 守卫），双模式同面板交叉淡化切换（弃 ModalBottomSheet 与双 sheet 接力动画），GenerateWorkbench 可复用，动作栏 48dp 硬等高根治按钮压扁。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
+
 - **feat(wardrobe)**: it-077 十二次修订（Leo 拍板「合成一张长图」）——参考图改与穿搭预览同构的单张合成长图整张发送（复用 OutfitImageComposer），废止人物/衣物配额策略与多选瓦片，sheet 装配区改长图预览；纯文生图模型仍只发文字。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
 
 - **fix(wardrobe)**: it-077 十一次修订——纯文生图模型（Z-Image-Turbo）生成必败修复：buildRefs 人物照无条件附带致 image 字段违反模型能力被 SF 拒 11235，抽纯函数 refPlan（零上限零附带/人物优先占席）+ RefPlanTest 5 例锁契约。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。

@@ -263,7 +263,6 @@ fun WishlistScreen(
             items = items,
             existingOutfit = null,
             refPhotoFile = person?.refImageFile,
-            imageGenReady = com.leo.wardrobe.ui.records.rememberImageGenReady(vm),
             onDismiss = { exportItems = null },
         )
     }

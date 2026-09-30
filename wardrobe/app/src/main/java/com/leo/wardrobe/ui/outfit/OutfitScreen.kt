@@ -110,7 +110,6 @@ fun OutfitScreen(
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
     // it-077 修订（Leo 反馈×2）：生成入口收进出图面板（ExportSheet），页面按钮不合并堆挤
-    var showGenerate by remember { mutableStateOf(false) }
     // it-077 修订八：连接对象页面级解析（sheet 拿到即渲染装配态，无开栏加载跳变）
     val imageGenConnection = com.leo.wardrobe.ui.records.rememberImageGenConnection(vm)
     // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
@@ -536,17 +535,6 @@ fun OutfitScreen(
         PersonSheet(vm = vm, onDismiss = { showPersonSheet = false })
     }
 
-    if (showGenerate && imageGenConnection != null) {
-        com.leo.wardrobe.ui.records.OutfitGenerateSheet(
-            vm = vm,
-            outfit = savedOutfit,
-            items = currentItemsFromMemory,
-            person = vm.currentPerson.collectAsState().value,
-            personNote = vm.personNote.collectAsState().value,
-            connection = imageGenConnection,
-            onDismiss = { showGenerate = false },
-        )
-    }
     addSheetCats?.let { cats ->
         AddSlotSheet(
             cats = cats,
@@ -565,17 +553,12 @@ fun OutfitScreen(
             existingOutfit = null,
             refPhotoFile = person?.refImageFile,
             onDismiss = { exportItems = null },
-            imageGenReady = imageGenConnection != null,
+            // it-077 十三次修订：预览⇄生成在同一全屏面板内切换（无第二个抽屉/接力动画）
+            imageGenConnection = imageGenConnection,
             onOpenSettings = onOpenSettings,
-            // it-077 修订（Leo 反馈×5）：先等本面板退场再开生成 sheet——
-            // 同帧切换两个 ModalBottomSheet 会退场/入场动画叠加，出现分层不连贯
-            onGenerate = {
-                scope.launch {
-                    exportItems = null
-                    kotlinx.coroutines.delay(280)
-                    showGenerate = true
-                }
-            },
+            onSaved = { exportItems = null },
+            person = person,
+            personNoteText = vm.personNote.collectAsState().value,
         )
     }
 }

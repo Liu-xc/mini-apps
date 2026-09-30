@@ -112,8 +112,6 @@ fun OutfitDetailScreen(
     var showExport by remember { mutableStateOf(false) }
     // it-077：生成效果图 sheet
     var showGenerate by remember { mutableStateOf(false) }
-    // it-077 修订：出图面板 → 生成 sheet 的顺序切换作用域
-    val genSwitchScope = androidx.compose.runtime.rememberCoroutineScope()
     var actionMenuOpen by remember { mutableStateOf(false) }
     var editingItems by remember(outfit.id) { mutableStateOf(false) }
     // it-070 US-49：主视图切到「单品布局」的会话态（仅成品图存在时可切，默认成品图）
@@ -652,16 +650,12 @@ fun OutfitDetailScreen(
             existingOutfit = outfit,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
-            imageGenReady = imageGenConnection != null,
+            // it-077 十三次修订：预览⇄生成同一全屏面板内切换
+            imageGenConnection = imageGenConnection,
             onOpenSettings = onOpenSettings,
-            // it-077 修订（Leo 反馈×5）：先退场再进场，避免两个抽屉动画叠出分层
-            onGenerate = {
-                genSwitchScope.launch {
-                    showExport = false
-                    kotlinx.coroutines.delay(280)
-                    showGenerate = true
-                }
-            },
+            onSaved = { showExport = false },
+            person = vm.currentPerson.value,
+            personNoteText = vm.personNote.collectAsState().value,
         )
     }
 

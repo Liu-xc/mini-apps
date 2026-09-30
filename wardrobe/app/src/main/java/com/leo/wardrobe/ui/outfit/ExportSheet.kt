@@ -102,8 +102,9 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * W6 导出面板：预览是内容主角，画面设定常驻可扫读，补充信息与 Prompt 分段编辑；
- * 底部复制/保存/分享动作始终固定可达。维度选择记忆经 ready 标志修竞态。
+ * W6 导出面板（it-077 十三次修订：全屏工作台，弃 ModalBottomSheet）：
+ * 预览模式（长图预览 + 五维表单 + 钉底动作栏）⇄ 生成模式（GenerateWorkbench）在同一面板内
+ * 220ms 交叉淡化切换——不再有第二个抽屉与接力动画；关闭走顶栏 ✕/系统返回。
  */
 @Composable
 fun ExportSheet(
@@ -115,12 +116,14 @@ fun ExportSheet(
     // 也不再消费对话推荐预选（it-056/057 的带入取消）——每次打开面板全空，
     // 强需求才展开设置；exportSelections 的 VM/Store 层保留但 UI 不再读写
     onDismiss: () -> Unit,
-    // it-077 修订：AI 生成效果图入口收进出图面板（Leo 反馈：页面按钮合并）；
-    // 就绪态由调用方传入（页面级 produceState 先行求值，sheet 打开即稳定，无高度跳变）
-    imageGenReady: Boolean = false,
-    onGenerate: (() -> Unit)? = null,
-    // it-077 修订八（Leo）：未配置态点击按钮直达 W11 生图模型设置
-    onOpenSettings: () -> Unit = {},
+    // it-077 十三次修订：连接对象直传；onOpenSettings 为 null = 次要导出入口（聊天/单品/心愿），
+    // 整个 AI 行都不出——主入口（W1/W7）非空：已配置切生成模式、未配置直达 W11 设置
+    imageGenConnection: com.leo.wardrobe.data.gen.OutfitImageGenerator.Connection? = null,
+    onOpenSettings: (() -> Unit)? = null,
+    // 生成保存成功后的收尾（W1 未保存组合等场景由宿主处理，默认整面板关闭）
+    onSaved: () -> Unit = onDismiss,
+    person: com.leo.wardrobe.domain.model.Person? = null,
+    personNoteText: String = "",
 ) {
     val scope = rememberCoroutineScope()
     val savedNote by vm.personNote.collectAsState()
@@ -196,25 +199,52 @@ fun ExportSheet(
         if (uri != null) vm.importEffectImage(existingOutfit, items.map { it.id }, uri)
     }
 
-    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // it-077 十三次修订：全屏工作台——预览 ⇄ 生成 两种模式在同一面板内切换（220ms 同语言），
+    // 无第二个抽屉、无接力动画、无嵌套滚动接交。
     val screenH = LocalConfiguration.current.screenHeightDp
+    var genMode by remember { mutableStateOf(false) }
+    var genPhase by remember { mutableStateOf<com.leo.wardrobe.ui.records.GeneratePhase>(
+        com.leo.wardrobe.ui.records.GeneratePhase.Setup) }
     // it-066：长图预览原位展开核对（销账 it-017 已知限制 / it-042 C5 挂账）——
     // 展开态表单收起、预览占满滚动区、自身纵向可滚；点按预览或角标收起。
-    // 不用 Dialog 叠 sheet（DESIGN.md §2.5 禁弹窗套弹窗）；模式切换 220ms crossfade
-    // + 0.985 微缩放（it-058 C4 同语言），走框架动画随系统「移除动画」降级。
     var previewExpanded by remember { mutableStateOf(false) }
     // 表单滚动位提在模式切换之外——收起时恢复原浏览位置（AnimatedContent 重建不丢）
     val formScroll = rememberScrollState()
     // 全幅核对态的预览纵向滚动位（模式内使用）
     val previewScroll = rememberScrollState()
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+    com.leo.wardrobe.ui.components.FullscreenSheet(
+        title = if (genMode) "生成效果图" else "穿搭预览",
+        onDismiss = onDismiss,
+        dismissGuard = genMode && genPhase is com.leo.wardrobe.ui.records.GeneratePhase.Running,
+    ) {
+        AnimatedContent(
+            targetState = genMode,
+            transitionSpec = {
+                (fadeIn(tween(220)) + scaleIn(initialScale = 0.985f, animationSpec = tween(220)))
+                    .togetherWith(fadeOut(tween(160)))
+            },
+            label = "panelMode",
+            modifier = Modifier.fillMaxSize(),
+        ) { generate ->
+            if (generate && imageGenConnection != null) {
+                // ---- 生成模式：与独立生成工作台同体（it-077 十三次修订）----
+                com.leo.wardrobe.ui.records.GenerateWorkbench(
+                    vm = vm,
+                    outfit = existingOutfit,
+                    items = items,
+                    person = person,
+                    personNote = personNoteText,
+                    connection = imageGenConnection,
+                    phase = genPhase,
+                    onPhaseChange = { genPhase = it },
+                    onDone = {
+                        onSaved()
+                    },
+                )
+            } else {
         // Box 仅作 ConfettiBurst 悬浮层（居中对齐），不参与尺寸
         Box {
-        // it-077 修订八（Leo 反馈×7 抽屉分层/抖动）：去掉外层 heightIn + 滚动区 weight 撑满——
-        // weight 把滚动视口强制拉满 0.92 屏高，表单短于视口时动作栏上方悬出空白带，
-        // 拖动时「表面（空白带+按钮）在动、内容看似不动」= 分层感的来源。
-        // 改为滚动区贴合内容、只设上限（0.74H，给钉底动作栏留预算），sheet 高度=实际内容。
-        Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxSize()) {
                 // ---- 滚动区 ----
                 // it-036 C8：内容列底距 40dp = 视口底缘 24dp 渐隐带 + 16dp 动作栏安全余量
                 // （安全间距落在滚动区 contentPadding），
@@ -228,15 +258,11 @@ fun ExportSheet(
                             .togetherWith(fadeOut(tween(160)))
                     },
                     label = "previewExpand",
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 ) { expanded ->
                     if (expanded) {
                         // it-066：全幅核对态——预览占满可用高度、宽度铺满、自身纵向可滚
-                        Column(
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = (screenH * 0.74f).dp),
-                        ) {
+                        Column(Modifier.fillMaxSize()) {
                             Text(
                                 "穿搭预览",
                                 style = MaterialTheme.typography.titleLarge,
@@ -292,9 +318,7 @@ fun ExportSheet(
                     } else {
                 Column(
                     Modifier
-                        .fillMaxWidth()
-                        // it-077 修订八：贴合内容 + 上限（不给 Coil 无限高度约束，历史空白 bug 不复归）
-                        .heightIn(max = (screenH * 0.74f).dp)
+                        .fillMaxSize()
                         .drawWithContent {
                             drawContent()
                             if (formScroll.value < formScroll.maxValue) {
@@ -598,51 +622,48 @@ fun ExportSheet(
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        // it-077 修订：AI 生成整行主按钮——生成即录入成品图，
-                        // 与下方「存相册/分享」并列（复制长图已按 Leo 反馈移除，外置生图链路废止）
-                        // it-077 修订八（Leo 反馈）：未配置不藏入口也不放引导文案——
-                        // 按钮常驻，未配置态降级为描边样式，点击直达 W11 生图模型设置
-                        // （不传 onGenerate 的次要导出入口不出按钮）
-                        if (onGenerate != null) {
-                            if (imageGenReady) {
-                                Button(
-                                    onClick = onGenerate,
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.AutoFixHigh,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Text("  AI 生成效果图", maxLines = 1)
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = {
-                                        onDismiss()
-                                        onOpenSettings()
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.AutoFixHigh,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Text("  AI 生成效果图 · 未配置，去设置", maxLines = 1)
-                                }
+                        // it-077 十三次修订：AI 生成 = 本面板切到生成模式（无第二个抽屉/接力动画）；
+                        // 未配置不藏入口——描边态点击直达 W11 生图模型设置（不传连接的次要导出入口不出）
+                        if (imageGenConnection != null) {
+                            Button(
+                                onClick = {
+                                    previewExpanded = false
+                                    genMode = true
+                                },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoFixHigh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text("  AI 生成效果图", maxLines = 1)
+                            }
+                        } else if (onOpenSettings != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    onDismiss()
+                                    onOpenSettings()
+                                },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoFixHigh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text("  AI 生成效果图 · 未配置，去设置", maxLines = 1)
                             }
                         }
                         // it-014：复制｜存相册｜分享 三动作并列
                         val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
-                        // it-077 十次修订（Leo「底部按钮变形」）：分享钮曾以 contentPadding(horizontal=10)
-                        // 顶掉默认 vertical 内边距、高度塌成矮条与存相册不齐——恢复 vertical 并整行居中
+                        // it-077 十三次修订：48dp 硬等高（图标尺寸/字体缩放不再影响行高，「压扁」根除）
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         ) {
-                            // it-014：snackbar 会被 sheet 遮挡，成功反馈直接落在按钮上
+                            // it-014：snackbar 会被面板遮挡，成功反馈直接落在按钮上
                             Button(  // it-077 修订（Leo）：复制长图移除，存相册升默认主动作
                                 onClick = {
                                     val file = composedFile ?: return@Button
@@ -658,11 +679,12 @@ fun ExportSheet(
                                     }
                                 },
                                 enabled = composedFile != null,
-                                modifier = Modifier.weight(1.2f),
+                                modifier = Modifier.weight(1.2f).height(48.dp),
                             ) {
                                 Icon(
                                     if (savedToGallery) Icons.Rounded.Check else Icons.Rounded.Download,
                                     contentDescription = "保存长图到相册",
+                                    modifier = Modifier.size(18.dp),
                                 )
                                 Text(if (savedToGallery) "已存相册 ✓" else "存相册", maxLines = 1)
                             }
@@ -700,8 +722,10 @@ fun ExportSheet(
                     .fillMaxWidth()
                     .height(220.dp),
             )
-        }
-    }
+        } // Box（预览模式）
+        } // else 预览分支
+    } // AnimatedContent panelMode
+    } // FullscreenSheet
 }
 
 /** W6 it-051：常驻值的画面设定行；仅展开当前编辑项，避免嵌套弹层。 */
