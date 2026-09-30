@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- **feat(lottery)**: it-001 拾彩 MVP 全闭环——情绪价值彩票 demo：图片种子确定性选号（双色球 6+1 / 大乐透 5+2，单式/复式，同图同批恒等复现）、票夹、开奖直播复现剧场（Compose Canvas 手写物理：摇奖机翻滚→逐球出槽→篮球→验票揭晓，非中奖不庆祝，reduce-motion 直落结果态）、官方奖级表逐注验票、票面导出 PNG 入 `Pictures/拾彩/`；「演示数据 · 非官方」全程标注。27 单测绿 + 模拟器三屏全流程走查 15 截图；ADR-001~005。详 [it-001](lottery/specs/iterations/it-001-emotional-lottery-demo.md)。
 - **feat(wardrobe)**: it-075 顾问对话页工具结果结构化卡片——SDK 工具结果增可选 payload 通道（不上 wire、旧会话兼容），查单品/穿搭出单品横卡·列表卡（>5 件折叠 + 底部抽屉全量浏览，行点击进 W5/W7），卡片只存 id 引用实时取数，删除落占位。详 [it-075](wardrobe/specs/iterations/it-075-chat-result-cards.md)。
 - **feat(wardrobe)**: it-073 全站禁用滚动 overscroll 拉伸效果——主题根 `LocalOverscrollConfiguration provides null`，列表/网格/pager 到头即停（fling/吸附不变）。详 [it-073](wardrobe/specs/iterations/it-073-disable-overscroll-stretch.md)。
 

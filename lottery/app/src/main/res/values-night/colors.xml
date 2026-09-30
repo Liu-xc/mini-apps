@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 墨底同 05 §4 剧场墨 #15171A（dark paper），冷启动不闪白 -->
+    <color name="window_background_dark">#15171A</color>
+</resources>

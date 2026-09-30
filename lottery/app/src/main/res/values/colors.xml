@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 冷启动底色与 W1 纸面同色（paper #F5F4F0），消灭白闪；图标底为墨色 -->
+    <color name="window_background">#F5F4F0</color>
+    <color name="ic_launcher_background">#1A1A18</color>
+</resources>
