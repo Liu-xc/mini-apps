@@ -322,14 +322,23 @@ fun OutfitGenerateSheet(
                     }
 
                     is GeneratePhase.Running -> {
+                        // 已等待计时（进入 Running 分支才组合，remember 随分支重建，计时即请求起点）
+                        val startedAt = remember { System.currentTimeMillis() }
+                        var elapsed by remember { mutableStateOf(0) }
+                        LaunchedEffect(Unit) {
+                            while (true) {
+                                elapsed = ((System.currentTimeMillis() - startedAt) / 1000).toInt()
+                                kotlinx.coroutines.delay(1_000)
+                            }
+                        }
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text(
-                            p.progress,
+                            "${p.progress}（已等待 ${elapsed}s）",
                             style = MaterialTheme.typography.bodyMedium,
                             color = ec.ink,
                         )
                         Text(
-                            "生成约需 20~60 秒，可随时取消",
+                            "通常 1~2 分钟，厂商高峰排队会更久；超过约 3 分钟自动失败可重试",
                             style = MaterialTheme.typography.labelSmall,
                             color = ec.inkFaint,
                         )

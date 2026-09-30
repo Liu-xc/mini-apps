@@ -18,6 +18,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -133,10 +136,10 @@ class DashScopeTaskImageModel(
         }
     }
 
-    private fun download(url: String): GeneratedImage {
+    private suspend fun download(url: String): GeneratedImage {
         val request = Request.Builder().url(url).build()
         return runCatching {
-            client.newCall(request).execute().use { resp ->
+            client.newCall(request).await().use { resp ->
                 if (!resp.isSuccessful) throw AgentError.Provider(resp.code, "生成图下载失败 HTTP ${resp.code}")
                 val mime = resp.header("Content-Type")?.substringBefore(';')
                     ?.takeIf { it.startsWith("image/") } ?: OkHttpImageModel.guessMime(url)
@@ -145,8 +148,22 @@ class DashScopeTaskImageModel(
         }.getOrElse { e -> throw if (e is AgentError) e else AgentError.Network(e as? IOException ?: IOException(e)) }
     }
 
-    private fun execute(request: Request): JsonObject = runCatching {
-        client.newCall(request).execute().use { resp ->
+    /** 异步桥接（it-077 live 补修）：协程取消即刻取消 HTTP 请求，同 OkHttpImageModel */
+    private suspend fun Call.await(): okhttp3.Response = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        enqueue(object : okhttp3.Callback {
+            override fun onResponse(call: Call, response: okhttp3.Response) {
+                cont.resume(response)
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                cont.resumeWithException(e)
+            }
+        })
+        cont.invokeOnCancellation { runCatching { cancel() } }
+    }
+
+    private suspend fun execute(request: Request): JsonObject = runCatching {
+        client.newCall(request).await().use { resp ->
             val text = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) throw AgentError.fromHttp(resp.code, text, resp.header("Retry-After"))
             Json.parseToJsonElement(text).let { it as? JsonObject ?: throw AgentError.Provider(resp.code, "响应不是 JSON 对象") }

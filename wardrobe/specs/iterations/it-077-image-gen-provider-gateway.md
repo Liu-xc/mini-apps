@@ -132,3 +132,5 @@
 2. **目录修正**：`Kolors/Kolors`→`Kwai-Kolors/Kolors`、`Z-Image-Turbo`→`Tongyi-MAI/Z-Image-Turbo`（`/v1/models` 实查）；`Qwen/Qwen-Image-Edit(-2509)` 硅基通道 `inputImages` 标 1..1 并注明「多图请走百炼通道」——同一模型不同厂商能力不同，由 ModelSpec 数据承载（ADR-007 设计的直接兑现）。
 3. **JVM live 冒烟**（`LiveImageSmokeTest`，App 同款 `OkHttpImageModel` 代码，Key 走 `SF_KEY` 环境变量、缺省跳过——CI 红线不变）：真实生成 1 张 372KB PNG，44.7s 端到端 ✓。
 4. **模拟器（真实模式）UI 实测**：W11 生图卡真 Key 保存（mask `sk-a***jyba`）✓、聊天卡已有 GLM Key 两轨两厂商并存 ✓、W7 sheet 装配态 live 渲染（模型行/人物+6 衣物/超限红字「已选 7 / 上限 1」本地预检）✓——装配后的触发生成因模拟器手势限制未能在 UI 内完成，由 3 的同码 JVM 冒烟覆盖。
+5. **live 联调补修（同日，403d963）**：①「取消」不中断 HTTP（阻塞 execute 不响应协程取消，取消后请求后台跑完并计费）→ 两适配器改 `Call.await()` 桥接，取消即断；②运行态增「已等待 Ns」计时，文案改「通常 1~2 分钟，高峰更久，约 3 分钟自动失败」（原「20~60 秒」与实测不符）。
+6. **模拟器生图超慢根因（环境，非代码）**：宿主一云梯 TUN fake-ip 劫持模拟器流量（模拟器解析 open.bigmodel.cn → 198.18.0.10），SF 的 HTTPS 经代理绕行境外数分钟不归；Mac 直连实测同模型同图 29.6s 出图。处置：代理规则给 `*.siliconflow.cn` 加直连，或暂停 TUN，或真机移动网络实测。

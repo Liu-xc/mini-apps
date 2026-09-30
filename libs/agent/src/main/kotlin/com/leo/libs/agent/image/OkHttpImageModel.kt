@@ -6,11 +6,14 @@ import com.leo.libs.agent.ImageProtocol
 import com.leo.libs.agent.ProviderSpec
 import java.io.IOException
 import java.util.Base64
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -22,10 +25,13 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 
 /**
  * 同步生图传输（it-077）：一个类吃下两种同步协议——
@@ -141,6 +147,23 @@ class OkHttpImageModel(
 
     private fun endpoint(path: String): String = provider.imageBaseUrl!!.trimEnd('/') + path
 
+    /**
+     * 异步桥接（it-077 live 补修）：挂起等响应，协程取消即刻 [Call.cancel]——
+     * 此前阻塞式 execute 不响应取消，用户点「取消」后请求仍在后台跑完并计费。
+     */
+    private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
+        enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                cont.resume(response)
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                cont.resumeWithException(e)
+            }
+        })
+        cont.invokeOnCancellation { runCatching { cancel() } }
+    }
+
     private suspend fun postJson(url: String, body: JsonObject, key: String): JsonObject {
         val request = Request.Builder()
             .url(url)
@@ -148,7 +171,7 @@ class OkHttpImageModel(
             .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
         return runCatching {
-            client.newCall(request).execute().use { resp ->
+            client.newCall(request).await().use { resp ->
                 val text = resp.body?.string().orEmpty()
                 if (!resp.isSuccessful) throw AgentError.fromHttp(resp.code, text, resp.header("Retry-After"))
                 Json.parseToJsonElement(text).let { it as? JsonObject ?: throw AgentError.Provider(resp.code, "响应不是 JSON 对象") }
@@ -158,11 +181,11 @@ class OkHttpImageModel(
         }
     }
 
-    /** 生成图下载（预签名 URL 免鉴权；读超时沿用长超时客户端） */
-    private fun download(url: String): GeneratedImage {
+    /** 生成图下载（预签名 URL 免鉴权；读超时沿用长超时客户端，取消即断） */
+    private suspend fun download(url: String): GeneratedImage {
         val request = Request.Builder().url(url).build()
         return runCatching {
-            client.newCall(request).execute().use { resp ->
+            client.newCall(request).await().use { resp ->
                 if (!resp.isSuccessful) throw AgentError.Provider(resp.code, "生成图下载失败 HTTP ${resp.code}")
                 val mime = resp.header("Content-Type")?.substringBefore(';')
                     ?.takeIf { it.startsWith("image/") } ?: guessMime(url)
