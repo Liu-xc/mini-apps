@@ -116,12 +116,8 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
     val fired = remember(beat) { BooleanArray(total + 1) }
 
     LaunchedEffect(beat, reduceMotion) {
-        if (reduceMotion) {
-            clock.longValue = beat.endAt
-            fired.fill(true)
-            if (anyWon) Haptics.confirm(context)
-            return@LaunchedEffect
-        }
+        // 剧场是内容而非装饰：animator=0（省电/开发者关动画）也照常播时间轴，
+        // reduceMotion 只关装饰动效（彩纸/脉冲/弹簧）；跳过仅走「跳过」按钮（it-002 hotfix）。
         var startNs = -1L
         var shifted = false
         while (isActive) {
@@ -214,7 +210,7 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
         }
 
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            BroadcastTopBar(result, ended, onSkip = { skipReq.value = true }, onClose = vm::finishReplay)
+            BroadcastTopBar(result, ended, !ended && !reduceMotion, onSkip = { skipReq.value = true }, onClose = vm::finishReplay)
 
             Box(Modifier.fillMaxWidth().weight(0.58f)) {
                 DrawStageCanvas(
@@ -275,6 +271,7 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
 private fun BroadcastTopBar(
     result: DrawResult,
     ended: Boolean,
+    livePulse: Boolean,
     onSkip: () -> Unit,
     onClose: () -> Unit,
 ) {
@@ -284,7 +281,7 @@ private fun BroadcastTopBar(
             .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LiveDot(!ended)
+        LiveDot(livePulse)
         Spacer(Modifier.width(8.dp))
         Text(
             text = "开奖直播",
