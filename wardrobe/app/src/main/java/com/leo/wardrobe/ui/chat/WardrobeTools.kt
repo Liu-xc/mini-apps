@@ -9,8 +9,12 @@ import com.leo.wardrobe.domain.model.WardrobeData
 import com.leo.wardrobe.domain.model.itemsOf
 import com.leo.wardrobe.domain.model.outfitsContaining
 import com.leo.wardrobe.domain.model.outfitsOf
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 /** it-043 O3（走查 C3）：工具名的用户侧中文标签——对话界面不铺 raw 英文标识 */
 fun toolLabel(name: String): String = when (name) {
@@ -65,6 +69,14 @@ fun wardrobeTools(
                     append("）")
                 }
             } + if (hits.size > 20) "\n…共 ${hits.size} 件" else "\n共 ${hits.size} 件",
+            // it-075：结构化载荷（只存 id 引用；ids 全量供卡片/抽屉渲染，快照由 UI 现取）
+            buildJsonObject {
+                put("kind", "items")
+                put("total", hits.size)
+                put("category", category?.label ?: "")
+                put("keyword", keyword)
+                put("ids", buildJsonArray { hits.forEach { add(it.id) } })
+            },
         )
     }
 
@@ -92,13 +104,21 @@ fun wardrobeTools(
                     }
             }
         }
-        if (hits.isEmpty()) ToolResult.ok("没有匹配的穿搭")
+        val sorted = hits.sortedByDescending { it.updatedAt }
+        if (sorted.isEmpty()) ToolResult.ok("没有匹配的穿搭")
         else ToolResult.ok(
-            hits.sortedByDescending { it.updatedAt }.take(10).joinToString("\n") { outfit ->
+            sorted.take(10).joinToString("\n") { outfit ->
                 val names = outfit.itemIds.mapNotNull { id -> snapshot.items.find { it.id == id }?.name }
                 val done = if (outfit.effectImages.isNotEmpty()) "有成品图" else "无成品图"
                 "· 穿搭[${names.joinToString(" + ").ifBlank { "空" }}]（${done}" +
                     (if (outfit.tags.isNotEmpty()) "，标签：${outfit.tags.joinToString("/")}" else "") + "）"
+            },
+            // it-075：结构化载荷（穿搭 id 按最近更新排序，全量）
+            buildJsonObject {
+                put("kind", "outfits")
+                put("total", sorted.size)
+                put("keyword", keyword)
+                put("ids", buildJsonArray { sorted.forEach { add(it.id) } })
             },
         )
     }

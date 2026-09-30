@@ -79,7 +79,12 @@ import com.leo.wardrobe.ui.theme.editorialColors
 private sealed interface RowUi {
     data class Me(val text: String) : RowUi
     data class Ai(val text: String, val stamp: Long) : RowUi
-    data class Tools(val names: List<String>, val results: List<Pair<String, String>>) : RowUi
+    data class Tools(
+        val names: List<String>,
+        val results: List<Pair<String, String>>,
+        /** it-075：工具结果的结构化卡片（payload 解析；无载荷的旧会话为空） */
+        val cards: List<ToolResultCard> = emptyList(),
+    ) : RowUi
 }
 
 private fun groupRows(messages: List<Message>): List<RowUi> = buildList {
@@ -91,12 +96,14 @@ private fun groupRows(messages: List<Message>): List<RowUi> = buildList {
             Role.Assistant -> {
                 if (m.toolCalls.isNotEmpty()) {
                     val results = mutableListOf<Pair<String, String>>()
+                    val cards = mutableListOf<ToolResultCard>()
                     var j = i + 1
                     while (j < messages.size && messages[j].role == Role.Tool) {
                         results += (messages[j].toolCallId ?: "") to messages[j].text
+                        parseToolResultCard(messages[j].payload)?.let(cards::add)
                         j++
                     }
-                    add(RowUi.Tools(m.toolCalls.map { it.name }, results))
+                    add(RowUi.Tools(m.toolCalls.map { it.name }, results, cards))
                     i = j
                 } else {
                     if (m.text.isNotBlank()) add(RowUi.Ai(m.text, m.createdAt))
@@ -124,6 +131,8 @@ fun ChatScreen(
     onOpenSettings: () -> Unit = {},
     appVm: com.leo.wardrobe.ui.AppViewModel? = null,
     onOpenItem: (String) -> Unit = {},
+    // it-075：结果卡穿搭行 → W7 穿搭详情
+    onOpenOutfit: (String) -> Unit = {},
 ) {
     val ec = editorialColors()
     val messages by vm.messages.collectAsState()
@@ -135,6 +144,9 @@ fun ChatScreen(
     val canChat by vm.canChat.collectAsState()
     val cacheHit by vm.cacheHit.collectAsState()
     val recommendationItems by vm.recommendationItems.collectAsState()
+    val chatOutfits by vm.chatOutfits.collectAsState()
+    // it-075：折叠列表的「查看全部」→ 全量浏览抽屉
+    var browserCard by remember { mutableStateOf<ToolResultCard?>(null) }
 
     var input by remember { mutableStateOf("") }
     // it-055 US-58：推荐卡「复制长图」→ W6 导出面板（items=该套已匹配单品）
@@ -262,12 +274,27 @@ fun ChatScreen(
                 }
                 if (notices.isNotEmpty()) {
                     item(key = "notices") {
-                        ToolsRow(
-                            names = notices.map { it.name },
-                            results = notices.map { it.name to it.detail },
-                            initialExpanded = true, // 进行中直接展示「查询中…」
-                            live = true,
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ToolsRow(
+                                names = notices.map { it.name },
+                                results = notices.map { it.name to it.detail },
+                                initialExpanded = true, // 进行中直接展示「查询中…」
+                                live = true,
+                            )
+                            // it-075：live 工具结果卡——工具完成即出卡，不等整轮收尾
+                            val liveCards = notices.mapNotNull { it.card }
+                            if (liveCards.isNotEmpty()) {
+                                ToolResultCards(
+                                    cards = liveCards,
+                                    items = recommendationItems,
+                                    outfits = chatOutfits,
+                                    imageFileOf = vm::imageFileOf,
+                                    onOpenItem = onOpenItem,
+                                    onOpenOutfit = onOpenOutfit,
+                                    onBrowseAll = { browserCard = it },
+                                )
+                            }
+                        }
                     }
                 }
                 items(display.size, key = { "row-${display.size - 1 - it}" }) { idx ->
@@ -302,7 +329,23 @@ fun ChatScreen(
                             } else null,
                         ) }
                         // it-043 O3：历史工具条默认折叠为中文摘要
-                        is RowUi.Tools -> BubbleIn { ToolsRow(row.names, row.results, initialExpanded = false) }
+                        is RowUi.Tools -> BubbleIn {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                ToolsRow(row.names, row.results, initialExpanded = false)
+                                // it-075：历史回放结果卡（payload 随会话文件落盘，杀进程重进不丢）
+                                if (row.cards.isNotEmpty()) {
+                                    ToolResultCards(
+                                        cards = row.cards,
+                                        items = recommendationItems,
+                                        outfits = chatOutfits,
+                                        imageFileOf = vm::imageFileOf,
+                                        onOpenItem = onOpenItem,
+                                        onOpenOutfit = onOpenOutfit,
+                                        onBrowseAll = { browserCard = it },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -377,6 +420,19 @@ fun ChatScreen(
                 onDismiss = { exportRequest = null },
             )
         }
+    }
+
+    // it-075：折叠结果卡的「查看全部」→ 全量浏览抽屉（行点击关抽屉进 W5/W7）
+    browserCard?.let { card ->
+        ResultBrowserSheet(
+            card = card,
+            items = recommendationItems,
+            outfits = chatOutfits,
+            imageFileOf = vm::imageFileOf,
+            onOpenItem = onOpenItem,
+            onOpenOutfit = onOpenOutfit,
+            onDismiss = { browserCard = null },
+        )
     }
 }
 

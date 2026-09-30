@@ -2,6 +2,7 @@ package com.leo.libs.agent
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 enum class Role {
@@ -39,6 +40,12 @@ data class Message(
      * AgentRunner 落盘时对未盖章消息自动补 `now`；app 侧发用户消息时自行 `copy(createdAt = now)`。
      */
     val createdAt: Long = 0L,
+    /**
+     * 工具结果的结构化载荷（it-075，仅 role=tool 携带；null = 无或旧会话文件缺字段）。
+     * 只随会话落盘与 [AgentEvent.ToolFinished] 事件透传给 UI，
+     * **不上 wire**（toWire() 不映射此字段，厂商请求体不受影响）。
+     */
+    val payload: JsonElement? = null,
 ) {
     /** 纯文本视图（拼接全部 Text 片段） */
     val text: String get() = parts.filterIsInstance<Part.Text>().joinToString("") { it.text }
@@ -51,7 +58,7 @@ data class Message(
         fun assistant(text: String) = Message(Role.Assistant, listOf(Part.Text(text)))
         fun assistantToolCalls(toolCalls: List<ToolCall>) =
             Message(Role.Assistant, toolCalls = toolCalls)
-        fun toolResult(callId: String, text: String) =
-            Message(Role.Tool, listOf(Part.Text(text)), toolCallId = callId)
+        fun toolResult(callId: String, text: String, payload: JsonElement? = null) =
+            Message(Role.Tool, listOf(Part.Text(text)), toolCallId = callId, payload = payload)
     }
 }

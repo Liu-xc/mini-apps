@@ -165,3 +165,9 @@
 - **决策**（2026-09-30，it-071）：① release `isMinifyEnabled=true` + `isShrinkResources=true`，`app/proguard-rules.pro` 只放定点规则（三方库自带 consumer rules，禁全局 `-keep` 兜底）；② signingConfig 取 debug keystore 签 release——与既有 debug 装机**同签名可直接覆盖升级**、零新增密钥管理面，明确不上 Google Play；③ 基线 profile 全链路：仓库 version catalog 增 `profileinstaller 1.4.1`、`androidx.baselineprofile 1.3.3`、`benchmark-macro-junit4 1.3.3`、`uiautomator 2.3.0`，:app 挂 `androidx.baselineprofile` 插件 + `profileinstaller` 依赖 + manifest `<profileable android:shell="true"/>`，新建 `:baselineprofile`（`com.android.test` 模块，release 变体），Macrobenchmark 场景 = 启动（搭配页）→ 衣橱网格往返 fling → 记录页往返 fling，生成物 merge 进 release 资产。依赖与构建链路变更由本 ADR 记录（AGENTS.md 要求）。
 - **理由**：R8 + baseline profile 是 Android release 标准基线；debug-keystore 签名让「分发包 = 性能验证包」且签名连续（v0.5.0.x debug 机可直升）；profile 场景锚定 it-071 优化路径（列表滚动），AOT 收益可与 gfxinfo 前后测互证。
 - **后果**：release 启动/滚动由 JIT 转 AOT、体积收缩；代价 = R8 误剥离风险（靠 release 全路径冒烟兑底，发现即在 proguard-rules.pro 定点补 keep 并回填 it-071 验证记录）、首次 release 构建显著变长；将来若上架须换正式 keystore（同包名异签名不能覆盖装，需卸载重装）；`:baselineprofile` 生成依赖 arm64 模拟器/真机（release abiFilters 无 x86_64，x86 CI 跑不了该任务）。
+
+## ADR-029 工具结果结构化通道：payload 只存 id 引用，不上 wire 不进数据包
+- **背景**：it-075 顾问结果卡片——4 个工具只回纯文本，UI 无法渲染结构化卡片；it-054 推荐卡靠 system prompt 文本协议反向解析绕行，只覆盖推荐场景，不可复制到任意查询。
+- **决策**（2026-09-30，it-075）：`libs/agent` 的 `ToolResult.Ok` 增可选 `payload: JsonElement`，`Message` 增可选 `payload`（role=tool 携带）；AgentRunner 透传落盘，`toWire()` 不映射（厂商请求体零变化，`PayloadTest` 断言锁死）。wardrobe 侧 `search_items`/`search_outfits` 附 `{kind,total,category/keyword,ids}`，**ids 只存引用全量、不存数据快照**；UI 渲染时从仓库现取，删除落占位。
+- **理由**：快照会让卡片与仓库双源漂移（改名/换图/删除后卡片陈旧）；只存 id 一致于「仓库是唯一 SSOT」；wire 隔离使扩展零厂商风险；旧会话缺字段读 null 天然兼容（createdAt 同款先例）。
+- **后果**：历史卡片在衣物删除后显示占位而非旧图（接受：与「不伪装」原则一致）；`wear_stats`/`current_person` 暂无 payload（无卡片需求，后续加卡片不必改通道）；会话文件体积增量 = id 数组（uuid×N，可忽略）。

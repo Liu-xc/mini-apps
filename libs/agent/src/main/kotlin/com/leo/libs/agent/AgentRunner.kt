@@ -126,7 +126,12 @@ class AgentRunner(
                 emit(AgentEvent.ToolRequested(call))
                 val result = tools.execute(call.name, call.argumentsJson)
                 emit(AgentEvent.ToolFinished(call, result))
-                val toolMsg = Message.toolResult(call.id, result.asText())
+                // it-075：结构化载荷随 role=tool 消息落盘（回喂模型的仍只有 text，wire 不带 payload）
+                val toolMsg = Message.toolResult(
+                    call.id,
+                    result.asText(),
+                    (result as? ToolResult.Ok)?.payload,
+                )
                 messages += toolMsg
                 persist(toolMsg)
             }

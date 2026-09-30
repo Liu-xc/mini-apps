@@ -34,3 +34,9 @@
 - **决策**：agent loop 全过程以 `Flow<AgentEvent>` 暴露（StepStarted / TextDelta / ThinkingDelta / ToolRequested / ToolFinished / StepFinished / Completed / Failed）；会话持久化走 `SessionStore` 接口，SDK 不依赖 libs/store——app 可用 SnapshotStore 实现，也可用 SDK 默认文件实现（tmp→rename 原子写，store 同款）。
 - **动机**：Compose collect 直渲染打字机；依赖方向铁律（libs 互不依赖，组合发生在 app）。
 - **后果**：解析与 UI 帧率解耦（flow buffer）；`AgentEvent` 枚举演进须向后兼容（只增不改名）。
+
+## ADR-006 · ToolResult/Message 可选 payload 通道（2026-09-30，it-075/wardrobe）
+
+- **决策**：`ToolResult.Ok(text, payload: JsonElement? = null)`；`Message.payload`（role=tool 携带，落盘随会话）。payload **不回喂模型、不上 wire**——`toWire()` 不映射该字段，厂商请求体零变化（测试断言锁定）；仅随 `AgentEvent.ToolFinished` 透传 UI + FileSessionStore 落盘供历史回放。缺字段反序列化为 null（createdAt 同款向后兼容）。
+- **动机**：app 需要工具结果的结构化渲染（如命中的实体 id 列表出卡片），纯文本通道（it-054 式文本协议解析）不可泛化。
+- **后果**：事件签名不变（ADR-005 只增不改名合规）；不关心 payload 的工具与 app 零改动；落盘 JSON 里 null 字段被默认 `Json`（encodeDefaults=false）省略。

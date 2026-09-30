@@ -15,6 +15,7 @@ import com.leo.wardrobe.data.chat.ChatSessionSummary
 import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.currentPersonOrFirst
 import com.leo.wardrobe.domain.model.itemsOf
+import com.leo.wardrobe.domain.model.outfitsOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
@@ -46,6 +47,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             data.currentPersonOrFirst(savedId)?.let { data.itemsOf(it.id) }.orEmpty()
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** it-075：穿搭结果卡同源——当前角色的穿搭实时快照（行点击进 W7）。 */
+    val chatOutfits: StateFlow<List<com.leo.wardrobe.domain.model.Outfit>> =
+        combine(container.repository.data, prefs.currentPersonId) { data, savedId ->
+            data.currentPersonOrFirst(savedId)?.let { data.outfitsOf(it.id) }.orEmpty()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** it-071：不再主线程 stat——文件缺失交给 Coil 兜底（与 AppViewModel.imageFileOf 同口径）。 */
     fun imageFileOf(name: String): File? = container.imageStore.file(name)
 
@@ -61,8 +68,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private val _cacheHit = MutableStateFlow(false)
     val cacheHit: StateFlow<Boolean> = _cacheHit.asStateFlow()
 
-    /** 当前回合进行中的工具条（完成后并入历史由 messages 渲染） */
-    data class ToolNotice(val name: String, val detail: String, val ok: Boolean)
+    /** 当前回合进行中的工具条（完成后并入历史由 messages 渲染）；
+     *  it-075：[card] 为工具结果的结构化卡片（无 payload 的工具为 null）。 */
+    data class ToolNotice(
+        val name: String,
+        val detail: String,
+        val ok: Boolean,
+        val card: ToolResultCard? = null,
+    )
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
@@ -252,6 +265,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                             if (i == list.lastIndex) n.copy(
                                 detail = ev.result.asText().take(80),
                                 ok = ev.result is com.leo.libs.agent.tool.ToolResult.Ok,
+                                // it-075：live 卡片与历史回放同一解析入口（工具完成即出卡）
+                                card = (ev.result as? com.leo.libs.agent.tool.ToolResult.Ok)
+                                    ?.let { parseToolResultCard(it.payload) },
                             ) else n
                         }
                     }

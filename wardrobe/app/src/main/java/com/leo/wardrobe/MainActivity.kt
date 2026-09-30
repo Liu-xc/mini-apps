@@ -350,6 +350,8 @@ private fun WardrobeRoot() {
                                 appVm = vm,
                                 // it-055 US-56：推荐卡单品 tile → W5 单品详情
                                 onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
+                                // it-075：结果卡穿搭行 → W7 穿搭详情
+                                onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
                             )
                         }
                     }

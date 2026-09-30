@@ -146,7 +146,7 @@ interface ApiKeyStore { suspend fun get(preset: String): String?; suspend fun pu
 
 ## 7. 会话与上下文
 
-- `Message` 模型与 OpenAI 对齐：role / content / tool_calls / tool_call_id，kotlinx.serialization 落盘。
+- `Message` 模型与 OpenAI 对齐：role / content / tool_calls / tool_call_id，kotlinx.serialization 落盘；另有 app 侧可选 `payload`（role=tool，it-075/ADR-006：结构化载荷只落盘与事件透传，不上 wire）。
 - 默认 `ContextPolicy`：system 常驻 + 保留近 12 轮 + token 估算（字符数/4 量级）超限再裁最老；预留 summarize 钩子（后置）。
 
 ## 8. Key 管理与安全红线

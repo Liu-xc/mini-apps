@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- **feat(wardrobe)**: it-075 顾问对话页工具结果结构化卡片——SDK 工具结果增可选 payload 通道（不上 wire、旧会话兼容），查单品/穿搭出单品横卡·列表卡（>5 件折叠 + 底部抽屉全量浏览，行点击进 W5/W7），卡片只存 id 引用实时取数，删除落占位。详 [it-075](wardrobe/specs/iterations/it-075-chat-result-cards.md)。
 - **feat(wardrobe)**: it-073 全站禁用滚动 overscroll 拉伸效果——主题根 `LocalOverscrollConfiguration provides null`，列表/网格/pager 到头即停（fling/吸附不变）。详 [it-073](wardrobe/specs/iterations/it-073-disable-overscroll-stretch.md)。
 
 - **feat(wardrobe)**: it-072 品类清单直选可发现性升级——W1 槽位清单入口从 n/m 单点扩为三通道（名称条整条可点 + 长按照片区 + n/m 原位），名称条加 `⊞ n/m` 图标计数组；长按读全名 toast 废止（US-39 修订：清单名称两行完整可见为超集）；items==1 不挂假入口。详 [it-072](wardrobe/specs/iterations/it-072-slot-picker-discoverability.md)。

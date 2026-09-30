@@ -8,9 +8,13 @@ import kotlinx.serialization.json.JsonObject
 /**
  * 工具执行结果。[Ok]/[Error] 的差别是回喂给模型的措辞（it-002 §1）：
  * 模型看到后自行纠正，loop 不因此中断。
+ *
+ * it-075：[Ok.payload] 可携带结构化载荷（如命中的实体 id 列表）——不回喂模型、不上 wire，
+ * 仅随 `AgentEvent.ToolFinished` 透传给 UI 并由 AgentRunner 写入 role=tool 消息落盘，
+ * 供 app 侧渲染结构化卡片；不关心的工具保持 `ok(text)` 不变。
  */
 sealed class ToolResult {
-    data class Ok(val text: String) : ToolResult()
+    data class Ok(val text: String, val payload: JsonElement? = null) : ToolResult()
     data class Error(val text: String) : ToolResult()
 
     fun asText(): String = when (this) {
@@ -20,6 +24,7 @@ sealed class ToolResult {
 
     companion object {
         fun ok(text: String) = Ok(text)
+        fun ok(text: String, payload: JsonElement) = Ok(text, payload)
         fun error(text: String) = Error(text)
     }
 }
