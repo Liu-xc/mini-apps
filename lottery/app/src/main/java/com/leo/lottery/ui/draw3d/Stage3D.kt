@@ -647,8 +647,8 @@ class StageDirector(
         var x = sin(a) * cos(b)
         var y = sin(b) * 0.82f + 0.06f * sin(c * 2f)
         var z = cos(a) * sin(b)
-        val len = sqrt(x * x + y * y + z * z).coerceAtLeast(1e-4f)
-        val rr = breath / len
+        val len = sqrt(x * x + y * y + z * z)
+        val rr = if (len < 1e-3f) 0f else (breath / len).coerceAtMost(0.95f)
         x *= rr; y *= rr; z *= rr
         return floatArrayOf(x, y, z)
     }

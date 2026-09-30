@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -60,8 +61,9 @@ object CanvasStage {
         var x = sin(a) * cos(b)
         var y = sin(b) * 0.82f + 0.06f * sin(c * 2f)
         var z = cos(a) * sin(b)
-        val len = sqrt(x * x + y * y + z * z).coerceAtLeast(1e-4f)
-        val rr = breath / len
+        val len = sqrt(x * x + y * y + z * z)
+        // 方向向量周期性趋零（sinA≈0 ∧ sinB≈0），除以小量会放大成千倍——半径封顶防退化
+        val rr = if (len < 1e-3f) 0f else (breath / len).coerceAtMost(0.95f)
         x *= rr; y *= rr; z *= rr
         return floatArrayOf(x, y, z)
     }
@@ -153,7 +155,7 @@ fun DrawStageCanvas(
     val nums = remember(numbers) { numbers.toIntArray() }
     val starts = remember(dropStarts) { dropStarts }
 
-    Canvas(modifier) {
+    Canvas(modifier.clipToBounds()) {
         val t = tState.value
         val w = size.width
         val h = size.height
