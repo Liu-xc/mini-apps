@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
@@ -114,6 +115,8 @@ fun ExportSheet(
     // 也不再消费对话推荐预选（it-056/057 的带入取消）——每次打开面板全空，
     // 强需求才展开设置；exportSelections 的 VM/Store 层保留但 UI 不再读写
     onDismiss: () -> Unit,
+    // it-077 修订：AI 生成效果图入口收进出图面板（Leo 反馈：页面按钮合并）
+    onGenerate: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val savedNote by vm.personNote.collectAsState()
@@ -585,6 +588,19 @@ fun ExportSheet(
                             .padding(horizontal = 20.dp, vertical = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        // it-077 修订：AI 生成整行主按钮——生成即录入成品图，
+                        // 与下方「复制长图（外置生图链路）」并列，替代页面上单独的生成按钮
+                        Button(
+                            onClick = onGenerate,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                Icons.Rounded.AutoFixHigh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text("  AI 生成效果图", maxLines = 1)
+                        }
                         // it-014：复制｜存相册｜分享 三动作并列
                         val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {

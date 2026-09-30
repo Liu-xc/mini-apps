@@ -521,16 +521,6 @@ fun OutfitDetailScreen(
                     Spacer(Modifier.width(6.dp))
                     Text("复制长图")  // it-012：与搭配页同一套词
                 }
-                // it-077 修订（Leo 反馈）：定位为「录入成品图」的 AI 兄弟功能，名「生成效果图」
-                OutlinedButton(onClick = { showGenerate = true }, modifier = Modifier.weight(1f)) {
-                    Icon(
-                        Icons.Rounded.AutoFixHigh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("生成效果图")
-                }
             }
 
             HorizontalDivider(color = editorialColors().hairline)
@@ -654,6 +644,11 @@ fun OutfitDetailScreen(
             existingOutfit = outfit,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
+            // it-077：面板内直生成（关闭导出面板 → 打开生成 sheet）
+            onGenerate = {
+                showExport = false
+                showGenerate = true
+            },
         )
     }
 

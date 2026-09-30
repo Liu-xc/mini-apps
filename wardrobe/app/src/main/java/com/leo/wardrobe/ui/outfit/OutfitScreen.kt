@@ -107,7 +107,7 @@ fun OutfitScreen(
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
-    // it-077 修订（Leo 反馈）：W1 直生成效果图（生成即录入成品图；未保存组合保存时自动建穿搭）
+    // it-077 修订（Leo 反馈×2）：生成入口收进出图面板（ExportSheet），页面按钮不合并堆挤
     var showGenerate by remember { mutableStateOf(false) }
     // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
     var addSheetCats by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
@@ -510,21 +510,6 @@ fun OutfitScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text("复制长图", style = MaterialTheme.typography.titleSmall)            }
-            // it-077：「录入成品图」的 AI 兄弟功能（外置生图链路内置化，接替 it-066 回程录入的绕行）
-            OutlinedButton(
-                onClick = { showGenerate = true },
-                enabled = currentItemsFromMemory.isNotEmpty(),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    Icons.Rounded.AutoFixHigh,
-                    contentDescription = null,
-                    tint = editorialColors().accent,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("生成效果图", style = MaterialTheme.typography.titleSmall)
-            }
             if (hasWishInMix) {
                 OutlinedButton(
                     onClick = {
@@ -613,6 +598,11 @@ fun OutfitScreen(
             existingOutfit = null,
             refPhotoFile = person?.refImageFile,
             onDismiss = { exportItems = null },
+            // it-077：面板内直生成（关闭本面板 → 打开生成 sheet；未保存组合保存时自动建穿搭）
+            onGenerate = {
+                exportItems = null
+                showGenerate = true
+            },
         )
     }
 }
