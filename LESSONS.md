@@ -21,6 +21,7 @@
 
 ### 流程与协作
 
+- **迭代编号在提交前 re-check `git log`（提案落盘到提交之间并行会话可能占号）**——本仓 it-016/it-002/it-074 三次编号被并行会话抢占，撞号时对「自己动过的文件集」统一 sed 顺延（spec/ADR/代码注释/测试注释/CHANGELOG 行），别全局替换（会扫走对方的同号引用）。· [wardrobe it-075](wardrobe/specs/iterations/it-075-chat-result-cards.md) · 2026-09
 - **超时判罚用「静默超时」（无输出时长），别用总时长**——LLM/agent 合法长思考可达数十分钟，总时长硬中断会把「想得久」误判成「挂死」。· [xiangqi it-001](xiangqi/specs/iterations/it-001-arena-mvp.md) · 2026-09
 - **spec/文档不钉死易漂移的数字（测试用例数等）**——以 CI/测试套件实际结果为准，写死必漂移。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
 - **「本地全绿」≠「CI 绿」**——CI 配置入库后必须看首跑结果，未实跑的流水线视同未验证。· [wardrobe it-020](wardrobe/specs/iterations/it-020-arch-review-stabilize.md) · 2026-09
