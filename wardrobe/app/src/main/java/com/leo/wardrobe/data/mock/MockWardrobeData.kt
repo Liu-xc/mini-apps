@@ -28,7 +28,12 @@ object MockWardrobeData {
      * APK 内置的完整演示数据（图片与 JSON 同源于 wardrobe/tools/mock-data）。
      * 保留 [create] 作为 JVM 单测的历史确定性种子；正式演示入口由 AppContainer 调用此解析器。
      */
-    fun fromJson(json: String): WardrobeData = assetJson.decodeFromString(json)
+    fun fromJson(json: String): WardrobeData {
+        val data = assetJson.decodeFromString<WardrobeData>(json)
+        return data.copy(persons = data.persons.map {
+            it.copy(refImageFile = com.leo.wardrobe.export.usablePersonReference(it.refImageFile))
+        })
+    }
 
     private const val P1 = "p1"
     private const val P2 = "p2"
@@ -47,8 +52,8 @@ object MockWardrobeData {
         )
 
         val persons = listOf(
-            // it-059：P1 带形象参考照（与 assets/mock/wardrobe.json 的 Leo 对齐，人台演示图）
-            Person(P1, "我", "👨", refImageFile = "person-ref.png", createdAt = ago(60)),
+            // 人物参考由用户主动设置，演示种子不默认附人台。
+            Person(P1, "我", "👨", createdAt = ago(60)),
             Person(P2, "小满", "👧", createdAt = ago(58)),
         )
 

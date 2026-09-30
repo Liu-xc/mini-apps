@@ -125,7 +125,8 @@ fun ExportSheet(
     var promptEdit by remember { mutableStateOf<String?>(null) } // 用户手改覆盖，维度变化时重置
     // it-017：参考照开关——默认使用，不持久化（关闭仅本次有效，下次打开面板仍默认开）
     var attachRef by remember { mutableStateOf(true) }
-    val composedRefPhoto = refPhotoFile?.takeIf { attachRef }
+    val usableRefPhoto = com.leo.wardrobe.export.usablePersonReference(refPhotoFile)
+    val composedRefPhoto = usableRefPhoto?.takeIf { attachRef }
     var composedFile by remember { mutableStateOf<File?>(null) }
     var composing by remember { mutableStateOf(true) }
     var copied by remember { mutableStateOf(false) }
@@ -452,7 +453,7 @@ fun ExportSheet(
                             }
                             // it-017：附形象参考照开关（it-061 修3 随画面设定一并折叠；
                             // 默认开——不展开面板即维持默认行为）
-                            if (refPhotoFile != null) {
+                            if (usableRefPhoto != null) {
                                 Surface(
                                     shape = RoundedCornerShape(12.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),

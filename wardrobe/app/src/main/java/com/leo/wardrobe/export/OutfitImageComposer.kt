@@ -30,7 +30,7 @@ class OutfitImageComposer(private val imageStore: ImageEditStore) {
     /** 生成并写入 export 目录，返回 JPEG 文件（含 EXIF prompt）；refPhotoFile 非空时其照片置顶（it-017） */
     suspend fun composeToExportFile(items: List<Item>, prompt: String, refPhotoFile: String? = null): File? =
         withContext(Dispatchers.IO) {
-            val refPhoto = refPhotoFile?.let { imageStore.decode(it) }
+            val refPhoto = usablePersonReference(refPhotoFile)?.let { imageStore.decode(it) }
             val bitmap = renderLong(items, prompt, refPhoto) ?: return@withContext null
             val out = File(imageStore.exportDir(), "outfit_${System.currentTimeMillis()}.jpg")
             out.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, QUALITY, it) }

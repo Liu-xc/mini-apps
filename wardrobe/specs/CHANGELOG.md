@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- **导出人物参考**：[it-074](iterations/it-074-no-mannequin-reference.md) 移除演示人台默认引用，拦截旧占位图进入长图与提示词；提供男女全身白色打底模特素材。
+
 - **滚动行为**：[it-073](iterations/it-073-disable-overscroll-stretch.md) 全站禁用 Android 12+ overscroll 拉伸（「弹簧绳」），到头即停。
 - **槽位清单**：[it-072](iterations/it-072-slot-picker-discoverability.md) 品类清单直选可发现性升级——名称条整条可点/长按/图标计数组三通道，长按 toast 读全名废止（清单两行全名承接 US-39）。
 - **演示数据**：[it-060](iterations/it-060-mock-corpus-expansion.md) mock 衣橱扩充至 68 件单品、15 套穿搭，新增 32 张 RGBA 透明底单品 PNG，八品类均衡覆盖；同步产出可导入包并通过 validator。
