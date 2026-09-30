@@ -91,6 +91,8 @@ fun OutfitDetailScreen(
     onBack: () -> Unit,
     onOpenItem: (String) -> Unit,
     onOpenOutfit: (String) -> Unit,
+    // it-077 修订八：预览面板「AI 生成效果图 · 未配置」点击直达 W11 生图模型设置
+    onOpenSettings: () -> Unit = {},
 ) {
     val data by vm.data.collectAsState()
     val outfit = remember(outfitId, data) { data.outfitById(outfitId) }
@@ -102,6 +104,8 @@ fun OutfitDetailScreen(
 
     val notes = remember(data, outfit) { data.notesOf(NoteParent.OUTFIT, outfit.id) }
     val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
+    // it-077 修订八：连接页面级解析（菜单入口/两 sheet 共用）
+    val imageGenConnection = rememberImageGenConnection(vm)
 
     var showDelete by remember { mutableStateOf(false) }
     var showTagEdit by remember { mutableStateOf(false) }
@@ -199,7 +203,7 @@ fun OutfitDetailScreen(
                                     showTagEdit = true
                                 },
                             )
-                            if (rememberImageGenReady(vm)) DropdownMenuItem(
+                            if (imageGenConnection != null) DropdownMenuItem(
                                 text = { Text("生成效果图") },
                                 leadingIcon = {
                                     Icon(
@@ -648,7 +652,8 @@ fun OutfitDetailScreen(
             existingOutfit = outfit,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
-            imageGenReady = rememberImageGenReady(vm),
+            imageGenReady = imageGenConnection != null,
+            onOpenSettings = onOpenSettings,
             // it-077 修订（Leo 反馈×5）：先退场再进场，避免两个抽屉动画叠出分层
             onGenerate = {
                 genSwitchScope.launch {
@@ -661,13 +666,14 @@ fun OutfitDetailScreen(
     }
 
     // it-077：生成效果图 sheet
-    if (showGenerate) {
+    if (showGenerate && imageGenConnection != null) {
         OutfitGenerateSheet(
             vm = vm,
             outfit = outfit,
             items = items,
             person = vm.currentPerson.collectAsState().value,
             personNote = vm.personNote.collectAsState().value,
+            connection = imageGenConnection,
             onDismiss = { showGenerate = false },
         )
     }

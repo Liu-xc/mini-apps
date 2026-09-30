@@ -69,12 +69,20 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 
-/** it-077 修订（Leo 反馈×4）：生图连接未配置（无厂商/模型/Key）时隐藏所有 AI 生成入口；配置后自动出现 */
+/**
+ * it-077 修订（Leo 反馈×4）：生图连接未配置（无厂商/模型/Key）时隐藏 AI 入口；配置后自动出现。
+ * it-077 修订八：连接解析上提到页面级（打开 sheet 前已完成）——sheet 内异步解析会造成
+ * 开栏先加载条后内容弹跳，且曾因重构丢失赋值导致永远卡加载条（gen6 回归）。
+ */
 @Composable
-fun rememberImageGenReady(vm: AppViewModel): Boolean =
-    androidx.compose.runtime.produceState(initialValue = false) {
-        value = vm.imageGenerator.connection() != null
+fun rememberImageGenConnection(vm: AppViewModel): OutfitImageGenerator.Connection? =
+    androidx.compose.runtime.produceState<OutfitImageGenerator.Connection?>(initialValue = null) {
+        value = vm.imageGenerator.connection()
     }.value
+
+/** 兼容旧调用（布尔就绪态） */
+@Composable
+fun rememberImageGenReady(vm: AppViewModel): Boolean = rememberImageGenConnection(vm) != null
 
 /** 生成 sheet 四态（it-040 W5 四态语言） */
 private sealed interface GeneratePhase {
@@ -97,6 +105,8 @@ fun OutfitGenerateSheet(
     items: List<Item>,
     person: Person?,
     personNote: String,
+    // it-077 修订八：连接由调用方解析传入（入口已按就绪态把关，这里非空直达装配态）
+    connection: OutfitImageGenerator.Connection,
     onDismiss: () -> Unit,
 ) {
     val ec = editorialColors()
@@ -104,8 +114,6 @@ fun OutfitGenerateSheet(
     val scope = rememberCoroutineScope()
     val generator = vm.imageGenerator
 
-    var connection by remember { mutableStateOf<OutfitImageGenerator.Connection?>(null) }
-    var connectionResolved by remember { mutableStateOf(false) }
     var phase by remember { mutableStateOf<GeneratePhase>(GeneratePhase.Setup) }
     var job by remember { mutableStateOf<Job?>(null) }
     // it-077 修订：候选挑选序（sheet 级，随 phase 变化重置；动作栏与滚动区共用）
@@ -122,21 +130,20 @@ fun OutfitGenerateSheet(
     // 高级参数面板（按模型记忆，拍板①）
     var paramValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var paramsExpanded by remember { mutableStateOf(false) }
-    val modelSpec = connection?.modelSpec
-    LaunchedEffect(connection?.model) {
-        val conn = connection ?: return@LaunchedEffect
-        val remembered = generator.lastParams()[conn.model].orEmpty()
-        val defaults = conn.modelSpec?.params?.associate { it.key to it.default.content }.orEmpty()
+    val modelSpec = connection.modelSpec
+    LaunchedEffect(connection.model) {
+        val remembered = generator.lastParams()[connection.model].orEmpty()
+        val defaults = connection.modelSpec?.params?.associate { it.key to it.default.content }.orEmpty()
         paramValues = defaults + remembered
     }
 
     val selectedItems = items.filter { includeItems[it.id] == true }
-    val inputLimit = connection?.let(generator::inputLimit) ?: 10
+    val inputLimit = generator.inputLimit(connection)
     val refCount = (if (includePerson && hasPersonRef) 1 else 0) + selectedItems.size
-    val modelTakesImages = (connection?.modelSpec?.inputImages?.first ?: 1) > 0
+    val modelTakesImages = (connection.modelSpec?.inputImages?.first ?: 1) > 0
 
     fun startGenerate() {
-        val conn = connection ?: return
+        val conn = connection
         val size = paramValues["size"]
         val extra = paramValues.filterKeys { it != "size" }
         phase = GeneratePhase.Running("提交生成请求…")
@@ -167,17 +174,17 @@ fun OutfitGenerateSheet(
         onDismissRequest = { if (phase !is GeneratePhase.Running) onDismiss() },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp),
-        ) {
+        // it-077 修订八（Leo 反馈×7 抽屉分层/抖动）：去掉 weight 撑满——
+        // weight 会把滚动视口强制拉到 0.92 屏高，表单短于视口时动作栏上方悬出空白带，
+        // 拖动抽屉时「表面（含空白带+按钮）在动、内容看似不动」即分层感的来源。
+        // 改为滚动区贴合内容、仅设高度上限（留出钉底动作栏预算），sheet 高度始终 = 实际内容。
+        Column(Modifier.fillMaxWidth()) {
             // it-077 修订（Leo 反馈×5）：内容区滚动、动作按钮钉底——
             // 整列滚动会让按钮跟着滚、下滑关闭手势先滚内容再拖抽屉（不连贯/分层感的根源）
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.80f).dp)
                     .verticalScroll(rememberScrollState())
                     .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -192,24 +199,12 @@ fun OutfitGenerateSheet(
                 Text("生成效果图", style = MaterialTheme.typography.titleLarge, color = ec.ink)
             }
 
-            if (!connectionResolved) {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-            } else if (connection == null) {
-                // 未配置生图模型（W11 引导）
-                Text(
-                    "尚未配置生图模型：到「设置 → 生图模型」选择厂商、模型并粘贴 API Key 后再来生成。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ec.inkFaint,
-                )
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("知道了") }
-            } else {
-                val conn = connection!!
-                Text(
-                    "${conn.spec.displayName} · ${conn.model}" +
-                        (modelSpec?.costPerImage?.let { " · 参考价 ¥$it/张" } ?: ""),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = ec.inkFaint,
-                )
+            Text(
+                "${connection.spec.displayName} · ${connection.model}" +
+                    (modelSpec?.costPerImage?.let { " · 参考价 ¥$it/张" } ?: ""),
+                style = MaterialTheme.typography.labelMedium,
+                color = ec.inkFaint,
+            )
 
                 when (val p = phase) {
                     is GeneratePhase.Setup -> {
@@ -385,7 +380,6 @@ fun OutfitGenerateSheet(
                         Text(p.message, style = MaterialTheme.typography.bodyMedium, color = ec.ink)
                     }
                 }
-            }
             }  // 内层滚动区闭合（it-077 修订：动作栏须在滚动区外、外层 Column 内）
 
             // ---- 钉底动作栏（it-077 修订：按钮不随内容滚动；ExportSheet 同构） ----
@@ -398,21 +392,18 @@ fun OutfitGenerateSheet(
                 ) {
                     when (val p = phase) {
                         is GeneratePhase.Setup -> {
-                            val conn = connection
-                            if (conn != null) {
-                                Button(
-                                    onClick = { startGenerate() },
-                                    enabled = prompt.isNotBlank() && selectedItems.isNotEmpty() &&
-                                        (!modelTakesImages || refCount <= inputLimit),
-                                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                                    shape = MaterialTheme.shapes.large,
-                                ) { Text("生成效果图") }
-                                Text(
-                                    "照片将上传至 ${conn.spec.displayName} 用于本次生成，结果保存在本机。",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = ec.inkFaint,
-                                )
-                            }
+                            Button(
+                                onClick = { startGenerate() },
+                                enabled = prompt.isNotBlank() && selectedItems.isNotEmpty() &&
+                                    (!modelTakesImages || refCount <= inputLimit),
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                shape = MaterialTheme.shapes.large,
+                            ) { Text("生成效果图") }
+                            Text(
+                                "照片将上传至 ${connection.spec.displayName} 用于本次生成，结果保存在本机。",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ec.inkFaint,
+                            )
                         }
 
                         is GeneratePhase.Running -> OutlinedButton(

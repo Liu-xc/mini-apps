@@ -364,6 +364,8 @@ private fun WardrobeRoot() {
                                 onBack = { nav.popBackStack() },
                                 onOpenItem = { nav.navigate(Routes.itemDetail(it)) },
                                 onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
+                                // it-077 修订八：预览面板未配置生图时直达设置
+                                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                             )
                         }
                     }
@@ -402,6 +404,8 @@ private fun HomeTabs(
                 onAddItem = { editItem(null) },
                 onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
                 onOpenWishlist = { nav.navigate(Routes.WISHLIST) },
+                // it-077 修订八：预览面板未配置生图时直达设置
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
             )
             Tab.RECORDS -> RecordsScreen(
                 vm = vm,

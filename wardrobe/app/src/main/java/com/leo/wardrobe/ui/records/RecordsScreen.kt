@@ -72,7 +72,9 @@ fun RecordsScreen(
     var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
     var generateFor by remember { mutableStateOf<Outfit?>(null) } // it-077：卡片生成效果图
-    val imageGenReady = rememberImageGenReady(vm) // it-077 修订：未配置隐藏 AI 入口
+    // it-077 修订八：连接对象级解析（角标显示与生成 sheet 共用，未配置隐藏 AI 入口）
+    val imageGenConnection = rememberImageGenConnection(vm)
+    val imageGenReady = imageGenConnection != null
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
 
@@ -300,13 +302,15 @@ fun RecordsScreen(
         }
     }
     // it-077：穿搭卡片生成效果图 sheet（生成即录入该穿搭成品图）
-    generateFor?.let { target ->
+    if (generateFor != null && imageGenConnection != null) {
+        val target = generateFor!!
         OutfitGenerateSheet(
             vm = vm,
             outfit = target,
             items = remember(target, data) { target.itemIds.mapNotNull { data.itemById(it) } },
             person = person,
             personNote = vm.personNote.collectAsState().value,
+            connection = imageGenConnection,
             onDismiss = { generateFor = null },
         )
     }

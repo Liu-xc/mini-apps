@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-077 八次修订（Leo 反馈×7）——抽屉分层/抖动根除：两 sheet 滚动区去 weight 撑满改贴合内容+高度上限（消灭动作栏上方空白带）；生成 sheet 连接解析上提 `rememberImageGenConnection` 修 gen6「永久加载条」回归且开栏直达装配态；ExportSheet AI 按钮未配置态常驻描边「去设置」点击直达 W11。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
+
 - **docs(lottery)**: it-004按用户个人非商业用途扩大免费模型筛选范围，纳入非商业许可；记录实际查看的BlendSwap Loto/Bingo源场景与登录下载/机构差异，取消待询问商用授权的条件。
 
 - **chore(lottery)**: it-004启动专业模型资产筛选，固定Godot4.5.2审查工具，真实GLB导入与Jolt堆积检查通过；记录实际候选、许可/获取缺口与ADR-008。尚未取得达标机器资产，Android剧场和皮肤未替换，当前APK仍为0.2.0。
