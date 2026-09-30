@@ -1,0 +1,12 @@
+--------- beginning of main
+09-30 20:36:58.493  5657  5657 I Lottery3D: LIT physical renderer ready; 49 spheres; uniqueInstances=49
+09-30 20:37:00.783  5657  5657 I Lottery3D: First GPU frame ready
+09-30 20:37:20.534  5657  5657 I LotteryPlayback: frames=1182 p50Ms=16.666666 p95Ms=16.666666 over32Ms=2 simMeanMs=0.19826206091370557
+09-30 20:37:51.895  5657  5657 I Lottery3D: Disposed; presented=1184 cpuSubmitMeanMs=1.0297089780405406
+09-30 20:37:55.436  5657  5657 I Lottery3D: LIT physical renderer ready; 49 spheres; uniqueInstances=49
+09-30 20:37:55.486  5657  5657 I Lottery3D: First GPU frame ready
+09-30 20:38:15.237  5657  5657 I LotteryPlayback: frames=1159 p50Ms=16.666666 p95Ms=16.666666 over32Ms=19 simMeanMs=0.1981097670405522
+09-30 20:42:13.669  5657  5657 I Lottery3D: Disposed; presented=1160 cpuSubmitMeanMs=1.3426905698275862
+09-30 20:42:18.422  5657  5657 I Lottery3D: LIT physical renderer ready; 49 spheres; uniqueInstances=49
+09-30 20:42:18.743  5657  5657 I Lottery3D: First GPU frame ready
+09-30 20:42:38.488  5657  5657 I LotteryPlayback: frames=906 p50Ms=16.666666 p95Ms=49.999998 over32Ms=147 simMeanMs=0.38845016556291395
