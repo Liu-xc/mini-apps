@@ -75,3 +75,5 @@
 - 决策：资产审查工具固定Godot4.5.2官方版，用其GLTFDocument与内置Jolt；不用代码生成机器网格代替专业模型。来源：[官方4.5.2发行包](https://github.com/godotengine/godot-builds/releases/tag/4.5.2-stable)。工具位于`tools/model-review/`，编辑器二进制在本地缓存，不进git或APK。
 - 验证：真实GLB导入和桌面球体堆积通过，见it-004阶段报告；没有证明Android嵌入或视觉质量。
 - 后果：当前APP依赖和默认舞台仍按ADR-007；不同时打包尚未验收的第二套引擎。专业机械资产取得且近景通过后，才进入Godot Android library兼容原型与生产替换。外部资产许可必须单独确认，开源引擎不等于模型开放许可。
+- 独立兼容原型（用户再次确认实施后并行推进）：`tools/android-probe/`为独立Gradle工具包，依赖Maven Central的`org.godotengine:godot:4.5.2.stable`和其对应`androidx.fragment:fragment:1.8.6`，不进入正式APP构建。先用明确署名的Khronos测试资产验证运行/进退，机器资产关未通过则不替换生产剧场。场景独立`:stage`进程，测试引擎退出是否会影响原生宿主；不是生产IPC方案已定稿。
+- 原型结果：OpenGL真实GLB/PBR/Jolt接触与10轮回传/退出通过；原生PID保持、场景PID每轮更换。快速重进须在Activity结果返回后继续等待旧进程释放；仅收到结果就重开存在已复现竞态。Vulkan/Mobile在当前host GPU模拟器呈现失败，冷启动仍复现；生产选择继续待验，不能用OpenGL成功覆盖失败事实。可选本地AAR仅接受官方Maven4.5.2.stable的固定SHA-256，以避免同一大文件重复下载。

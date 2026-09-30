@@ -1,0 +1,58 @@
+{
+  "passed": true,
+  "serial": "emulator-5562",
+  "backend": "gles",
+  "cycles": [
+    {
+      "cycle": 1,
+      "host_pid": "5442",
+      "stage_pid": "5515"
+    },
+    {
+      "cycle": 2,
+      "host_pid": "5442",
+      "stage_pid": "5629"
+    },
+    {
+      "cycle": 3,
+      "host_pid": "5442",
+      "stage_pid": "5726"
+    },
+    {
+      "cycle": 4,
+      "host_pid": "5442",
+      "stage_pid": "5819"
+    },
+    {
+      "cycle": 5,
+      "host_pid": "5442",
+      "stage_pid": "5911"
+    },
+    {
+      "cycle": 6,
+      "host_pid": "5442",
+      "stage_pid": "6005"
+    },
+    {
+      "cycle": 7,
+      "host_pid": "5442",
+      "stage_pid": "6095"
+    },
+    {
+      "cycle": 8,
+      "host_pid": "5442",
+      "stage_pid": "6189"
+    },
+    {
+      "cycle": 9,
+      "host_pid": "5442",
+      "stage_pid": "6285"
+    },
+    {
+      "cycle": 10,
+      "host_pid": "5442",
+      "stage_pid": "6375"
+    }
+  ],
+  "scope": "GLB import, Jolt contacts, internal events, native result, separate process release; not visual/FPS acceptance."
+}

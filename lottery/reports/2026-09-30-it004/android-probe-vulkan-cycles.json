@@ -1,0 +1,6 @@
+{
+  "passed": false,
+  "serial": "emulator-5562",
+  "cycles": [],
+  "error": "Cycle 1: no native result within 35 seconds"
+}

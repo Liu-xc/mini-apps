@@ -1,0 +1,47 @@
+--------- beginning of main
+E/godot   ( 7855): ERROR: Couldn't load file 'res://project.binary', error code 19.
+E/godot   ( 7855):    at: _load_settings_text_or_binary (core/config/project_settings.cpp:920)
+I/godot   ( 7855): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 7855): Vulkan 1.3.0 - Forward Mobile - Using Device #0: Apple - Apple M2
+I/godot   ( 7855): 
+E/godot   ( 7855): ERROR: Could not load global script cache.
+E/godot   ( 7855):    at: get_global_class_list (core/config/project_settings.cpp:1341)
+E/godot   ( 7855): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 7855):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+I/godot   ( 7855): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 7855): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 7855): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 7855): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 7855): STAGE_EVENT pid=7855 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 7855): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 7855): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 7855): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 7793): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 7793): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 7793): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 7793): 拖动查看；不用于摇奖机交付。
+E/godot   ( 7855): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 7855):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+E/godot   ( 7855): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 7855):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+I/godot   ( 8104): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 8104): Vulkan 1.3.0 - Forward Mobile - Using Device #0: Apple - Apple M2
+I/godot   ( 8104): 
+E/godot   ( 8104): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 8104):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+I/godot   ( 8104): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 8104): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 8104): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 8104): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 8104): STAGE_EVENT pid=8104 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 8104): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 8104): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 8104): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 8076): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 8076): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 8076): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 8076): 拖动查看；不用于摇奖机交付。
+E/godot   ( 8104): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 8104):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+E/godot   ( 8104): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 8104):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)

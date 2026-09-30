@@ -1,0 +1,7 @@
+Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+
+LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+DamagedHelmet / ctxwing / theblueturtle_
+CC-BY4 / 原版CC-BY-NC4
+拖动查看；不用于摇奖机交付。
+LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385

@@ -1,0 +1,13 @@
+{
+  "passed": false,
+  "serial": "emulator-5562",
+  "backend": "gles",
+  "cycles": [
+    {
+      "cycle": 1,
+      "host_pid": "4771",
+      "stage_pid": "4796"
+    }
+  ],
+  "error": "Cycle 2: missing model/contact evidence"
+}

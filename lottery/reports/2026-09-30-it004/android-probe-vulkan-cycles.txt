@@ -1,0 +1,22 @@
+--------- beginning of main
+I/godot   ( 4249): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 4249): Vulkan 1.3.0 - Forward Mobile - Using Device #0: Apple - Apple M2
+I/godot   ( 4249): 
+E/godot   ( 4249): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 4249):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+I/godot   ( 4249): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 4249): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 4249): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 4249): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 4249): STAGE_EVENT pid=4249 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 4249): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 4249): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 4249): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 4225): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 4225): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 4225): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 4225): 拖动查看；不用于摇奖机交付。
+E/godot   ( 4249): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 4249):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)
+E/godot   ( 4249): ERROR: QueuePresentKHR failed with error: 5
+E/godot   ( 4249):    at: command_queue_execute_and_present (drivers/vulkan/rendering_device_driver_vulkan.cpp:2850)

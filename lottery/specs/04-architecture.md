@@ -52,3 +52,7 @@ MainActivity.kt
 - 独立 Gradle 工程，settings 引根 `gradle/libs.versions.toml`（Filament渲染依赖见ADR-006/007）。
 - minSdk 31 / target 35 / Kotlin 2.1.21 / Compose BOM 2025.06.01 / M3 1.4.0。
 - 设备分治：`lottery_*` AVD（`tools/emu.sh`），不裸跑 adb。
+
+## it-004独立兼容工具（非生产替换）
+
+`tools/model-review/`验证真实GLB结构与桌面Jolt接触；`tools/android-probe/`为独立Gradle构建/包名，使用Godot4.5.2与独立`:stage`进程，通过内部事件和Activity结果连接原生宿主。重进前检查旧场景进程释放，避免终止中的native单例复用。OpenGL路径十轮通过；Vulkan/Mobile在当前模拟器未通过。生产依赖图和舞台仍按it-003；模型资产、完整机械物理、皮肤及移动端视觉通过前不替换。工具与事实边界见ADR-008及it-004报告。

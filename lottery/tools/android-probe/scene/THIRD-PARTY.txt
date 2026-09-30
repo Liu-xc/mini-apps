@@ -1,0 +1,16 @@
+This is a non-commercial, standalone engine compatibility probe, not the lottery app.
+
+Godot Engine 4.5.2
+Copyright Godot Engine contributors; MIT License.
+https://github.com/godotengine/godot/blob/4.5.2-stable/LICENSE.txt
+
+Test fixture: DamagedHelmet.glb (unmodified)
+Source: https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/DamagedHelmet
+SHA-256: a1e3b04de97b11de564ce6e53b95f02954a297f0008183ac63a4f5974f6b32d8
+Source README attribution and licenses:
+Copyright 2018 ctxwing, rebuild and conversion to glTF, CC Attribution 4.0.
+https://creativecommons.org/licenses/by/4.0/legalcode
+Copyright 2016 theblueturtle_, earlier version of model, CC Attribution Non Commercial 4.0.
+https://creativecommons.org/licenses/by-nc/4.0/legalcode
+
+The fixture demonstrates real GLB/PBR import only; it is not a lottery machine model.

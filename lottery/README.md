@@ -67,4 +67,4 @@ ADR-006 历史默认Canvas降级 · ADR-007 三维物理舞台默认启用、透
 
 当前界面截图与模拟器运行证据见 [it-003运行报告](reports/2026-09-30-it003/README.md)。版本0.2.0(2)，真机性能待验。
 
-it-004已获实施确认，正在专业模型筛选阶段：Godot4.5.2导入/Jolt工具链验证通过，实际机器资产尚未取得，新剧场与皮肤尚未接入。工具用法见[model-review](tools/model-review/README.md)，事实、缺口及待验范围见[阶段报告](reports/2026-09-30-it004/README.md)。
+it-004已获实施确认，正在免费个人使用模型筛选阶段：Godot4.5.2导入/Jolt工具链验证通过；独立[Android兼容工具](tools/android-probe/README.md)的OpenGL路径连续10次进退通过，Vulkan/Mobile模拟器呈现未通过。实际机器资产下载需登录，尚未取得，新剧场与皮肤尚未接入。资产检查用法见[model-review](tools/model-review/README.md)，事实、缺口及待验范围见[阶段报告](reports/2026-09-30-it004/README.md)。

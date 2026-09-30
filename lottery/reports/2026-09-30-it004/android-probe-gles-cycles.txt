@@ -1,0 +1,211 @@
+
+I/godot   ( 5515): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 5515): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 5515): 
+I/godot   ( 5515): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 5515): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 5515): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 5515): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5515): STAGE_EVENT pid=5515 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5515): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5515): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5515): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 5515): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5515): STAGE_EVENT pid=5515 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5515): STAGE_EXIT pid=5515
+I/LotteryProbe( 5442): HOST_RETURN launches=1 returns=1 pid=5442 code=-1
+I/LotteryProbe( 5515): STAGE_PROCESS_RELEASE pid=5515
+I/godot   ( 5629): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 5629): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 5629): 
+I/godot   ( 5629): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 5629): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 5629): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 5629): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5629): STAGE_EVENT pid=5629 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5629): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5629): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5629): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 5629): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5629): STAGE_EVENT pid=5629 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5629): STAGE_EXIT pid=5629
+I/LotteryProbe( 5442): HOST_RETURN launches=2 returns=2 pid=5442 code=-1
+I/LotteryProbe( 5629): STAGE_PROCESS_RELEASE pid=5629
+I/godot   ( 5726): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 5726): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 5726): 
+I/godot   ( 5726): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 5726): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 5726): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 5726): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5726): STAGE_EVENT pid=5726 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5726): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5726): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5726): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 5726): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5726): STAGE_EVENT pid=5726 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5726): STAGE_EXIT pid=5726
+I/LotteryProbe( 5442): HOST_RETURN launches=3 returns=3 pid=5442 code=-1
+I/LotteryProbe( 5726): STAGE_PROCESS_RELEASE pid=5726
+I/godot   ( 5819): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 5819): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 5819): 
+I/godot   ( 5819): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 5819): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 5819): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 5819): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5819): STAGE_EVENT pid=5819 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5819): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5819): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5819): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 5819): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5819): STAGE_EVENT pid=5819 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5819): STAGE_EXIT pid=5819
+I/LotteryProbe( 5442): HOST_RETURN launches=4 returns=4 pid=5442 code=-1
+I/LotteryProbe( 5819): STAGE_PROCESS_RELEASE pid=5819
+I/godot   ( 5911): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 5911): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 5911): 
+I/godot   ( 5911): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 5911): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 5911): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 5911): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5911): STAGE_EVENT pid=5911 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5911): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5911): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5911): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 5911): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5911): STAGE_EVENT pid=5911 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5911): STAGE_EXIT pid=5911
+I/LotteryProbe( 5442): HOST_RETURN launches=5 returns=5 pid=5442 code=-1
+I/LotteryProbe( 5911): STAGE_PROCESS_RELEASE pid=5911
+I/godot   ( 6005): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 6005): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 6005): 
+I/godot   ( 6005): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 6005): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 6005): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 6005): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 6005): STAGE_EVENT pid=6005 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 6005): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 6005): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 6005): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 6005): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6005): STAGE_EVENT pid=6005 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6005): STAGE_EXIT pid=6005
+I/LotteryProbe( 5442): HOST_RETURN launches=6 returns=6 pid=5442 code=-1
+I/LotteryProbe( 6005): STAGE_PROCESS_RELEASE pid=6005
+I/godot   ( 6095): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 6095): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 6095): 
+I/godot   ( 6095): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 6095): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 6095): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 6095): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 6095): STAGE_EVENT pid=6095 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 6095): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 6095): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 6095): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 6095): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6095): STAGE_EVENT pid=6095 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6095): STAGE_EXIT pid=6095
+I/LotteryProbe( 5442): HOST_RETURN launches=7 returns=7 pid=5442 code=-1
+I/LotteryProbe( 6095): STAGE_PROCESS_RELEASE pid=6095
+I/godot   ( 6189): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 6189): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 6189): 
+I/godot   ( 6189): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 6189): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 6189): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 6189): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 6189): STAGE_EVENT pid=6189 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 6189): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 6189): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 6189): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 6189): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6189): STAGE_EVENT pid=6189 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6189): STAGE_EXIT pid=6189
+I/LotteryProbe( 5442): HOST_RETURN launches=8 returns=8 pid=5442 code=-1
+I/LotteryProbe( 6189): STAGE_PROCESS_RELEASE pid=6189
+I/godot   ( 6285): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 6285): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 6285): 
+I/godot   ( 6285): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 6285): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 6285): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 6285): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 6285): STAGE_EVENT pid=6285 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 6285): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 6285): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 6285): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 6285): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6285): STAGE_EVENT pid=6285 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6285): STAGE_EXIT pid=6285
+I/LotteryProbe( 5442): HOST_RETURN launches=9 returns=9 pid=5442 code=-1
+I/LotteryProbe( 6285): STAGE_PROCESS_RELEASE pid=6285
+I/godot   ( 6375): Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+I/godot   ( 6375): OpenGL API OpenGL ES 3.0 (4.1 Metal - 89.4) - Compatibility - Using Device: Google (Apple) - Android Emulator OpenGL ES Translator (Apple M2)
+I/godot   ( 6375): 
+I/godot   ( 6375): LOTTERY_PROBE MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/godot   ( 6375): DamagedHelmet / ctxwing / theblueturtle_
+I/godot   ( 6375): CC-BY4 / 原版CC-BY-NC4
+I/godot   ( 6375): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 6375): STAGE_EVENT pid=6375 MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 6375): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 6375): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 6375): 拖动查看；不用于摇奖机交付。
+I/LotteryProbe( 5442): HOST_EVENT MODEL_READY Godot4.5.2 · Jolt · GLB/PBR
+I/LotteryProbe( 5442): DamagedHelmet / ctxwing / theblueturtle_
+I/LotteryProbe( 5442): CC-BY4 / 原版CC-BY-NC4
+I/LotteryProbe( 5442): 拖动查看；不用于摇奖机交付。
+I/godot   ( 6375): LOTTERY_PROBE CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6375): STAGE_EVENT pid=6375 CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 5442): HOST_EVENT CONTACT_OK engine=Jolt Physics y=0.49963/1.48385
+I/LotteryProbe( 6375): STAGE_EXIT pid=6375
+I/LotteryProbe( 5442): HOST_RETURN launches=10 returns=10 pid=5442 code=-1
+I/LotteryProbe( 6375): STAGE_PROCESS_RELEASE pid=6375

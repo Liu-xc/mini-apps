@@ -1,0 +1,18 @@
+config_version=5
+
+[application]
+config/name="Lottery Engine Probe"
+run/main_scene="res://main.tscn"
+
+[display]
+window/size/viewport_width=390
+window/size/viewport_height=844
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[physics]
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
