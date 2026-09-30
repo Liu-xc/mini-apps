@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -86,22 +89,22 @@ fun TicketCard(
         Row(
             Modifier
                 .fillMaxWidth()
-                .background(LotteryPalette.CardRed)
+                .background(paper)
                 .padding(horizontal = 20.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = ticket.game.label,
                 style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
+                color = ink,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = if (ticket.isCombo) "复式 · ${ticket.combos}注" else "单式 · 1注",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.92f),
+                color = inkFaint,
                 modifier = Modifier
-                    .border(1.dp, Color.White.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+                    .border(1.dp, hairline, RoundedCornerShape(6.dp))
                     .padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
@@ -182,12 +185,13 @@ fun TicketCard(
             }
             Text("拾彩", style = MaterialTheme.typography.titleMedium, color = ink)
             Spacer(Modifier.width(8.dp))
-            SeedBarcode(ticket.seed, Modifier.height(24.dp))
+            SeedBarcode(ticket.seed, Modifier.width(48.dp).height(24.dp))
         }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BallRow(
     numbers: List<Int>,
@@ -197,7 +201,7 @@ private fun BallRow(
     reduceMotion: Boolean,
     staggerOffset: Int = 0,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         numbers.forEachIndexed { i, n ->
             RollingBall(
                 final = n,
@@ -228,28 +232,24 @@ private fun RollingBall(
 
     LaunchedEffect(rollKey) {
         if (rollKey == null || reduceMotion) return@LaunchedEffect
-        delay(index * 40L)
-        // 入场
-        scale.snapTo(0.55f)
-        scale.animateTo(1f, Motion.pop())
-        // 滚码
-        val rollUntil = System.currentTimeMillis() + 240
+        delay(index * 22L)
+        val rollUntil = System.currentTimeMillis() + 260
         while (System.currentTimeMillis() < rollUntil && isActive) {
             display = rng.nextInt(1, 40)
-            delay(55)
+            delay(45)
         }
         display = final
-        // 落定脉冲
-        scale.animateTo(1.16f, tween(70))
-        scale.animateTo(1f, Motion.pop())
+        scale.snapTo(.92f)
+        scale.animateTo(1f, tween(180))
     }
 
-    Box(Modifier.size(size * scale.value)) {
+    Box(Modifier.size(size)) {
         Ball(
             number = display,
             base = base,
             highlight = hi,
-            size = size * scale.value,
+            size = size,
+            modifier = Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value },
         )
     }
 }

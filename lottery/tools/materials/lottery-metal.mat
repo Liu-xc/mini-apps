@@ -1,0 +1,13 @@
+material {
+    name : "lottery-brushed-metal",
+    shadingModel : lit,
+    culling : none
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = vec4(0.31, 0.38, 0.37, 1.0);
+        material.roughness = 0.38;
+        material.metallic = 0.75;
+    }
+}

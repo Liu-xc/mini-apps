@@ -140,8 +140,11 @@ private fun RowScope.NavItem(
         icon = { Icon(icon, contentDescription = label) },
         label = { Text(label) },
         colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = LocalLotteryColors.current.ink,
+            unselectedIconColor = LocalLotteryColors.current.inkFaint,
             selectedTextColor = LocalLotteryColors.current.accent,
-            indicatorColor = LocalLotteryColors.current.accent.copy(alpha = 0.12f),
+            unselectedTextColor = LocalLotteryColors.current.inkFaint,
+            indicatorColor = LocalLotteryColors.current.ink.copy(alpha = 0.055f),
         ),
     )
 }

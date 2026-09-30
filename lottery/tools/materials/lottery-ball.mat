@@ -1,0 +1,15 @@
+material {
+    name : "physical-lottery-ball",
+    shadingModel : lit,
+    requires : [ uv0 ],
+    parameters : [ { type : sampler2d, name : numbers } ]
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_numbers, getUV0());
+        material.roughness = 0.48;
+        material.metallic = 0.0;
+        material.reflectance = 0.35;
+    }
+}

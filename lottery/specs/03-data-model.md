@@ -61,3 +61,7 @@
 | 票夹 | JSON 文件 | `filesDir/tickets.json`（tmp→rename） |
 | 导出购票图 | MediaStore | `Pictures/拾彩/*.png` |
 | 选中的种子图 | 不落盘 | 会话内存（生成即解码出指纹） |
+
+## it-003 体验偏好
+
+`SharedPreferences("experience")`的`simple_draw`布尔值，默认false；只决定完整仪式/直接结果，不改变tickets.json或演示开奖数据。播放时间是rememberSaveable会话状态，退出剧场不作为票据持久化。

@@ -6,7 +6,7 @@
 > 定位与价值流见 [specs/00-overview.md](specs/00-overview.md)；迭代状态见
 > [specs/iterations/](specs/iterations/)。
 
-## 界面速览
+## 历史 MVP 界面（当前版本见 it-003）
 
 | [W1 选号](specs/iterations/assets-it-001/01-generate-initial.png) | [W2 开奖复现](specs/iterations/assets-it-001/08-draw-screen.png) | [复现剧场](specs/iterations/assets-it-001/11-replay-verdict.png) | [票详情·导出](specs/iterations/assets-it-001/13-detail.png) |
 |---|---|---|---|
@@ -24,7 +24,7 @@ cd lottery
 ```
 
 - 独立 Gradle 工程（与 wardrobe/eats/darkroom 同构），版本表引用仓库根 `gradle/libs.versions.toml`。
-- minSdk 31 / target 35 / Kotlin 2.1.21 / Compose BOM 2025.06.01 / M3 1.4.0；零第三方依赖。
+- minSdk 31 / target 35 / Kotlin 2.1.21 / Compose BOM 2025.06.01 / M3 1.4.0；Filament1.57.1三维渲染依赖（预编译材质，不含运行时编译器）。
 - 分发：APK 不入 git（根 `.gitignore`），走 `~/Documents/mini-apps-apk` 或本地 http（见根 README）。
 
 ## 模拟器（设备分治）
@@ -47,8 +47,8 @@ tools/emu.sh serial    # 打印序列号，裸 adb 用 adb -s $(tools/emu.sh ser
 `ImageSeed`（图片→SHA-256 指纹）→ `Generator`（指纹+玩法+批次 → SplitMix64 确定性号码）→
 `TicketStore`（票夹 JSON 原子写）；开奖侧 `IssueCalendar`（开奖日历/期号）→ `DrawRepository`
 （本期 `DemoDrawRepository` 确定性演示结果，留真实 API 插槽）→ `Verify`（官方奖级表逐注判定）→
-`ReplayOverlay`（直播式剧场：2.5D 摇奖机舞台→出球轨道→大号读数→换机→验票；
-  ui/draw3d 留 Filament 真三维实现，ADR-006）。
+`ReplayOverlay`（直播式剧场：真实三维碰撞+气流 → 连通导管 → 滚动轨道 → 号码板 → 换机 → 验票；
+  默认Filament LIT材质舞台，ADR-007）。
 详见 [specs/04-architecture.md](specs/04-architecture.md)。
 
 ## 关键决策
@@ -56,5 +56,13 @@ tools/emu.sh serial    # 打印序列号，裸 adb 用 adb -s $(tools/emu.sh ser
 ADR-001 平台安卓原生 Kotlin+Compose · ADR-002 渲染用 Compose Canvas+手写物理（不引 3D/Lottie）·
 ADR-003 开奖数据本地确定性演示、留真实 API 插槽 · ADR-004 官方奖级表逐注判定 ·
 ADR-005 票夹 JSON 单文件原子写（复用 libs/store 模式、不上 composite）·
-ADR-006 剧场接入 Filament、默认 Canvas 2.5D 舞台交付（模拟器原生层不可验收，真机可切）。
+ADR-006 历史默认Canvas降级 · ADR-007 三维物理舞台默认启用、透明TextureView、预编译材质与资源生命周期。
 详见 [specs/06-decisions.md](specs/06-decisions.md)。
+
+## it-003 当前体验
+
+图片种子居首、暖白收藏票据、复式号码换行；开奖为约20秒物理仪式，静止堆积、气流翻滚、球球/球壳碰撞、连续捕获、透明管轨滚动与停稳。支持随时跳过、持久化简化开奖、后台暂停及配置恢复。
+
+材质源码在`tools/materials/`，预编译资产在`app/src/main/assets/`；修改材质时，用Filament v1.57.1的matc运行`MATC=/path/to/matc tools/compile-materials.sh`，正常Gradle构建无需该工具。验证及限制见[it-003](specs/iterations/it-003-physical-draw-and-refined-ui.md)。
+
+当前界面截图与模拟器运行证据见 [it-003运行报告](reports/2026-09-30-it003/README.md)。版本0.2.0(2)，真机性能待验。

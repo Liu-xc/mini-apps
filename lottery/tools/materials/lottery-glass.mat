@@ -1,0 +1,18 @@
+material {
+    name : "lottery-glass-shell",
+    shadingModel : lit,
+    blending : transparent,
+    depthWrite : false,
+    culling : back
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float rim = pow(1.0 - abs(dot(getWorldNormalVector(), getWorldViewVector())), 3.0);
+        float opacity = 0.012 + 0.11 * rim;
+        material.baseColor = vec4(vec3(0.58, 0.73, 0.72) * opacity, opacity);
+        material.roughness = 0.10;
+        material.metallic = 0.0;
+        material.reflectance = 0.5;
+    }
+}

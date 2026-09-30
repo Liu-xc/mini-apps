@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -56,7 +57,7 @@ fun TicketsScreen(
     val c = LocalLotteryColors.current
     val tickets = remember(state.tickets) { state.tickets.sortedByDescending { it.createdAt } }
 
-    Scaffold(containerColor = c.paper) { padding ->
+    Scaffold(containerColor = c.paper, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             Modifier
                 .fillMaxSize()

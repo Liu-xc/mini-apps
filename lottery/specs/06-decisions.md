@@ -58,3 +58,13 @@
   ReplayOverlay 舞台实现切回 `DrawStage3D` 即一开关的事。
 - 后果：APK 体积 +≈20MB（保留 native 库以便真机切换）；2.5D 舞台与 3D 共用时间轴常量
   （Stage3D.T_*），切换零语义漂移。
+
+## ADR-007 默认三维物理舞台与预编译材质（取代ADR-006默认降级）
+
+- 状态：接受，2026-09-30，用户确认it-003「实施」。
+- 背景：编排正弦与UNLIT贴图无法提供重量、碰撞与材质；原生接入不能等同实际启用。
+- 决策：固定步长三维模拟独立于渲染；默认Filament1.57.1 LIT球体/金属底座/透明球壳，TextureView透明合成，Canvas只承担机械管轨、阴影/反光和静止预览。时间轴唯一来源为DrawTiming。
+- 修复：TransformManager以getInstance(entity)更新，避免实体号或重复create导致句柄失效；正的局部包围盒、单位网格按球半径缩放；View.viewport与TextureView实际缓冲分辨率一致，避免缩放裁切导致巨球/错位；透明SwapChain采用UiHelper.swapChainFlags。
+- 材质：SDK版本保持1.57.1；新增源码`.mat`与同版matc编译的`.filamat`资产，移除`filamat-android`运行时依赖。开发重编使用tools/compile-materials.sh，正常构建无需matc。官方工具来源：[Filament v1.57.1](https://github.com/google/filament/releases/tag/v1.57.1)。
+- 生命周期：只读GPU资产进程内复用；每场释放实体、灯光、相机、实例、Scene/View/Renderer/Surface与回调，Engine仅随进程终结销毁。首次GPU帧完成前显示静止Canvas球堆，不提前播放空壳。
+- 后果：模拟内碰撞实际积分；开奖目标球捕获、导管与轨道仍为受控复现，以保持已有开奖号与连续旅程。玻璃不宣称精确折射。硬件模拟器、真机与软件模拟器性能必须分别记录，不能相互替代。

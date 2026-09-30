@@ -24,22 +24,22 @@ import com.leo.lottery.core.Game
  */
 object LotteryPalette {
     // Light：票纸日间
-    val PaperLight = Color(0xFFFAF5EA)
-    val SurfaceLight = Color(0xFFFFFDF8)
-    val InkLight = Color(0xFF241A14)
-    val InkFaintLight = Color(0xFF8B7E6C)
-    val AccentLight = Color(0xFFC8161D)
-    val GoldLight = Color(0xFFB8902F)
-    val HairlineLight = Color(0xFFEADFC8)
+    val PaperLight = Color(0xFFF6F5F1)
+    val SurfaceLight = Color(0xFFFDFCF8)
+    val InkLight = Color(0xFF252720)
+    val InkFaintLight = Color(0xFF6B6E64)
+    val AccentLight = Color(0xFFB83B37)
+    val GoldLight = Color(0xFF9B895E)
+    val HairlineLight = Color(0xFFDDDED5)
 
     // Dark：暗夜演播厅
-    val PaperDark = Color(0xFF141019)
-    val SurfaceDark = Color(0xFF1F1824)
-    val InkDark = Color(0xFFF3EADB)
-    val InkFaintDark = Color(0xFFA89880)
+    val PaperDark = Color(0xFF171C19)
+    val SurfaceDark = Color(0xFF222A24)
+    val InkDark = Color(0xFFEEEFE6)
+    val InkFaintDark = Color(0xFFAFB7AA)
     val AccentDark = Color(0xFFE85545)
     val GoldDark = Color(0xFFD6B35F)
-    val HairlineDark = Color(0xFF3A3140)
+    val HairlineDark = Color(0xFF3C463E)
 
     // 玩法内容色（球色，主题无关；广播级高饱和）
     val SsqRed = Color(0xFFE0342B)
@@ -52,19 +52,19 @@ object LotteryPalette {
     val DltBackHi = Color(0xFFF4BC6B)
 
     // 演播室舞台（剧场恒定，不随主题）
-    val Theater = Color(0xFF0A1226)
-    val TheaterHi = Color(0xFF14213F)
-    val StageGold = Color(0xFFC9A24A)
-    val StageInk = Color(0xFFF5EDD8)
-    val StageFaint = Color(0xFF9AA4BC)
+    val Theater = Color(0xFF151D20)
+    val TheaterHi = Color(0xFF293538)
+    val StageGold = Color(0xFF9FAAA7)
+    val StageInk = Color(0xFFF3F2E9)
+    val StageFaint = Color(0xFFAAB6B5)
 
     /** 购票卡恒定浅纸（导出图不随主题翻转）。 */
-    val CardPaper = Color(0xFFFCFBF7)
-    val CardInk = Color(0xFF241A14)
-    val CardInkFaint = Color(0xFF8B7E6C)
-    val CardHairline = Color(0xFFE4DAC4)
-    val CardRed = Color(0xFFC8161D)
-    val CardGold = Color(0xFFB8902F)
+    val CardPaper = Color(0xFFFDFCF8)
+    val CardInk = Color(0xFF252720)
+    val CardInkFaint = Color(0xFF6B6E64)
+    val CardHairline = Color(0xFFDDDED5)
+    val CardRed = Color(0xFFB83B37)
+    val CardGold = Color(0xFF9B895E)
 }
 
 @Immutable
@@ -114,17 +114,19 @@ val LocalLotteryColors = staticCompositionLocalOf {
 
 private val AppTypography = Typography(
     displaySmall = TextStyle(
-        fontWeight = FontWeight.ExtraBold,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         letterSpacing = (-0.3).sp,
     ),
     displayMedium = TextStyle(
-        fontWeight = FontWeight.Black,
-        fontSize = 40.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 34.sp,
         letterSpacing = (-0.5).sp,
     ),
     titleLarge = TextStyle(
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 20.sp,
         letterSpacing = 0.sp,
     ),
@@ -158,7 +160,7 @@ fun LotteryTheme(
             ink = LotteryPalette.InkDark,
             inkFaint = LotteryPalette.InkFaintDark,
             accent = LotteryPalette.AccentDark,
-            accentContent = Color(0xFF141019),
+            accentContent = Color(0xFF171C19),
             gold = LotteryPalette.GoldDark,
             hairline = LotteryPalette.HairlineDark,
         )

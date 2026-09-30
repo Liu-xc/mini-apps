@@ -43,6 +43,8 @@
 
 ### Android / Compose
 
+- **嵌入 3D 渲染时，视口必须使用实际 Surface 缓冲尺寸，跨层投影共用同一几何参数；实体 ID 不能当 Transform 实例句柄**——先验证球体大小与管轨坐标，再看动画；分辨率降采样后尤其要重验。· [lottery it-003](lottery/specs/iterations/it-003-physical-draw-and-refined-ui.md) · 2026-09
+
 - **Lazy 容器内的子项不吃常规尺寸约束**——列表空态居中用 `fillParentMaxSize`，普通 `fillMaxSize`/gravity 不生效。· [wardrobe it-043](wardrobe/specs/iterations/it-043-newui-p1-fixes.md) · 2026-09
 - **`LaunchedEffect(Unit)` 驱动的一次性入场动画，Activity 重建会整段重放**——进度已过半却还在「出纸」多半是它；改由状态标志（如 `UiState.ejecting`）驱动，重建后直接落位。· [darkroom it-007](darkroom/specs/iterations/it-007-develop-modes-and-fidelity.md) · 2026-09
 - **自研/手动驱动的动画不在官方动画跟踪内**——`isAnimationRunning` 这类官方标志会恒 false，判断「在动」须自带标志（try-finally 维护）。· [wardrobe it-048](wardrobe/specs/iterations/it-048-hotfix-deck-clip-continuity.md) · 2026-09

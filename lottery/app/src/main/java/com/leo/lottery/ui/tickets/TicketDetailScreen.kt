@@ -1,5 +1,6 @@
 package com.leo.lottery.ui.tickets
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -57,7 +58,7 @@ fun TicketDetailScreen(
     val result = remember(ticket) { vm.resultOf(ticket.game, ticket.targetIssue) }
     val verdict = remember(ticket, result) { result?.let { Verify.verify(ticket, it) } }
 
-    Scaffold(containerColor = c.paper) { padding ->
+    Scaffold(containerColor = c.paper, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -118,7 +119,7 @@ fun TicketDetailScreen(
             }
 
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 PrimaryButton(
                     text = "导出图片",
                     onClick = {
@@ -133,17 +134,17 @@ fun TicketDetailScreen(
                             }
                         }
                     },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 SecondaryButton(
                     text = "去验票",
                     onClick = { vm.goToDraw(ticket) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 SecondaryButton(
                     text = "删除",
                     onClick = { vm.deleteTicket(ticket) },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             Spacer(Modifier.height(32.dp))

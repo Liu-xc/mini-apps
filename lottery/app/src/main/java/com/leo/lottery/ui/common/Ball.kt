@@ -60,7 +60,7 @@ fun Ball(
                 // 接触阴影
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(Color.Black.copy(alpha = 0.28f), Color.Transparent),
+                        listOf(Color.Black.copy(alpha = 0.12f), Color.Transparent),
                         center = Offset(c.x, c.y + r * 0.82f),
                         radius = r * 1.15f,
                     ),
@@ -107,7 +107,7 @@ fun Ball(
                 // 镜面高光点
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(Color.White.copy(alpha = 0.85f), Color.Transparent),
+                        listOf(Color.White.copy(alpha = 0.4f), Color.Transparent),
                         center = Offset(c.x - r * 0.42f, c.y - r * 0.5f),
                         radius = r * 0.30f,
                     ),
@@ -121,10 +121,10 @@ fun Ball(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = number.toString(),
+            text = "%02d".format(number),
             color = inkC,
             fontSize = (size.value * 0.36f).sp,
-            fontWeight = FontWeight.Black,
+            fontWeight = FontWeight.SemiBold,
         )
         if (checked) {
             Box(

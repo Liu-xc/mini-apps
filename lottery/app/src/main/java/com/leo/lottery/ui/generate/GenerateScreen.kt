@@ -5,6 +5,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,7 +79,7 @@ fun GenerateScreen(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) vm.pickSeed(uri) }
 
-    Scaffold(containerColor = c.paper) { padding ->
+    Scaffold(containerColor = c.paper, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -88,9 +89,37 @@ fun GenerateScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text("选号", style = MaterialTheme.typography.displaySmall, color = c.ink)
-            Text("一张图，一注好运", style = MaterialTheme.typography.bodySmall, color = c.inkFaint)
+            Text("把今天的灵感，留在一张票里", style = MaterialTheme.typography.bodySmall, color = c.inkFaint)
             Spacer(Modifier.height(20.dp))
 
+            Spacer(Modifier.height(20.dp))
+            SectionLabel("灵感图片")
+            Spacer(Modifier.height(8.dp))
+            val seed = g.seed
+            if (seed == null) {
+                SeedEmptyCard(
+                    busy = g.seedBusy,
+                    onPick = {
+                        picker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                )
+            } else {
+                SeedCard(
+                    thumb = { Image(seed.thumb.asImageBitmap(), contentDescription = null, modifier = Modifier.size(88.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) },
+                    fingerprint = seed.fingerprint,
+                    busy = g.seedBusy,
+                    onReplace = {
+                        picker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                )
+            }
+
+
+            Spacer(Modifier.height(24.dp))
             SectionLabel("玩法")
             Spacer(Modifier.height(8.dp))
             SegmentedPill(
@@ -108,9 +137,9 @@ fun GenerateScreen(
                     options = listOf("单式", "复式"),
                     selectedIndex = if (g.combo) 1 else 0,
                     onSelect = { vm.setCombo(it == 1) },
-                    modifier = Modifier.width(180.dp),
+                    modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
                 if (g.combo) {
                     Stepper(
                         value = g.comboZone1,
@@ -131,31 +160,6 @@ fun GenerateScreen(
                 color = c.inkFaint,
             )
 
-            Spacer(Modifier.height(20.dp))
-            SectionLabel("种子")
-            Spacer(Modifier.height(8.dp))
-            val seed = g.seed
-            if (seed == null) {
-                SeedEmptyCard(
-                    busy = g.seedBusy,
-                    onPick = {
-                        picker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                )
-            } else {
-                SeedCard(
-                    thumb = { Image(seed.thumb.asImageBitmap(), contentDescription = null, modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) },
-                    fingerprint = seed.fingerprint,
-                    busy = g.seedBusy,
-                    onReplace = {
-                        picker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                )
-            }
 
             Spacer(Modifier.height(20.dp))
             PrimaryButton(
@@ -186,7 +190,7 @@ fun GenerateScreen(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     PrimaryButton(
                         text = if (gen.saved) "已存入 ✓" else "存入票夹",
                         onClick = {
@@ -196,7 +200,7 @@ fun GenerateScreen(
                             }
                         },
                         enabled = !gen.saved && !gen.stale,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     SecondaryButton(
                         text = "导出图片",
@@ -214,12 +218,12 @@ fun GenerateScreen(
                             }
                         },
                         enabled = !gen.stale,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     SecondaryButton(
                         text = "再换一批",
                         onClick = vm::regenerateBatch,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -240,15 +244,15 @@ private fun SeedEmptyCard(busy: Boolean, onPick: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .height(132.dp)
+            .height(188.dp)
             .drawBehind {
                 drawRoundRect(
                     color = c.hairline,
                     topLeft = Offset(1f, 1f),
                     size = Size(size.width - 2f, size.height - 2f),
-                    cornerRadius = CornerRadius(18.dp.toPx()),
+                    cornerRadius = CornerRadius(20.dp.toPx()),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = 2.dp.toPx(),
+                        width = 1.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f)),
                     ),
                 )
@@ -267,7 +271,7 @@ private fun SeedEmptyCard(busy: Boolean, onPick: () -> Unit) {
                     modifier = Modifier.size(32.dp),
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("选一张图片当种子", style = MaterialTheme.typography.bodyMedium, color = c.inkFaint)
+                Text("从一张喜欢的照片开始", style = MaterialTheme.typography.bodyMedium, color = c.inkFaint)
                 Spacer(Modifier.height(4.dp))
                 TextButton(onClick = onPick) {
                     Text("选择图片", color = c.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
@@ -297,9 +301,9 @@ private fun SeedCard(
         thumb()
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("种子指纹", style = MaterialTheme.typography.labelSmall, color = c.inkFaint)
+            Text("这一张照片的幸运签", style = MaterialTheme.typography.labelSmall, color = c.inkFaint)
             Text(
-                fingerprint,
+                fingerprint.take(8) + " · " + fingerprint.takeLast(4),
                 style = MaterialTheme.typography.bodyLarge,
                 color = c.ink,
                 fontFamily = FontFamily.Monospace,

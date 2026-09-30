@@ -13,8 +13,8 @@ android {
         applicationId = "com.leo.lottery"
         minSdk = 31
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -49,9 +49,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
-    // it-002 / ADR-006：开奖复现 3D（Filament，UNLIT 编排式舞台）
+    // it-003 / ADR-007：LIT 物理舞台；材质预编译在 assets，移除运行时编译器。
     implementation(libs.filament.android)
-    implementation(libs.filamat.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

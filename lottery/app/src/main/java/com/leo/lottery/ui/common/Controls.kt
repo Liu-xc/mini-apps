@@ -58,8 +58,8 @@ fun SegmentedPill(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(40.dp)
-                    .background(if (selected) c.accent else Color.Transparent)
+                    .height(44.dp)
+                    .background(if (selected) c.ink else Color.Transparent)
                     .clip(shape)
                     .then(
                         if (enabled) Modifier.clickableNoRipple { onSelect(i) } else Modifier
@@ -70,7 +70,7 @@ fun SegmentedPill(
                     text = label,
                     color = when {
                         !enabled -> c.inkFaint.copy(alpha = 0.5f)
-                        selected -> c.accentContent
+                        selected -> c.paper
                         else -> c.inkFaint
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -138,12 +138,11 @@ fun PrimaryButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = c.accent,
             contentColor = c.accentContent,
-            disabledContainerColor = c.accent.copy(alpha = 0.32f),
-            disabledContentColor = c.accentContent.copy(alpha = 0.6f),
+            disabledContainerColor = c.hairline,
+            disabledContentColor = c.inkFaint,
         ),
-        border = BorderStroke(1.dp, c.gold.copy(alpha = 0.65f)),
     ) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, letterSpacing = 0.sp)
     }
 }
 
@@ -161,7 +160,7 @@ fun SecondaryButton(
         enabled = enabled,
         modifier = modifier.height(50.dp),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, c.gold.copy(alpha = 0.55f)),
+        border = BorderStroke(1.dp, c.hairline),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = c.ink,
             disabledContentColor = c.inkFaint.copy(alpha = 0.5f),

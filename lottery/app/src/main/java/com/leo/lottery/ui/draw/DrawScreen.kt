@@ -2,8 +2,11 @@ package com.leo.lottery.ui.draw
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +29,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.TextButton
+import com.leo.lottery.core.physics.DrawScene
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +58,16 @@ import com.leo.lottery.ui.theme.LocalLotteryColors
 /**
  * W2 开奖：期号导航 + 「复现本期开奖」剧场入口；已揭晓后亮出号码与逐票验票结果。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DrawScreen(
     vm: LotteryViewModel,
     state: LotteryViewModel.UiState,
     @Suppress("UNUSED_PARAMETER") snackbar: SnackbarHostState,
 ) {
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("experience", 0) }
+    var simple by rememberSaveable { mutableStateOf(preferences.getBoolean("simple_draw", false)) }
     val d = state.draw
     val c = LocalLotteryColors.current
     val result = vm.resultOf(d.game, d.issue)
@@ -62,7 +75,7 @@ fun DrawScreen(
     val myTickets = vm.ticketsFor(d.game, d.issue)
     val idx = d.issueList.indexOf(d.issue)
 
-    Scaffold(containerColor = c.paper) { padding ->
+    Scaffold(containerColor = c.paper, contentWindowInsets = WindowInsets(0, 0, 0, 0)) { padding ->
         Column(
             Modifier
                 .fillMaxSize()
@@ -71,8 +84,8 @@ fun DrawScreen(
                 .padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(8.dp))
-            Text("开奖复现", style = MaterialTheme.typography.displaySmall, color = c.ink)
-            Text("错过的直播，这里补回来", style = MaterialTheme.typography.bodySmall, color = c.inkFaint)
+            Text("开奖时刻", style = MaterialTheme.typography.displaySmall, color = c.ink)
+            Text("让期待慢一点，让揭晓近一点", style = MaterialTheme.typography.bodySmall, color = c.inkFaint)
             Spacer(Modifier.height(20.dp))
 
             SegmentedPill(
@@ -118,9 +131,27 @@ fun DrawScreen(
                 MiniChip(text = "演示数据 · 非官方")
             }
 
+            if (result != null && !revealed) {
+                val preview = remember(result) { DrawScene(result.zone1, result.zone2, result.game.poolZone1, result.game.poolZone2, "preview").apply { advance(0) } }
+                val previewClock = remember { mutableLongStateOf(0L) }
+                Box(Modifier.fillMaxWidth().height(268.dp).clip(RoundedCornerShape(20.dp)).background(com.leo.lottery.ui.theme.LotteryPalette.Theater)) {
+                    MechanicalStage(preview, previewClock, false, c.zone1(d.game), c.zone2(d.game), modifier = Modifier.fillMaxSize())
+                    MechanicalStage(preview, previewClock, true, c.zone1(d.game), c.zone2(d.game), canvasBalls = true, modifier = Modifier.fillMaxSize())
+                }
+            }
+            Row(Modifier.fillMaxWidth().clickable {
+                simple = !simple
+                preferences.edit().putBoolean("simple_draw", simple).apply()
+            }, verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = simple, onCheckedChange = {
+                    simple = it
+                    preferences.edit().putBoolean("simple_draw", it).apply()
+                })
+                Text("简化开奖 · 直接看结果", style = MaterialTheme.typography.bodySmall, color = c.inkFaint)
+            }
             Spacer(Modifier.height(20.dp))
             PrimaryButton(
-                text = if (revealed) "再看一次" else "▶  复现本期开奖",
+                text = if (revealed) "再看一次" else "开始开奖",
                 onClick = vm::startReplay,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -144,9 +175,9 @@ fun DrawScreen(
                 Spacer(Modifier.height(24.dp))
                 Text("本期开奖号码", style = MaterialTheme.typography.labelSmall, color = c.inkFaint)
                 Spacer(Modifier.height(10.dp))
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     result.zone1.forEach {
                         Ball(
@@ -169,7 +200,7 @@ fun DrawScreen(
 
                 Spacer(Modifier.height(24.dp))
                 if (myTickets.isEmpty()) {
-                    EmptyNoTicket()
+                    EmptyNoTicket { vm.selectTab(LotteryViewModel.Tab.GENERATE) }
                 } else {
                     Text("我的票", style = MaterialTheme.typography.labelSmall, color = c.inkFaint)
                     Spacer(Modifier.height(10.dp))
@@ -186,7 +217,7 @@ fun DrawScreen(
 }
 
 @Composable
-private fun EmptyNoTicket() {
+private fun EmptyNoTicket(onGenerate: () -> Unit) {
     val c = LocalLotteryColors.current
     Column(
         Modifier
