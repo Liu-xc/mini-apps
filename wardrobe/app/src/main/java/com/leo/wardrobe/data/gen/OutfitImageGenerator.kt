@@ -83,8 +83,8 @@ class OutfitImageGenerator(private val container: AppContainer) {
 
     /**
      * 跑一次生成：返回候选字节，不落盘。用 [onProgress] 透出进度文案。
-     * @param items 参与的单品（参考图按 person → items 顺序）
-     * @param personRefFile 人物参考照文件名（null = 不带人物参考）
+     * @param items 参与的单品
+     * @param personRefFile 人物参考照文件名（null = 长图不含人物参考）
      */
     suspend fun run(
         connection: Connection,
@@ -95,10 +95,7 @@ class OutfitImageGenerator(private val container: AppContainer) {
         extra: Map<String, String>,
         onProgress: (String) -> Unit,
     ): RunOutcome {
-        val refs = buildRefs(personRefFile, items.map { it.imageFile }, connection)
-        if (refs.isEmpty() && items.isNotEmpty()) {
-            return RunOutcome.Failed(AgentError.Schema("参考图读取失败：本地文件缺失"))
-        }
+        val refs = buildRefs(prompt, items, personRefFile, connection)
         val request = ImageGenRequest(
             model = connection.model,
             prompt = prompt,
@@ -181,28 +178,17 @@ class OutfitImageGenerator(private val container: AppContainer) {
     }
 
     /**
-     * 参考图装配：人物参考照在前、衣物在后（多图融合以最后一张定宽高比——衣物收尾）。
-     * 衣物 WebP 统一转 JPEG（各家对 WebP 支持不一），≤1440px 由存储层天然满足。
-     * it-077 十一次修订：纯文生图模型（inputImages 上限 0）一张参考图都不带——
-     * 原实现人物照无条件附带，Z-Image-Turbo 收到 image 字段报 11235 Input image error。
+     * 参考图装配（it-077 十二次修订，Leo 拍板「合成一张长图」）：
+     * 与「穿搭预览」同构的合成长图（描述置顶 + 人物参考照 + 人体比例拼贴）整张一张；
+     * 纯文生图模型（inputImages 上限 0）一张不带，只发文字。
+     * （十一次修订的 refPlan 人物/衣物配额策略随之废止——单图模型下衣物永远看不到，产品语义错误。）
      */
-    private suspend fun buildRefs(personRefFile: String?, itemFiles: List<String>, connection: Connection): List<ImageRef> =
+    private suspend fun buildRefs(prompt: String, items: List<Item>, personRefFile: String?, connection: Connection): List<ImageRef> =
         withContext(Dispatchers.IO) {
-            val limit = inputLimit(connection)
-            val plan = refPlan(hasPerson = personRefFile != null, limit = limit)
-            buildList {
-                if (plan.attachPerson) {
-                    personRefFile?.let { f -> fileToDataUri(f)?.let { add(ImageRef.DataUri(it)) } }
-                }
-                var taken = 0
-                for (f in itemFiles) {
-                    if (taken >= plan.garments) break
-                    fileToDataUri(f)?.let {
-                        add(ImageRef.DataUri(it))
-                        taken++
-                    }
-                }
-            }
+            if (inputLimit(connection) <= 0) return@withContext emptyList()
+            val composed = container.imageComposer.composeToExportFile(items, prompt, personRefFile)
+                ?: return@withContext emptyList()
+            fileToDataUri(composed.absolutePath)?.let { listOf(ImageRef.DataUri(it)) } ?: emptyList()
         }
 
     private fun fileToDataUri(fileName: String): String? = runCatching {
@@ -225,16 +211,5 @@ class OutfitImageGenerator(private val container: AppContainer) {
         fun promptOf(items: List<Item>, scene: String, personNote: String): String =
             BuildTryOnPrompt.build(items, scene, personNote)
 
-        /**
-         * 参考图取舍（it-077 十一次修订，纯函数可测）：limit<=0（纯文生图）一张不带——
-         * 人物照曾无条件附带，Z-Image-Turbo 收到 image 字段报 11235 Input image error；
-         * 人物优先占 1 席，余量给衣物。
-         */
-        fun refPlan(hasPerson: Boolean, limit: Int): RefPlan =
-            if (limit <= 0) RefPlan(attachPerson = false, garments = 0)
-            else if (hasPerson) RefPlan(attachPerson = true, garments = limit - 1)
-            else RefPlan(attachPerson = false, garments = limit)
-
-        data class RefPlan(val attachPerson: Boolean, val garments: Int)
     }
 }

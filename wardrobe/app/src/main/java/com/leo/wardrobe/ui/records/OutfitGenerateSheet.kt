@@ -42,7 +42,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,6 +52,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material3.CircularProgressIndicator
 import com.leo.libs.agent.ImageParamSpec
 import com.leo.libs.agent.ParamType
 import com.leo.libs.agent.image.GeneratedImage
@@ -62,7 +64,6 @@ import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.Person
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
-import com.leo.wardrobe.ui.components.PhotoCard
 import com.leo.wardrobe.ui.components.rememberHaptics
 import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.Job
@@ -123,9 +124,6 @@ fun OutfitGenerateSheet(
     var prompt by remember(outfit?.id) {
         mutableStateOf(OutfitImageGenerator.promptOf(items, scene = "", personNote = personNote))
     }
-    val includeItems = remember(outfit?.id) { mutableStateMapOf(*items.map { it.id to true }.toTypedArray()) }
-    val hasPersonRef = person?.refImageFile != null
-    var includePerson by remember(outfit?.id) { mutableStateOf(hasPersonRef) }
 
     // 高级参数面板（按模型记忆，拍板①）
     var paramValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -137,9 +135,12 @@ fun OutfitGenerateSheet(
         paramValues = defaults + remembered
     }
 
-    val selectedItems = items.filter { includeItems[it.id] == true }
-    val inputLimit = generator.inputLimit(connection)
-    val refCount = (if (includePerson && hasPersonRef) 1 else 0) + selectedItems.size
+    // it-077 十二次修订：参考长图预览（开栏合成一次；生成时另以当前描述现合成）
+    var composedPreview by remember(outfit?.id) { mutableStateOf<java.io.File?>(null) }
+    LaunchedEffect(outfit?.id, items) {
+        composedPreview = vm.imageComposer.composeToExportFile(items, prompt, person?.refImageFile)
+    }
+
     val modelTakesImages = (connection.modelSpec?.inputImages?.first ?: 1) > 0
 
     fun startGenerate() {
@@ -154,8 +155,8 @@ fun OutfitGenerateSheet(
                 val r = generator.run(
                     connection = conn,
                     prompt = prompt,
-                    items = selectedItems,
-                    personRefFile = if (includePerson && hasPersonRef) person?.refImageFile else null,
+                    items = items,
+                    personRefFile = person?.refImageFile,
                     resolution = size?.takeIf { it.isNotBlank() && it != "auto" },
                     extra = extra,
                     onProgress = { phase = GeneratePhase.Running(it) },
@@ -208,62 +209,39 @@ fun OutfitGenerateSheet(
 
                 when (val p = phase) {
                     is GeneratePhase.Setup -> {
-                        // ---- 装配：参考图勾选 ----
-                        Text("参考图", style = MaterialTheme.typography.titleMedium, color = ec.ink)
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (hasPersonRef) {
-                                item {
-                                    RefTile(
-                                        selected = includePerson,
-                                        onToggle = { includePerson = !includePerson },
-                                        content = {
-                                            PhotoCard(
-                                                file = vm.imageFileOf(person!!.refImageFile!!),
-                                                contentDescription = "人物参考照",
-                                                corner = 14.dp,
-                                                modifier = Modifier.size(width = 64.dp, height = 80.dp),
-                                            )
-                                        },
-                                        caption = "人物",
-                                    )
-                                }
-                            }
-                            items(items.size) { i ->
-                                val item = items[i]
-                                RefTile(
-                                    selected = includeItems[item.id] == true,
-                                    onToggle = { includeItems[item.id] = !(includeItems[item.id] ?: true) },
-                                    content = {
-                                        PhotoCard(
-                                            file = vm.imageFileOf(item.imageFile),
-                                            contentDescription = item.name,
-                                            corner = 14.dp,
-                                            modifier = Modifier.size(width = 64.dp, height = 80.dp),
-                                        )
-                                    },
-                                    caption = item.name,
+                        // ---- 装配：参考长图（it-077 十二次修订：合成一张长图整张发送，撤多选/配额）----
+                        // 长图与「穿搭预览」同构（描述置顶 + 人物参考照 + 人体比例拼贴），
+                        // 生成时以当前描述现合成一份发模型；此处仅作预览（开栏合成一次）。
+                        Text("参考长图", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                        val previewFile by remember(composedPreview) { mutableStateOf(composedPreview) }
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.34f).dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (previewFile != null) {
+                                AsyncImage(
+                                    model = previewFile,
+                                    contentDescription = "参考长图（人物+全部单品，合成后整张发给模型）",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                    color = ec.inkFaint,
                                 )
                             }
                         }
                         Text(
-                            when {
-                                !modelTakesImages -> "当前模型不吃参考图（纯文生图），将只按描述生成"
-                                else -> "已选 $refCount / 参考图上限 $inputLimit 张（人物 1 + 衣物 ${selectedItems.size}）"
-                            },
+                            if (modelTakesImages) "人物参考照与全部单品合成一张长图整张发送"
+                            else "当前模型不吃参考图（纯文生图），将只按描述生成",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (refCount > inputLimit && modelTakesImages) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                ec.inkFaint
-                            },
+                            color = ec.inkFaint,
                         )
-                        if (!hasPersonRef) {
-                            Text(
-                                "未设置人物参考照：生成将不含人物参考（可在角色信息里设置形象参考照）",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ec.inkFaint,
-                            )
-                        }
 
                         // ---- 描述（预填模板 + 场景快捷 chips） ----
                         Text("描述", style = MaterialTheme.typography.titleMedium, color = ec.ink)
@@ -394,8 +372,7 @@ fun OutfitGenerateSheet(
                         is GeneratePhase.Setup -> {
                             Button(
                                 onClick = { startGenerate() },
-                                enabled = prompt.isNotBlank() && selectedItems.isNotEmpty() &&
-                                    (!modelTakesImages || refCount <= inputLimit),
+                                enabled = prompt.isNotBlank() && items.isNotEmpty(),
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
                                 shape = MaterialTheme.shapes.large,
                             ) { Text("生成效果图") }
@@ -472,35 +449,7 @@ fun OutfitGenerateSheet(
     }
 }
 
-/** 参考图勾选瓦片：整块可点切换，未选中盖半透明遮罩（it-040 四态语言里的选态表达） */
-@Composable
-private fun RefTile(
-    selected: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable () -> Unit,
-    caption: String,
-) {
-    val ec = editorialColors()
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.clickable { onToggle() }) {
-            content()
-            if (!selected) {
-                Surface(
-                    color = Color.Black.copy(alpha = 0.45f),
-                    modifier = Modifier.matchParentSize(),
-                ) {}
-            }
-        }
-        Text(
-            caption,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (selected) ec.ink else ec.inkFaint,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.width(68.dp),
-        )
-    }
-}
+
 
 /** it-077 拍板①：模型专属参数声明式控件——BOOL/ENUM/INT/FLOAT/TEXT 五型 */
 @Composable
