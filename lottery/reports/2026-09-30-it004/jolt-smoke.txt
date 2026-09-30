@@ -1,0 +1,21 @@
+Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+
+{
+	"bodies": [
+		{
+			"position": "(0.0, 0.499866, 0.0)",
+			"sleeping": true,
+			"velocity": "(0.0, 0.0, 0.0)"
+		},
+		{
+			"position": "(0.0, 1.499866, 0.0)",
+			"sleeping": true,
+			"velocity": "(0.0, 0.0, 0.0)"
+		}
+	],
+	"crossed_floor": false,
+	"passed": true,
+	"physics_engine": "Jolt Physics",
+	"scope": "Desktop Jolt gravity/contact/stacking smoke only; not lottery asset, high-speed CCD or Android verification.",
+	"ticks": 960
+}

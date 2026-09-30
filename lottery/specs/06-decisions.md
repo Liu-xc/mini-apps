@@ -68,3 +68,10 @@
 - 材质：SDK版本保持1.57.1；新增源码`.mat`与同版matc编译的`.filamat`资产，移除`filamat-android`运行时依赖。开发重编使用tools/compile-materials.sh，正常构建无需matc。官方工具来源：[Filament v1.57.1](https://github.com/google/filament/releases/tag/v1.57.1)。
 - 生命周期：只读GPU资产进程内复用；每场释放实体、灯光、相机、实例、Scene/View/Renderer/Surface与回调，Engine仅随进程终结销毁。首次GPU帧完成前显示静止Canvas球堆，不提前播放空壳。
 - 后果：模拟内碰撞实际积分；开奖目标球捕获、导管与轨道仍为受控复现，以保持已有开奖号与连续旅程。玻璃不宣称精确折射。硬件模拟器、真机与软件模拟器性能必须分别记录，不能相互替代。
+
+## ADR-008 专业资产与Godot/Jolt工具链（分阶段，生产替换待验）
+
+- 状态：工具链接受，2026-09-30，用户确认it-004「实施」；生产Android替换仍待资产与兼容性验收。
+- 决策：资产审查工具固定Godot4.5.2官方版，用其GLTFDocument与内置Jolt；不用代码生成机器网格代替专业模型。来源：[官方4.5.2发行包](https://github.com/godotengine/godot-builds/releases/tag/4.5.2-stable)。工具位于`tools/model-review/`，编辑器二进制在本地缓存，不进git或APK。
+- 验证：真实GLB导入和桌面球体堆积通过，见it-004阶段报告；没有证明Android嵌入或视觉质量。
+- 后果：当前APP依赖和默认舞台仍按ADR-007；不同时打包尚未验收的第二套引擎。专业机械资产取得且近景通过后，才进入Godot Android library兼容原型与生产替换。外部资产许可必须单独确认，开源引擎不等于模型开放许可。

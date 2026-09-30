@@ -1,0 +1,40 @@
+Godot Engine v4.5.2.stable.official.6ce3de25a - https://godotengine.org
+
+{
+	"animations": 0,
+	"bytes": 3773916,
+	"engine": "4.5.2-stable (official)",
+	"file": "/tmp/lottery-it004-tools/DamagedHelmet.glb",
+	"meshes": [
+		{
+			"local_bounds_metres": "[P: (-0.947459, -1.187155, -0.900995), S: (1.889954, 2.0, 1.801969)]",
+			"node": "/root/DamagedHelmet/node_damagedHelmet_-6514",
+			"surfaces": [
+				{
+					"indices": 46356,
+					"material": "Material_MR",
+					"normals": true,
+					"pbr": {
+						"albedo_texture": true,
+						"metallic": 1.0,
+						"metallic_texture": true,
+						"normal_texture": true,
+						"roughness": 1.0,
+						"roughness_texture": true,
+						"transparency": 0
+					},
+					"primitive_type": 3,
+					"uv": true,
+					"vertices": 14556
+				}
+			],
+			"transform": "[X: (1.0, 0.0, 0.0), Y: (0.0, 0.0, 1.0), Z: (0.0, -1.0, 0.0), O: (0.0, 0.0, 0.0)]"
+		}
+	],
+	"nodes": [
+		"/root/DamagedHelmet",
+		"/root/DamagedHelmet/node_damagedHelmet_-6514"
+	],
+	"quality_status": "Requires visual, license and mechanical structure review; import success is not approval.",
+	"sha256": "a1e3b04de97b11de564ce6e53b95f02954a297f0008183ac63a4f5974f6b32d8"
+}

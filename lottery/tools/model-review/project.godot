@@ -1,0 +1,12 @@
+; Asset inspection only. This is not the app's production theatre.
+config_version=5
+
+[application]
+config/name="Lottery Model Review"
+
+[physics]
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+renderer/rendering_method="mobile"
+textures/default_filters/use_nearest_mipmap_filter=false
