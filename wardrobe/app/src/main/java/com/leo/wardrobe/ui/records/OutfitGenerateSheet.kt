@@ -68,6 +68,14 @@ import com.leo.wardrobe.ui.theme.editorialColors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+
+/** it-077 修订（Leo 反馈×4）：生图连接未配置（无厂商/模型/Key）时隐藏所有 AI 生成入口；配置后自动出现 */
+@Composable
+fun rememberImageGenReady(vm: AppViewModel): Boolean =
+    androidx.compose.runtime.produceState(initialValue = false) {
+        value = vm.imageGenerator.connection() != null
+    }.value
+
 /** 生成 sheet 四态（it-040 W5 四态语言） */
 private sealed interface GeneratePhase {
     data object Setup : GeneratePhase

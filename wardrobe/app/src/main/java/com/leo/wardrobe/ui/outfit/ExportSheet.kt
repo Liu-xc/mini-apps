@@ -90,6 +90,7 @@ import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
+import com.leo.wardrobe.ui.records.rememberImageGenReady
 import com.leo.wardrobe.ui.components.ConfettiBurst
 import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
@@ -589,16 +590,25 @@ fun ExportSheet(
                     ) {
                         // it-077 修订：AI 生成整行主按钮——生成即录入成品图，
                         // 与下方「存相册/分享」并列（复制长图已按 Leo 反馈移除，外置生图链路废止）
-                        Button(
-                            onClick = onGenerate,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(
-                                Icons.Rounded.AutoFixHigh,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                        if (rememberImageGenReady(vm)) {
+                            Button(
+                                onClick = onGenerate,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(
+                                    Icons.Rounded.AutoFixHigh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text("  AI 生成效果图", maxLines = 1)
+                            }
+                        } else {
+                            // it-077 修订（Leo）：未配置不展示可点的生成按钮，只留一行去配置的弱提示
+                            Text(
+                                "AI 生成效果图：到 设置 → 生图模型 配置厂商与 Key 后可用",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = editorialColors().inkFaint,
                             )
-                            Text("  AI 生成效果图", maxLines = 1)
                         }
                         // it-014：复制｜存相册｜分享 三动作并列
                         val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）

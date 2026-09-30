@@ -72,6 +72,7 @@ fun RecordsScreen(
     var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
     var generateFor by remember { mutableStateOf<Outfit?>(null) } // it-077：卡片生成效果图
+    val imageGenReady = rememberImageGenReady(vm) // it-077 修订：未配置隐藏 AI 入口
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
 
@@ -211,6 +212,7 @@ fun RecordsScreen(
                                 OutfitDeckCard(
                                     vm = vm,
                                     outfit = outfit,
+                                    showGenerate = imageGenReady,
                                     onOpen = {
                                         // it-047 #8③：抽取进行中卡面点击忽略
                                         if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
@@ -381,7 +383,7 @@ private fun RandomButton(
  * 卡组穿搭卡（it-010 成品图优先；it-011 O7 人体叙事拼贴 + 缺失空槽）。
  */
 @Composable
-private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit, onGenerate: () -> Unit) {
+private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit, showGenerate: Boolean, onGenerate: () -> Unit) {
     val data by vm.data.collectAsState()
     val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val effect = outfit.effectImages.firstOrNull()
@@ -420,9 +422,9 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标
+                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标（未配置生图连接时隐藏）
                 //（W7 拼贴「录入成品图」角标同语言——生成即录入成品图的 AI 兄弟入口）
-                androidx.compose.material3.Surface(
+                if (showGenerate) androidx.compose.material3.Surface(
                     onClick = onGenerate,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.primary,

@@ -196,7 +196,7 @@ fun OutfitDetailScreen(
                                     showTagEdit = true
                                 },
                             )
-                            DropdownMenuItem(
+                            if (rememberImageGenReady(vm)) DropdownMenuItem(
                                 text = { Text("生成效果图") },
                                 leadingIcon = {
                                     Icon(
