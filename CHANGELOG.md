@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- **chore(lottery)**: it-004新增独立Godot Android兼容工具与场景打包，OpenGL真实GLB/PBR/Jolt接触及连续10次回传/进退通过，修复场景退出进程与快速重进竞态；记录Vulkan模拟器呈现失败。正式APP仍0.2.0，机器模型待账号下载，剧场/皮肤未替换。
+
+- **fix(wardrobe)**: it-077 十次修订（Leo 反馈×9）——ExportSheet「分享」钮 contentPadding 只写 horizontal 顶掉默认 vertical 内边距致高度塌陷与「存相册」不齐，补 vertical=8 + 整行居中对齐。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
+
 - **fix(wardrobe)**: it-077 九次修订（Leo 反馈×8）——W8 拼贴卡「生成效果图」角标常驻不再按配置隐藏：已配置主色点击进生成 sheet、未配置浅色「· 去配置」直达 W11（与预览面板 AI 按钮同口径）；成品图卡依旧不挂角标。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
 
 - **fix(wardrobe)**: it-077 八次修订（Leo 反馈×7）——抽屉分层/抖动根除：两 sheet 滚动区去 weight 撑满改贴合内容+高度上限（消灭动作栏上方空白带）；生成 sheet 连接解析上提 `rememberImageGenConnection` 修 gen6「永久加载条」回归且开栏直达装配态；ExportSheet AI 按钮未配置态常驻描边「去设置」点击直达 W11。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。

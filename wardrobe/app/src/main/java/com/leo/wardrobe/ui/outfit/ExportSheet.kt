@@ -635,7 +635,13 @@ fun ExportSheet(
                         }
                         // it-014：复制｜存相册｜分享 三动作并列
                         val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        // it-077 十次修订（Leo「底部按钮变形」）：分享钮曾以 contentPadding(horizontal=10)
+                        // 顶掉默认 vertical 内边距、高度塌成矮条与存相册不齐——恢复 vertical 并整行居中
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             // it-014：snackbar 会被 sheet 遮挡，成功反馈直接落在按钮上
                             Button(  // it-077 修订（Leo）：复制长图移除，存相册升默认主动作
                                 onClick = {
@@ -668,7 +674,7 @@ fun ExportSheet(
                             }
                             OutlinedButton(
                                 onClick = { composedFile?.let { vm.share.shareImage(it) } },
-                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                                 modifier = Modifier.weight(0.8f),
                             ) {
                                 Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(16.dp))

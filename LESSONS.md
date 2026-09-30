@@ -43,6 +43,8 @@
 
 ### Android / Compose
 
+- **跨进程页面返回结果不等于子进程已退出，重开单实例引擎前检查并等待旧进程释放，不用固定延时猜测**——否则旧Activity退出可能连带终止已重开的场景；本次第二轮复现，释放门禁后十轮通过。· [lottery it-004](lottery/reports/2026-09-30-it004/README.md) · 2026-09
+
 - **嵌入 3D 渲染时，视口必须使用实际 Surface 缓冲尺寸，跨层投影共用同一几何参数；实体 ID 不能当 Transform 实例句柄**——先验证球体大小与管轨坐标，再看动画；分辨率降采样后尤其要重验。· [lottery it-003](lottery/specs/iterations/it-003-physical-draw-and-refined-ui.md) · 2026-09
 
 - **Lazy 容器内的子项不吃常规尺寸约束**——列表空态居中用 `fillParentMaxSize`，普通 `fillMaxSize`/gravity 不生效。· [wardrobe it-043](wardrobe/specs/iterations/it-043-newui-p1-fixes.md) · 2026-09
@@ -72,3 +74,4 @@
 - **auto 模式会拦「起本地 http.server 分发 APK/预览」这类网络服务命令——不换工具绕，直接把可跑的一行命令交给用户自己执行**（含完整端口与目录），并在交付里说明被拦原因；生成好的 APK 路径与二维码照常给。· [lottery it-001](lottery/specs/iterations/it-001-emotional-lottery-demo.md) · 2026-09
 - **ModalBottomSheet 内滚动区禁 `weight(1f)`/`fillMaxSize()` 撑满**——视口被强制拉到上限高度，表单短于视口时钉底动作栏上方悬出空白带，拖动时「表面在动、内容不动」的分层感即来源于此；滚动区应贴合内容 + `heightIn(max≈屏高×0.74~0.80)` 给动作栏留预算。同坑姊妹：sheet 内异步解析状态（先转圈后弹内容）应上提调用方 produceState 以参数传入，且重构 if/else 分支时检查布尔赋值是否被整段带走（gen6「永久加载条」回归）。· [wardrobe it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md) · 2026-09
 - **模拟器验证不了「拖动跟手性」**——重图形 app 在 AVD 上连续拖动帧渲染近乎冻结（p50=400ms/帧），同一 `input swipe` 在桌面启动器却大幅实时跟手；手势流畅度类问题只能真机验收，模拟器证据只可用来定位结构性缺陷（截图空白带/布局跳变），帧间差分全 0 ≠ 手势路由 bug。· [wardrobe it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md) · 2026-09
+- **M3 Button/OutlinedButton 的 contentPadding 是整只 PaddingValues 覆盖、不是与默认值合并**——只想收窄横向内距时只写 `PaddingValues(horizontal=…)` 会把默认 vertical 一并抹成 0，按钮高度当场塌成矮条；覆盖时四个方向都要显式给。· [wardrobe it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md) · 2026-09

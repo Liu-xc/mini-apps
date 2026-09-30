@@ -136,6 +136,8 @@
 
 **2026-09-30 九次修订（Leo 反馈×8：W8 角标理解纠偏）**：拼贴卡（无成品图=「展示一堆单品」）的「生成效果图」角标**常驻，不再按配置状态隐藏**——五次修订的「未配置全隐藏」在 Leo 真机未配 Key 时把拼贴卡角标也藏没了（「现在你都去掉了」）。双态与预览面板 AI 按钮同口径：已配置=主色胶囊「生成效果图」→生成 sheet；未配置=secondaryContainer 胶囊「生成效果图 · 去配置」→直达 W11（`onOpenSettings` 经 MainActivity→RecordsScreen→OutfitDeckCard 接线）。成品图卡依旧不挂角标（重生成走 W7 菜单）。
 
+**2026-09-30 十次修订（Leo 反馈×9「底部按钮变形」）**：ExportSheet 动作栏「分享」钮自 it-014 起用 `contentPadding=PaddingValues(horizontal=10)` 覆盖了整个默认内边距——vertical 被**归零**，按钮高度塌成矮条与「存相册」不齐（九次修订后动作栏上移更显眼）。修：contentPadding 补 vertical=8、Row 加 `verticalAlignment=CenterVertically`。教训：**M3 按钮改 contentPadding 是整只 PaddingValues 覆盖不是合并——只写 horizontal 会把默认 vertical 抹成 0**，改窄按钮横向内距时必须同时显式给 vertical。
+
 ## 验证记录
 
 **2026-09-30：**
@@ -165,3 +167,5 @@
 3. 拖动跟手性说明：模拟器对该 app 渲染连续拖动帧的能力不足（桌面同手势流畅、app 冻结，gfxinfo p50=400ms）——真机手感留 Leo 验证；本轮已消除结构性分层根源（空白带+开栏跳变+双 sheet 叠影）。
 
 **2026-09-30 九次修订验证：** 单测全绿；模拟器实测四步——①已配置：拼贴卡右上主色「生成效果图」角标 → 点击开生成 sheet 装配态 ✓；②W11 清除 Key（二次确认）→ ③未配置：拼贴卡角标**仍在**，浅色「· 去配置」样式 → ④点击落位 W11 设置页 ✓；成品图卡全程无角标 ✓。模拟器 Key 已回配。
+
+**2026-09-30 十次修订验证：** 模拟器实测「存相册/分享」两钮等高对齐（约 48dp），无压扁。
