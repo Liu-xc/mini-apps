@@ -49,6 +49,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // it-002 / ADR-006：开奖复现 3D（Filament，UNLIT 编排式舞台）
+    implementation(libs.filament.android)
+    implementation(libs.filamat.android)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 }

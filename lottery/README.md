@@ -47,12 +47,14 @@ tools/emu.sh serial    # 打印序列号，裸 adb 用 adb -s $(tools/emu.sh ser
 `ImageSeed`（图片→SHA-256 指纹）→ `Generator`（指纹+玩法+批次 → SplitMix64 确定性号码）→
 `TicketStore`（票夹 JSON 原子写）；开奖侧 `IssueCalendar`（开奖日历/期号）→ `DrawRepository`
 （本期 `DemoDrawRepository` 确定性演示结果，留真实 API 插槽）→ `Verify`（官方奖级表逐注判定）→
-`ReplayOverlay`（Canvas 手写物理：摇奖机→逐球出槽→验票揭晓，reduce-motion 直落结果态）。
+`ReplayOverlay`（直播式剧场：2.5D 摇奖机舞台→出球轨道→大号读数→换机→验票；
+  ui/draw3d 留 Filament 真三维实现，ADR-006）。
 详见 [specs/04-architecture.md](specs/04-architecture.md)。
 
 ## 关键决策
 
 ADR-001 平台安卓原生 Kotlin+Compose · ADR-002 渲染用 Compose Canvas+手写物理（不引 3D/Lottie）·
 ADR-003 开奖数据本地确定性演示、留真实 API 插槽 · ADR-004 官方奖级表逐注判定 ·
-ADR-005 票夹 JSON 单文件原子写（复用 libs/store 模式、不上 composite）。
+ADR-005 票夹 JSON 单文件原子写（复用 libs/store 模式、不上 composite）·
+ADR-006 剧场接入 Filament、默认 Canvas 2.5D 舞台交付（模拟器原生层不可验收，真机可切）。
 详见 [specs/06-decisions.md](specs/06-decisions.md)。

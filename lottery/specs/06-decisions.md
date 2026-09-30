@@ -43,3 +43,18 @@
   写 tmp → rename，未知字段忽略保前向兼容。
 - 后果：数据量小（票夹）单文件足够；若迭代膨胀或要多设备同步，再评估迁 libs/store
   （迁移时 JSON schema 不变，成本低）。
+
+## ADR-006 开奖剧场渲染：接入 Filament，但交付默认 Canvas 2.5D（模拟器原生层不可验收）
+
+- 状态：接受 2026-09-30（it-002）
+- 背景：it-001 验收反馈「没用 3D 技术」，ADR-002 的 Canvas 取向被用户推翻。
+- 决策：**接入 Filament 1.57.1（filament-android + filamat 运行时材料编译）**，
+  完整实现留在 `ui/draw3d/`（UV 球网格、号码贴图、UNLIT 材料 `platform(MOBILE)`、
+  编排导演、透明 SurfaceView 合成）；**但剧场默认渲染走 `ui/draw/CanvasStage.kt` 的
+  2.5D 确定性舞台**。
+- 原因：模拟器（SwiftShader + MTE arm64）上 Filament 路径在 buildBalls 附近间歇
+  SIGSEGV（fault addr 为 Java 堆标签指针，换 1.71.5/1.57.1、float[]/double[] 均复现）；
+  叠加该模拟器 screencap/uiautomator 高频旧帧，3D 无法在此环境验收。真机验证稳定后，
+  ReplayOverlay 舞台实现切回 `DrawStage3D` 即一开关的事。
+- 后果：APK 体积 +≈20MB（保留 native 库以便真机切换）；2.5D 舞台与 3D 共用时间轴常量
+  （Stage3D.T_*），切换零语义漂移。

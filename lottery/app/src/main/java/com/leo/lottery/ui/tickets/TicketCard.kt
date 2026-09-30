@@ -80,24 +80,32 @@ fun TicketCard(
             .alpha(entrance.value)
             .clip(RoundedCornerShape(18.dp))
             .background(paper)
-            .border(1.dp, hairline, RoundedCornerShape(18.dp))
-            .padding(horizontal = 20.dp, vertical = 18.dp),
+            .border(1.dp, hairline, RoundedCornerShape(18.dp)),
     ) {
-        // 标题行
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // 红头带（票头）
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(LotteryPalette.CardRed)
+                .padding(horizontal = 20.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = ticket.game.label,
                 style = MaterialTheme.typography.titleLarge,
-                color = ink,
+                color = Color.White,
                 modifier = Modifier.weight(1f),
             )
-            MiniChip(
+            Text(
                 text = if (ticket.isCombo) "复式 · ${ticket.combos}注" else "单式 · 1注",
-                borderColor = hairline,
-                textColor = inkFaint,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.92f),
+                modifier = Modifier
+                    .border(1.dp, Color.White.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
         val issueDate = remember(ticket.game, ticket.targetIssue) {
             IssueCalendar.dateOfIssue(ticket.game, ticket.targetIssue)?.toString()
                 ?: run {
@@ -175,6 +183,7 @@ fun TicketCard(
             Text("拾彩", style = MaterialTheme.typography.titleMedium, color = ink)
             Spacer(Modifier.width(8.dp))
             SeedBarcode(ticket.seed, Modifier.height(24.dp))
+        }
         }
     }
 }

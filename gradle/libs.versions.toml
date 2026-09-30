@@ -5,6 +5,7 @@
 # onnxruntime 与 onnxruntime-android 版本必须对齐（cutout ADR-002）。
 
 [versions]
+filament = "1.57.1"
 agp = "8.7.3"
 kotlin = "2.1.21"
 coroutines = "1.9.0"
@@ -68,6 +69,10 @@ onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android"
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 junit = { module = "junit:junit", version.ref = "junit" }
+
+# lottery it-002 / ADR-006：开奖复现 3D 引擎
+filament-android = { module = "com.google.android.filament:filament-android", version.ref = "filament" }
+filamat-android = { module = "com.google.android.filament:filamat-android", version.ref = "filament" }
 
 # it-071 P3 / ADR-028
 androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }

@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.leo.lottery.ui.theme.LocalLotteryColors
 
 /** 分段胶囊（玩法/单式复式切换）：选中 accent 填充，未选 hairline 描边。 */
@@ -120,7 +121,7 @@ private fun StepButton(
     }
 }
 
-/** 主按钮（accent 底，全宽）。 */
+/** 主按钮（福彩红渐变 + 金线，全宽）。 */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -128,14 +129,21 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val c = LocalLotteryColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(),
+        modifier = modifier.height(54.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = c.accent,
+            contentColor = c.accentContent,
+            disabledContainerColor = c.accent.copy(alpha = 0.32f),
+            disabledContentColor = c.accentContent.copy(alpha = 0.6f),
+        ),
+        border = BorderStroke(1.dp, c.gold.copy(alpha = 0.65f)),
     ) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
     }
 }
 
@@ -147,14 +155,19 @@ fun SecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val c = LocalLotteryColors.current
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, LocalLotteryColors.current.hairline),
+        modifier = modifier.height(50.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, c.gold.copy(alpha = 0.55f)),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = c.ink,
+            disabledContentColor = c.inkFaint.copy(alpha = 0.5f),
+        ),
     ) {
-        Text(text, style = MaterialTheme.typography.bodyMedium)
+        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 
