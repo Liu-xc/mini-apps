@@ -124,4 +124,11 @@
 3. **模拟器走查**（emulator-5554 wardrobe_test，演示模式，截图入 `reports/2026-09-30-wardrobe-imagegen-research/screenshots/`）：
    - W11 生图卡渲染正确（默认硅基流动 · Kolors/Kolors · 文生图 · 免费，参考价展示）；假 Key 保存后 mask `demo***-key` 显示正确；聊天卡厂商下拉目录全量。
    - W7「AI 试衣」入口 → sheet 未配置态（引导文案+知道了）→ 配 Key 后装配态（模型行/纯文生图防御提示「当前模型不吃参考图」/五件单品预填描述/场景 chips）→ 生成（mock 即时）→ Done 候选态「挑一张保存」→ 保存 → sheet 关闭、W7 轮播出现带「AI」角标新成品图、toast「AI 效果图已保存」。**演示模式全链路闭环**。
-4. **待真机/体验包**：真厂商（百炼 edit-plus / 硅基流动 / 火山）live Key 端到端与 W13 对话流生图实测（演示模式顾问无聊天 Key 不能外呼，与 it-075「live 配 Key 链路留体验包」同例）；高级参数面板展开态实拍（控件为纯 M3 组件已过编译与代码审查）。
+4. **待真机/体验包**：W13 对话流生图实测（顾问工具→成图卡，需聊天模型配合）；W7 生成 sheet 的真机手势体验（模拟器 `input swipe` 极易触发 ModalBottomSheet 关闭 + uiautomator 抓不到 Compose 节点坐标，UI 自动化在装配态后无法续推——演示模式闭环已覆盖同一 sheet 代码，live UI 留 Leo 真机）。
+
+**2026-09-30 补：硅基流动 live 实测（Leo 提供 Key 自测）**
+
+1. **wire 验证（curl/urllib 直打真端点）**：端点 `/v1/images/generations` ✓；`image` 字段**必须 data URI 前缀**（纯 base64 报 500）——适配器当前形态正确 ✓；响应 `images[].url` ✓；S3 预签名 URL 匿名下载 ✓（1.5MB PNG）；**`image` 只收字符串（单图），数组报 400 `image should be a string`** → 目录修正。
+2. **目录修正**：`Kolors/Kolors`→`Kwai-Kolors/Kolors`、`Z-Image-Turbo`→`Tongyi-MAI/Z-Image-Turbo`（`/v1/models` 实查）；`Qwen/Qwen-Image-Edit(-2509)` 硅基通道 `inputImages` 标 1..1 并注明「多图请走百炼通道」——同一模型不同厂商能力不同，由 ModelSpec 数据承载（ADR-007 设计的直接兑现）。
+3. **JVM live 冒烟**（`LiveImageSmokeTest`，App 同款 `OkHttpImageModel` 代码，Key 走 `SF_KEY` 环境变量、缺省跳过——CI 红线不变）：真实生成 1 张 372KB PNG，44.7s 端到端 ✓。
+4. **模拟器（真实模式）UI 实测**：W11 生图卡真 Key 保存（mask `sk-a***jyba`）✓、聊天卡已有 GLM Key 两轨两厂商并存 ✓、W7 sheet 装配态 live 渲染（模型行/人物+6 衣物/超限红字「已选 7 / 上限 1」本地预检）✓——装配后的触发生成因模拟器手势限制未能在 UI 内完成，由 3 的同码 JVM 冒烟覆盖。

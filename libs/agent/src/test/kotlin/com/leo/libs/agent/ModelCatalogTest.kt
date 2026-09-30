@@ -59,7 +59,9 @@ class ModelCatalogTest {
     fun `主力组合齐备`() {
         assertNotNull(ModelCatalog.dashscope.model("qwen-image-edit-plus"))
         assertEquals(2, ModelCatalog.volcArk.imageModels.size)
-        assertEquals(0..0, ModelCatalog.siliconflow.model("Kolors/Kolors")?.inputImages)
+        assertEquals(0..0, ModelCatalog.siliconflow.model("Kwai-Kolors/Kolors")?.inputImages)
+        // 硅基通道实测（2026-09-30 live）：image 只收字符串 → 编辑类单图
+        assertEquals(1..1, ModelCatalog.siliconflow.model("Qwen/Qwen-Image-Edit")?.inputImages)
         assertTrue(ModelCatalog.volcArk.model("doubao-seedream-4-0-250828")!!.inputImages!!.last >= 14)
     }
 

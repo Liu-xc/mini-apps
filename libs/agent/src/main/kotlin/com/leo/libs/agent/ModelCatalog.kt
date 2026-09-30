@@ -334,7 +334,7 @@ object ModelCatalog {
             ModelSpec("Qwen/Qwen3-32B", "均衡档", setOf(Capability.CHAT), supportsToolCall = true),
             ModelSpec("Qwen/Qwen3-8B", "免费档", setOf(Capability.CHAT), supportsToolCall = true),
             ModelSpec(
-                id = "Kolors/Kolors",
+                id = "Kwai-Kolors/Kolors",
                 tier = "文生图 · 免费",
                 capabilities = setOf(Capability.IMAGE_GEN),
                 imageProtocol = ImageProtocol.OPENAI_IMAGES_SYNC,
@@ -348,7 +348,7 @@ object ModelCatalog {
                 ),
             ),
             ModelSpec(
-                id = "Z-Image-Turbo",
+                id = "Tongyi-MAI/Z-Image-Turbo",
                 tier = "文生图 · 快速",
                 capabilities = setOf(Capability.IMAGE_GEN),
                 imageProtocol = ImageProtocol.OPENAI_IMAGES_SYNC,
@@ -364,11 +364,24 @@ object ModelCatalog {
                 tier = "图文编辑",
                 capabilities = setOf(Capability.IMAGE_GEN),
                 imageProtocol = ImageProtocol.OPENAI_IMAGES_SYNC,
-                inputImages = 1..3,
+                // 硅基通道实测（2026-09-30，live key）：image 只收字符串=单图；多图需走百炼通道
+                inputImages = 1..1,
                 costPerImage = 0.3,
                 params = listOf(
                     ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("auto", "1328*1328", "1664*928", "928*1664"), JsonPrimitive("auto")),
                     ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(0)),
+                ),
+            ),
+            ModelSpec(
+                id = "Qwen/Qwen-Image-Edit-2509",
+                tier = "图文编辑 · 多图（硅基通道单图）",
+                capabilities = setOf(Capability.IMAGE_GEN),
+                imageProtocol = ImageProtocol.OPENAI_IMAGES_SYNC,
+                inputImages = 1..1,
+                costPerImage = 0.3,
+                note = "多图参考请用阿里百炼通道（qwen-image-edit-plus，1~3 图）",
+                params = listOf(
+                    ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("auto", "1328*1328", "1664*928", "928*1664"), JsonPrimitive("auto")),
                 ),
             ),
         ),
