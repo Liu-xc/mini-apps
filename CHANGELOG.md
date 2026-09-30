@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **docs(lottery)**: it-004按用户个人非商业用途扩大免费模型筛选范围，纳入非商业许可；记录实际查看的BlendSwap Loto/Bingo源场景与登录下载/机构差异，取消待询问商用授权的条件。
+
 - **chore(lottery)**: it-004启动专业模型资产筛选，固定Godot4.5.2审查工具，真实GLB导入与Jolt堆积检查通过；记录实际候选、许可/获取缺口与ADR-008。尚未取得达标机器资产，Android剧场和皮肤未替换，当前APK仍为0.2.0。
 
 - **feat(lottery)**: it-003 物理摇奖与视觉重做——120Hz 三维球球/球壁接触、气流翻滚、连续捕获与管轨滚动；默认 Filament LIT 球体/金属/透明球壳、预编译材质和复用资源；暖白票据与深墨剧场、窄屏换行、跳过/简化/后台恢复。版本 0.2.0；构建与 35 JVM 测试通过，硬件 GPU 模拟器三轮完成无崩溃，真机性能待验。详 [it-003](lottery/specs/iterations/it-003-physical-draw-and-refined-ui.md)。

@@ -14,6 +14,7 @@
 
 | 实际候选 | 事实 | 处理 |
 |---|---|---|
+| [Loto/Bingo / ian57](https://blendswap.com/blend/11602) | 用户明确个人自用后纳入筛选；实际浏览了预览及下载页。CC-BY-NC-SA，Blender2.6x/Cycles，页面显示7.83MB；金属笼、支架、号码球、接球槽；作者声明引用Sunuba/19seanak19作品 | 手摇机构，可评估部件或复古主题；不直接替换气吹机器。下载要求登录，尚未获取文件或核查引用资产许可/内部结构 |
 | [Lottery Machine / Ankush Gupta](https://sketchfab.com/3d-models/lottery-machine-14cd7c97b7dc4fa5a5d7ecf4c8c7beb1) | 在浏览器实际打开动画预览，约47.9k三角面/24.1k顶点，作者说明Maya/Substance Painter；球腔、连续出口管、接头与底座完整。当前页面无下载/购买入口，搜索索引显示过Get it on Fab，但没有核实有效Fab商品和价格 | 最接近目标的视觉候选；未获取文件，授权、玻璃厚度/UV、拆件和移动端效果均待验，不能直接当作成品素材 |
 | [Lottery Machine / MarcMestre](https://sketchfab.com/3d-models/lottery-machine-e9fc8422d1384748a4a5abd4f049753a) | Meshy AI生成、约634k面、不可下载，许可不明 | 拒绝；不能回应用户对AI味和精细模型的要求 |
 | [Gumball Machine / pizzaguyty](https://sketchfab.com/3d-models/gumball-machine-free-download-12be48147ad94473994dbb9801247ec6) | 元数据CC Attribution、可下载，约91.9k面；下载接口401要求账户 | 糖果机与气吹式摇奖机机构不同；未取得或验收，不用来替代目标 |
@@ -23,6 +24,6 @@
 
 ## 下一步所需条件
 
-已向用户询问模型是否允许采用授权专业模型，或模型也必须严格限制开放许可；尚未收到回答。不自动把“实施”解释为购买授权。
+用户已明确：个人自用、不商用，采用免费且允许个人使用的模型即可。按此继续筛选，包含允许非商业改造的模型；不以商用授权为门槛，不走付费采购。模型获取和实际质量仍须验证，不把无需商用授权等同任意网页模型都可下载。
 
 取得合法且达标的模型文件后，按it-004继续：文件授权/哈希清单 → 三视图/近景审查 → Godot Android嵌入原型 → Jolt机械碰撞/气流 → 产品布光与两款主题 → UI交互 → Android完整旅程验收。未满足资产关，不提交新的基础体占位APK冒充视觉交付。
