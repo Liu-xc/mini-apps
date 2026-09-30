@@ -422,9 +422,10 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标（未配置生图连接时隐藏）
-                //（W7 拼贴「录入成品图」角标同语言——生成即录入成品图的 AI 兄弟入口）
-                if (showGenerate) androidx.compose.material3.Surface(
+                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标——
+                // 仅无成品图的卡（拼贴视图）显示；已有成品图的卡不再挂生成入口（重生成走 W7 菜单），
+                // 未配置生图连接时全部隐藏
+                if (showGenerate && effect == null) androidx.compose.material3.Surface(
                     onClick = onGenerate,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.primary,
