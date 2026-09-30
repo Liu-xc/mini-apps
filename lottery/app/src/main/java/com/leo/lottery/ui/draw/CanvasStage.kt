@@ -5,12 +5,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -21,7 +24,6 @@ import com.leo.lottery.core.SplitMix64
 import com.leo.lottery.ui.draw3d.Stage3D
 import com.leo.lottery.ui.theme.LotteryPalette
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -29,6 +31,7 @@ import kotlin.math.sqrt
 /**
  * 2.5D 演播室舞台（it-002）：确定性 Canvas 摇奖机——与 3D 版同一套时间轴与编排语义，
  * 球带 z 深度（近大远小 + z 排序），玻璃罩/底座/出球口全手绘。
+ * 性能约法：号码排版与渐变刷全部缓存；每帧只做变换与绘制，不分配大对象。
  * Filament 真三维实现留在 ui.draw3d（模拟器原生层不稳，真机验证后启用，ADR-006）。
  */
 object CanvasStage {
@@ -69,32 +72,89 @@ object CanvasStage {
         t >= swapAt && t < swapAt + Stage3D.T_SWAP -> 0.45f
         else -> 1f
     }
+
+    /** 舞台内出球口坐标（与绘制同一几何公式；sway/breathe 幅度 <1% 忽略）。 */
+    fun tubeTopIn(stage: Rect): Offset {
+        val w = stage.width
+        val h = stage.height
+        val domeR = minOf(w * 0.36f, h * 0.40f)
+        return Offset(stage.left + w / 2f, stage.top + h * 0.46f - domeR * 1.06f)
+    }
+}
+
+/** 号码球绘制器：排版与渐变按 (颜色,号码) 缓存，热路径零分配。 */
+internal class BallPainter(measurer: TextMeasurer) {
+    val layouts = HashMap<Int, TextLayoutResult>()
+    val style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF241A14))
+    val measurer = measurer
+
+    fun layout(num: Int): TextLayoutResult = layouts.getOrPut(num) {
+        measurer.measure(num.toString(), style)
+    }
+}
+
+internal class BallBrushes(base: Color, hi: Color) {
+    val sphere: Brush
+    val rim: Brush
+    val plate: Brush
+    val spec: Brush
+
+    init {
+        val shade = Color(base.red * 0.5f, base.green * 0.5f, base.blue * 0.5f)
+        sphere = Brush.radialGradient(
+            listOf(hi, base, shade),
+            center = Offset(-0.3f * R, -0.34f * R),
+            radius = 1.65f * R,
+        )
+        rim = Brush.radialGradient(
+            listOf(Color.Transparent, Color.White.copy(alpha = 0.16f)),
+            center = Offset(-0.4f * R, -0.3f * R),
+            radius = 1.9f * R,
+        )
+        plate = Brush.radialGradient(
+            listOf(Color.White, Color(0xFFFCFAF3), Color(0xFFE7DFC9)),
+            center = Offset(-0.1f * R, -0.14f * R),
+            radius = 1.16f * R,
+        )
+        spec = Brush.radialGradient(
+            listOf(Color.White.copy(alpha = 0.8f), Color.Transparent),
+            center = Offset(-0.45f * R, -0.52f * R),
+            radius = 0.32f * R,
+        )
+    }
+
+    companion object {
+        const val R = 40f
+    }
 }
 
 /**
- * 摇奖舞台：玻璃球 + 号码球群 + 底座 + 出球口。t 为剧场时钟（ms）。
+ * 摇奖舞台：玻璃球 + 号码球群 + 底座 + 出球口。
+ * tState 为剧场时钟（在绘制 lambda 内读取，避免逐帧重组）。
+ * eject：ejectNum 非 null 时该球正被吸向出球口（ejectProg ∈ [0,1]）。
  */
 @Composable
 fun DrawStageCanvas(
-    t: Long,
-    blue: Boolean,
-    game: com.leo.lottery.core.Game,
+    tState: androidx.compose.runtime.State<Long>,
+    swapAt: Long,
     poolCount: Int,
-    drawNumbers: Set<Int>,
-    ejectNumber: Int?,
     seedTag: String,
+    numbers: List<Int>,
+    dropStarts: LongArray,
+    n1: Int,
     ballBase: Color,
     ballHi: Color,
     modifier: Modifier = Modifier,
 ) {
     val seeds = remember(seedTag, poolCount) { CanvasStage.seeds(poolCount, seedTag) }
     val measurer = rememberTextMeasurer()
-    val txtStyle = remember(ballBase) {
-        TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color(0xFF241A14))
-    }
-    val swapAtBlue = blue
+    val painter = remember(measurer) { BallPainter(measurer) }
+    val brushes = remember(ballBase, ballHi) { BallBrushes(ballBase, ballHi) }
+    val nums = remember(numbers) { numbers.toIntArray() }
+    val starts = remember(dropStarts) { dropStarts }
 
     Canvas(modifier) {
+        val t = tState.value
         val w = size.width
         val h = size.height
         val domeR = minOf(w * 0.36f, h * 0.40f)
@@ -110,34 +170,55 @@ fun DrawStageCanvas(
             drawPedestal(cx, cy, domeR)
             drawDomeBack(cx, cy, domeR)
 
-            // ---- 号码球群（z 排序，远小近大）----
-            val jets = CanvasStage.jets(t, 0L)
-            val tt = t / 1000f
-            data class B(val x: Float, val y: Float, val z: Float, val num: Int, val eject: Float)
-
-            val balls = ArrayList<B>(poolCount)
-            seeds.forEachIndexed { i, s ->
-                val num = i + 1
-                var f = CanvasStage.fly(tt, s, jets)
-                var eject = -1f
-                if (num == ejectNumber) eject = 1f
-                if (num in drawNumbers && num != ejectNumber) return@forEachIndexed
-                if (ejectNumber != null && num == ejectNumber) {
-                    // 吸顶：向 (0, ~0.95, 0) 收拢再升高（由调用方时间控制，这里用 eject=1 简化为顶位）
-                    f = floatArrayOf(f[0] * 0.15f, 0.92f, f[2] * 0.15f)
+            // 出球状态（绘制层内推导，避免逐帧重组）
+            var ejectNum = -1
+            var ejectProg = 0f
+            var goneFrom = -1L
+            for (k in nums.indices) {
+                val ds = starts[k]
+                if (t >= ds && t < ds + Stage3D.T_DROP) {
+                    ejectNum = nums[k]
+                    ejectProg = (t - ds).toFloat() / Stage3D.T_DROP
+                    goneFrom = ds
+                    break
                 }
-                balls.add(B(f[0], f[1], f[2], num, eject))
             }
-            balls.sortedBy { it.z }.forEach { b ->
-                val persp = 1f + b.z * 0.22f
-                val bx = cx + b.x * domeR * 0.80f * persp
-                val by = cy + b.y * domeR * 0.74f * persp - domeR * 0.06f
-                val br = domeR * 0.135f * persp
-                if (b.eject >= 0f) {
-                    drawBall(bx, by - domeR * 0.28f, br, b.num, ballBase, ballHi, measurer, txtStyle)
+
+            val jets = CanvasStage.jets(t, swapAt)
+            val tt = t / 1000f
+            val balls = ArrayList<BallDraw>(poolCount)
+
+            for (i in seeds.indices) {
+                val num = i + 1
+                val s = seeds[i]
+                val f = CanvasStage.fly(tt, s, jets)
+                val persp = 1f + f[2] * 0.22f
+                var bx = cx + f[0] * domeR * 0.80f * persp
+                var by = cy + f[1] * domeR * 0.74f * persp - domeR * 0.06f
+                if (num == ejectNum) {
+                    // 吸顶：加速收拢到出球口；0.55 后交给飞行层
+                    val e = (ejectProg * 1.82f).coerceIn(0f, 1f)
+                    val tubeX = cx
+                    val tubeY = cy - domeR * 1.02f
+                    bx = bx + (tubeX - bx) * e * e
+                    by = by + (tubeY - by) * e * e
+                    if (ejectProg >= 0.55f) continue
                 } else {
-                    drawBall(bx, by, br, b.num, ballBase, ballHi, measurer, txtStyle)
+                    // 已出球的号码不再回机内
+                    var landed = false
+                    for (k in nums.indices) {
+                        if (nums[k] == num && t >= starts[k] + Stage3D.T_DROP * 0.55f) {
+                            landed = true
+                            break
+                        }
+                    }
+                    if (landed) continue
                 }
+                balls.add(BallDraw(bx, by, domeR * 0.135f * persp, f[2], num))
+            }
+            balls.sortBy { it.z }
+            balls.forEach { b ->
+                drawGlossyBall(b.x, b.y, b.r, b.num, painter, brushes)
             }
 
             drawDomeFront(cx, cy, domeR, t, ballBase)
@@ -145,13 +226,20 @@ fun DrawStageCanvas(
     }
 }
 
+private class BallDraw(
+    val x: Float,
+    val y: Float,
+    val r: Float,
+    val z: Float,
+    val num: Int,
+)
+
 private fun DrawScope.drawPedestal(cx: Float, cy: Float, domeR: Float) {
     val topW = domeR * 0.62f
     val botW = domeR * 0.78f
     val ph = domeR * 0.42f
     val top = cy + domeR * 0.86f
     val bot = top + ph
-    // 接地阴影
     drawOval(
         brush = Brush.radialGradient(
             listOf(Color.Black.copy(alpha = 0.5f), Color.Transparent),
@@ -176,7 +264,6 @@ private fun DrawScope.drawPedestal(cx: Float, cy: Float, domeR: Float) {
             endY = bot,
         ),
     )
-    // 金环
     drawLine(
         color = LotteryPalette.StageGold.copy(alpha = 0.9f),
         start = Offset(cx - topW * 1.04f, top + ph * 0.14f),
@@ -208,7 +295,6 @@ private fun DrawScope.drawDomeBack(cx: Float, cy: Float, domeR: Float) {
 }
 
 private fun DrawScope.drawDomeFront(cx: Float, cy: Float, domeR: Float, t: Long, ballColor: Color) {
-    // 气流微光
     val shimmer = 0.5f + 0.5f * sin(t / 210f)
     drawOval(
         brush = Brush.radialGradient(
@@ -219,14 +305,12 @@ private fun DrawScope.drawDomeFront(cx: Float, cy: Float, domeR: Float, t: Long,
         topLeft = Offset(cx - domeR * 0.85f, cy - domeR * 0.1f),
         size = Size(domeR * 1.7f, domeR * 1.5f),
     )
-    // 玻璃轮廓
     drawCircle(
         color = Color.White.copy(alpha = 0.22f),
         radius = domeR,
         center = Offset(cx, cy),
         style = androidx.compose.ui.graphics.drawscope.Stroke(width = domeR * 0.016f),
     )
-    // 反光弧
     rotate(-38f, pivot = Offset(cx, cy)) {
         drawArc(
             color = Color.White.copy(alpha = 0.26f),
@@ -247,7 +331,6 @@ private fun DrawScope.drawDomeFront(cx: Float, cy: Float, domeR: Float, t: Long,
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = domeR * 0.045f),
         )
     }
-    // 金环（赤道）
     val rx = domeR * 0.42f
     drawOval(
         color = LotteryPalette.StageGold.copy(alpha = 0.34f),
@@ -255,7 +338,6 @@ private fun DrawScope.drawDomeFront(cx: Float, cy: Float, domeR: Float, t: Long,
         size = Size(rx * 2, rx * 0.28f),
         style = androidx.compose.ui.graphics.drawscope.Stroke(width = domeR * 0.014f),
     )
-    // 出球口（球顶）
     val tubeTop = Offset(cx, cy - domeR * 1.06f)
     drawCircle(
         color = LotteryPalette.StageGold.copy(alpha = 0.9f),
@@ -270,63 +352,27 @@ private fun DrawScope.drawDomeFront(cx: Float, cy: Float, domeR: Float, t: Long,
     )
 }
 
-/** 广播级手绘号码球：径向球体 + 白盘 + 高光 + 边缘光。 */
-private fun DrawScope.drawBall(
+/** 广播级号码球：缓存刷 + 固定基准半径 + scale 变换（热路径零分配）。 */
+internal fun DrawScope.drawGlossyBall(
     x: Float,
     y: Float,
     r: Float,
     num: Int,
-    base: Color,
-    hi: Color,
-    measurer: androidx.compose.ui.text.TextMeasurer,
-    style: TextStyle,
+    painter: BallPainter,
+    brushes: BallBrushes,
 ) {
-    val shade = Color(base.red * 0.5f, base.green * 0.5f, base.blue * 0.5f)
-    // 球体
-    drawCircle(
-        brush = Brush.radialGradient(
-            listOf(hi, base, shade),
-            center = Offset(x - r * 0.3f, y - r * 0.34f),
-            radius = r * 1.65f,
-        ),
-        radius = r,
-        center = Offset(x, y),
-    )
-    // 边缘光
-    drawCircle(
-        brush = Brush.radialGradient(
-            listOf(Color.Transparent, Color.White.copy(alpha = 0.16f)),
-            center = Offset(x - r * 0.4f, y - r * 0.3f),
-            radius = r * 1.9f,
-        ),
-        radius = r,
-        center = Offset(x, y),
-    )
-    // 白盘
-    val pr = r * 0.68f
-    drawCircle(
-        brush = Brush.radialGradient(
-            listOf(Color.White, Color(0xFFFCFAF3), Color(0xFFE7DFC9)),
-            center = Offset(x - pr * 0.15f, y - pr * 0.2f),
-            radius = pr * 1.7f,
-        ),
-        radius = pr,
-        center = Offset(x, y),
-    )
-    // 高光点
-    drawCircle(
-        brush = Brush.radialGradient(
-            listOf(Color.White.copy(alpha = 0.8f), Color.Transparent),
-            center = Offset(x - r * 0.45f, y - r * 0.52f),
-            radius = r * 0.32f,
-        ),
-        radius = r * 0.32f,
-        center = Offset(x - r * 0.45f, y - r * 0.52f),
-    )
-    // 号码
-    val res = measurer.measure(num.toString(), style)
-    drawText(
-        res,
-        topLeft = Offset(x - res.size.width / 2f, y - res.size.height / 2f),
-    )
+    val s = r / BallBrushes.R
+    withTransform({ translate(x - BallBrushes.R, y - BallBrushes.R); scale(s, s) }) {
+        val c = Offset(BallBrushes.R, BallBrushes.R)
+        drawCircle(brush = brushes.sphere, radius = BallBrushes.R, center = c)
+        drawCircle(brush = brushes.rim, radius = BallBrushes.R, center = c)
+        val pr = BallBrushes.R * 0.68f
+        drawCircle(brush = brushes.plate, radius = pr, center = c)
+        drawCircle(brush = brushes.spec, radius = 0.32f * BallBrushes.R, center = c)
+        val res = painter.layout(num)
+        drawText(
+            res,
+            topLeft = Offset(BallBrushes.R - res.size.width / 2f, BallBrushes.R - res.size.height / 2f),
+        )
+    }
 }

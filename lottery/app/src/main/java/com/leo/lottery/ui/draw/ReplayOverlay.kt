@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
@@ -42,14 +43,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +74,7 @@ import com.leo.lottery.ui.theme.LotteryPalette
 import com.leo.lottery.ui.theme.Motion
 import com.leo.lottery.ui.theme.StageReadout
 import kotlinx.coroutines.isActive
+import kotlin.math.sin
 
 // ---- 剧场固定色（不随主题）----
 private val ThStage = LotteryPalette.Theater
@@ -79,11 +85,19 @@ private val ThFaint = LotteryPalette.StageFaint
 private val ThSurface = Color.White.copy(alpha = 0.07f)
 private val ThHairline = Color.White.copy(alpha = 0.16f)
 
+/** 语义状态：仅在值变化时触发重组（时钟只在绘制层读取）。 */
+private data class ReplayUi(
+    val caption: String = "",
+    val blueOn: Boolean = false,
+    val drawnCount: Int = 0,
+    val flashNumber: Int? = null,
+    val ended: Boolean = false,
+)
+
 /**
- * W2-剧场（it-002 / US-2R）：直播式开奖复现。
- * 摇奖机（Canvas 2.5D 确定性舞台；Filament 真三维实现在 ui.draw3d，模拟器原生层不稳，
- * 真机验证后可切换，ADR-006）→ 出球轨道 → 大号读数 → 解说字幕 → 终幕验票；
- * 跳过直达验票；reduce-motion 直接终态。
+ * W2-剧场（it-002）：直播式开奖复现。
+ * 单一时钟（State<Long>）只在 Canvas/graphicsLayer 里读——每帧重绘不重组；
+ * 出球旅程：机内吸顶 → 冲出出球口 → 弧线飞落对应槽位（飞行层）→ 大号读数。
  */
 @Composable
 fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
@@ -105,21 +119,23 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
     val n2 = result.zone2.size
     val total = n1 + n2
     val beat = remember(result) { Stage3D.beat(n1, n2) }
-
-    fun dropStartOf(k: Int): Long {
-        val base = if (k < n1) Stage3D.T_OPEN + Stage3D.T_WARM else beat.swapAt + Stage3D.T_SWAP
-        return base + (if (k < n1) k else k - n1) * Stage3D.T_BALL + Stage3D.T_PRE
+    val numbers = remember(result) { result.zone1 + result.zone2 }
+    val dropStarts = remember(beat, numbers) {
+        LongArray(total) { k ->
+            val base = if (k < n1) Stage3D.T_OPEN + Stage3D.T_WARM else beat.swapAt + Stage3D.T_SWAP
+            base + (if (k < n1) k else k - n1) * Stage3D.T_BALL + Stage3D.T_PRE
+        }
     }
 
     val clock = remember { mutableLongStateOf(0L) }
     val skipReq = remember { mutableStateOf(false) }
-    val fired = remember(beat) { BooleanArray(total + 1) }
+    val ui = remember { mutableStateOf(ReplayUi()) }
 
-    LaunchedEffect(beat, reduceMotion) {
-        // 剧场是内容而非装饰：animator=0（省电/开发者关动画）也照常播时间轴，
-        // reduceMotion 只关装饰动效（彩纸/脉冲/弹簧）；跳过仅走「跳过」按钮（it-002 hotfix）。
+    LaunchedEffect(beat) {
+        // 剧场是内容而非装饰：animator=0 也照常播；reduceMotion 只关装饰（it-002 hotfix）。
         var startNs = -1L
         var shifted = false
+        var lastTick = -1
         while (isActive) {
             withFrameNanos { now ->
                 if (startNs < 0) startNs = now
@@ -129,18 +145,33 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
                     if (cur < beat.endAt - Stage3D.T_RESULT) {
                         startNs = now - (beat.endAt - Stage3D.T_RESULT) * 1_000_000
                     }
-                    for (i in 0 until total) fired[i] = true
                 }
                 val t = ((now - startNs) / 1_000_000).coerceIn(0, beat.endAt)
                 clock.longValue = t
-                for (i in 0 until total) {
-                    if (!fired[i] && t >= dropStartOf(i) + Stage3D.T_DROP) {
-                        fired[i] = true
-                        Haptics.tick(context)
-                    }
+
+                var drawn = 0
+                var flash: Int? = null
+                for (k in 0 until total) {
+                    val land = dropStarts[k] + Stage3D.T_DROP + Stage3D.T_FLIGHT
+                    if (t >= land) drawn++
+                    if (t >= land && t < land + Stage3D.T_LAND) flash = numbers[k]
                 }
-                if (!fired[total] && t >= beat.endAt - Stage3D.T_RESULT) {
-                    fired[total] = true
+                val ended = t >= beat.endAt - 1
+                val next = ReplayUi(
+                    caption = caption(result, t, ended, total, n1, dropStarts),
+                    blueOn = t >= beat.swapAt,
+                    drawnCount = drawn,
+                    flashNumber = flash,
+                    ended = ended,
+                )
+                if (next != ui.value) ui.value = next
+
+                if (drawn > lastTick) {
+                    if (lastTick >= 0) Haptics.tick(context)
+                    lastTick = drawn
+                }
+                if (ended && lastTick != -2) {
+                    lastTick = -2
                     if (anyWon) Haptics.confirm(context)
                 }
             }
@@ -148,37 +179,11 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
         }
     }
 
-    val t = clock.longValue
-    val blueOn = t >= beat.swapAt
-    val drawnCount = run {
-        var k = 0
-        for (i in 0 until total) if (t >= dropStartOf(i) + Stage3D.T_DROP + 140L) k++
-        k
-    }
-    val flashNumber = run {
-        for (i in 0 until total) {
-            val land = dropStartOf(i) + Stage3D.T_DROP
-            if (t >= land && t < land + Stage3D.T_LAND) {
-                return@run if (i < n1) result.zone1[i] else result.zone2[i - n1]
-            }
-        }
-        null
-    }
-    val ejectNumber = run {
-        for (i in 0 until total) {
-            val ds = dropStartOf(i)
-            if (t >= ds && t < ds + Stage3D.T_DROP) {
-                return@run if (i < n1) result.zone1[i] else result.zone2[i - n1]
-            }
-        }
-        null
-    }
-    val ended = t >= beat.endAt - 1
-    val drawnSet = buildSet {
-        for (i in 0 until total) if (t >= dropStartOf(i) + Stage3D.T_DROP) {
-            add(if (i < n1) result.zone1[i] else result.zone2[i - n1])
-        }
-    }
+    val u = ui.value
+
+    // 几何捕获（飞行层用）
+    var stageRect by remember { mutableStateOf<Rect?>(null) }
+    val slotCenters = remember { arrayOfNulls<Offset>(total) }
 
     Box(Modifier.fillMaxSize()) {
         // 舞台背景（深蓝演播厅 + 聚光灯）
@@ -210,24 +215,29 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
         }
 
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            BroadcastTopBar(result, ended, !ended && !reduceMotion, onSkip = { skipReq.value = true }, onClose = vm::finishReplay)
+            BroadcastTopBar(result, u.ended, !u.ended && !reduceMotion, onSkip = { skipReq.value = true }, onClose = vm::finishReplay)
 
-            Box(Modifier.fillMaxWidth().weight(0.58f)) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(0.58f)
+                    .onGloballyPositioned { stageRect = it.boundsInRoot() },
+            ) {
                 DrawStageCanvas(
-                    t = t,
-                    blue = blueOn,
-                    game = result.game,
-                    poolCount = if (blueOn) result.game.poolZone2 else result.game.poolZone1,
-                    drawNumbers = drawnSet,
-                    ejectNumber = ejectNumber,
-                    seedTag = "${result.game}|${result.issue}|${if (blueOn) "b" else "r"}",
-                    ballBase = if (blueOn) c.zone2(result.game) else c.zone1(result.game),
-                    ballHi = if (blueOn) c.zone2Hi(result.game) else c.zone1Hi(result.game),
+                    tState = clock,
+                    swapAt = beat.swapAt,
+                    poolCount = if (u.blueOn) result.game.poolZone2 else result.game.poolZone1,
+                    seedTag = "${result.game}|${result.issue}|${if (u.blueOn) "b" else "r"}",
+                    numbers = numbers,
+                    dropStarts = dropStarts,
+                    n1 = n1,
+                    ballBase = if (u.blueOn) c.zone2(result.game) else c.zone1(result.game),
+                    ballHi = if (u.blueOn) c.zone2Hi(result.game) else c.zone1Hi(result.game),
                     modifier = Modifier.fillMaxSize(),
                 )
                 MachineChip(
                     result.game,
-                    blue = blueOn,
+                    blue = u.blueOn,
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 16.dp, bottom = 8.dp),
@@ -237,18 +247,25 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
             ResultPanel(
                 Modifier.fillMaxWidth().weight(0.42f),
                 result = result,
-                t = t,
-                blueOn = blueOn,
-                drawnCount = drawnCount,
-                flashNumber = flashNumber,
-                ended = ended,
+                u = u,
                 total = total,
                 n1 = n1,
-                dropStartOf = ::dropStartOf,
+                slotCenters = slotCenters,
             )
         }
 
-        if (ended) {
+        // 出球飞行层：出球口 → 弧线 → 对应槽位（最顶层）
+        FlightLayer(
+            clock = clock,
+            numbers = numbers,
+            dropStarts = dropStarts,
+            n1 = n1,
+            game = result.game,
+            stageRect = stageRect,
+            slotCenters = slotCenters,
+        )
+
+        if (u.ended) {
             Box(Modifier.fillMaxSize().systemBarsPadding(), contentAlignment = Alignment.BottomCenter) {
                 Box(Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                     VerdictPanel(
@@ -261,7 +278,7 @@ fun ReplayOverlay(vm: LotteryViewModel, state: LotteryViewModel.UiState) {
             }
         }
 
-        if (anyWon && ended && !reduceMotion) {
+        if (anyWon && u.ended && !reduceMotion) {
             Confetti(result)
         }
     }
@@ -343,21 +360,16 @@ private fun MachineChip(game: com.leo.lottery.core.Game, blue: Boolean, modifier
 private fun ResultPanel(
     modifier: Modifier,
     result: DrawResult,
-    t: Long,
-    blueOn: Boolean,
-    drawnCount: Int,
-    flashNumber: Int?,
-    ended: Boolean,
+    u: ReplayUi,
     total: Int,
     n1: Int,
-    dropStartOf: (Int) -> Long,
+    slotCenters: Array<Offset?>,
 ) {
     val c = LocalLotteryColors.current
 
     Column(modifier.padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        val caption = broadcastCaption(result, t, blueOn, ended, total, n1, dropStartOf)
         Text(
-            text = caption,
+            text = u.caption,
             style = MaterialTheme.typography.titleMedium,
             color = ThInk,
             textAlign = TextAlign.Center,
@@ -366,17 +378,17 @@ private fun ResultPanel(
         Spacer(Modifier.height(4.dp))
 
         Box(Modifier.weight(0.9f), contentAlignment = Alignment.Center) {
-            if (flashNumber != null) {
+            if (u.flashNumber != null) {
                 val rm = Motion.reduceMotion()
-                key(flashNumber, blueOn) {
+                key(u.flashNumber, u.blueOn) {
                     val s = remember { Animatable(if (rm) 1f else 0.45f) }
-                    LaunchedEffect(flashNumber) {
+                    LaunchedEffect(u.flashNumber) {
                         if (!rm) s.animateTo(1f, Motion.pop())
                     }
                     Text(
-                        text = flashNumber.toString(),
+                        text = u.flashNumber.toString(),
                         style = StageReadout.copy(fontSize = 52.sp),
-                        color = if (blueOn) c.zone2Hi(result.game) else c.zone1Hi(result.game),
+                        color = if (u.blueOn) c.zone2Hi(result.game) else c.zone1Hi(result.game),
                         modifier = Modifier.graphicsLayer {
                             scaleX = s.value
                             scaleY = s.value
@@ -396,10 +408,11 @@ private fun ResultPanel(
             repeat(n1) { i ->
                 RailSlot(
                     number = result.zone1[i],
-                    filled = drawnCount > i,
+                    filled = u.drawnCount > i,
                     base = c.zone1(result.game),
                     hi = c.zone1Hi(result.game),
                     size = slot,
+                    onCenter = { slotCenters[i] = it },
                 )
                 if (i < n1 - 1) Spacer(Modifier.width(gap))
             }
@@ -414,10 +427,11 @@ private fun ResultPanel(
             repeat(result.zone2.size) { j ->
                 RailSlot(
                     number = result.zone2[j],
-                    filled = drawnCount > n1 + j,
+                    filled = u.drawnCount > n1 + j,
                     base = c.zone2(result.game),
                     hi = c.zone2Hi(result.game),
                     size = slot,
+                    onCenter = { slotCenters[n1 + j] = it },
                 )
                 if (j < result.zone2.size - 1) Spacer(Modifier.width(gap))
             }
@@ -426,7 +440,7 @@ private fun ResultPanel(
         Spacer(Modifier.height(6.dp))
 
         Text(
-            text = if (ended) "开奖结束 · 共 $total 球" else "已出 $drawnCount / $total 球",
+            text = if (u.ended) "开奖结束 · 共 $total 球" else "已出 ${u.drawnCount} / $total 球",
             style = MaterialTheme.typography.bodySmall,
             color = ThFaint,
         )
@@ -434,8 +448,20 @@ private fun ResultPanel(
 }
 
 @Composable
-private fun RailSlot(number: Int, filled: Boolean, base: Color, hi: Color, size: androidx.compose.ui.unit.Dp) {
-    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+private fun RailSlot(
+    number: Int,
+    filled: Boolean,
+    base: Color,
+    hi: Color,
+    size: androidx.compose.ui.unit.Dp,
+    onCenter: (Offset) -> Unit,
+) {
+    Box(
+        Modifier
+            .size(size)
+            .onGloballyPositioned { onCenter(it.boundsInRoot().center) },
+        contentAlignment = Alignment.Center,
+    ) {
         if (!filled) {
             Box(
                 Modifier
@@ -460,14 +486,73 @@ private fun RailSlot(number: Int, filled: Boolean, base: Color, hi: Color, size:
     }
 }
 
-private fun broadcastCaption(
+/**
+ * 出球飞行层：每球在 [ds+0.55·T_DROP, ds+T_DROP+T_FLIGHT) 内，
+ * 从出球口经三次贝塞尔（先上抛出管、再弧线落槽）飞到对应槽位；带拖尾残影。
+ */
+@Composable
+private fun FlightLayer(
+    clock: State<Long>,
+    numbers: List<Int>,
+    dropStarts: LongArray,
+    n1: Int,
+    game: com.leo.lottery.core.Game,
+    stageRect: Rect?,
+    slotCenters: Array<Offset?>,
+) {
+    val c = LocalLotteryColors.current
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val painter = remember(measurer) { BallPainter(measurer) }
+    val brushesRed = remember { BallBrushes(c.zone1(game), c.zone1Hi(game)) }
+    val brushesBlue = remember { BallBrushes(c.zone2(game), c.zone2Hi(game)) }
+    val ballR = with(density) { 23.dp.toPx() }
+    val upPx = with(density) { 150.dp.toPx() }
+
+    Canvas(Modifier.fillMaxSize()) {
+        val stage = stageRect ?: return@Canvas
+        val p0 = CanvasStage.tubeTopIn(stage)
+        for (k in numbers.indices) {
+            val f0 = dropStarts[k] + (Stage3D.T_DROP * 0.55f).toLong()
+            val f1 = dropStarts[k] + Stage3D.T_DROP + Stage3D.T_FLIGHT
+            val t = clock.value
+            if (t < f0 || t >= f1) continue
+            val raw = (t - f0).toFloat() / (f1 - f0)
+            val e = raw * raw * (3f - 2f * raw)
+            val p3 = slotCenters[k] ?: Offset(size.width / 2f, size.height * 0.8f)
+            val c1 = Offset(p0.x, p0.y - upPx)
+            val c2 = Offset((p0.x + p3.x) / 2f + (p3.x - p0.x) * 0.18f, p3.y - upPx * 0.7f)
+            fun bez(u: Float): Offset {
+                val mu = 1f - u
+                val x = mu * mu * mu * p0.x + 3f * mu * mu * u * c1.x + 3f * mu * u * u * c2.x + u * u * u * p3.x
+                val y = mu * mu * mu * p0.y + 3f * mu * mu * u * c1.y + 3f * mu * u * u * c2.y + u * u * u * p3.y
+                return Offset(x, y)
+            }
+            val brushes = if (k < n1) brushesRed else brushesBlue
+            for (g in 3 downTo 1) {
+                val gu = (e - g * 0.055f).coerceAtLeast(0.001f)
+                val gp = bez(gu)
+                drawCircle(
+                    color = (if (k < n1) c.zone1(game) else c.zone2(game)).copy(alpha = 0.05f * (4 - g)),
+                    radius = ballR * (0.85f - g * 0.08f),
+                    center = gp,
+                )
+            }
+            val pos = bez(e)
+            rotate(sin(e * 18f) * 8f, pivot = pos) {
+                drawGlossyBall(pos.x, pos.y, ballR, numbers[k], painter, brushes)
+            }
+        }
+    }
+}
+
+private fun caption(
     result: DrawResult,
     t: Long,
-    blueOn: Boolean,
     ended: Boolean,
     total: Int,
     n1: Int,
-    dropStartOf: (Int) -> Long,
+    dropStarts: LongArray,
 ): String {
     val z1 = result.game.zone1Label
     val z2 = result.game.zone2Label
@@ -480,15 +565,17 @@ private fun broadcastCaption(
         else -> {
             var cap = "摇奖进行中"
             for (k in 0 until total) {
-                val ds = dropStartOf(k)
-                val land = ds + Stage3D.T_DROP
+                val ds = dropStarts[k]
+                val exitAt = ds + (Stage3D.T_DROP * 0.55f).toLong()
+                val land = ds + Stage3D.T_DROP + Stage3D.T_FLIGHT
                 val zone = if (k < n1) z1 else z2
                 val idx = if (k < n1) k + 1 else k - n1 + 1
                 val num = if (k < n1) result.zone1[k] else result.zone2[k - n1]
                 cap = when {
                     t >= land + Stage3D.T_LAND -> "${zone}已出 $idx 个"
                     t >= land -> "$zone $num"
-                    t >= ds -> "第 $idx 个$zone · 出球"
+                    t >= exitAt -> "第 $idx 个$zone · 出球"
+                    t >= ds -> "第 $idx 个$zone · 吸出"
                     else -> return cap
                 }
             }

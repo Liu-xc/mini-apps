@@ -64,12 +64,13 @@ object Stage3D {
     // ---- 时间轴（ms）----
     const val T_OPEN = 900L
     const val T_WARM = 1000L
-    const val T_PRE = 620L
+    const val T_PRE = 500L
     const val T_DROP = 520L
-    const val T_LAND = 780L
+    const val T_FLIGHT = 640L
+    const val T_LAND = 560L
     const val T_SWAP = 1100L
     const val T_RESULT = 1500L
-    const val T_BALL = T_PRE + T_DROP + T_LAND
+    const val T_BALL = T_PRE + T_DROP + T_FLIGHT + T_LAND
 
     class Beat(val swapAt: Long, val endAt: Long)
 
