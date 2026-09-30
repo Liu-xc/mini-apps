@@ -171,3 +171,10 @@
 - **决策**（2026-09-30，it-075）：`libs/agent` 的 `ToolResult.Ok` 增可选 `payload: JsonElement`，`Message` 增可选 `payload`（role=tool 携带）；AgentRunner 透传落盘，`toWire()` 不映射（厂商请求体零变化，`PayloadTest` 断言锁死）。wardrobe 侧 `search_items`/`search_outfits` 附 `{kind,total,category/keyword,ids}`，**ids 只存引用全量、不存数据快照**；UI 渲染时从仓库现取，删除落占位。
 - **理由**：快照会让卡片与仓库双源漂移（改名/换图/删除后卡片陈旧）；只存 id 一致于「仓库是唯一 SSOT」；wire 隔离使扩展零厂商风险；旧会话缺字段读 null 天然兼容（createdAt 同款先例）。
 - **后果**：历史卡片在衣物删除后显示占位而非旧图（接受：与「不伪装」原则一致）；`wear_stats`/`current_person` 暂无 payload（无卡片需求，后续加卡片不必改通道）；会话文件体积增量 = id 数组（uuid×N，可忽略）。
+
+
+## ADR-030 生图 provider 统一目录与用途分轨路由（2026-09-30，it-077）
+- **背景**：it-077 接入「图+文→图」生成穿搭效果图；需求明确不锁死厂商（参考 OpenCode/cc-switch 多 provider 架构），且 provider 抽象同时覆盖聊天轨与生图轨；应用自用定位不做开销拦截（拍板①②）。
+- **决策**：`libs/agent` 建统一 `ModelCatalog`（`ProviderSpec`/`ModelSpec`，capability=CHAT/IMAGE_GEN 分轨声明；聊天 preset 扩容 deepseek/moonshot/dashscope/volc-ark/siliconflow 全为 OpenAI 兼容纯数据零代码——ADR-002 红利兑现）；生图新增 `ImageModel` 轨（协议三枚举 OPENAI_IMAGES_SYNC/DASHSCOPE_SYNC/DASHSCOPE_ASYNC_TASK，同步/异步在适配器内消化为 `Flow<ImageGenEvent>`；模型专属参数按 `ModelSpec.params` 声明式透传，UI 动态渲染高级面板）。wardrobe 侧按用途分轨路由：聊天连接与生图连接各自独立偏好（`aiPresetId/aiModel` vs `aiImagePresetId/aiImageModel`），Key 按厂商 id 一把双轨共用（自定义生图独立槽位 custom-image）。
+- **理由**：一个厂商往往双能力（百炼=Qwen 聊天+生图、火山=豆包+Seedream、硅基流动=聚合两者），两套注册表会让同一把 Key 配两遍；LiteLLM 未归一异步任务型生图（issue #28763）必须自建；参数透传避免为每个厂商开关建抽象字段（OpenRouter supported_parameters 思想）。
+- **后果**：模型 id 漂移靠目录数据随版本更新（UI 保留自定义兜底）；百炼 aitryon（URL-only）SDK 传输已实现单测覆盖但 UI 二期开放；`OutfitImage` 增 source/model/prompt 溯源字段（向后兼容）；演示模式生图一律假实现不出网（与聊天轨「有 Key 真连」不同，简化取舍已注记）。

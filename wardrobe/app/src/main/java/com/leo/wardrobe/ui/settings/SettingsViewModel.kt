@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.leo.libs.agent.AgentError
 import com.leo.libs.agent.ChatRequest
 import com.leo.libs.agent.Message
+import com.leo.libs.agent.ModelCatalog
+import com.leo.libs.agent.ModelSpec
 import com.leo.libs.agent.ProviderPreset
-import com.leo.libs.agent.Providers
+import com.leo.libs.agent.ProviderSpec
 import com.leo.libs.agent.maskApiKey
 import com.leo.wardrobe.WardrobeApp
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,8 +58,13 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         .flatMapLatest { ui -> flow { emit(keyStore.get(ui.presetId)?.let(::maskApiKey)) } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** 一等公民厂商 + 自定义（Providers.all 之外的第四项） */
-    val presetOptions: List<ProviderPreset> get() = Providers.all
+    /** it-077 统一目录：聊天卡厂商全量 + 生图卡厂商（有生图模型者），Key 按厂商 id 双轨共用 */
+    val presetOptions: List<ProviderSpec> get() = ModelCatalog.all
+    val imagePresetOptions: List<ProviderSpec> get() = ModelCatalog.all.filter { it.imageModels.isNotEmpty() }
+
+    /** 聊天模型下拉（只列支持工具调用的——顾问 loop 的硬门槛） */
+    fun chatModelsOf(presetId: String): List<ModelSpec> =
+        presetOptions.find { it.id == presetId }?.chatModels?.filter { it.supportsToolCall }.orEmpty()
 
     sealed interface CheckState {
         data object Idle : CheckState
@@ -117,18 +124,20 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
             if (ui.customBaseUrl.isBlank() || ui.customModel.isBlank()) null
             else ProviderPreset.custom(CUSTOM_ID, "自定义", ui.customBaseUrl.trim(), listOf(ui.customModel.trim()))
         } else {
-            presetOptions.find { it.id == ui.presetId }
+            presetOptions.find { it.id == ui.presetId }?.chatPreset
         }
 
-    /** 生效模型：自定义项即其模型；预设项选填（空 = preset 默认，如 GLM 旗舰档） */
+    /** 生效模型：自定义项即其模型；预设项选填（空 = 目录首个聊天模型） */
     fun effectiveModel(ui: ConnectionUi): String? =
         if (ui.presetId == CUSTOM_ID) ui.customModel.ifBlank { null }?.trim()
-        else resolvePreset(ui)?.let { ui.model.ifBlank { it.defaultModel } }
+        else chatModelsOf(ui.presetId).firstOrNull()?.id?.let { first -> ui.model.ifBlank { first } }
 
-    /** 用量卡的厂商显示名 */
-    fun presetLabel(presetId: String): String =
-        if (presetId == CUSTOM_ID) "自定义"
-        else presetOptions.find { it.id == presetId }?.displayName ?: presetId
+    /** 用量卡 / 标签的厂商显示名（统一目录；含生图厂商） */
+    fun presetLabel(presetId: String): String = when (presetId) {
+        CUSTOM_ID -> "自定义"
+        IMAGE_CUSTOM_ID -> "自定义"
+        else -> ModelCatalog.byId(presetId)?.displayName ?: presetId
+    }
 
     /**
      * 保存连接偏好（+ 可选新 Key）并跑连通性自检（1-token ping，US-A1）。
@@ -215,7 +224,86 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         container.mockChatCache?.clear()
     }
 
+    // ---------- it-077 US-64c：生图模型连接（与聊天卡同形制；无免费 ping——保存即校验格式，首次生成验证） ----------
+
+    data class ImageConnectionUi(
+        val presetId: String = "siliconflow",
+        val model: String = "",
+        val customBaseUrl: String = "",
+        val customModel: String = "",
+    )
+
+    val imageConnection: StateFlow<ImageConnectionUi> = combine(
+        prefs.aiImagePresetId,
+        prefs.aiImageModel,
+        prefs.aiImageCustomBaseUrl,
+        prefs.aiImageCustomModel,
+    ) { presetId, model, baseUrl, customModel ->
+        ImageConnectionUi(presetId, model, baseUrl, customModel)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ImageConnectionUi())
+
+    private val imageKeyRevision = MutableStateFlow(0)
+
+    /** 生图轨当前厂商的 Key mask；预设厂商与聊天轨共用一把（按厂商 id），自定义生图独立槽位 */
+    val imageKeyMask: StateFlow<String?> = combine(imageConnection, imageKeyRevision) { ui, _ -> ui }
+        .flatMapLatest { ui -> flow { emit(keyStore.get(imageKeystoreId(ui.presetId))?.let(::maskApiKey)) } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private fun imageKeystoreId(presetId: String): String = presetId
+
+    /** 生图模型下拉（自定义项由 ui 字段拼一条） */
+    fun imageModelsOf(ui: ImageConnectionUi): List<ModelSpec> =
+        if (ui.presetId == IMAGE_CUSTOM_ID) {
+            if (ui.customBaseUrl.isBlank() || ui.customModel.isBlank()) emptyList()
+            else listOf(
+                ModelSpec(
+                    id = ui.customModel.trim(),
+                    tier = "自定义模型",
+                    capabilities = setOf(com.leo.libs.agent.Capability.IMAGE_GEN),
+                ),
+            )
+        } else {
+            imagePresetOptions.find { it.id == ui.presetId }?.imageModels.orEmpty()
+        }
+
+    fun saveImageConnection(ui: ImageConnectionUi, keyInput: String) {
+        viewModelScope.launch {
+            prefs.setAiImageConnection(ui.presetId, ui.model.trim())
+            if (ui.presetId == IMAGE_CUSTOM_ID) prefs.setAiImageCustom(ui.customBaseUrl.trim(), ui.customModel.trim())
+            keyInput.trim().takeIf { it.isNotEmpty() }?.let {
+                keyStore.put(imageKeystoreId(ui.presetId), it)
+                imageKeyRevision.value += 1
+            }
+        }
+    }
+
+    fun clearImageKey(presetId: String) {
+        viewModelScope.launch {
+            keyStore.delete(imageKeystoreId(presetId))
+            imageKeyRevision.value += 1
+        }
+    }
+
+    fun selectImagePreset(presetId: String) {
+        viewModelScope.launch { prefs.setAiImageConnection(presetId, "") }
+    }
+
+    fun selectImageModel(model: String) {
+        viewModelScope.launch { prefs.setAiImageConnection(imageConnection.value.presetId, model) }
+    }
+
+    fun updateImageCustom(baseUrl: String? = null, model: String? = null) {
+        val current = imageConnection.value
+        viewModelScope.launch {
+            prefs.setAiImageCustom(
+                baseUrl ?: current.customBaseUrl,
+                model ?: current.customModel,
+            )
+        }
+    }
+
     companion object {
         const val CUSTOM_ID = "custom"
+        const val IMAGE_CUSTOM_ID = "custom-image"
     }
 }

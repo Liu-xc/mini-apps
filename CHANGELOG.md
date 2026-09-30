@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **feat(wardrobe)**: it-077 AI 穿搭生图与多 provider 生图网关——SDK 统一模型目录（聊天 preset 扩容 5 家全 OpenAI 兼容零代码）+ ImageModel 生图轨（同步/异步协议归一、模型专属参数声明式透出）；W7「AI 试衣」四态生成 sheet（参考图装配/场景 chips/高级参数面板/候选挑选/AI 角标）、W11 聊天卡目录化 + 生图卡（同厂商一把 Key 双轨共用）、W13 顾问对话流第 5 工具 + 成图卡；OutfitImage 增 source/model/prompt 溯源。调研报告见 [reports/2026-09-30-wardrobe-imagegen-research](../reports/2026-09-30-wardrobe-imagegen-research/report.md)。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
+
 - **feat(lottery)**: it-002 开奖复现重做——直播式剧场（LIVE 角标/台标/解说字幕/出球轨道/大号金色读数/换蓝球机）、福彩演播室视觉身份（暖票纸+福彩红+金线、票据红头带、白盘号码球印刷质感）、接入 Filament 3D（ADR-006：模拟器原生层不稳，默认 Canvas 2.5D 确定性舞台，真机可切）。三连放零崩溃 + 27 测绿。详 [it-002](lottery/specs/iterations/it-002-broadcast-3d-replay.md)。
 
 - **feat(lottery)**: it-001 拾彩 MVP 全闭环——情绪价值彩票 demo：图片种子确定性选号（双色球 6+1 / 大乐透 5+2，单式/复式，同图同批恒等复现）、票夹、开奖直播复现剧场（Compose Canvas 手写物理：摇奖机翻滚→逐球出槽→篮球→验票揭晓，非中奖不庆祝，reduce-motion 直落结果态）、官方奖级表逐注验票、票面导出 PNG 入 `Pictures/拾彩/`；「演示数据 · 非官方」全程标注。27 单测绿 + 模拟器三屏全流程走查 15 截图；ADR-001~005。详 [it-001](lottery/specs/iterations/it-001-emotional-lottery-demo.md)。

@@ -7,6 +7,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** it-075：工具结果 payload → 结构化卡片的解析与标签拼装 */
@@ -116,6 +117,69 @@ class ToolResultCardTest {
         assertEquals(25, card.ids.size) // 文本 take(20)，payload ids 全量
         assertEquals("外套", card.category)
         assertEquals("找到 25 件 · 外套", card.headerLabel())
+    }
+
+    // ---------- it-077：AI 试衣成图卡 ----------
+
+    private fun outfitImagePayload(
+        outfitId: String = "o1",
+        imageFile: String = "gen-1.webp",
+        model: String = "dashscope/qwen-image-edit-plus",
+    ) = buildJsonObject {
+        put("kind", "outfit_image")
+        put("outfitId", outfitId)
+        put("imageFile", imageFile)
+        put("model", model)
+    }
+
+    @Test
+    fun `outfit_image payload 解析为成图卡`() {
+        val card = parseToolResultCard(outfitImagePayload()) as ToolResultCard.GeneratedImage
+        assertEquals("o1", card.outfitId)
+        assertEquals("gen-1.webp", card.imageFile)
+        assertEquals("dashscope/qwen-image-edit-plus", card.model)
+        assertEquals("AI 生成 · 穿搭效果图", card.headerLabel())
+    }
+
+    @Test
+    fun `outfit_image 缺关键字段返回 null 不抛`() {
+        assertNull(parseToolResultCard(buildJsonObject { put("kind", "outfit_image"); put("outfitId", "o1") }))
+        assertNull(parseToolResultCard(buildJsonObject { put("kind", "outfit_image"); put("imageFile", "f") }))
+        assertNull(parseToolResultCard(buildJsonObject { put("kind", "outfit_image") }))
+    }
+
+    @Test
+    fun `generate 工具按需注册并可执行`() = kotlinx.coroutines.runBlocking {
+        val pid = "p1"
+        var captured: Triple<String?, List<String>, String?>? = null
+        val registry = wardrobeTools(
+            data = { com.leo.wardrobe.domain.model.WardrobeData(persons = listOf(com.leo.wardrobe.domain.model.Person(pid, "Leo"))) },
+            personId = { pid },
+            imageGen = { requestedOutfitId, itemIds, sceneHint ->
+                captured = Triple(requestedOutfitId, itemIds, sceneHint)
+                com.leo.libs.agent.tool.ToolResult.ok("done", outfitImagePayload(outfitId = requestedOutfitId ?: "o1"))
+            },
+        )
+        // 未注入 imageGen 的旧调用方没有该工具（上面 search_items 契约用例即两参形态）
+        val result = registry.execute(
+            "generate_outfit_image",
+            """{"outfitId":"o9","sceneHint":"办公室"}""",
+        ) as com.leo.libs.agent.tool.ToolResult.Ok
+        assertEquals(Triple("o9", emptyList<String>(), "办公室"), captured)
+        val card = parseToolResultCard(result.payload) as ToolResultCard.GeneratedImage
+        assertEquals("o9", card.outfitId)
+    }
+
+    @Test
+    fun `generate 工具无入参时友好报错`() = kotlinx.coroutines.runBlocking {
+        val pid = "p1"
+        val registry = wardrobeTools(
+            data = { com.leo.wardrobe.domain.model.WardrobeData() },
+            personId = { pid },
+            imageGen = { _, _, _ -> com.leo.libs.agent.tool.ToolResult.ok("unreachable") },
+        )
+        val result = registry.execute("generate_outfit_image", "{}")
+        assertTrue(result is com.leo.libs.agent.tool.ToolResult.Error)
     }
 }
 

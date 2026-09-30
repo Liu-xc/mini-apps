@@ -67,7 +67,7 @@
 | createdAt / updatedAt | Long | |
 
 ### OutfitImage（值对象）
-`file: String`（文件名） + `addedAt: Long`。
+`file: String`（文件名） + `addedAt: Long` + `source: String`（`manual` 手动录入 / `ai` AI 生成，it-077，旧数据缺字段读入 manual） + `model: String?`（生成模型 id，如 `dashscope/qwen-image-edit-plus`） + `prompt: String?`（生成提示词摘要，截断存档）。后三个为 it-077 溯源元数据——「AI 生成」角标与筛选依据；`effectStale` 联动规则不变（AI 图同样在单品调整后标过期，录入新成品图即清）。
 
 ### WearLog（穿搭打卡，it-018 阶段A）
 | 字段 | 类型 | 说明 |
@@ -110,7 +110,9 @@
              "color":"白色","desc":"宽松棉质、纽扣领","imageFile":"uuid1.webp",
              "tags":["通勤","简约"],"createdAt":0,"updatedAt":0}],
   "outfits": [{"id":"o1","personId":"p1","itemIds":["i1","i2"],"tags":["通勤","早秋"],
-               "effectImages":[{"file":"uuid9.webp","addedAt":0}],"createdAt":0,"updatedAt":0}],
+               "effectImages":[{"file":"uuid9.webp","addedAt":0,"source":"manual"},
+                               {"file":"uuid10.webp","addedAt":1,"source":"ai","model":"dashscope/qwen-image-edit-plus","prompt":"…"}],
+               "createdAt":0,"updatedAt":0}],
   "notes": [{"id":"n1","parentType":"ITEM","parentId":"i1","text":"洗后微缩水","createdAt":0}]
 }
 ```

@@ -11,6 +11,8 @@
 M0 校准回填（2026-09-25 实调）：MiMo **双 host**（按量 `api.xiaomimimo.com/v1` / Token 套餐 `token-plan-cn.xiaomimimo.com/v1`，key 类型不可混用——tp- 走按量 host 实证 401）；GLM 免费档 **glm-4-flash 四步全过**、旗舰档视账户资源包（plan 外 1113 余额不足）；**tool_call_id 回喂两厂均接受**（arguments 必须 JSON 字符串，裸嵌对象 GLM 报 1210）；MiMo `delta.reasoning_content` 流式确认（quirks.reasoningField=true 实证）。仍待校验：`response_format` json 支持度、GLM 各档 contextTokens。
 - **一句话**：各 app 内嵌 AI Agent 的公共底座——用户自带 API Key（BYOK）直连模型厂商，单一 OpenAI 兼容传输层打天下，内置 agent loop（工具调用）、流式事件流、会话持久化、用量记账；零业务概念。
 
+**M3 生图轨与统一模型目录已落地**（2026-09-30，wardrobe [it-077](../../../wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)，ADR-007）：新增 `ModelCatalog`（ProviderSpec/ModelSpec，capability 分轨；聊天 preset 扩容 deepseek/moonshot/dashscope/volc-ark/siliconflow，全 OpenAI 兼容零传输代码）与 `image/` 包——`ImageModel` 接口（`Flow<ImageGenEvent>` 事件流，Started/Progress/Completed/Failed）、`OkHttpImageModel`（同步双协议：OpenAI images 兼容 + 百炼 multimodal-generation；输出 URL 24h 失效故适配器内下载完毕只吐字节）、`DashScopeTaskImageModel`（异步任务型：X-DashScope-Async 提交 + 轮询，aitryon 形态；v1 传输+单测就绪、UI 二期）、`FakeImageModel`。模型专属参数 `ImageParamSpec` 声明式透传（拍板：不做开销拦截）。`Usage` 增 images 计数。JVM 单测 24 例新增全绿。
+
 ## 1. 调研结论：为什么自研薄核（2026-09 盘点）
 
 开源 agent 框架很热，但**没有一个是为「Android 个人应用 + BYOK 多厂商」设计的轻量件**：

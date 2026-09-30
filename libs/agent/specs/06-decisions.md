@@ -40,3 +40,10 @@
 - **决策**：`ToolResult.Ok(text, payload: JsonElement? = null)`；`Message.payload`（role=tool 携带，落盘随会话）。payload **不回喂模型、不上 wire**——`toWire()` 不映射该字段，厂商请求体零变化（测试断言锁定）；仅随 `AgentEvent.ToolFinished` 透传 UI + FileSessionStore 落盘供历史回放。缺字段反序列化为 null（createdAt 同款向后兼容）。
 - **动机**：app 需要工具结果的结构化渲染（如命中的实体 id 列表出卡片），纯文本通道（it-054 式文本协议解析）不可泛化。
 - **后果**：事件签名不变（ADR-005 只增不改名合规）；不关心 payload 的工具与 app 零改动；落盘 JSON 里 null 字段被默认 `Json`（encodeDefaults=false）省略。
+
+
+## ADR-007 · 统一模型目录 + ImageModel 生图双能力轨（2026-09-30，it-077/wardrobe）
+- **背景**：消费方（wardrobe it-077）需要「图+文→图」生成能力且不锁死厂商；provider 抽象须同时覆盖聊天与生图两轨（Leo 拍板②）；国内生图 API 大量异步任务型（百炼 aitryon/wan），LiteLLM 至今未归一（issue #28763）。
+- **决策**：`ModelCatalog` 统一注册表——`ProviderSpec`（id/displayName/chatPreset/imageBaseUrl/models）+ `ModelSpec`（capabilities={CHAT,IMAGE_GEN} 分轨声明；supportsToolCall 门槛；inputImages/outputs/supportsBase64/params/costPerImage）。聊天轨零改动（OkHttpChatModel 不动，新厂商=目录数据）；生图新轨 `ImageModel`，协议显式三枚举（OPENAI_IMAGES_SYNC / DASHSCOPE_SYNC / DASHSCOPE_ASYNC_TASK），同步/异步差异在适配器内消化为统一事件流；输出字节在适配器内下载完毕（App 不接触 24h 失效 URL）。Key 按厂商 id 存取（一把 Key 双轨共用，消费方 ApiKeyStore 现机制）。模型专属参数（watermark/negative_prompt/batch_size…）按 `ImageParamSpec` 声明、透传进请求体，不为厂商开关建抽象字段。
+- **理由**：结构抄 OpenCode（协议驱动 preset + 静态注册表）、能力字段抄 models.dev/OpenRouter（capability 与输入输出 modality 分开）、异步任务型显式建模是 LiteLLM 的空白；参数声明式透传（OpenRouter supported_parameters 思想）让新模型参数零代码暴露。
+- **后果**：模型 id 漂移靠目录数据随版本更新（消费方 UI 保留自定义模型 id 兜底）；目录价格字段为展示快照不构成计费依据；上传图格式归一由消费方负责（wardrobe 统一 WebP→JPEG base64）。

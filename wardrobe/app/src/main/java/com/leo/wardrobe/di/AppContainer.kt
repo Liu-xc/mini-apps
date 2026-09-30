@@ -101,6 +101,9 @@ class AppContainer(private val context: Context) {
             File(context.filesDir, if (demo) "mock-agent-usage.json" else "agent-usage.json"),
         )
 
+    /** it-077：穿搭生图控制器（W7 生成 sheet 与顾问对话流工具共用；演示模式内部走 MockImageModel） */
+    val outfitImageGenerator = com.leo.wardrobe.data.gen.OutfitImageGenerator(this)
+
     val buildPrompt: BuildOutfitPrompt = BuildOutfitPrompt()
     val pickRandom: PickRandomOutfit = PickRandomOutfit()
     val imageComposer: OutfitImageComposer = OutfitImageComposer(imageStore)

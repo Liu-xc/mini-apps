@@ -25,11 +25,14 @@ data class Usage(
     val promptTokens: Int = 0,
     val completionTokens: Int = 0,
     val totalTokens: Int = 0,
+    /** it-077：生图张数计数（聊天轨恒 0；纯信息展示，不做拦截——拍板①） */
+    val images: Int = 0,
 ) {
     operator fun plus(other: Usage) = Usage(
         promptTokens + other.promptTokens,
         completionTokens + other.completionTokens,
         totalTokens + other.totalTokens,
+        images + other.images,
     )
 }
 

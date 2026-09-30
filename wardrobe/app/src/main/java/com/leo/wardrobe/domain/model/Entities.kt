@@ -45,10 +45,20 @@ data class Item(
     val updatedAt: Long = 0L,
 )
 
+/**
+ * 穿搭成品图条目。it-077：AI 生成的效果图带溯源元数据（source/model/prompt）——
+ * 与手动录入共存同一字段，旧数据缺字段读入默认 manual，向后兼容不 bump schemaVersion。
+ */
 @Serializable
 data class OutfitImage(
     val file: String,
     val addedAt: Long = 0L,
+    /** manual = 手动录入 / ai = AI 生成（UI 角标与筛选依据） */
+    val source: String = "manual",
+    /** 生成模型 id（如 dashscope/qwen-image-edit-plus），manual 时为 null */
+    val model: String? = null,
+    /** 生成时的提示词摘要（截断存档），manual 时为 null */
+    val prompt: String? = null,
 )
 
 @Serializable

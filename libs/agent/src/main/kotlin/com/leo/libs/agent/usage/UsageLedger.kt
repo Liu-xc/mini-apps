@@ -70,11 +70,13 @@ class FileUsageLedger(private val file: File) : UsageLedger {
             JsonObject.serializer(),
             JsonObject(map.mapValues { (_, u) ->
                 JsonObject(
-                    mapOf(
-                        "prompt" to JsonPrimitive(u.promptTokens),
-                        "completion" to JsonPrimitive(u.completionTokens),
-                        "total" to JsonPrimitive(u.totalTokens),
-                    )
+                    buildMap {
+                        put("prompt", JsonPrimitive(u.promptTokens))
+                        put("completion", JsonPrimitive(u.completionTokens))
+                        put("total", JsonPrimitive(u.totalTokens))
+                        // it-077：生图张数（聊天轨旧文件缺字段读入默认 0，向后兼容）
+                        if (u.images > 0) put("images", JsonPrimitive(u.images))
+                    },
                 )
             }.toMap()),
         )
@@ -94,5 +96,6 @@ class FileUsageLedger(private val file: File) : UsageLedger {
         promptTokens = obj["prompt"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
         completionTokens = obj["completion"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
         totalTokens = obj["total"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
+        images = obj["images"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0,
     )
 }

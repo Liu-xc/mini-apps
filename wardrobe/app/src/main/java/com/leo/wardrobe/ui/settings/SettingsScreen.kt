@@ -92,6 +92,7 @@ fun SettingsScreen(
     LaunchedEffect(Unit) { vm.refreshUsage() }
 
     val preset = vm.presetOptions.find { it.id == connection.presetId }
+    val chatModels = vm.chatModelsOf(connection.presetId)
     val isCustom = connection.presetId == SettingsViewModel.CUSTOM_ID
     val presetName = preset?.displayName ?: if (isCustom) "自定义" else connection.presetId
     val customIncomplete = isCustom &&
@@ -181,8 +182,8 @@ fun SettingsScreen(
                         }
                     }
 
-                    // 模型（预设项且多模型时给选择；空 = preset 默认）
-                    if (!isCustom && preset != null && preset.models.size > 1) {
+                    // 模型（it-077 统一目录：按 capability 过滤后的档位下拉；空 = 目录首个）
+                    if (!isCustom && chatModels.size > 1) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -194,25 +195,25 @@ fun SettingsScreen(
                                 contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
                             ) {
                                 Text(
-                                    connection.model.ifBlank { "默认 · ${preset.defaultModel}" },
+                                    connection.model.ifBlank { "默认 · ${chatModels.first().id}" },
                                     color = ec.ink,
                                 )
                                 Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = ec.inkFaint)
                             }
                             DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("默认 · ${preset.defaultModel}") },
+                                    text = { Text("默认 · ${chatModels.first().id}") },
                                     onClick = {
                                         vm.resetCheck()
                                         vm.selectModel("")
                                         modelMenu = false
                                     },
                                 )
-                                preset.models.forEach { m ->
+                                chatModels.forEach { m ->
                                     DropdownMenuItem(
                                         text = {
                                             Column {
-                                                Text(m.name)
+                                                Text(m.id)
                                                 if (m.tier.isNotBlank()) {
                                                     Text(
                                                         m.tier,
@@ -224,7 +225,7 @@ fun SettingsScreen(
                                         },
                                         onClick = {
                                             vm.resetCheck()
-                                            vm.selectModel(m.name)
+                                            vm.selectModel(m.id)
                                             modelMenu = false
                                         },
                                     )
@@ -377,7 +378,204 @@ fun SettingsScreen(
                 }
             }
 
-            // ---------- 用量卡（US-41d） ----------
+            // ---------- 生图模型卡（it-077 US-64c：与聊天卡同形制；同厂商共用一把 Key） ----------
+            val imageConn by vm.imageConnection.collectAsState()
+            val imageKeyMask by vm.imageKeyMask.collectAsState()
+            var imageKeyInput by remember(imageConn.presetId) { mutableStateOf("") }
+            var imagePresetMenu by remember { mutableStateOf(false) }
+            var imageModelMenu by remember { mutableStateOf(false) }
+            var clearImageKeyAsk by remember { mutableStateOf(false) }
+            val isImageCustom = imageConn.presetId == SettingsViewModel.IMAGE_CUSTOM_ID
+            val imageProviderName = if (isImageCustom) "自定义" else vm.imagePresetOptions.find { it.id == imageConn.presetId }?.displayName ?: imageConn.presetId
+            val imageModels = vm.imageModelsOf(imageConn)
+            val imageCustomIncomplete = isImageCustom &&
+                (imageConn.customBaseUrl.isBlank() || imageConn.customModel.isBlank())
+            val sharesChatKey = !isImageCustom && imageConn.presetId == connection.presetId
+
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = ec.surface,
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("生图模型", style = MaterialTheme.typography.titleLarge, color = ec.ink)
+                    Text(
+                        "穿搭效果图的生成通道；选择与上方连接相同的厂商时共用同一把 Key。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ec.ink,
+                    )
+
+                    // 厂商
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("厂商", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = { imagePresetMenu = true },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                            ) {
+                                Text(imageProviderName, color = ec.ink)
+                                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = ec.inkFaint)
+                            }
+                            DropdownMenu(expanded = imagePresetMenu, onDismissRequest = { imagePresetMenu = false }) {
+                                vm.imagePresetOptions.forEach { p ->
+                                    DropdownMenuItem(
+                                        text = { Text(p.displayName) },
+                                        onClick = {
+                                            imageKeyInput = ""
+                                            vm.selectImagePreset(p.id)
+                                            imagePresetMenu = false
+                                        },
+                                        trailingIcon = {
+                                            if (p.id == imageConn.presetId) {
+                                                Icon(Icons.Rounded.CheckCircle, contentDescription = "当前")
+                                            }
+                                        },
+                                    )
+                                }
+                                DropdownMenuItem(
+                                    text = { Text("自定义…") },
+                                    onClick = {
+                                        imageKeyInput = ""
+                                        vm.selectImagePreset(SettingsViewModel.IMAGE_CUSTOM_ID)
+                                        imagePresetMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (isImageCustom) Icon(Icons.Rounded.CheckCircle, contentDescription = "当前")
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    // 模型（含档位与参考价快照——以厂商账单为准）
+                    if (!isImageCustom && imageModels.isNotEmpty()) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("模型", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                            TextButton(
+                                onClick = { imageModelMenu = true },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                            ) {
+                                Text(
+                                    imageConn.model.ifBlank {
+                                        imageModels.first().id + " · ${imageModels.first().tier}"
+                                    },
+                                    color = ec.ink,
+                                )
+                                Icon(Icons.Rounded.ArrowDropDown, contentDescription = null, tint = ec.inkFaint)
+                            }
+                            DropdownMenu(expanded = imageModelMenu, onDismissRequest = { imageModelMenu = false }) {
+                                imageModels.forEach { m ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(m.id)
+                                                Text(
+                                                    buildString {
+                                                        append(m.tier)
+                                                        m.costPerImage?.let { append(" · 参考价 ¥$it/张") }
+                                                    },
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = ec.inkFaint,
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            vm.selectImageModel(m.id)
+                                            imageModelMenu = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 自定义生图厂商（OpenAI images 兼容）
+                    if (isImageCustom) {
+                        OutlinedTextField(
+                            value = imageConn.customBaseUrl,
+                            onValueChange = { vm.updateImageCustom(baseUrl = it) },
+                            label = { Text("Base URL（含 /v1，images/generations 兼容）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = imageConn.customModel,
+                            onValueChange = { vm.updateImageCustom(model = it) },
+                            label = { Text("模型名") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // API Key（同厂商与聊天连接共用；自定义生图为独立槽位）
+                    OutlinedTextField(
+                        value = imageKeyInput,
+                        onValueChange = { imageKeyInput = it },
+                        label = { Text("API Key", color = ec.ink) },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        supportingText = {
+                            Text(
+                                when {
+                                    imageKeyMask != null && sharesChatKey -> "已保存 $imageKeyMask · 与聊天连接共用 · 留空保持不变"
+                                    imageKeyMask != null -> "已保存 $imageKeyMask · 留空保持不变"
+                                    else -> "未配置"
+                                },
+                                color = ec.ink,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 生图没有免费 ping（拍板：不做付费自检）——保存即校验格式，首次生成时验证
+                        Button(
+                            onClick = { vm.saveImageConnection(imageConn, imageKeyInput) },
+                            enabled = !imageCustomIncomplete,
+                            modifier = Modifier.weight(1f),
+                        ) { Text("保存") }
+                        if (imageKeyMask != null) {
+                            TextButton(
+                                onClick = { clearImageKeyAsk = true },
+                                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                    contentColor = ec.inkFaint,
+                                ),
+                            ) { Text("清除 Key") }
+                        }
+                    }
+                }
+            }
+
+            if (clearImageKeyAsk) {
+                AlertDialog(
+                    onDismissRequest = { clearImageKeyAsk = false },
+                    title = { Text("清除生图连接的 Key？") },
+                    text = { Text("清除后需要重新粘贴 API Key 才能生成穿搭效果图；与聊天连接共用的厂商会一并失效。") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            clearImageKeyAsk = false
+                            imageKeyInput = ""
+                            vm.clearImageKey(imageConn.presetId)
+                        }) { Text("清除") }
+                    },
+                    dismissButton = { TextButton(onClick = { clearImageKeyAsk = false }) { Text("取消") } },
+                )
+            }
+
+            // ---------- 用量卡（US-41d；it-077 增生图张数） ----------
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = ec.surface,
@@ -403,7 +601,11 @@ fun SettingsScreen(
                                             color = ec.ink,
                                         )
                                         Text(
-                                            "输入 ${usage.promptTokens} · 输出 ${usage.completionTokens}",
+                                            if (usage.images > 0) {
+                                                "输入 ${usage.promptTokens} · 输出 ${usage.completionTokens} · 生图 ${usage.images} 张"
+                                            } else {
+                                                "输入 ${usage.promptTokens} · 输出 ${usage.completionTokens}"
+                                            },
                                             style = MaterialTheme.typography.labelMedium,
                                             color = ec.inkFaint,
                                         )

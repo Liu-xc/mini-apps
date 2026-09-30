@@ -175,12 +175,12 @@ class WardrobeRepositoryImpl(
         files.forEach { images.delete(it) }
     }
 
-    override suspend fun addEffectImage(outfitId: String, imageFile: String) {
+    override suspend fun addEffectImage(outfitId: String, image: OutfitImage) {
         mutate {
             it.copy(outfits = it.outfits.replaceBy(outfitId, { o -> o.id }) { o ->
                 // it-068：新成品图即当前组合的效果——解除「调整前组合」标注（单一真源）
                 o.copy(
-                    effectImages = o.effectImages + OutfitImage(imageFile, now()),
+                    effectImages = o.effectImages + image.copy(addedAt = now()),
                     effectStale = false,
                     updatedAt = now(),
                 )

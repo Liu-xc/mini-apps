@@ -51,22 +51,27 @@ import java.io.File
  * it-075 · 工具结果的结构化卡片模型：只存 id 引用 + 查询条件摘要，
  * 数据快照（名称/图片/标签）渲染时从仓库现取——衣物改名换图自动新鲜，删除落占位行。
  * 由 [parseToolResultCard] 从 tool 消息 payload 解析（live 事件与历史回放同一入口）。
+ * it-077 · 新增 [GeneratedImage]：AI 试衣成图卡（本地 imageFile 引用 + 模型溯源）。
  */
 sealed interface ToolResultCard {
-    val total: Int
-    val ids: List<String>
-
     data class Items(
-        override val total: Int,
-        override val ids: List<String>,
+        val total: Int,
+        val ids: List<String>,
         val category: String,
         val keyword: String,
     ) : ToolResultCard
 
     data class Outfits(
-        override val total: Int,
-        override val ids: List<String>,
+        val total: Int,
+        val ids: List<String>,
         val keyword: String,
+    ) : ToolResultCard
+
+    /** it-077：顾问生成的穿搭效果图（图片已落盘本地，卡片只存文件引用——ADR-029 同款） */
+    data class GeneratedImage(
+        val outfitId: String,
+        val imageFile: String,
+        val model: String,
     ) : ToolResultCard
 }
 
@@ -78,12 +83,14 @@ fun ToolResultCard.queryLabel(): String = when (this) {
     }.joinToString(" · ").ifEmpty { "全部单品" }
     is ToolResultCard.Outfits ->
         keyword.takeIf { it.isNotBlank() }?.let { "“$it”" } ?: "穿搭"
+    is ToolResultCard.GeneratedImage -> "穿搭效果图"
 }
 
-/** 卡头计数：「找到 8 件 · 外套」「找到 3 套穿搭 · “通勤”」 */
+/** 卡头计数：「找到 8 件 · 外套」「找到 3 套穿搭 · “通勤”」「AI 生成 · 穿搭效果图」 */
 fun ToolResultCard.headerLabel(): String = when (this) {
     is ToolResultCard.Items -> "找到 $total 件 · ${queryLabel()}"
     is ToolResultCard.Outfits -> "找到 $total 套穿搭 · ${queryLabel()}"
+    is ToolResultCard.GeneratedImage -> "AI 生成 · ${queryLabel()}"
 }
 
 /**
@@ -92,19 +99,31 @@ fun ToolResultCard.headerLabel(): String = when (this) {
  */
 fun parseToolResultCard(payload: JsonElement?): ToolResultCard? {
     val obj = payload as? JsonObject ?: return null
-    val kind = obj["kind"]?.jsonPrimitive?.contentOrNull ?: return null
-    val ids = obj["ids"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: return null
-    if (ids.isEmpty()) return null
-    val total = obj["total"]?.jsonPrimitive?.intOrNull ?: ids.size
-    val keyword = obj["keyword"]?.jsonPrimitive?.contentOrNull.orEmpty()
-    return when (kind) {
-        "items" -> ToolResultCard.Items(
-            total = total,
-            ids = ids,
-            category = obj["category"]?.jsonPrimitive?.contentOrNull.orEmpty(),
-            keyword = keyword,
-        )
-        "outfits" -> ToolResultCard.Outfits(total = total, ids = ids, keyword = keyword)
+    return when (obj["kind"]?.jsonPrimitive?.contentOrNull) {
+        "items", "outfits" -> {
+            val ids = obj["ids"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: return null
+            if (ids.isEmpty()) return null
+            val total = obj["total"]?.jsonPrimitive?.intOrNull ?: ids.size
+            val keyword = obj["keyword"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            if (obj["kind"]?.jsonPrimitive?.contentOrNull == "items") {
+                ToolResultCard.Items(
+                    total = total,
+                    ids = ids,
+                    category = obj["category"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                    keyword = keyword,
+                )
+            } else {
+                ToolResultCard.Outfits(total = total, ids = ids, keyword = keyword)
+            }
+        }
+        // it-077：AI 试衣成图卡（imageFile 为本地文件名引用，不存在时渲染落占位）
+        "outfit_image" -> {
+            val outfitId = obj["outfitId"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            val imageFile = obj["imageFile"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            val model = obj["model"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            if (outfitId.isBlank() || imageFile.isBlank()) null
+            else ToolResultCard.GeneratedImage(outfitId, imageFile, model)
+        }
         else -> null
     }
 }
@@ -131,6 +150,67 @@ fun ToolResultCards(
             when (card) {
                 is ToolResultCard.Items -> ItemResultCard(card, items, imageFileOf, onOpenItem, onBrowseAll)
                 is ToolResultCard.Outfits -> OutfitListCard(card, items, outfits, imageFileOf, onOpenOutfit, onBrowseAll)
+                is ToolResultCard.GeneratedImage -> GeneratedImageCard(card, outfits, imageFileOf, onOpenOutfit)
+            }
+        }
+    }
+}
+
+/**
+ * it-077 · AI 试衣成图卡：本地 imageFile 渲染（it-054 边界——不信任模型 URL），
+ * 穿搭已删时落占位说明；整卡点进 W7 穿搭详情。
+ */
+@Composable
+private fun GeneratedImageCard(
+    card: ToolResultCard.GeneratedImage,
+    outfits: List<Outfit>,
+    imageFileOf: (String) -> File?,
+    onOpenOutfit: (String) -> Unit,
+) {
+    val ec = editorialColors()
+    CardShell {
+        if (outfits.none { it.id == card.outfitId }) {
+            Text(
+                "这张 AI 效果图所属的穿搭已删除",
+                style = MaterialTheme.typography.bodySmall,
+                color = ec.inkFaint,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            )
+        } else {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenOutfit(card.outfitId) }
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PhotoCard(
+                    file = imageFileOf(card.imageFile),
+                    contentDescription = "AI 穿搭效果图",
+                    corner = 12.dp,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    mat = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp),
+                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        card.headerLabel() + if (card.model.isNotBlank()) " · ${card.model}" else "",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = ec.inkFaint,
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = "查看穿搭",
+                        tint = ec.inkFaint,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
     }
@@ -477,6 +557,8 @@ fun ResultBrowserSheet(
                         }
                     }
                 }
+                // it-077：成图卡是单图，无折叠抽屉形态
+                is ToolResultCard.GeneratedImage -> {}
             }
         }
     }

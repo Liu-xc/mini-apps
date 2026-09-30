@@ -9,7 +9,6 @@ import com.leo.libs.agent.AgentEvent
 import com.leo.libs.agent.AgentRunner
 import com.leo.libs.agent.Message
 import com.leo.libs.agent.ProviderPreset
-import com.leo.libs.agent.Providers
 import com.leo.libs.agent.Role
 import com.leo.wardrobe.data.chat.ChatSessionSummary
 import com.leo.wardrobe.domain.model.Item
@@ -27,6 +26,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import com.leo.wardrobe.WardrobeApp
 import java.io.File
 
@@ -242,6 +243,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             tools = wardrobeTools(
                 data = { container.repository.data.value },
                 personId = { personId },
+                // it-077 US-64b：对话流生图工具（未配置生图连接时工具内友好报错，不炸 loop）
+                imageGen = { outfitId, itemIds, sceneHint ->
+                    runAdvisorImageGen(personId, outfitId, itemIds, sceneHint.orEmpty())
+                },
             ),
             session = session,
             sessionId = sessionId,
@@ -258,7 +263,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     is AgentEvent.ThinkingDelta -> _thinking.value = true
                     is AgentEvent.ToolRequested -> _toolNotices.update {
-                        it + ToolNotice(ev.call.name, "查询中…", ok = true)
+                        // it-077：生图工具耗时长，进度文案单独标注
+                        it + ToolNotice(
+                            ev.call.name,
+                            if (ev.call.name == "generate_outfit_image") "生成中（约 20~60 秒）…" else "查询中…",
+                            ok = true,
+                        )
                     }
                     is AgentEvent.ToolFinished -> _toolNotices.update { list ->
                         list.mapIndexed { i, n ->
@@ -304,7 +314,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun isBusy(): Boolean = _running.value || job?.isActive == true
 
-    /** 返回可运行连接；Key 缺失即 null，保证未配置场景不会写入会话。 */
+    /** 返回可运行连接；Key 缺失即 null，保证未配置场景不会写入会话。it-077：厂商目录化（统一 ModelCatalog）。 */
     private suspend fun resolveConnection(): Pair<ProviderPreset, String>? {
         val presetId = prefs.aiPresetId.first()
         val modelSel = prefs.aiModel.first()
@@ -313,11 +323,71 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         val preset: ProviderPreset? = if (presetId == "custom") {
             if (customBase.isBlank() || customModel.isBlank()) null
             else ProviderPreset.custom("custom", "自定义", customBase.trim(), listOf(customModel.trim()))
-        } else Providers.all.find { it.id == presetId }
+        } else com.leo.libs.agent.ModelCatalog.byId(presetId)?.chatPreset
         val model = if (preset == null) null else if (presetId == "custom") customModel.trim()
         else modelSel.ifBlank { preset.defaultModel }
         val hasKey = preset?.let { container.apiKeyStore.get(it.id)?.isNotBlank() == true } == true
         return if (preset != null && !model.isNullOrBlank() && hasKey) preset to model else null
+    }
+
+    /**
+     * it-077 US-64b：顾问生图工具的执行体——解析穿搭/单品 → 装配参考图（人物参考照 + 单品图）
+     * → 生成 → 取首张候选保存挂 effectImages → 回带结构化 payload（ADR-029：只存引用）。
+     */
+    private suspend fun runAdvisorImageGen(
+        personId: String,
+        outfitId: String?,
+        itemIds: List<String>,
+        sceneHint: String,
+    ): com.leo.libs.agent.tool.ToolResult {
+        val generator = container.outfitImageGenerator
+        val conn = generator.connection()
+            ?: return com.leo.libs.agent.tool.ToolResult.error("生图未配置：请先在「设置 → 生图模型」选择厂商并粘贴 Key")
+        val snapshot = container.repository.data.value
+        val resolvedIds: List<String> = if (outfitId != null) {
+            snapshot.outfits.find { it.id == outfitId && it.personId == personId }?.itemIds
+                ?: return com.leo.libs.agent.tool.ToolResult.error("未找到穿搭 $outfitId（可先用 search_outfits 查 id）")
+        } else itemIds
+        val items = resolvedIds.mapNotNull { id -> snapshot.items.find { it.id == id } }
+        if (items.isEmpty()) {
+            return com.leo.libs.agent.tool.ToolResult.error("没有可用单品：itemIds 需来自 search_items 的结果")
+        }
+        val person = snapshot.persons.find { it.id == personId }
+        val prompt = com.leo.wardrobe.data.gen.OutfitImageGenerator.promptOf(
+            items, sceneHint, container.prefs.personNote.first(),
+        )
+        return when (
+            val r = generator.run(
+                connection = conn,
+                prompt = prompt,
+                items = items,
+                personRefFile = person?.refImageFile,
+                resolution = null,
+                extra = emptyMap(),
+                onProgress = {},
+            )
+        ) {
+            is com.leo.wardrobe.data.gen.OutfitImageGenerator.RunOutcome.Candidates -> {
+                when (
+                    val s = generator.save(personId, outfitId, resolvedIds, r.images.first(), r.model, prompt)
+                ) {
+                    is com.leo.wardrobe.data.gen.OutfitImageGenerator.SaveOutcome.Saved ->
+                        com.leo.libs.agent.tool.ToolResult.ok(
+                            "已生成穿搭效果图并保存为该穿搭的成品图，用户可在穿搭详情查看。",
+                            buildJsonObject {
+                                put("kind", "outfit_image")
+                                put("outfitId", s.outfitId)
+                                put("imageFile", s.file)
+                                put("model", s.model)
+                            },
+                        )
+                    is com.leo.wardrobe.data.gen.OutfitImageGenerator.SaveOutcome.Failed ->
+                        com.leo.libs.agent.tool.ToolResult.error("保存失败：${s.error.userMessage}")
+                }
+            }
+            is com.leo.wardrobe.data.gen.OutfitImageGenerator.RunOutcome.Failed ->
+                com.leo.libs.agent.tool.ToolResult.error("生成失败：${r.error.userMessage}")
+        }
     }
 
     companion object {
@@ -325,6 +395,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "你是「衣橱顾问」，服务于用户的个人衣橱应用（中文回复）。" +
                 "按问题调用必要的只读工具并引用具体单品名称，不要编造衣橱里不存在的衣物；同一查询条件只查一次。" +
                 "建议给出 1~3 套可执行的搭配思路并说明理由；数据为只读，你不能修改衣橱。" +
+                "用户想看某套搭配的上身效果时，调用 generate_outfit_image（优先传 search_outfits 的 outfitId，" +
+                "无已存穿搭时传 search_items 的 itemIds，可用 sceneHint 描述场景）；生成耗时较长，一轮至多调用一次，" +
+                "成功后告诉用户效果图已存入穿搭详情的成品图。" +
                 "请使用 Markdown 回复：每套方案以「## 第一套 · 场景」或「## 第二套 · 场景」开头，" +
                 "用「- 品类：单品原名」列出单品，品类只能使用上装/外套/下装/连衣裙/鞋/包/帽子/其他配饰，" +
                 "单品名称必须原样来自 search_items 的结果；随后用「**适合**：…」和「**理由**：…」说明。" +

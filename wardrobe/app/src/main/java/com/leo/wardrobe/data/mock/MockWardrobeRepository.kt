@@ -134,11 +134,11 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
         )
     }
 
-    override suspend fun addEffectImage(outfitId: String, imageFile: String) {
+    override suspend fun addEffectImage(outfitId: String, image: OutfitImage) {
         _data.value = _data.value.copy(
             outfits = _data.value.outfits.map { o ->
                 if (o.id == outfitId) {
-                    o.copy(effectImages = o.effectImages + OutfitImage(imageFile, now()), updatedAt = now())
+                    o.copy(effectImages = o.effectImages + image.copy(addedAt = now()), updatedAt = now())
                 } else o
             },
         )

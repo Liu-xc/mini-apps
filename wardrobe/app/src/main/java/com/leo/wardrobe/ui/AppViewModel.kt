@@ -50,6 +50,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val promptBuilder get() = container.buildPrompt
     val share get() = container.share
 
+    /** it-077：穿搭生图控制器（W7 生成 sheet 使用） */
+    val imageGenerator get() = container.outfitImageGenerator
+
     /** it-071：不再主线程 stat——文件缺失交给 Coil，由 PhotoCard placeholder/error 兜底。 */
     fun imageFileOf(name: String): File? = container.imageStore.file(name)
 

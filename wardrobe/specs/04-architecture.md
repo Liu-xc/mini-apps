@@ -38,7 +38,8 @@ com.leo.wardrobe/
 │  ├─ image/ImageFileStore.kt          # 实现 ImageStore + ImageEditStore 接口(it-021)；文件管理走 store SDK FileMediaStore
 │  ├─ prefs/                           # PrefsStore（组合记忆/文案记忆/真实与 Mock 隔离的 AI 连接偏好）RecapPrefsStore / KeystoreApiKeyStore
 │  ├─ chat/                            # ChatSessionIndex（会话摘要目录；消息仍归 agent FileSessionStore）
-│  └─ mock/                            # Mock 数据/仓库/DemoMode；MockChatCache + CachedMockChatModel（it-050）
+│  ├─ gen/OutfitImageGenerator.kt      # it-077 穿搭生图控制器：连接解析→参考图装配（WebP→JPEG base64）→ImageModel 事件流→落盘挂 effectImages；演示模式走 MockImageModel
+│  └─ mock/                            # Mock 数据/仓库/DemoMode；MockChatCache + CachedMockChatModel（it-050）+ MockImageModel（it-077，生图演示一律不出网）
 ├─ export/
 │  ├─ OutfitImageComposer.kt      # Bitmap 拼合成图（2列网格+品类标签）
 │  ├─ JpegXmp.kt                  # 成品图 XMP 元数据回写（it-013）
@@ -50,13 +51,13 @@ com.leo.wardrobe/
    ├─ components/  PhotoCard PhotoPicker SlotGrid Tags CommentTimeline EmptyState Confetti…
    ├─ AppViewModel.kt             # 全局：角色状态 + 数据流（SSOT 出口）
    ├─ outfit/      OutfitScreen(W1) PersonSheet(W2) ExportSheet(W6)
-   ├─ records/     RecordsScreen(W8) OutfitDetailScreen(W7)
+   ├─ records/     RecordsScreen(W8) OutfitDetailScreen(W7) OutfitGenerateSheet(it-077 AI 试衣四态生成 sheet + 高级参数面板)
    ├─ wardrobe/    WardrobeScreen(W3) ItemEditScreen(W4)
    ├─ detail/      ItemDetailScreen(W5)
    ├─ recap/       WardrobeRecapScreen RecapViewModel WardrobeRecapLongImage(W9，it-018/021)
    ├─ wishlist/    WishlistScreen(W10，it-019)
-   ├─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域)
-   └─ chat/        ChatListScreen(W12) ChatScreen(W13) ChatViewModel WardrobeTools（多会话 + 只读门禁）
+   ├─ settings/    SettingsScreen(W11) SettingsViewModel(it-041 阶段A，模型连接域；it-077 聊天卡目录化 + 生图卡)
+   └─ chat/        ChatListScreen(W12) ChatScreen(W13) ChatViewModel WardrobeTools（多会话 + 只读门禁 + it-077 生图工具/成图卡）
 ```
 
 ## 设计模式

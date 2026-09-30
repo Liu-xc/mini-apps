@@ -142,4 +142,43 @@ class PrefsStore(private val context: Context, private val aiNamespace: String =
     suspend fun setAiLastCheck(value: String) {
         context.store.edit { it[keyAiLastCheck] = value }
     }
+
+    // it-077 US-64c：生图轨连接偏好（与聊天轨同命名空间前缀隔离；Key 本体仍走 KeystoreApiKeyStore，
+    // 同一厂商 id 一把 Key 双轨共用）。默认硅基流动（免费 Kolors 可先跑通链路）。
+
+    private val keyAiImagePreset = aiKey("image_preset")
+    private val keyAiImageModel = aiKey("image_model")
+    private val keyAiImageCustomBaseUrl = aiKey("image_custom_base_url")
+    private val keyAiImageCustomModel = aiKey("image_custom_model")
+
+    /** 高级面板上次取值（JSON：{modelId: {paramKey: value}}，按模型记忆——拍板①） */
+    private val keyAiImageLastParams = aiKey("image_last_params")
+
+    val aiImagePresetId: Flow<String> = context.store.data.map { it[keyAiImagePreset] ?: "siliconflow" }
+
+    /** 选中的生图模型 id（空 = preset 首个生图模型） */
+    val aiImageModel: Flow<String> = context.store.data.map { it[keyAiImageModel] ?: "" }
+
+    suspend fun setAiImageConnection(presetId: String, model: String) {
+        context.store.edit {
+            it[keyAiImagePreset] = presetId
+            it[keyAiImageModel] = model
+        }
+    }
+
+    val aiImageCustomBaseUrl: Flow<String> = context.store.data.map { it[keyAiImageCustomBaseUrl] ?: "" }
+    val aiImageCustomModel: Flow<String> = context.store.data.map { it[keyAiImageCustomModel] ?: "" }
+
+    suspend fun setAiImageCustom(baseUrl: String, model: String) {
+        context.store.edit {
+            it[keyAiImageCustomBaseUrl] = baseUrl
+            it[keyAiImageCustomModel] = model
+        }
+    }
+
+    val aiImageLastParams: Flow<String> = context.store.data.map { it[keyAiImageLastParams] ?: "{}" }
+
+    suspend fun setAiImageLastParams(json: String) {
+        context.store.edit { it[keyAiImageLastParams] = json }
+    }
 }

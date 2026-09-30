@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -104,6 +105,8 @@ fun OutfitDetailScreen(
     var showDelete by remember { mutableStateOf(false) }
     var showTagEdit by remember { mutableStateOf(false) }
     var showExport by remember { mutableStateOf(false) }
+    // it-077 US-64a：AI 试衣生成 sheet
+    var showGenerate by remember { mutableStateOf(false) }
     var actionMenuOpen by remember { mutableStateOf(false) }
     var editingItems by remember(outfit.id) { mutableStateOf(false) }
     // it-070 US-49：主视图切到「单品布局」的会话态（仅成品图存在时可切，默认成品图）
@@ -194,6 +197,19 @@ fun OutfitDetailScreen(
                                 },
                             )
                             DropdownMenuItem(
+                                text = { Text("AI 试衣") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Rounded.AutoFixHigh,
+                                        contentDescription = null,
+                                    )
+                                },
+                                onClick = {
+                                    actionMenuOpen = false
+                                    showGenerate = true
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text("创建副本") },
                                 leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
                                 onClick = {
@@ -261,15 +277,36 @@ fun OutfitDetailScreen(
                         val img = outfit.effectImages[page]
                         // it-064 修2a：撤销 it-058 C2 的轮播共享元素（W8 hero 端已撤，
                         // 无配对即无动画；卡组场景的切换流畅优先，见 RecordsScreen 注记）
-                        PhotoCard(
-                            file = vm.imageFileOf(img.file),
-                            contentDescription = "成品效果图 ${page + 1}",
-                            contentScale = ContentScale.Fit,
-                            mat = true,
-                            modifier = Modifier
+                        // it-077：AI 生成的成品图带角标（自用区分生成图与手动录入）
+                        Box(
+                            Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.86f),
-                        )
+                        ) {
+                            PhotoCard(
+                                file = vm.imageFileOf(img.file),
+                                contentDescription = "成品效果图 ${page + 1}",
+                                contentScale = ContentScale.Fit,
+                                mat = true,
+                                modifier = Modifier.matchParentSize(),
+                            )
+                            if (img.source == com.leo.wardrobe.data.gen.OutfitImageGenerator.SOURCE_AI) {
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                                    color = editorialColors().accent,
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(10.dp),
+                                ) {
+                                    Text(
+                                        "AI",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
                     if (outfit.effectImages.size > 1) {
                         // 当前页删除小按钮
@@ -484,6 +521,16 @@ fun OutfitDetailScreen(
                     Spacer(Modifier.width(6.dp))
                     Text("复制长图")  // it-012：与搭配页同一套词
                 }
+                // it-077 US-64a：AI 试衣直达入口（与复制长图同层级的次动作）
+                OutlinedButton(onClick = { showGenerate = true }, modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.Rounded.AutoFixHigh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("AI 试衣")
+                }
             }
 
             HorizontalDivider(color = editorialColors().hairline)
@@ -607,6 +654,18 @@ fun OutfitDetailScreen(
             existingOutfit = outfit,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
+        )
+    }
+
+    // it-077 US-64a：AI 试衣生成 sheet
+    if (showGenerate) {
+        OutfitGenerateSheet(
+            vm = vm,
+            outfit = outfit,
+            items = items,
+            person = vm.currentPerson.collectAsState().value,
+            personNote = vm.personNote.collectAsState().value,
+            onDismiss = { showGenerate = false },
         )
     }
 }

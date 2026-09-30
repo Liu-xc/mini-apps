@@ -1,6 +1,7 @@
 package com.leo.wardrobe.domain.repository
 
 import com.leo.wardrobe.domain.model.Outfit
+import com.leo.wardrobe.domain.model.OutfitImage
 
 /** 穿搭域仓储（it-021 接口拆分） */
 interface OutfitRepository {
@@ -11,6 +12,11 @@ interface OutfitRepository {
     /** 级联：删成品图文件与该穿搭的评论 */
     suspend fun deleteOutfit(id: String)
 
-    suspend fun addEffectImage(outfitId: String, imageFile: String)
+    suspend fun addEffectImage(outfitId: String, imageFile: String) {
+        addEffectImage(outfitId, OutfitImage(imageFile))
+    }
+
+    /** it-077：带溯源元数据的成品图写入（source/model/prompt） */
+    suspend fun addEffectImage(outfitId: String, image: OutfitImage)
     suspend fun removeEffectImage(outfitId: String, imageFile: String)
 }

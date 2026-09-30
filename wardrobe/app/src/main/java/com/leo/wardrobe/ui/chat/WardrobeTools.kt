@@ -22,16 +22,21 @@ fun toolLabel(name: String): String = when (name) {
     "search_outfits" -> "查穿搭"
     "wear_stats" -> "穿用统计"
     "current_person" -> "当前角色"
+    "generate_outfit_image" -> "生成试衣图"
     else -> "查衣橱"
 }
 
 /**
  * it-041 US-41b：注册给模型的只读衣橱工具——全部从 repo 快照读（零写路径），
  * 数据经工具结果回喂进模型上下文（与导出长图给生图 Agent 同性质）。
+ *
+ * it-077 US-64b：可选注入 [imageGen] 时注册第 5 个工具 generate_outfit_image——
+ * 写入的是 effectImages 成品图域（AI 效果图带 source=ai 溯源），只读门禁原则不破。
  */
 fun wardrobeTools(
     data: () -> WardrobeData,
     personId: () -> String?,
+    imageGen: (suspend (outfitId: String?, itemIds: List<String>, sceneHint: String?) -> ToolResult)? = null,
 ): ToolRegistry = toolRegistry {
 
     tool(
@@ -160,5 +165,28 @@ fun wardrobeTools(
         ToolResult.ok(
             "当前角色：${person.name}；形象参考照：${if (person.refImageFile != null) "已设置" else "未设置"}",
         )
+    }
+
+    // it-077 US-64b：AI 试衣（生成写入 effectImages 成品图域，带 source=ai 溯源）
+    if (imageGen != null) {
+        tool(
+            name = "generate_outfit_image",
+            description = "为穿搭生成 AI 上身效果图并保存为该穿搭的成品图：优先传 search_outfits 结果里的 outfitId；" +
+                "搭配尚未保存为穿搭时传 search_items 结果里的 itemIds（英文逗号分隔）。耗时约 20~60 秒，一轮对话至多调用一次。",
+            parameters = jsonSchema {
+                string("outfitId", "已保存穿搭的 id（与 itemIds 二选一）", required = false)
+                string("itemIds", "单品 id 列表，英文逗号分隔（与 outfitId 二选一）", required = false)
+                string("sceneHint", "场景或风格描述，如 城市街头 / 办公室 / 居家", required = false)
+            },
+        ) { args ->
+            val outfitId = args["outfitId"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+            val itemIds = args["itemIds"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+                .split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            val sceneHint = args["sceneHint"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+            if (outfitId.isEmpty() && itemIds.isEmpty()) {
+                return@tool ToolResult.error("需要 outfitId 或 itemIds 至少一个（来自 search_outfits / search_items 的结果）")
+            }
+            imageGen(outfitId.ifEmpty { null }, itemIds, sceneHint)
+        }
     }
 }

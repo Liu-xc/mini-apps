@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- **AI 穿搭生图**：[it-077](iterations/it-077-image-gen-provider-gateway.md) AI 试衣直达生成（W7 四态 sheet + 高级参数面板）与顾问对话流生图（第 5 工具 + 成图卡）；SDK 统一模型目录（聊天扩容 DeepSeek/Kimi/Qwen/豆包/硅基流动，一把 Key 双轨共用）；OutfitImage 增 AI 溯源字段。
+
 - **导出人物参考**：[it-074](iterations/it-074-no-mannequin-reference.md) 移除演示人台默认引用，拦截旧占位图进入长图与提示词；提供男女全身白色打底模特素材。
 
 - **滚动行为**：[it-073](iterations/it-073-disable-overscroll-stretch.md) 全站禁用 Android 12+ overscroll 拉伸（「弹簧绳」），到头即停。
