@@ -77,14 +77,15 @@ private sealed interface GeneratePhase {
 }
 
 /**
- * it-077 US-64a · W7 搭配详情「AI 试衣」全屏生成 sheet（it-040 W5 四态交互语言）：
+ * it-077 US-64a · W1/W7/W8「生成效果图」全屏生成 sheet（生成即录入成品图）（it-040 W5 四态交互语言）：
  * 装配（参考图勾选 + 描述 + 高级参数面板）→ 生成（进度可取消）→ 结果（候选挑选）→ 保存挂 effectImages。
  * 照片上传去向一行静态提示（拍板①：自用不做确认弹窗）；开销不拦截。
  */
 @Composable
 fun OutfitGenerateSheet(
     vm: AppViewModel,
-    outfit: Outfit,
+    // null = 组合未保存（W1 直生成，保存时自动建穿搭）
+    outfit: Outfit?,
     items: List<Item>,
     person: Person?,
     personNote: String,
@@ -101,12 +102,12 @@ fun OutfitGenerateSheet(
     var job by remember { mutableStateOf<Job?>(null) }
 
     // 装配态输入
-    var prompt by remember(outfit.id) {
+    var prompt by remember(outfit?.id) {
         mutableStateOf(OutfitImageGenerator.promptOf(items, scene = "", personNote = personNote))
     }
-    val includeItems = remember(outfit.id) { mutableStateMapOf(*items.map { it.id to true }.toTypedArray()) }
+    val includeItems = remember(outfit?.id) { mutableStateMapOf(*items.map { it.id to true }.toTypedArray()) }
     val hasPersonRef = person?.refImageFile != null
-    var includePerson by remember(outfit.id) { mutableStateOf(hasPersonRef) }
+    var includePerson by remember(outfit?.id) { mutableStateOf(hasPersonRef) }
 
     // 高级参数面板（按模型记忆，拍板①）
     var paramValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -171,7 +172,7 @@ fun OutfitGenerateSheet(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp),
                 )
-                Text("AI 试衣", style = MaterialTheme.typography.titleLarge, color = ec.ink)
+                Text("生成效果图", style = MaterialTheme.typography.titleLarge, color = ec.ink)
             }
 
             if (!connectionResolved) {
@@ -385,9 +386,9 @@ fun OutfitGenerateSheet(
                                         scope.launch {
                                             when (
                                                 val s = generator.save(
-                                                    personId = outfit.personId,
-                                                    outfitId = outfit.id,
-                                                    itemIds = items.map { it.id },
+                                                    personId = outfit?.personId ?: person?.id ?: "",
+                                                    outfitId = outfit?.id,
+                                                    itemIds = items.map { it.id }.filterNot { it.startsWith(com.leo.wardrobe.domain.model.WISH_SLOT_PREFIX) },
                                                     chosen = candidate,
                                                     model = p.model,
                                                     prompt = prompt,
@@ -395,7 +396,7 @@ fun OutfitGenerateSheet(
                                             ) {
                                                 is OutfitImageGenerator.SaveOutcome.Saved -> {
                                                     haptics.confirm()
-                                                    vm.toast("AI 效果图已保存")
+                                                    vm.toast("效果图已录入成品图")
                                                     onDismiss()
                                                 }
                                                 is OutfitImageGenerator.SaveOutcome.Failed ->

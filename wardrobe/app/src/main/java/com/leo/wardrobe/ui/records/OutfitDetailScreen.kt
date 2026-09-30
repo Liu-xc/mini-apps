@@ -105,7 +105,7 @@ fun OutfitDetailScreen(
     var showDelete by remember { mutableStateOf(false) }
     var showTagEdit by remember { mutableStateOf(false) }
     var showExport by remember { mutableStateOf(false) }
-    // it-077 US-64a：AI 试衣生成 sheet
+    // it-077：生成效果图 sheet
     var showGenerate by remember { mutableStateOf(false) }
     var actionMenuOpen by remember { mutableStateOf(false) }
     var editingItems by remember(outfit.id) { mutableStateOf(false) }
@@ -197,7 +197,7 @@ fun OutfitDetailScreen(
                                 },
                             )
                             DropdownMenuItem(
-                                text = { Text("AI 试衣") },
+                                text = { Text("生成效果图") },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Rounded.AutoFixHigh,
@@ -521,7 +521,7 @@ fun OutfitDetailScreen(
                     Spacer(Modifier.width(6.dp))
                     Text("复制长图")  // it-012：与搭配页同一套词
                 }
-                // it-077 US-64a：AI 试衣直达入口（与复制长图同层级的次动作）
+                // it-077 修订（Leo 反馈）：定位为「录入成品图」的 AI 兄弟功能，名「生成效果图」
                 OutlinedButton(onClick = { showGenerate = true }, modifier = Modifier.weight(1f)) {
                     Icon(
                         Icons.Rounded.AutoFixHigh,
@@ -529,7 +529,7 @@ fun OutfitDetailScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("AI 试衣")
+                    Text("生成效果图")
                 }
             }
 
@@ -657,7 +657,7 @@ fun OutfitDetailScreen(
         )
     }
 
-    // it-077 US-64a：AI 试衣生成 sheet
+    // it-077：生成效果图 sheet
     if (showGenerate) {
         OutfitGenerateSheet(
             vm = vm,

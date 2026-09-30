@@ -116,6 +116,8 @@
 - `ChatResultCards`：`ToolResultCard.GeneratedImage` 新卡型（重构：total/ids 从接口下放到 Items/Outfits；解析入口新增 outfit_image 分支）；成图卡本地渲染 + 点进 W7 + 穿搭删除占位。
 - 数据层：`OutfitImage` +source/model/prompt 三可选字段（旧 JSON 缺字段读默认 manual）；`OutfitRepository.addEffectImage` 增 OutfitImage 重载（字符串变体接口默认委托），两实现同步。
 
+**2026-09-30 二次修订（Leo 反馈「定位应为生成效果图录入成品图，而非试衣」）**：全局更名 AI 试衣 → 生成效果图（sheet 标题/W7 按钮/W8 角标/对话工具标签/toast「效果图已录入成品图」）；入口从 W7 单点扩为三处——W1 搭配页底部第三按钮（未保存组合直生成、保存自动建穿搭、愿望伪 id 过滤）、W8 卡组卡右上角「✨生成效果图」胶囊（录入成品图角标同语言）、W7 菜单+按钮保留；sheet 的 outfit 参数改可空。模拟器实测 W1 三按钮与 W8 角标渲染正确。
+
 ## 验证记录
 
 **2026-09-30：**

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Star
@@ -106,6 +107,8 @@ fun OutfitScreen(
     val scope = rememberCoroutineScope()
     var showPersonSheet by remember { mutableStateOf(false) }
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
+    // it-077 修订（Leo 反馈）：W1 直生成效果图（生成即录入成品图；未保存组合保存时自动建穿搭）
+    var showGenerate by remember { mutableStateOf(false) }
     // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
     var addSheetCats by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
 
@@ -507,6 +510,21 @@ fun OutfitScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text("复制长图", style = MaterialTheme.typography.titleSmall)            }
+            // it-077：「录入成品图」的 AI 兄弟功能（外置生图链路内置化，接替 it-066 回程录入的绕行）
+            OutlinedButton(
+                onClick = { showGenerate = true },
+                enabled = currentItemsFromMemory.isNotEmpty(),
+                modifier = Modifier.weight(1f),
+            ) {
+                Icon(
+                    Icons.Rounded.AutoFixHigh,
+                    contentDescription = null,
+                    tint = editorialColors().accent,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("生成效果图", style = MaterialTheme.typography.titleSmall)
+            }
             if (hasWishInMix) {
                 OutlinedButton(
                     onClick = {
@@ -565,6 +583,17 @@ fun OutfitScreen(
 
     if (showPersonSheet) {
         PersonSheet(vm = vm, onDismiss = { showPersonSheet = false })
+    }
+
+    if (showGenerate) {
+        com.leo.wardrobe.ui.records.OutfitGenerateSheet(
+            vm = vm,
+            outfit = savedOutfit,
+            items = currentItemsFromMemory,
+            person = vm.currentPerson.collectAsState().value,
+            personNote = vm.personNote.collectAsState().value,
+            onDismiss = { showGenerate = false },
+        )
     }
     addSheetCats?.let { cats ->
         AddSlotSheet(

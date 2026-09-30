@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import com.leo.wardrobe.ui.components.StaggeredEntrance
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Casino
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +71,7 @@ fun RecordsScreen(
     // it-069 修2：筛选状态 rememberSaveable——Tab 往返不丢（HomeTabs 切换销毁页面）
     var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
+    var generateFor by remember { mutableStateOf<Outfit?>(null) } // it-077：卡片生成效果图
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
 
@@ -206,10 +208,15 @@ fun RecordsScreen(
                                 // it-047：样式与弹簧全部走 DeckStyle 默认（14dp 层叠 / 6dp 内衬 /
                                 // flyOutSpec = it-046 基准 spring(0.9,500)），不再引用三方库类型
                             ) { outfit ->
-                                OutfitDeckCard(vm, outfit) {
-                                    // it-047 #8③：抽取进行中卡面点击忽略
-                                    if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
-                                }
+                                OutfitDeckCard(
+                                    vm = vm,
+                                    outfit = outfit,
+                                    onOpen = {
+                                        // it-047 #8③：抽取进行中卡面点击忽略
+                                        if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
+                                    },
+                                    onGenerate = { generateFor = outfit },
+                                )
                             }
                             // it-071 P2：组合期写状态改 SideEffect（原直写在组合期，多一次重组）
                             SideEffect { deck = controller }
@@ -290,6 +297,17 @@ fun RecordsScreen(
             }
         }
     }
+    // it-077：穿搭卡片生成效果图 sheet（生成即录入该穿搭成品图）
+    generateFor?.let { target ->
+        OutfitGenerateSheet(
+            vm = vm,
+            outfit = target,
+            items = remember(target, data) { target.itemIds.mapNotNull { data.itemById(it) } },
+            person = person,
+            personNote = vm.personNote.collectAsState().value,
+            onDismiss = { generateFor = null },
+        )
+    }
 }
 
 /**
@@ -363,7 +381,7 @@ private fun RandomButton(
  * 卡组穿搭卡（it-010 成品图优先；it-011 O7 人体叙事拼贴 + 缺失空槽）。
  */
 @Composable
-private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit) {
+private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit, onGenerate: () -> Unit) {
     val data by vm.data.collectAsState()
     val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val effect = outfit.effectImages.firstOrNull()
@@ -401,6 +419,35 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit)
                         imageFileOf = vm::imageFileOf,
                         modifier = Modifier.fillMaxSize(),
                     )
+                }
+                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标
+                //（W7 拼贴「录入成品图」角标同语言——生成即录入成品图的 AI 兄弟入口）
+                androidx.compose.material3.Surface(
+                    onClick = onGenerate,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.primary,
+                    shadowElevation = 3.dp,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.AutoFixHigh,
+                            contentDescription = "生成效果图",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Text(
+                            "生成效果图",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
                 }
             }
             if (outfit.tags.isNotEmpty()) {

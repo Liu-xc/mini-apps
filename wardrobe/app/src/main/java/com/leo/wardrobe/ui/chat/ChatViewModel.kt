@@ -266,7 +266,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         // it-077：生图工具耗时长，进度文案单独标注
                         it + ToolNotice(
                             ev.call.name,
-                            if (ev.call.name == "generate_outfit_image") "生成中（约 20~60 秒）…" else "查询中…",
+                            if (ev.call.name == "generate_outfit_image") "生成中（通常 1~2 分钟）…" else "查询中…",
                             ok = true,
                         )
                     }

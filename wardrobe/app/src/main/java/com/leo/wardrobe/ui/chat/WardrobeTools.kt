@@ -22,7 +22,7 @@ fun toolLabel(name: String): String = when (name) {
     "search_outfits" -> "查穿搭"
     "wear_stats" -> "穿用统计"
     "current_person" -> "当前角色"
-    "generate_outfit_image" -> "生成试衣图"
+    "generate_outfit_image" -> "生成效果图"
     else -> "查衣橱"
 }
 
