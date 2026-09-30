@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-077 九次修订（Leo 反馈×8）——W8 拼贴卡「生成效果图」角标常驻不再按配置隐藏：已配置主色点击进生成 sheet、未配置浅色「· 去配置」直达 W11（与预览面板 AI 按钮同口径）；成品图卡依旧不挂角标。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
+
 - **fix(wardrobe)**: it-077 八次修订（Leo 反馈×7）——抽屉分层/抖动根除：两 sheet 滚动区去 weight 撑满改贴合内容+高度上限（消灭动作栏上方空白带）；生成 sheet 连接解析上提 `rememberImageGenConnection` 修 gen6「永久加载条」回归且开栏直达装配态；ExportSheet AI 按钮未配置态常驻描边「去设置」点击直达 W11。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
 
 - **docs(lottery)**: it-004按用户个人非商业用途扩大免费模型筛选范围，纳入非商业许可；记录实际查看的BlendSwap Loto/Bingo源场景与登录下载/机构差异，取消待询问商用授权的条件。

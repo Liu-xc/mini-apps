@@ -65,6 +65,8 @@ fun RecordsScreen(
     onOpenOutfit: (String) -> Unit,
     /** it-066：打卡/记录空态「去搭配一套」→ 切搭配 Tab（接线先例 it-031 C10 onGoRecords） */
     onGoOutfit: () -> Unit = {},
+    // it-077 修订九：拼贴卡「生成效果图」角标未配置时点击直达 W11 生图模型设置
+    onOpenSettings: () -> Unit = {},
 ) {
     val person by vm.currentPerson.collectAsState()
     val data by vm.data.collectAsState()
@@ -72,9 +74,8 @@ fun RecordsScreen(
     var filterTag by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf<String?>(null) }
     var deck by remember { mutableStateOf<CardDeckController<Outfit>?>(null) }
     var generateFor by remember { mutableStateOf<Outfit?>(null) } // it-077：卡片生成效果图
-    // it-077 修订八：连接对象级解析（角标显示与生成 sheet 共用，未配置隐藏 AI 入口）
+    // it-077 修订九：连接对象级解析（角标双态与生成 sheet 共用；角标常驻不再按配置隐藏）
     val imageGenConnection = rememberImageGenConnection(vm)
-    val imageGenReady = imageGenConnection != null
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
 
@@ -214,12 +215,15 @@ fun RecordsScreen(
                                 OutfitDeckCard(
                                     vm = vm,
                                     outfit = outfit,
-                                    showGenerate = imageGenReady,
+                                    // it-077 修订九：角标常驻拼贴卡——未配置不再隐藏（Leo 拍板与预览面板同口径），
+                                    // 未配置态点击直达 W11；已配置点击进生成 sheet
+                                    configured = imageGenConnection != null,
                                     onOpen = {
                                         // it-047 #8③：抽取进行中卡面点击忽略
                                         if (deck?.isDrawing != true) onOpenOutfit(outfit.id)
                                     },
                                     onGenerate = { generateFor = outfit },
+                                    onOpenSettings = onOpenSettings,
                                 )
                             }
                             // it-071 P2：组合期写状态改 SideEffect（原直写在组合期，多一次重组）
@@ -387,7 +391,14 @@ private fun RandomButton(
  * 卡组穿搭卡（it-010 成品图优先；it-011 O7 人体叙事拼贴 + 缺失空槽）。
  */
 @Composable
-private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit, showGenerate: Boolean, onGenerate: () -> Unit) {
+private fun OutfitDeckCard(
+    vm: AppViewModel,
+    outfit: Outfit,
+    configured: Boolean,
+    onOpen: () -> Unit,
+    onGenerate: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
     val data by vm.data.collectAsState()
     val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val effect = outfit.effectImages.firstOrNull()
@@ -426,34 +437,41 @@ private fun OutfitDeckCard(vm: AppViewModel, outfit: Outfit, onOpen: () -> Unit,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-                // it-077 修订（Leo 反馈）：穿搭卡片上的「生成效果图」角标——
-                // 仅无成品图的卡（拼贴视图）显示；已有成品图的卡不再挂生成入口（重生成走 W7 菜单），
-                // 未配置生图连接时全部隐藏
-                if (showGenerate && effect == null) androidx.compose.material3.Surface(
-                    onClick = onGenerate,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primary,
-                    shadowElevation = 3.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                // it-077 修订九（Leo）：角标只上拼贴卡（无成品图=该穿搭还没有效果图）；
+                // 已有成品图的卡即结果展示，不挂入口（重生成走 W7 菜单）。
+                // 角标常驻不再按配置状态隐藏——已配置=主色胶囊点击进生成 sheet；
+                // 未配置=次级胶囊「去配置」点击直达 W11（与预览面板 AI 按钮同口径）
+                if (effect == null) {
+                    val configuredPill = configured
+                    androidx.compose.material3.Surface(
+                        onClick = if (configuredPill) onGenerate else onOpenSettings,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        color = if (configuredPill) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.secondaryContainer,
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(10.dp),
                     ) {
-                        Icon(
-                            Icons.Rounded.AutoFixHigh,
-                            contentDescription = "生成效果图",
-                            tint = androidx.compose.ui.graphics.Color.White,
-                            modifier = Modifier.size(15.dp),
-                        )
-                        Text(
-                            "生成效果图",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = androidx.compose.ui.graphics.Color.White,
-                            modifier = Modifier.padding(start = 4.dp),
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.AutoFixHigh,
+                                contentDescription = "生成效果图",
+                                tint = if (configuredPill) androidx.compose.ui.graphics.Color.White
+                                else MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(15.dp),
+                            )
+                            Text(
+                                if (configuredPill) "生成效果图" else "生成效果图 · 去配置",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (configuredPill) androidx.compose.ui.graphics.Color.White
+                                else MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+                        }
                     }
                 }
             }

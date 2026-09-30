@@ -410,8 +410,10 @@ private fun HomeTabs(
             Tab.RECORDS -> RecordsScreen(
                 vm = vm,
                 onOpenOutfit = { nav.navigate(Routes.outfitDetail(it)) },
-                // it-066：空态「去搭配一套」直达（同 onGoRecords 先例）
+                // it-066：空态「去搭配一套」直达（同 onGoOutfit 先例）
                 onGoOutfit = onGoOutfit,
+                // it-077 修订九：拼贴卡角标未配置时直达设置
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) },
             )
             Tab.WARDROBE -> WardrobeScreen(
                 vm = vm,
