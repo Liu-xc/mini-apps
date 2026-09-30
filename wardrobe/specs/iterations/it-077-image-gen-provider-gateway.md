@@ -124,6 +124,8 @@
 
 **2026-09-30 五次修订（Leo 反馈×4）**：新增 `rememberImageGenReady(vm)`（produceState 读 generator.connection()）——未配置生图连接时三处 AI 入口全部隐藏（ExportSheet 主按钮换为一行弱提示「到 设置 → 生图模型 配置后可用」、W8 卡片角标不渲染、W7 菜单项不显示），配置后自动出现。
 
+**2026-09-30 六次修订（Leo 反馈×5：抽屉下滑交互怪——按钮区滚动/不连贯/分层）**：三根因齐修——①生成 sheet 由整列滚动改为「内容滚动区(weight1f) + 钉底动作栏(Surface)」两段式（各态按钮钉住不随滚，ExportSheet 同构）；②出图面板 → 生成 sheet 改顺序切换（先退场 delay 280ms 再进场，消除两个 ModalBottomSheet 动画叠加的分层残影）；③imageGenReady 就绪态提升到页面级 produceState 以参数传入（消灭 sheet 打开瞬间动作栏高度跳变）；ExportSheet 另有三处次要调用（聊天导出/单品详情/心愿）不传 onGenerate 时按钮与提示均不显示。模拟器实测：面板→生成顺序切换无残影、生成 sheet 按钮钉底。
+
 ## 验证记录
 
 **2026-09-30：**

@@ -109,6 +109,7 @@ fun OutfitScreen(
     var exportItems by remember { mutableStateOf<List<Item>?>(null) }
     // it-077 修订（Leo 反馈×2）：生成入口收进出图面板（ExportSheet），页面按钮不合并堆挤
     var showGenerate by remember { mutableStateOf(false) }
+    val imageGenReady = com.leo.wardrobe.ui.records.rememberImageGenReady(vm)
     // it-015 修订：添加单品弹层（当前待选品类列表；null = 关闭）
     var addSheetCats by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
 
@@ -560,10 +561,15 @@ fun OutfitScreen(
             existingOutfit = null,
             refPhotoFile = person?.refImageFile,
             onDismiss = { exportItems = null },
-            // it-077：面板内直生成（关闭本面板 → 打开生成 sheet；未保存组合保存时自动建穿搭）
+            imageGenReady = imageGenReady,
+            // it-077 修订（Leo 反馈×5）：先等本面板退场再开生成 sheet——
+            // 同帧切换两个 ModalBottomSheet 会退场/入场动画叠加，出现分层不连贯
             onGenerate = {
-                exportItems = null
-                showGenerate = true
+                scope.launch {
+                    exportItems = null
+                    kotlinx.coroutines.delay(280)
+                    showGenerate = true
+                }
             },
         )
     }

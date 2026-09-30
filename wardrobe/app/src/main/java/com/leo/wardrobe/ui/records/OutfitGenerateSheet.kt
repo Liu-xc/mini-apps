@@ -108,6 +108,8 @@ fun OutfitGenerateSheet(
     var connectionResolved by remember { mutableStateOf(false) }
     var phase by remember { mutableStateOf<GeneratePhase>(GeneratePhase.Setup) }
     var job by remember { mutableStateOf<Job?>(null) }
+    // it-077 修订：候选挑选序（sheet 级，随 phase 变化重置；动作栏与滚动区共用）
+    var chosen by remember(phase) { mutableStateOf(0) }
 
     // 装配态输入
     var prompt by remember(outfit?.id) {
@@ -168,11 +170,18 @@ fun OutfitGenerateSheet(
         Column(
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.92f).dp),
         ) {
+            // it-077 修订（Leo 反馈×5）：内容区滚动、动作按钮钉底——
+            // 整列滚动会让按钮跟着滚、下滑关闭手势先滚内容再拖抽屉（不连贯/分层感的根源）
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(
                     Icons.Rounded.AutoFixHigh,
@@ -315,19 +324,6 @@ fun OutfitGenerateSheet(
                             }
                         }
 
-                        Button(
-                            onClick = { startGenerate() },
-                            enabled = prompt.isNotBlank() && selectedItems.isNotEmpty() &&
-                                (!modelTakesImages || refCount <= inputLimit),
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            shape = MaterialTheme.shapes.large,
-                        ) { Text("生成效果图") }
-
-                        Text(
-                            "照片将上传至 ${conn.spec.displayName} 用于本次生成，结果保存在本机。",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ec.inkFaint,
-                        )
                     }
 
                     is GeneratePhase.Running -> {
@@ -351,17 +347,9 @@ fun OutfitGenerateSheet(
                             style = MaterialTheme.typography.labelSmall,
                             color = ec.inkFaint,
                         )
-                        OutlinedButton(
-                            onClick = {
-                                job?.cancel()
-                                phase = GeneratePhase.Setup
-                            },
-                            modifier = Modifier.fillMaxWidth().height(44.dp),
-                        ) { Text("取消") }
                     }
 
                     is GeneratePhase.Done -> {
-                        var chosen by remember { mutableStateOf(0) }
                         Text("挑一张保存", style = MaterialTheme.typography.titleMedium, color = ec.ink)
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(p.candidates.size) { i ->
@@ -386,7 +374,59 @@ fun OutfitGenerateSheet(
                                 }
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    }
+
+                    is GeneratePhase.Error -> {
+                        Text(
+                            "生成失败",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Text(p.message, style = MaterialTheme.typography.bodyMedium, color = ec.ink)
+                    }
+                }
+            }
+            }  // 内层滚动区闭合（it-077 修订：动作栏须在滚动区外、外层 Column 内）
+
+            // ---- 钉底动作栏（it-077 修订：按钮不随内容滚动；ExportSheet 同构） ----
+            Surface(shadowElevation = 6.dp) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when (val p = phase) {
+                        is GeneratePhase.Setup -> {
+                            val conn = connection
+                            if (conn != null) {
+                                Button(
+                                    onClick = { startGenerate() },
+                                    enabled = prompt.isNotBlank() && selectedItems.isNotEmpty() &&
+                                        (!modelTakesImages || refCount <= inputLimit),
+                                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                                    shape = MaterialTheme.shapes.large,
+                                ) { Text("生成效果图") }
+                                Text(
+                                    "照片将上传至 ${conn.spec.displayName} 用于本次生成，结果保存在本机。",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ec.inkFaint,
+                                )
+                            }
+                        }
+
+                        is GeneratePhase.Running -> OutlinedButton(
+                            onClick = {
+                                job?.cancel()
+                                phase = GeneratePhase.Setup
+                            },
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                        ) { Text("取消") }
+
+                        is GeneratePhase.Done -> Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             Button(
                                 onClick = {
                                     val candidate = p.candidates.getOrNull(chosen)
@@ -420,16 +460,11 @@ fun OutfitGenerateSheet(
                                 modifier = Modifier.weight(1f),
                             ) { Text("重新生成") }
                         }
-                    }
 
-                    is GeneratePhase.Error -> {
-                        Text(
-                            "生成失败",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Text(p.message, style = MaterialTheme.typography.bodyMedium, color = ec.ink)
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                        is GeneratePhase.Error -> Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             OutlinedButton(
                                 onClick = { phase = GeneratePhase.Setup },
                                 modifier = Modifier.weight(1f),

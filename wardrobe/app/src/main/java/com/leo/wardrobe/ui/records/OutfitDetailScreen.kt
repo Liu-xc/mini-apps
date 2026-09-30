@@ -60,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.leo.wardrobe.domain.model.NoteParent
 import com.leo.wardrobe.domain.model.WardrobeCategory
 import com.leo.wardrobe.domain.model.itemById
@@ -107,6 +108,8 @@ fun OutfitDetailScreen(
     var showExport by remember { mutableStateOf(false) }
     // it-077：生成效果图 sheet
     var showGenerate by remember { mutableStateOf(false) }
+    // it-077 修订：出图面板 → 生成 sheet 的顺序切换作用域
+    val genSwitchScope = androidx.compose.runtime.rememberCoroutineScope()
     var actionMenuOpen by remember { mutableStateOf(false) }
     var editingItems by remember(outfit.id) { mutableStateOf(false) }
     // it-070 US-49：主视图切到「单品布局」的会话态（仅成品图存在时可切，默认成品图）
@@ -645,10 +648,14 @@ fun OutfitDetailScreen(
             existingOutfit = outfit,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
             onDismiss = { showExport = false },
-            // it-077：面板内直生成（关闭导出面板 → 打开生成 sheet）
+            imageGenReady = rememberImageGenReady(vm),
+            // it-077 修订（Leo 反馈×5）：先退场再进场，避免两个抽屉动画叠出分层
             onGenerate = {
-                showExport = false
-                showGenerate = true
+                genSwitchScope.launch {
+                    showExport = false
+                    kotlinx.coroutines.delay(280)
+                    showGenerate = true
+                }
             },
         )
     }

@@ -417,6 +417,7 @@ fun ChatScreen(
                 items = items,
                 existingOutfit = null,
                 refPhotoFile = vmRef.currentPerson.value?.refImageFile,
+                imageGenReady = com.leo.wardrobe.ui.records.rememberImageGenReady(vmRef),
                 onDismiss = { exportRequest = null },
             )
         }

@@ -90,7 +90,6 @@ import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.isWishSlot
 import com.leo.wardrobe.domain.usecase.PromptPresets
 import com.leo.wardrobe.ui.AppViewModel
-import com.leo.wardrobe.ui.records.rememberImageGenReady
 import com.leo.wardrobe.ui.components.ConfettiBurst
 import com.leo.wardrobe.ui.components.pressScale
 import com.leo.wardrobe.ui.components.rememberHaptics
@@ -116,8 +115,10 @@ fun ExportSheet(
     // 也不再消费对话推荐预选（it-056/057 的带入取消）——每次打开面板全空，
     // 强需求才展开设置；exportSelections 的 VM/Store 层保留但 UI 不再读写
     onDismiss: () -> Unit,
-    // it-077 修订：AI 生成效果图入口收进出图面板（Leo 反馈：页面按钮合并）
-    onGenerate: () -> Unit = {},
+    // it-077 修订：AI 生成效果图入口收进出图面板（Leo 反馈：页面按钮合并）；
+    // 就绪态由调用方传入（页面级 produceState 先行求值，sheet 打开即稳定，无高度跳变）
+    imageGenReady: Boolean = false,
+    onGenerate: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val savedNote by vm.personNote.collectAsState()
@@ -590,7 +591,7 @@ fun ExportSheet(
                     ) {
                         // it-077 修订：AI 生成整行主按钮——生成即录入成品图，
                         // 与下方「存相册/分享」并列（复制长图已按 Leo 反馈移除，外置生图链路废止）
-                        if (rememberImageGenReady(vm)) {
+                        if (imageGenReady && onGenerate != null) {
                             Button(
                                 onClick = onGenerate,
                                 modifier = Modifier.fillMaxWidth(),
@@ -602,8 +603,9 @@ fun ExportSheet(
                                 )
                                 Text("  AI 生成效果图", maxLines = 1)
                             }
-                        } else {
+                        } else if (onGenerate != null) {
                             // it-077 修订（Leo）：未配置不展示可点的生成按钮，只留一行去配置的弱提示
+                            // （不传 onGenerate 的次要导出入口连提示也不出，避免误导）
                             Text(
                                 "AI 生成效果图：到 设置 → 生图模型 配置厂商与 Key 后可用",
                                 style = MaterialTheme.typography.labelSmall,

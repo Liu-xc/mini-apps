@@ -457,6 +457,7 @@ fun ItemDetailScreen(
             items = listOf(item),
             existingOutfit = null,
             refPhotoFile = vm.currentPerson.value?.refImageFile,
+            imageGenReady = com.leo.wardrobe.ui.records.rememberImageGenReady(vm),
             onDismiss = { showExport = false },
         )
     }
