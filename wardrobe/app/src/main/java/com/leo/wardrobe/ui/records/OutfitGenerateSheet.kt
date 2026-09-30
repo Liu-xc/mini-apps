@@ -368,26 +368,49 @@ fun GenerateWorkbench(
                 }
 
                 is GeneratePhase.Done -> {
-                    Text("挑一张保存", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                    // it-077 十五次修订：结果区标模型 + 候选瓦片给加载/失败态——
+                    // 解码中是转圈不是色块，失败是明确文案，不再让「看似成品」的占位蒙混
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("挑一张保存", style = MaterialTheme.typography.titleMedium, color = ec.ink)
+                        Text(
+                            "· ${p.model}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ec.inkFaint,
+                        )
+                    }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(p.candidates.size) { i ->
                             val selected = i == chosen
                             Surface(
                                 onClick = { chosen = i },
                                 shape = RoundedCornerShape(16.dp),
-                                color = if (selected) MaterialTheme.colorScheme.primaryContainer else ec.paper,
+                                color = ec.paper,
                                 border = androidx.compose.foundation.BorderStroke(
                                     if (selected) 2.dp else 1.dp,
                                     if (selected) MaterialTheme.colorScheme.primary else ec.hairline,
                                 ),
                             ) {
-                                AsyncImage(
+                                coil.compose.SubcomposeAsyncImage(
                                     model = p.candidates[i].bytes,
                                     contentDescription = "候选 ${i + 1}",
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
                                         .size(width = 200.dp, height = 260.dp)
                                         .padding(6.dp),
+                                    loading = {
+                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                        }
+                                    },
+                                    error = {
+                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                            Text(
+                                                "图片解码失败",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    },
                                 )
                             }
                         }
