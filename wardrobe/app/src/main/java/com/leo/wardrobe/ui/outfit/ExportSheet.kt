@@ -132,7 +132,6 @@ fun ExportSheet(
     val composedRefPhoto = usableRefPhoto?.takeIf { attachRef }
     var composedFile by remember { mutableStateOf<File?>(null) }
     var composing by remember { mutableStateOf(true) }
-    var copied by remember { mutableStateOf(false) }
     var savedToGallery by remember { mutableStateOf(false) }
     var collected by remember { mutableStateOf(false) }
     var confettiTrigger by remember { mutableIntStateOf(0) }
@@ -230,7 +229,7 @@ fun ExportSheet(
                         // it-066：全幅核对态——预览占满可用高度、宽度铺满、自身纵向可滚
                         Column(Modifier.fillMaxSize()) {
                             Text(
-                                "导出生图素材",
+                                "穿搭预览",
                                 style = MaterialTheme.typography.titleLarge,
                                 color = editorialColors().ink,
                                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 8.dp),
@@ -302,7 +301,7 @@ fun ExportSheet(
                         .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text("导出生图素材", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
+                    Text("穿搭预览", style = MaterialTheme.typography.titleLarge, color = editorialColors().ink)
 
                     // 长图预览（it-012：高自适应屏高 42%；ContentScale.Fit 整图全貌一屏可见
                     // ——修历史空白 bug：内层 verticalScroll 的无限高度约束使 Coil 请求尺寸失效）
@@ -589,7 +588,7 @@ fun ExportSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         // it-077 修订：AI 生成整行主按钮——生成即录入成品图，
-                        // 与下方「复制长图（外置生图链路）」并列，替代页面上单独的生成按钮
+                        // 与下方「存相册/分享」并列（复制长图已按 Leo 反馈移除，外置生图链路废止）
                         Button(
                             onClick = onGenerate,
                             modifier = Modifier.fillMaxWidth(),
@@ -604,38 +603,10 @@ fun ExportSheet(
                         // it-014：复制｜存相册｜分享 三动作并列
                         val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                onClick = {
-                                    val file = composedFile
-                                    scope.launch {
-                                        val ok = file != null && vm.share.copyImage(file)
-                                        if (ok) {
-                                            copied = true
-                                            confettiTrigger++
-                                            haptics.confirm()
-                                            // it-066：回程锚点——复制成功记住本次组合，W1 提示条
-                                            // 引导录回成品图；愿望组合护栏（不自动建正式穿搭，
-                                            // 与「收藏这套」置灰同语义）
-                                            if (items.none { it.isWishSlot }) {
-                                                vm.markExported(items.map { it.id })
-                                            }
-                                            vm.toast("长图已复制，去生图 Agent 里粘贴")
-                                        } else {
-                                            vm.toast("复制失败，试试「分享」")
-                                        }
-                                    }
-                                },
-                                enabled = composedFile != null,
-                                // it-058 C3：主 CTA 按压反馈
-                                modifier = Modifier.weight(1.25f).pressScale(0.96f),
-                            ) {
-                                Icon(if (copied) Icons.Rounded.Check else Icons.Rounded.ContentCopy, contentDescription = null)
-                                Text(if (copied) "已复制 ✓" else "复制长图", maxLines = 1)
-                            }
                             // it-014：snackbar 会被 sheet 遮挡，成功反馈直接落在按钮上
-                            OutlinedButton(
+                            Button(  // it-077 修订（Leo）：复制长图移除，存相册升默认主动作
                                 onClick = {
-                                    val file = composedFile ?: return@OutlinedButton
+                                    val file = composedFile ?: return@Button
                                     scope.launch {
                                         val ok = vm.share.saveToGallery(file)
                                         if (ok) {
@@ -648,7 +619,7 @@ fun ExportSheet(
                                     }
                                 },
                                 enabled = composedFile != null,
-                                modifier = Modifier.weight(0.95f),
+                                modifier = Modifier.weight(1.2f),
                             ) {
                                 Icon(
                                     if (savedToGallery) Icons.Rounded.Check else Icons.Rounded.Download,
@@ -660,12 +631,6 @@ fun ExportSheet(
                                 if (savedToGallery) {
                                     delay(2000)
                                     savedToGallery = false
-                                }
-                            }
-                            LaunchedEffect(copied) {  // it-028：与存相册同拍，2s 复位避免常驻「已复制 ✓」
-                                if (copied) {
-                                    delay(2000)
-                                    copied = false
                                 }
                             }
                             OutlinedButton(

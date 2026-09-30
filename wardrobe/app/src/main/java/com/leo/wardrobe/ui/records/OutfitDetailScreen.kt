@@ -512,14 +512,15 @@ fun OutfitDetailScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 // it-031 C7：次按钮降为描边，打卡主按钮保持页面唯一实底；it-030：图标 Material 化
+                // it-077 修订（Leo）：与 W1 同词「生成预览穿搭」——入口即出图工作台
                 OutlinedButton(onClick = { showExport = true }, modifier = Modifier.weight(1f)) {
                     Icon(
-                        Icons.Rounded.ContentCopy,
+                        Icons.Rounded.AutoFixHigh,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("复制长图")  // it-012：与搭配页同一套词
+                    Text("生成预览穿搭")
                 }
             }
 

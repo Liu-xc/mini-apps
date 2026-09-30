@@ -363,46 +363,6 @@ fun OutfitScreen(
             }
         }
 
-        // it-066：回程提示条——本会话成功「复制长图」后出现（US-09 入口增补）：
-        // 生图回来点此录回成品图，未收藏组合自动建穿搭（importEffectImage(null) 既有语义）；
-        // 愿望组合复制不写状态（护栏与 W6「收藏这套」置灰同语义）；录入成功后条自动消失。
-        if (lastExportedIds != null) {
-            Surface(
-                onClick = { pickReturnPhoto() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
-                border = BorderStroke(1.dp, editorialColors().hairline),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 2.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                ) {
-                    Icon(
-                        Icons.Rounded.PhotoCamera,
-                        contentDescription = null,
-                        tint = editorialColors().inkFaint,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        "刚复制过这套 · 生图回来录入成品图",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = editorialColors().ink,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = editorialColors().inkFaint,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-
         if (allItems.isEmpty() && wishSlotItems.isEmpty()) {
             EmptyState(
                 title = "衣橱还空着",
@@ -498,18 +458,20 @@ fun OutfitScreen(
         ) {
             Button(
                 onClick = { exportItems = currentItemsFromMemory },
-                // it-069 修1：组合为空即禁用（防打开空导出面板/保存空穿搭），替代「衣橱非空」旧判定
+                // it-069 修1：组合为空即禁用（防打开空面板/保存空穿搭）
+                // it-077 修订（Leo）：更名「生成预览穿搭」——入口即出图工作台（AI 生成/存相册/分享）
                 enabled = currentItemsFromMemory.isNotEmpty(),
                 // it-058 C3：主 CTA 按压反馈
                 modifier = Modifier.weight(1f).pressScale(0.96f),
             ) {
                 Icon(
-                    Icons.Rounded.ContentCopy,
+                    Icons.Rounded.AutoFixHigh,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(6.dp))
-                Text("复制长图", style = MaterialTheme.typography.titleSmall)            }
+                Text("生成预览穿搭", style = MaterialTheme.typography.titleSmall)
+            }
             if (hasWishInMix) {
                 OutlinedButton(
                     onClick = {
