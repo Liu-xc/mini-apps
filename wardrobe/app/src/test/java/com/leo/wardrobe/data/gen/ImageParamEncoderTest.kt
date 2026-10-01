@@ -1,0 +1,56 @@
+package com.leo.wardrobe.data.gen
+
+import com.leo.libs.agent.ImageParamSpec
+import com.leo.libs.agent.ModelSpec
+import com.leo.libs.agent.ParamType
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ImageParamEncoderTest {
+
+    private val model = ModelSpec(
+        id = "test/image-edit",
+        capabilities = emptySet(),
+        params = listOf(
+            ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(0)),
+            ImageParamSpec("guidance", "贴合度", ParamType.FLOAT, default = JsonPrimitive(2.5)),
+            ImageParamSpec("watermark", "水印", ParamType.BOOL, default = JsonPrimitive(false)),
+            ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("1024x1024"), JsonPrimitive("1024x1024")),
+            ImageParamSpec("negative_prompt", "负向词", ParamType.TEXT, default = JsonPrimitive("")),
+        ),
+    )
+
+    @Test
+    fun `declared parameter types are preserved in JSON`() {
+        val encoded = encodeImageParams(
+            model.params,
+            mapOf(
+                "seed" to "17",
+                "guidance" to "2.5",
+                "watermark" to "false",
+                "size" to "1024x1024",
+                "negative_prompt" to "logo",
+            ),
+        )
+
+        assertEquals("17", encoded.getValue("seed").toString())
+        assertFalse(encoded.getValue("seed").jsonPrimitive.isString)
+        assertEquals("2.5", encoded.getValue("guidance").toString())
+        assertFalse(encoded.getValue("guidance").jsonPrimitive.isString)
+        assertEquals("false", encoded.getValue("watermark").toString())
+        assertFalse(encoded.getValue("watermark").jsonPrimitive.isString)
+        assertTrue(encoded.getValue("size").jsonPrimitive.isString)
+        assertTrue(encoded.getValue("negative_prompt").jsonPrimitive.isString)
+    }
+
+    @Test
+    fun `invalid declared numeric parameter is omitted`() {
+        val encoded = encodeImageParams(model.params, mapOf("seed" to ""))
+
+        assertFalse(encoded.containsKey("seed"))
+    }
+}

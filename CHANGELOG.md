@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-079 修复真实生图漏传参考长图与数值 seed 被编码为字符串的问题，按模型参数类型编码请求并明确单张拼贴长图的生成指令；补回归测试，模拟器完成非 demo SiliconFlow/Qwen 实际调用。详 [it-079](wardrobe/specs/iterations/it-079-real-imagegen-missing-reference-hotfix.md)。
+
 - **fix(wardrobe)**: it-078 修复演示生图将有效的 1×1 半透明蓝 PNG 拉伸为候选图、生成态转瞬即逝的问题；改为回放包内穿搭样张，增加可见 loading 时长，样张缺失时显示失败态。详 [it-078](wardrobe/specs/iterations/it-078-demo-imagegen-blue-placeholder-hotfix.md)。
 
 - **chore(lottery)**: it-004新增独立Godot Android兼容工具与场景打包，OpenGL真实GLB/PBR/Jolt接触及连续10次回传/进退通过，修复场景退出进程与快速重进竞态；记录Vulkan模拟器呈现失败。正式APP仍0.2.0，机器模型待账号下载，剧场/皮肤未替换。

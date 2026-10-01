@@ -19,6 +19,9 @@ class BuildTryOnPromptTest {
         assertTrue(prompt.contains("牛仔裤"))
         assertTrue(prompt.contains("白色"))
         assertTrue(prompt.contains("严格保持每件衣物的版型、颜色、图案与材质细节"))
+        assertTrue(prompt.contains("不要复制输入图里的文字、边框、白底卡片或拼贴排版"))
+        assertTrue(prompt.contains("若没有人物则生成一位真人模特"))
+        assertFalse(prompt.contains("第一张参考图（人物）"))
         assertFalse(prompt.contains("场景："))
         assertFalse(prompt.contains("人物描述："))
     }

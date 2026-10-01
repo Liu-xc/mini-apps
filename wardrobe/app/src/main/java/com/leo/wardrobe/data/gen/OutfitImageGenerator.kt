@@ -116,7 +116,7 @@ class OutfitImageGenerator(private val container: AppContainer) {
             prompt = prompt,
             images = refs,
             resolution = resolution,
-            extra = extra.mapValues { (_, v) -> JsonPrimitive(v) },
+            extra = encodeImageParams(connection.modelSpec?.params.orEmpty(), extra),
         )
         var failure: AgentError? = null
         var candidates: List<GeneratedImage>? = null
@@ -207,8 +207,8 @@ class OutfitImageGenerator(private val container: AppContainer) {
         }
 
     private fun fileToDataUri(fileName: String): String? = runCatching {
-        val path = container.imageStore.file(fileName)?.absolutePath ?: return null
-        val bitmap = BitmapFactory.decodeFile(path) ?: return null
+        val source = resolveImageSourceFile(fileName) { container.imageStore.file(it) } ?: return null
+        val bitmap = BitmapFactory.decodeFile(source.absolutePath) ?: return null
         val buffer = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, buffer)
         bitmap.recycle()
