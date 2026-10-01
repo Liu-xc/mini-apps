@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- **生图演示修复**：[it-078](iterations/it-078-demo-imagegen-blue-placeholder-hotfix.md) 移除 1×1 蓝色 PNG fallback，演示模式回放包内效果图样张并保留可见 loading；样张缺失进入失败态。
+
 - **AI 穿搭生图**：[it-077](iterations/it-077-image-gen-provider-gateway.md) AI 试衣直达生成（W7 四态 sheet + 高级参数面板）与顾问对话流生图（第 5 工具 + 成图卡）；SDK 统一模型目录（聊天扩容 DeepSeek/Kimi/Qwen/豆包/硅基流动，一把 Key 双轨共用）；OutfitImage 增 AI 溯源字段。
 
 - **导出人物参考**：[it-074](iterations/it-074-no-mannequin-reference.md) 移除演示人台默认引用，拦截旧占位图进入长图与提示词；提供男女全身白色打底模特素材。

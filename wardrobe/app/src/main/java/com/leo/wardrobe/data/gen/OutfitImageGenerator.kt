@@ -82,7 +82,15 @@ class OutfitImageGenerator(private val container: AppContainer) {
     }
 
     private fun imageModel(spec: ProviderSpec): ImageModel =
-        if (container.isDemo) MockImageModel(spec) else OkHttpImageModel(spec, container.apiKeyStore)
+        if (container.isDemo) {
+            MockImageModel(spec) {
+                container.imageStore.file(MockImageModel.SAMPLE_IMAGE_FILE)
+                    ?.takeIf { it.isFile }
+                    ?.readBytes()
+            }
+        } else {
+            OkHttpImageModel(spec, container.apiKeyStore)
+        }
 
     /** 参考图张数预检（Rectifier 思想：超档位在 UI 层就该拦住，这里兜底） */
     fun inputLimit(connection: Connection): Int =

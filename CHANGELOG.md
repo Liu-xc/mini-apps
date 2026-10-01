@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-078 修复演示生图将有效的 1×1 半透明蓝 PNG 拉伸为候选图、生成态转瞬即逝的问题；改为回放包内穿搭样张，增加可见 loading 时长，样张缺失时显示失败态。详 [it-078](wardrobe/specs/iterations/it-078-demo-imagegen-blue-placeholder-hotfix.md)。
+
 - **chore(lottery)**: it-004新增独立Godot Android兼容工具与场景打包，OpenGL真实GLB/PBR/Jolt接触及连续10次回传/进退通过，修复场景退出进程与快速重进竞态；记录Vulkan模拟器呈现失败。正式APP仍0.2.0，机器模型待账号下载，剧场/皮肤未替换。
 
 - **fix(wardrobe)**: it-077 十五次修订——生成结果候选瓦片补加载转圈/解码失败红字态（不再让占位色块蒙混成成品），结果区标注实际模型名便于排查输出异常。详 [it-077](wardrobe/specs/iterations/it-077-image-gen-provider-gateway.md)。
