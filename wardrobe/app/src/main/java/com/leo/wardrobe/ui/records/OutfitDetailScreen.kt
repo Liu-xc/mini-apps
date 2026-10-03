@@ -85,6 +85,12 @@ import java.util.Locale
 /**
  * W7 穿搭详情（US-09/10/13/14）：成品图横滑 + 组成单品 + 录入成品图 + 复制素材 + 评论。
  */
+/** it-081/U-2：id/标签列表的 rememberSaveable Saver（Bundle 只认 ArrayList<String>） */
+private val idListSaver = androidx.compose.runtime.saveable.Saver<List<String>, ArrayList<String>>(
+    save = { ArrayList(it) },
+    restore = { it },
+)
+
 @Composable
 fun OutfitDetailScreen(
     vm: AppViewModel,
@@ -116,12 +122,13 @@ fun OutfitDetailScreen(
     // it-077：生成效果图 sheet
     var showGenerate by remember { mutableStateOf(false) }
     var actionMenuOpen by remember { mutableStateOf(false) }
-    var editingItems by remember(outfit.id) { mutableStateOf(false) }
+    // it-081/U-2 顺手同款：编辑中草稿态 saveable 化（重建不再丢半编辑的单品组合与标签草稿）
+    var editingItems by rememberSaveable(outfit.id) { mutableStateOf(false) }
     // it-070 US-49：主视图切到「单品布局」的会话态（仅成品图存在时可切，默认成品图）
     var showCollage by rememberSaveable(outfit.id) { mutableStateOf(false) }
-    var draftItemIds by remember(outfit.id) { mutableStateOf(outfit.itemIds) }
+    var draftItemIds by rememberSaveable(outfit.id, stateSaver = idListSaver) { mutableStateOf(outfit.itemIds) }
     var pickerCategories by remember { mutableStateOf<List<WardrobeCategory>?>(null) }
-    var tagDraft by remember { mutableStateOf(outfit.tags) }
+    var tagDraft by rememberSaveable(outfit.id, stateSaver = idListSaver) { mutableStateOf(outfit.tags) }
 
     val shownItemIds = if (editingItems) draftItemIds else outfit.itemIds
     val items = remember(data, shownItemIds) { shownItemIds.mapNotNull { data.itemById(it) } }

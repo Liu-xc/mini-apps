@@ -16,6 +16,7 @@ import com.leo.wardrobe.domain.usecase.BuildOutfitPrompt
 import com.leo.wardrobe.domain.usecase.PickRandomOutfit
 import com.leo.wardrobe.export.OutfitImageComposer
 import com.leo.wardrobe.export.ShareClipboard
+import okhttp3.OkHttpClient
 import java.io.File
 
 /** 组合根：手动构造器装配（ADR-003）， specs/04-architecture.md */
@@ -77,9 +78,13 @@ class AppContainer(private val context: Context) {
     val mockChatCache: com.leo.wardrobe.data.mock.MockChatCache? =
         if (demo) com.leo.wardrobe.data.mock.MockChatCache(File(context.cacheDir, "mock-agent-cache")) else null
 
+    /** it-081/A-8：聊天/生图各自单例 client（默认超时 vs 生图长超时）——不再每次调用新建连接池/线程池 */
+    private val chatClient: okhttp3.OkHttpClient by lazy { okhttp3.OkHttpClient() }
+    val imageClient: OkHttpClient by lazy { com.leo.libs.agent.image.OkHttpImageModel.defaultClient() }
+
     /** it-050：模型传输实例工厂。Mock 有 Key 时真实直连并经私有缓存；无 Key 由 UI/VM 只读拦截。 */
     fun chatModel(preset: com.leo.libs.agent.ProviderPreset): com.leo.libs.agent.ChatModel =
-        com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore).let { model ->
+        com.leo.libs.agent.OkHttpChatModel(preset, apiKeyStore, chatClient).let { model ->
             mockChatCache?.let { cache ->
                 com.leo.wardrobe.data.mock.CachedMockChatModel(model, cache) {
                     val key = apiKeyStore.get(preset.id).orEmpty()

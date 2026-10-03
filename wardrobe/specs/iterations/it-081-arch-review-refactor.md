@@ -92,6 +92,15 @@ libs/agent（OkHttpChatModel/image 两适配器/Sse/ImageModel/ModelCatalog/Prov
 - **真实失败态**（意外覆盖）：真实模式 + 无网 AVD 下生成，Failed 事件正确渲染错误分类文案（网络不可达/DNS）+「重试/返回调整」按钮（A-7 归一后路径）✓
 - 走查后 AVD 已还原初始态（真实模式、清除误存的测试 Key）
 
+### 补丁轮（2026-10-03 深夜，Leo 质询「确定完成了吗」后的完成度审计）
+审计发现四个缺口，已全部补齐并重验：
+1. **U-2「顺手同款」漏做** → WishEditSheet 七字段 + OutfitDetailScreen editingItems/draftItemIds/tagDraft 补 saveable 化。诚实边界：WishEditSheet 为 ModalBottomSheet，宿主开关态（editOpen）非 saveable、重建即关，表单 saveable 的「重建保持」收益受限（无害、方向正确，未来 sheet 宿主态 saveable 化后自然生效）；OutfitDetailScreen 为页面级状态，收益直接。模拟器验证：两处表单/标签编辑打开与渲染正常（深色渲染同帧确认无回归）。
+2. **A-3 取消传播零测试锁定** → 新增 `取消即断 - 挂起等响应期间协程取消立刻返回`（MockWebServer setHeadersDelay 拦响应头——setBodyDelay 下响应头立即返回、取消点消失，首版教训；阻塞式实现退回时 5s 断言窗炸出）。验收标准第 3 条（退出页面 logcat 无后台完成痕迹）的端到端真机验证仍留待有真实 Key 的场景，以本单测+it-077 生图轨同模式为据。
+3. **A-8 夹缝遗漏** → AppContainer 持 chatClient/imageClient 单例（聊天默认超时/生图长超时各一），chatModel 与 ImageModel.of 注入，连接池不再每次新建。
+4. **PrefsStore 死成员残留** → exportSelections/exportSelectionsReady/saveExportSelections 删除（AppViewModel 三件死 API 的同批收尾；旧 DataStore key 残留无害）。
+
+补丁后：wardrobe 123 / agent 99 / store 24 三套件全绿（compileDebugKotlin + assembleDebug 通过）。
+
 ### 环境备注
 - 走查中途 AVD uiautomator 出现假帧/卡死一次、ANR 一次（`FocusEvent` 派发超时型，发生在进程后台恢复瞬间；`emu kill` 重启后全程不复现，冷启与正常操作均无复现）——判为环境性（LESSONS 有同型先例），与本次改动路径无关；若后续真机复现再归因。
 - 演示模式「购入→重启→升级」的跨进程链路由单测锁定（`purchaseAllThenReloadKeepsWishOutfitAndPromoteWorks` 模拟同 store 新实例=重启语义）；UI 端购入表单需先拍实物照（必填），模拟器未实操，无回归面（该表单本次未改）。

@@ -75,24 +75,8 @@ class PrefsStore(private val context: Context, private val aiNamespace: String =
         context.store.edit { it[keyThemeMode] = mode }
     }
 
-    /** 导出面板五维选择（it-011 O8：记住上次），存储格式 "key=value" */
-    val exportSelections: Flow<Map<String, String>> = context.store.data.map { prefs ->
-        prefs[keyExportSelections].orEmpty()
-            .mapNotNull { entry -> entry.split('=', limit = 2).takeIf { it.size == 2 } }
-            .associate { it[0] to it[1] }
-    }
-
-    suspend fun saveExportSelections(selections: Map<String, String>) {
-        context.store.edit { prefs ->
-            prefs[keyExportSelections] = selections.entries
-                .filter { it.value.isNotBlank() }
-                .map { (k, v) -> "$k=$v" }
-                .toSet()
-        }
-    }
-
-    /** it-012：DataStore 首发射完成标志——修 exportSelections 恢复竞态（首帧空值不再吞掉记忆） */
-    val exportSelectionsReady: Flow<Boolean> = context.store.data.map { true }
+    // it-081：exportSelections 三成员已删——it-061 修3 后 UI（ExportSheet）本地持有选择，
+    // AppViewModel 死 API 同批清除；旧 DataStore key 残留无害
 
     /** W1 格位滑动 coach 动画（it-011 O6）：仅首次进入演示一次 */
     val coachSlotsShown: Flow<Boolean> = context.store.data.map { it[keyCoachSlots] ?: false }

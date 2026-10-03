@@ -1,13 +1,20 @@
 package com.leo.libs.agent
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import okhttp3.OkHttpClient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -29,7 +36,8 @@ class OkHttpChatModelTest {
 
     @After
     fun tearDown() {
-        server.shutdown()
+        // it-081：取消用例的延迟响应可能仍压在队列里，shutdown 等待会放弃——容忍之（其余用例不受影响）
+        runCatching { server.shutdown() }
     }
 
     private fun modelOf(id: String, reasoningField: Boolean = false): OkHttpChatModel =
@@ -229,5 +237,27 @@ class OkHttpChatModelTest {
             fail()
         } catch (_: AgentError.Auth) {
         }
+    }
+    @Test
+    fun `取消即断 - 挂起等响应期间协程取消立刻返回`() = runBlocking {
+        // it-081/A-3：enqueue+invokeOnCancellation 桥接的回归锁——若退回阻塞式 execute，
+        // cancelAndJoin 要拖到 read 超时（25s）才返回，5s 断言窗会在此炸出
+        // setHeadersDelay（非 bodyDelay）：响应头也不发——挂起点落在等响应头阶段，
+        // 正是 Call.await 的取消窗口；bodyDelay 下响应头立即返回、取消点已消失（首版教训）
+        server.enqueue(
+            MockResponse()
+                .setHeadersDelay(30, TimeUnit.SECONDS)
+                .setBody(completionBody("late"))
+                .setHeader("Content-Type", "application/json")
+        )
+        val preset = ProviderPreset.custom("test", "Test", server.url("/v1").toString(), listOf("test-model"))
+        val store = InMemoryApiKeyStore().also { it.put("test", "k-123") }
+        val slowClient = OkHttpClient.Builder().readTimeout(25, TimeUnit.SECONDS).build()
+        val m = OkHttpChatModel(preset, store, slowClient)
+
+        val job = launch(Dispatchers.IO) { m.complete(ChatRequest(messages = listOf(Message.user("hi")))) }
+        delay(600) // 让请求发出、挂起等响应头
+        withTimeout(5_000) { job.cancelAndJoin() }
+        assertTrue(job.isCancelled)
     }
 }

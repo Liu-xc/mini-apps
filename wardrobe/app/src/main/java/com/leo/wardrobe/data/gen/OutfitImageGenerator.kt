@@ -89,7 +89,7 @@ class OutfitImageGenerator(private val container: AppContainer) {
             }
         } else {
             // it-081/O-2：协议路由交给 SDK 工厂，本层不再感知实现类
-            ImageModel.of(connection.spec, connection.model, container.apiKeyStore)
+            ImageModel.of(connection.spec, connection.model, container.apiKeyStore, container.imageClient)
         }
 
     /** 参考图张数预检（Rectifier 思想：超档位在 UI 层就该拦住，这里兜底） */

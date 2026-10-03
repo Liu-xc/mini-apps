@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -618,6 +619,12 @@ private fun WishOutfitsSection(
 
 // ---- 弹层们 ----
 
+/** it-081/U-2：标签列表 rememberSaveable Saver（同 ItemEditScreen，Saver 在 saveable 包） */
+private val stringListSaver = androidx.compose.runtime.saveable.Saver<List<String>, ArrayList<String>>(
+    save = { ArrayList(it) },
+    restore = { it },
+)
+
 /** 种草 / 编辑（仅名称+品类必填，it-019 阶段A） */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -626,14 +633,17 @@ private fun WishEditSheet(
     existing: WishItem?,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(existing?.name.orEmpty()) }
-    var category by remember { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
-    var color by remember { mutableStateOf(existing?.color.orEmpty()) }
-    var desc by remember { mutableStateOf(existing?.desc.orEmpty()) }
-    var price by remember { mutableStateOf(existing?.price?.toString().orEmpty()) }
-    var url by remember { mutableStateOf(existing?.url.orEmpty()) }
-    val tags = remember { mutableStateListOf<String>().apply { addAll(existing?.tags.orEmpty()) } }
-    var photoFile by remember { mutableStateOf(existing?.imageFile) }
+    // it-081/U-2 顺手同款：表单内容态 saveable 化（深色切换/进程回收不再清空半填表单与已导图句柄）
+    var name by rememberSaveable(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
+    var category by rememberSaveable(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
+    var color by rememberSaveable(existing?.id) { mutableStateOf(existing?.color.orEmpty()) }
+    var desc by rememberSaveable(existing?.id) { mutableStateOf(existing?.desc.orEmpty()) }
+    var price by rememberSaveable(existing?.id) { mutableStateOf(existing?.price?.toString().orEmpty()) }
+    var url by rememberSaveable(existing?.id) { mutableStateOf(existing?.url.orEmpty()) }
+    var tags by rememberSaveable(existing?.id, stateSaver = stringListSaver) {
+        mutableStateOf(existing?.tags ?: emptyList())
+    }
+    var photoFile by rememberSaveable(existing?.id) { mutableStateOf(existing?.imageFile) }
     val photoPicker = rememberPhotoPicker { uri -> if (uri != null) vm.importPhoto(uri) { f -> photoFile = f } }
 
     ModalBottomSheet(
@@ -733,7 +743,7 @@ private fun WishEditSheet(
                 singleLine = true,
             )
             Text("标签", style = MaterialTheme.typography.labelLarge, color = editorialColors().inkFaint)
-            TagInput(tags = tags, onChange = { t -> tags.clear(); tags.addAll(t) })
+            TagInput(tags = tags, onChange = { tags = it })
         }
         androidx.compose.material3.HorizontalDivider(color = editorialColors().hairline)
         Button(
@@ -747,7 +757,7 @@ private fun WishEditSheet(
                     desc = desc,
                     price = price.toDoubleOrNull(),
                     url = url,
-                    tags = tags.toList(),
+                    tags = tags,
                     photoFile = photoFile,
                 ) { ok -> if (ok) { haptics.confirm(); onDismiss() } }
             },
