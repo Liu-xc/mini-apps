@@ -63,6 +63,7 @@ class SnapshotStore<T : Any>(
 
 - 文件头 `schemaVersion` 由 SDK 统一读写；迁移链 `Migration<T>(fromVersion)` 逐级执行，迁移完成后立即原子落盘一次（迁移不跨进程停留）。
 - 崩溃安全矩阵（测试逐项覆盖）：写一半崩溃（tmp 残片，主文件完好）、主文件损坏（bak 恢复 + 残片进隔离目录）、两者皆坏（null 引导）。
+- it-081/D-2 修订：`load()` 双损坏时把主/bak 改名 `.corrupt-<ts>` 隔离（不再被下一次 commit 覆盖消灭恢复线索），并暴露 `loadFailed` 信号（`SsotRepository.loadFailed` 透传）供 App 层提示。
 
 ### 3.2 SSOT 仓库基类
 

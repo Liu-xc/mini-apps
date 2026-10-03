@@ -22,6 +22,9 @@ abstract class SsotRepository<T : Any>(
     private val _data = MutableStateFlow(onLoad(store.load()))
     val data: StateFlow<T> = _data.asStateFlow()
 
+    /** it-081/D-2：主/bak 双损坏时为 true（损坏副本已被 store 隔离），上层应提示用户抢救数据 */
+    val loadFailed: Boolean get() = store.loadFailed
+
     private val mutex = Mutex()
 
     var writeHook: (suspend (T) -> Unit)? = null

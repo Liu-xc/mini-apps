@@ -40,8 +40,35 @@ class SnapshotStore<T : Any>(
 
     private val mutex = Mutex()
 
-    /** 载入快照（同步读；rename 原子性保证与并发 commit 不冲突）；主文件与 bak 均不可读时返回 [default] */
-    fun load(): T = read(file) ?: read(bakFile) ?: default()
+    /**
+     * it-081/D-2：主文件与 bak 均不可读时，损坏副本已改名 `.corrupt-<ts>` 隔离（不再被后续
+     * commit 覆盖消灭），[loadFailed] 置 true 供上层提示用户先抢救数据。
+     */
+    val loadFailed: Boolean
+        get() = _loadFailed
+
+    private var _loadFailed = false
+
+    /** 载入快照（同步读；rename 原子性保证与并发 commit 不冲突）；主文件与 bak 均不可读时隔离损坏文件并返回 [default] */
+    fun load(): T {
+        val main = read(file)
+        if (main != null) return main
+        val bak = read(bakFile)
+        if (bak != null) {
+            quarantine(file)
+            return bak
+        }
+        _loadFailed = true
+        quarantine(file)
+        quarantine(bakFile)
+        return default()
+    }
+
+    /** 损坏文件改名保留（`.corrupt-<时间戳>`），给用户留最后一线恢复材料；失败静默（不影响启动） */
+    private fun quarantine(f: File) {
+        if (!f.exists()) return
+        runCatching { f.renameTo(File(dir, "${f.name}.corrupt-${System.currentTimeMillis()}")) }
+    }
 
     /** 对外部读入的数据执行与 [load] 相同的逐版本迁移链（it-024 数据包导入预检用）；高于当前版本原样返回 */
     fun upgrade(data: T): T = migrate(data)
