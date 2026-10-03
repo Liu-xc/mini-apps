@@ -18,7 +18,7 @@ di/AppContainer.kt = 组合根，装配一切依赖（手动构造器注入）
 ```
 
 **规则**：依赖只能从上到下；domain 不 import 任何 data/ui/export 类型；UI 永远通过 ViewModel 间接拿数据。
-**现状例外**（it-023 记录）：WardrobeScreen 直调 `data.mock.DemoMode`（演示入口显隐）。
+**现状例外**（it-023 记录，it-081 复核）：WardrobeScreen 与 SettingsScreen 直调 `data.mock.DemoMode`（演示入口显隐/切换重启）。
 
 ## 模块结构
 
@@ -76,14 +76,15 @@ com.leo.wardrobe/
 
 - 全局：`AppViewModel` 暴露 `currentPerson: StateFlow<Person?>` 与 `data: StateFlow<WardrobeData>`。
 - 当前角色：`WardrobeData.currentPersonOrFirst(savedId)` 是共享解析规则；聊天工具必须使用与 W1/W2 一致的首角色回退，避免 DataStore 尚未写入或保存了旧 id 时误判“当前没有角色”。
-- 页面导航：Compose Navigation。路由：`home`(四 Tab，W12 顾问会话列表) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（W11）/ `chat/{sessionId}`（W13 会话详情）；W2(PersonSheet)/W6(ExportSheet) 与心愿域各表单为 ModalBottomSheet 而非路由。
+- 页面导航：Compose Navigation。路由：`home`(四 Tab，W12 顾问会话列表) / `itemEdit?itemId={itemId}` / `itemDetail/{itemId}` / `outfitDetail/{outfitId}` / `recap` / `wishlist` / `settings`（W11）/ `chat/{sessionId}`（W13 会话详情）；W2(PersonSheet) 为 ModalBottomSheet；W6(ExportSheet) 自 it-077 起为 FullscreenSheet（Dialog 全屏双模式）而非路由。
 - 组合记忆（US-06）：各品类选中 itemId 存 `DataStore<Preferences>`（PrefsStore），key 按 personId 隔离。
 - 回忆提醒开关存 DataStore（RecapPrefsStore），ReminderScheduler 对齐 WorkManager 任务。
 - Mock 模式的 AI 偏好、Keystore alias、会话/用量目录、缓存目录与真实衣橱分命名空间；只有主动保存 Mock Key 后才允许外呼。`CachedMockChatModel` 以完整请求与 Key 摘要指纹命中私有缓存，失败/取消不写入。
 
 ## 错误处理
 
-- Repository 所有写操作同步落盘；落盘失败抛出 → `AppViewModel.launchSafely` 统一捕获（it-020：Log + toast；带 `onDone` 契约的 saveItem/purchaseWishItem 失败回调 false）；内存快照由 libs/store 的 commit 序列回滚（commit 抛异常则快照不赋值）。
+- Repository 所有写操作同步落盘；落盘失败抛出 → `AppViewModel.launchSafely` 统一捕获（it-020：Log + toast；it-081/U-5：`onError` 形参保证 onDone 契约异常路径也有收尾信号）；内存快照由 libs/store 的 commit 序列回滚（commit 抛异常则快照不赋值）。并发写由 SsotRepository 的 Mutex 串行（it-081 措辞勘正：非「单线程 Dispatcher」），写路径内的存在性检查均在临界区执行（it-081/D-5）。
+- wardrobe.json 主/bak 双损坏时不再静默清零（it-081/D-2）：损坏副本改名 `.corrupt-<ts>` 隔离，`loadFailed` 信号驱动启动 toast 提示用户抢救；会话文件损坏同款隔离（不再被空表覆写）。
 - 图片解码失败显示占位图，不阻塞列表；导入/抠图失败返回 null 并 toast，原图不受影响。
 
 ## 测试策略

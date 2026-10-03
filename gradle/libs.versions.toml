@@ -1,5 +1,5 @@
 # 仓库级 version catalog（it-020）
-# 六个构建（wardrobe / eats / libs/{store,sync,carddeck,cutout}）统一引用此文件，
+# 七个构建（wardrobe / eats / libs/{store,sync,carddeck,cutout,agent}）统一引用此文件，
 # 各自 settings.gradle.kts 的 dependencyResolutionManagement.versionCatalogs 里 from(files(...))。
 # 之前 Kotlin/AGP/Compose 等版本在 6 处手工重复 pin、无护栏（架构评审 P1-2）。
 # onnxruntime 与 onnxruntime-android 版本必须对齐（cutout ADR-002）。
@@ -31,7 +31,7 @@ baselineprofile = "1.3.3"
 benchmarkMacro = "1.3.3"
 uiautomator = "2.3.0"
 androidxTestExtJunit = "1.2.1"
-leoStore = "0.1.0"                  # composite build 内坐标（与 libs/store version 一致）
+leoStore = "0.2.0"                  # composite build 内坐标（与 libs/store version 一致；it-081 对齐）
 leoCarddeck = "0.1.0"
 leoCutout = "0.1.0"
 leoAgent = "0.1.0"                  # composite build 内坐标（与 libs/agent version 一致）

@@ -33,6 +33,11 @@ jobs:
       - name: libs/store 单测
         run: wardrobe/gradlew -p libs/store test --no-daemon
 
+      # it-081/B-1：agent 是 wardrobe 的网络协议核心（SSE/wire 契约都靠它的测试锁），此前漏挂 CI；
+      # live 冒烟已用 SF_KEY 环境变量门控，缺失自动跳过、不打真 API
+      - name: libs/agent 单测
+        run: wardrobe/gradlew -p libs/agent test --no-daemon
+
       - name: libs/sync 单测
         run: wardrobe/gradlew -p libs/sync test --no-daemon
 

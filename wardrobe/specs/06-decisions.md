@@ -12,7 +12,7 @@
 - **背景**：数据规模个人级（≤数百条），实体关系简单。
 - **决策**：单文件 `wardrobe.json`（kotlinx.serialization）+ 图片文件目录；原子写（tmp+rename）+ .bak + schemaVersion 迁移。
 - **理由**：零 schema 迁移成本、可整文件备份/导出、调试直观；Room 对此规模是过度设计。
-- **后果**：全量读写（快照小，性能无虞）；并发写由单线程 Dispatcher 串行化保证。
+- **后果**：全量读写（快照小，性能无虞）；并发写由 `SsotRepository` 的 Mutex 串行化保证（it-081 勘正措辞：实现自 it-020 起即为 Mutex + Dispatchers.IO，非单线程 Dispatcher）。
 
 ## ADR-003 手动 DI（而非 Hilt/Koin）
 - **背景**：单模块小应用。

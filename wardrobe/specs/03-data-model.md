@@ -134,11 +134,12 @@
 | createdAt / updatedAt | Long | |
 
 ### WishOutfit（心愿穿搭，it-019）
-`id` · `personId` · `itemIds`（已有单品段）· `wishItemIds`（愿望单品段）· `tags` · `previewImages: List<OutfitImage>`（上身预览图，与 OutfitImage 同构）· `createdAt/updatedAt`。不变量：wishItemIds 至少一件。
+`id` · `personId` · `itemIds`（已有单品段）· `wishItemIds`（愿望单品段）· `tags` · `previewImages: List<OutfitImage>`（上身预览图，与 OutfitImage 同构）· `createdAt/updatedAt`。合法态（it-081/D-1 修订）：itemIds 与 wishItemIds **至少一段非空**——「全部购齐、等待一键升级」（wishItemIds 空、itemIds 非空）是合法生命周期状态，加载清洗与写路径统一按此保留/删除。
 
 ### 心愿域机制（ADR-020）
 - 混搭预览：WishItem.asSlotItem() 生成 `wish:` 前缀伪 Item 混入 W1 槽位，长图/文案/拼贴按 Item 统一处理，isWishSlot 判定后做愿望标注；伪 id 不落 Outfit（createOutfit 的无效 id 过滤天然防御）。
 - 转正：purchaseWishItem 单事务=创建 Item + 回填 purchasedAt/purchasedItemId + 含该件的心愿穿搭把 wishItemIds 移入 itemIds。
+- 删除愿望件（it-081/D-1）：deleteWishItem 从心愿穿搭移除引用，语义与转正一致；仅两段全空的组合随之删除，含已有件的保留为可升级态。
 - 升级：promoteWishOutfit 要求 wishItemIds 全空，创建 Outfit（tags 继承、previewImages→effectImages）并删除心愿条目。
 - 存储：`wardrobe.json` 增 `wishItems[]` / `wishOutfits[]`；缺字段反序列化空表，不 bump schemaVersion。
 

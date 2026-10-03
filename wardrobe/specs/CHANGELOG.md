@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- **架构审查落地（精简重构）**：[it-081](iterations/it-081-arch-review-refactor.md) 修复心愿穿搭「购齐待升级」被重启清洗静默删除（D-1）与数据/会话双损坏静默清零（D-2/A-9 隔离+提示）；聊天轨取消即断（A-3）与 SSE 中途截断可恢复（A-4）；生图参考图装配空显式失败（A-1）、异步任务型模型不再可选必败（A-2/O-2 ImageModel.of 工厂）、ProviderSpec 双清单防漂移（O-1）；表单 rememberSaveable（U-2）、组合期导航副作用修复（U-1）、缩略卡整库流收集消除（U-3）、onDone 异常路径补齐（U-5）；JpegXmp 段长 off-by-2 修复（测试抓到）；死 API/死代码清理；CI 补挂 libs/agent 单测（B-1）。
+
 - **真实生图请求**：[it-079](iterations/it-079-real-imagegen-missing-reference-hotfix.md) 修正参考长图路径和数值 seed 的 JSON 类型，提示词对齐单张拼贴长图；非 demo SiliconFlow/Qwen 模拟器调用返回真人穿搭候选。
 
 - **生图演示修复**：[it-078](iterations/it-078-demo-imagegen-blue-placeholder-hotfix.md) 移除 1×1 蓝色 PNG fallback，演示模式回放包内效果图样张并保留可见 loading；样张缺失进入失败态。
