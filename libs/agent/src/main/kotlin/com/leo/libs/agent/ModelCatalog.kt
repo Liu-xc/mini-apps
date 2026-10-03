@@ -360,7 +360,7 @@ object ModelCatalog {
                 costPerImage = 0.0,
                 params = listOf(
                     ImageParamSpec("batch_size", "张数", ParamType.INT, default = JsonPrimitive(1), min = 1.0, max = 4.0),
-                    ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("1024x1024", "960x1280", "768x1344", "1440x720", "1248x832"), JsonPrimitive("1024x1024")),
+                    ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("960x1280", "768x1344", "1024x1024", "1440x720", "1248x832"), JsonPrimitive("960x1280")),
                     ImageParamSpec("negative_prompt", "负向词", ParamType.TEXT, default = JsonPrimitive("")),
                     // it-082：min 如实声明服务端约束（SiliconFlow code 20015 要求 ≥0）；
                     // default 保持 -1=UI 随机语义，编码层低于 min 时省略字段
@@ -376,7 +376,8 @@ object ModelCatalog {
                 costPerImage = 0.1,
                 params = listOf(
                     ImageParamSpec("batch_size", "张数", ParamType.INT, default = JsonPrimitive(1), min = 1.0, max = 4.0),
-                    ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("1024x1024", "864x1152", "1152x864", "1440x720", "720x1440"), JsonPrimitive("1024x1024")),
+                    // it-083：试衣全身照默认竖幅（正方形天然裁半身）；用户仍可在面板换回
+                    ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("864x1152", "1152x864", "1024x1024", "1440x720", "720x1440"), JsonPrimitive("864x1152")),
                 ),
             ),
             ModelSpec(

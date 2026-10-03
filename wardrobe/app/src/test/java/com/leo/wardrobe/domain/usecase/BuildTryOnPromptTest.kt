@@ -50,6 +50,18 @@ class BuildTryOnPromptTest {
     }
 
     @Test
+    fun `全身构图约束两分支齐备`() {
+        // it-083 修订：明确从头到脚、含鞋、禁半身/七分身
+        val withRef = BuildTryOnPrompt.build(listOf(item("衬衫")), "", "", hasReferenceImage = true)
+        val noRef = BuildTryOnPrompt.build(listOf(item("衬衫")), "", "", hasReferenceImage = false)
+        listOf(withRef, noRef).forEach { p ->
+            assertTrue(p.contains("从头到脚完整入镜"))
+            assertTrue(p.contains("必须包含所穿鞋子"))
+            assertTrue(p.contains("不得拍成半身或七分身"))
+        }
+    }
+
+    @Test
     fun `参考图分支强调衣物穿到真人身上`() {
         val prompt = BuildTryOnPrompt.build(listOf(item("风衣", "卡其")), "", "", hasReferenceImage = true)
         assertTrue(prompt.contains("穿到真人身上"))
