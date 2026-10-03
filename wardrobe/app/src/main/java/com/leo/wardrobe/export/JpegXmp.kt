@@ -13,9 +13,11 @@ object JpegXmp {
 
     fun embedPrompt(file: File, prompt: String) {
         val xml = buildXmp(prompt)
-        val segLen = HEADER.size + xml.size
+        val payloadLen = HEADER.size + xml.size
+        // it-081：JPEG 段长字段按规范含自身 2 字节（此前少写 2，按 LEN 跳段的解析器会错位）
+        val segLen = payloadLen + 2
         require(segLen < 0xFFFF) { "XMP 段过长" }
-        val segment = ByteArray(2 + 2 + segLen)
+        val segment = ByteArray(2 + segLen)
         segment[0] = 0xFF.toByte()
         segment[1] = 0xE1.toByte()
         segment[2] = ((segLen shr 8) and 0xFF).toByte()

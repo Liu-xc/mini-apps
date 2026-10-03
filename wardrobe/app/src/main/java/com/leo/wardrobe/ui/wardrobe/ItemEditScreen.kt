@@ -55,6 +55,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,6 +89,12 @@ import java.io.File
  * 名称留空自动命名（颜色+品类），手动输入（描述/自定义颜色/自定义标签）折叠进「补充细节」
  * 二次交互展开——录一件衣物可以零打字。
  */
+/** it-081/U-2：标签列表的 rememberSaveable Saver（Bundle 只认 ArrayList<String>，不认 List 接口） */
+private val stringListSaver = Saver<List<String>, ArrayList<String>>(
+    save = { ArrayList(it) },
+    restore = { it },
+)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ItemEditScreen(
@@ -97,20 +105,25 @@ fun ItemEditScreen(
     val data by vm.data.collectAsState()
     val existing = remember(itemId, data) { itemId?.let { data.itemById(it) } }
 
-    var importedFile by remember { mutableStateOf<String?>(null) } // 选择后立即导入落盘的文件名
+    // it-081/U-2：表单内容态 rememberSaveable 化——深色切换/字号变更/进程回收重建 Activity
+    // 不再清空半填表单；已导入文件名一并保住（丢引用即丢清理句柄 → 孤儿文件）。
+    // importing/cutting/photoMissing 是瞬态，重建后归 false 即正确，保持 remember。
+    var importedFile by rememberSaveable { mutableStateOf<String?>(null) } // 选择后立即导入落盘的文件名
     var importing by remember { mutableStateOf(false) }
     // it-016 US-15 去背景：cutoutFile 非空 ⇔ 已采用抠图版（预览与保存都走它）；
     // 原图 importedFile 保留作还原锚点，确认采用（保存成功）后即弃（Leo 定，2026-09-20）
-    var cutoutFile by remember { mutableStateOf<String?>(null) }
+    var cutoutFile by rememberSaveable { mutableStateOf<String?>(null) }
     var cutting by remember { mutableStateOf(false) }
-    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: "") }
-    var nameTouched by remember(existing?.id) { mutableStateOf(existing != null) } // it-059：编辑态视为已定名
-    var category by remember(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
-    var color by remember(existing?.id) { mutableStateOf(existing?.color ?: "") }
-    var desc by remember(existing?.id) { mutableStateOf(existing?.desc ?: "") }
-    var tags by remember(existing?.id) { mutableStateOf(existing?.tags ?: emptyList()) }
+    var name by rememberSaveable(existing?.id) { mutableStateOf(existing?.name ?: "") }
+    var nameTouched by rememberSaveable(existing?.id) { mutableStateOf(existing != null) } // it-059：编辑态视为已定名
+    var category by rememberSaveable(existing?.id) { mutableStateOf(existing?.category ?: WardrobeCategory.TOP) }
+    var color by rememberSaveable(existing?.id) { mutableStateOf(existing?.color ?: "") }
+    var desc by rememberSaveable(existing?.id) { mutableStateOf(existing?.desc ?: "") }
+    var tags by rememberSaveable(existing?.id, stateSaver = stringListSaver) {
+        mutableStateOf(existing?.tags ?: emptyList())
+    }
     var photoMissing by remember { mutableStateOf(false) }
-    var detailOpen by remember { mutableStateOf(false) } // it-059：补充细节折叠区
+    var detailOpen by rememberSaveable { mutableStateOf(false) } // it-059：补充细节折叠区
     val haptics = rememberHaptics()  // it-027：确认动作触感（DESIGN.md §4）
 
     fun runCutout(src: String) {

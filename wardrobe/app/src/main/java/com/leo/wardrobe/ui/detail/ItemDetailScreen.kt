@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import com.leo.wardrobe.domain.model.Item
 import com.leo.wardrobe.domain.model.NoteParent
 import com.leo.wardrobe.domain.model.Outfit
 import com.leo.wardrobe.domain.model.itemById
@@ -92,7 +94,10 @@ fun ItemDetailScreen(
     val item = remember(itemId, data) { data.itemById(itemId) }
 
     if (item == null) {
-        onBack()
+        // it-081/U-1：导航副作用移入 LaunchedEffect——组合期调 onBack 属未定义行为模式
+        //（数据变更致 null 的那一帧多次重组可能连 pop 多级返回栈）
+        LaunchedEffect(itemId) { onBack() }
+        Box(Modifier.fillMaxSize())
         return
     }
 
@@ -407,13 +412,17 @@ fun ItemDetailScreen(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(end = 8.dp),
                 ) {
                     items(related.size, key = { related[it].id }) { index ->
+                        val relatedOutfit = related[index]
                         OutfitThumb(
                             vm,
-                            related[index],
+                            relatedOutfit,
+                            items = remember(data, relatedOutfit) {
+                                relatedOutfit.itemIds.mapNotNull { data.itemById(it) }
+                            },
                             showDate = false,
                             footerLabel = "穿搭记录 · 点开看整套",
                             modifier = Modifier.width(184.dp),
-                            onClick = { onOpenOutfit(related[index].id) },
+                            onClick = { onOpenOutfit(relatedOutfit.id) },
                         )
                     }
                 }
@@ -462,21 +471,21 @@ fun ItemDetailScreen(
     }
 }
 
-/** 穿搭缩略图（W5 相关穿搭 / W8 记录网格共用）：成品图优先，否则 2x2 单品拼贴 */
+/** 穿搭缩略图（W5 相关穿搭 / W8 记录网格共用）：成品图优先，否则 2x2 单品拼贴。
+ *  it-081/U-3：单品列表由调用方预派生传入——缩略卡不再各自订阅整库流（任意写操作曾致全列表逐卡重组） */
 @Composable
 fun OutfitThumb(
     vm: AppViewModel,
     outfit: Outfit,
+    items: List<Item>,
     modifier: Modifier = Modifier,
     showDate: Boolean = true,
     /** W5 关联卡专用目的地文案；记录网格保持日期信息，不混入重复提示。 */
     footerLabel: String? = null,
     onClick: () -> Unit,
 ) {
-    val data by vm.data.collectAsState()
     // it-042 C3：并入 it-036 C12 的全站日期格式（yyyy/MM/dd），废止 MM/dd 双轨
     val dateFormat = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
-    val items = remember(data, outfit) { outfit.itemIds.mapNotNull { data.itemById(it) } }
     val effect = outfit.effectImages.firstOrNull()
 
     Column(

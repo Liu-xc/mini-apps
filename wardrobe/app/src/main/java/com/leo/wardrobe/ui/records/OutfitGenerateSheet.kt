@@ -46,6 +46,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.leo.libs.agent.ImageParamSpec
+import com.leo.libs.agent.ImageProtocol
 import com.leo.libs.agent.ParamType
 import com.leo.libs.agent.image.GeneratedImage
 import com.leo.wardrobe.data.gen.OutfitImageGenerator
@@ -232,7 +233,10 @@ fun GenerateWorkbench(
                         Icon(Icons.Rounded.ArrowDropDown, contentDescription = "切换模型", tint = ec.inkFaint)
                     }
                     DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
-                        conn.spec.imageModels.forEach { m ->
+                        // it-081/A-2：异步任务型（aitryon 系）不进就地换模型下拉——同步链路下可选必败
+                        conn.spec.imageModels
+                            .filter { it.imageProtocol != ImageProtocol.DASHSCOPE_ASYNC_TASK }
+                            .forEach { m ->
                             DropdownMenuItem(
                                 text = {
                                     Column {

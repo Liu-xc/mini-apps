@@ -117,6 +117,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun open(sessionId: String) {
+        // it-081/A-12：切会话先停旧 loop——VM 级流式状态（_streaming/_toolNotices）否则会
+        // 串台渲染进新会话视图直到旧请求跑完
+        stop()
         this.sessionId = sessionId
         _messages.value = emptyList()
         _error.value = null

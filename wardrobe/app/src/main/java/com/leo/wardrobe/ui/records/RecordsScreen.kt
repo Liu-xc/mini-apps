@@ -293,7 +293,15 @@ fun RecordsScreen(
                 ) { index, outfit ->
                     StaggeredEntrance(index = index, animate = !entranceDone) {
                         Column(Modifier.padding(top = 4.dp)) {
-                            OutfitThumb(vm, outfit, modifier = Modifier.fillMaxWidth()) {
+                            // it-081/U-3：单品预派生传入，缩略卡不再订阅整库流
+                            OutfitThumb(
+                                vm,
+                                outfit,
+                                items = remember(data, outfit) {
+                                    outfit.itemIds.mapNotNull { data.itemById(it) }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
                                 onOpenOutfit(outfit.id)
                             }
                             if (outfit.tags.isNotEmpty()) {

@@ -43,7 +43,8 @@ import java.io.File
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val container = (app as WardrobeApp).container
-    val repo = container.repository
+    /** it-081：收 private——UI 一律经 ViewModel 间接拿数据（spec 04 铁律，grep 证实此前已零越层使用） */
+    private val repo = container.repository
     private val prefs = container.prefs
 
     val imageComposer get() = container.imageComposer
@@ -77,11 +78,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * it-020：写路径统一兜底——失败 Log + toast（quiet 时仅 Log），成功提示可选。
      * 内存快照回滚由 libs/store 的 commit 序列天然承担（commit 抛异常则快照不赋值）。
+     * it-081/U-5：[onError] 供表单类调用方收尾（onDone(false)），异常路径不再无信号。
      */
     private fun launchSafely(
         okToast: String? = null,
         failToast: String = "操作失败",
         quiet: Boolean = false,
+        onError: (() -> Unit)? = null,
         block: suspend () -> Unit,
     ) = viewModelScope.launch {
         try {
@@ -90,6 +93,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (t: Throwable) {
             android.util.Log.e("Wardrobe", "viewModel write failed", t)
             if (!quiet) toast("$failToast：${t.message ?: t.javaClass.simpleName}")
+            onError?.invoke()
         }
     }
 
@@ -108,6 +112,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         launchSafely { repo.ensureDefaultPerson() }
+        // it-081/D-2：主/bak 双损坏时显式提示（不再无声以空数据覆盖启动）
+        if (container.dataLoadFailed) {
+            toast("数据文件损坏，已以空衣橱启动；原文件已隔离为 .corrupt 备份，建议尽快导出数据求助恢复")
+        }
     }
 
     fun switchPerson(id: String) {
@@ -153,16 +161,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setCustomPrompt(prompt: String) {
         viewModelScope.launch { prefs.setCustomPrompt(prompt) }
     }
-    /** 导出面板五维选择记忆（it-011 O8；it-012 增 ready 修恢复竞态） */
-    val exportSelections: StateFlow<Map<String, String>> = prefs.exportSelections
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
-
-    val exportSelectionsReady: StateFlow<Boolean> = prefs.exportSelectionsReady
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
-
-    fun setExportSelections(selections: Map<String, String>) {
-        viewModelScope.launch { prefs.saveExportSelections(selections) }
-    }
+    /** it-081：导出五维选择记忆改由 ExportSheet 本地持有（it-061 修3 后 UI 已不读写，死 API 删除） */
 
     /** W1 格位滑动 coach 首演标记（it-011 O6） */
     val coachSlotsShown: StateFlow<Boolean> = prefs.coachSlotsShown
@@ -312,7 +311,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** ☆收藏：按当前组合创建穿搭（US-08，保留旧入口兼容） */
     fun createOutfit(itemIds: List<String>, tags: List<String>, onDone: (Outfit?) -> Unit = {}) =
-        launchSafely {
+        launchSafely(onError = { onDone(null) }) {
             val person = currentPerson.value ?: return@launchSafely
             val o = repo.createOutfit(person.id, itemIds, tags)
             toast("已收藏这套穿搭")
@@ -323,7 +322,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** W7 编辑：只接受同角色衣物，至少保留一件；标签、成品图等其余字段原样保留。 */
     fun updateOutfitItems(id: String, itemIds: List<String>, onDone: (Boolean) -> Unit = {}) {
-        launchSafely(failToast = "更新穿搭失败") {
+        launchSafely(failToast = "更新穿搭失败", onError = { onDone(false) }) {
             val outfit = repo.data.value.outfitById(id) ?: run {
                 onDone(false)
                 return@launchSafely
@@ -353,7 +352,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** 创建可独立调整的新记录；不复制成品图、评论或穿着记录，避免副本沿用过期内容。 */
     fun duplicateOutfit(source: Outfit, onDone: (Outfit?) -> Unit = {}) {
-        launchSafely(failToast = "创建副本失败") {
+        launchSafely(failToast = "创建副本失败", onError = { onDone(null) }) {
             val duplicate = repo.createOutfit(source.personId, source.itemIds, source.tags)
             toast("已创建副本")
             onDone(duplicate)
@@ -433,7 +432,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         photoFile: String?,
         onDone: (Boolean) -> Unit,
     ) {
-        launchSafely(failToast = "保存失败") {
+        launchSafely(failToast = "保存失败", onError = { onDone(false) }) {
             val person = currentPerson.value ?: repo.ensureDefaultPerson()
             val file = photoFile ?: existing?.imageFile
             if (name.isBlank()) { toast("名称必填"); onDone(false); return@launchSafely }

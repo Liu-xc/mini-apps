@@ -12,7 +12,6 @@ import com.leo.libs.agent.image.ImageGenEvent
 import com.leo.libs.agent.image.ImageGenRequest
 import com.leo.libs.agent.image.ImageModel
 import com.leo.libs.agent.image.ImageRef
-import com.leo.libs.agent.image.OkHttpImageModel
 import com.leo.wardrobe.data.mock.MockImageModel
 import com.leo.wardrobe.di.AppContainer
 import com.leo.wardrobe.domain.model.Item
@@ -81,15 +80,16 @@ class OutfitImageGenerator(private val container: AppContainer) {
         if (hasKey) Connection(spec, model) else null
     }
 
-    private fun imageModel(spec: ProviderSpec): ImageModel =
+    private fun imageModel(connection: Connection): ImageModel =
         if (container.isDemo) {
-            MockImageModel(spec) {
+            MockImageModel(connection.spec) {
                 container.imageStore.file(MockImageModel.SAMPLE_IMAGE_FILE)
                     ?.takeIf { it.isFile }
                     ?.readBytes()
             }
         } else {
-            OkHttpImageModel(spec, container.apiKeyStore)
+            // it-081/O-2：协议路由交给 SDK 工厂，本层不再感知实现类
+            ImageModel.of(connection.spec, connection.model, container.apiKeyStore)
         }
 
     /** 参考图张数预检（Rectifier 思想：超档位在 UI 层就该拦住，这里兜底） */
@@ -111,6 +111,13 @@ class OutfitImageGenerator(private val container: AppContainer) {
         onProgress: (String) -> Unit,
     ): RunOutcome {
         val refs = buildRefs(prompt, items, personRefFile, connection)
+        // it-081/A-1：模型吃参考图（inputLimit>0）而装配为空 ⇒ 显式失败——不再静默降级成
+        // 无 image 字段的纯文生图（it-079 只修了路径解析表象；人物照缺失/合成失败/存储满均落这里）
+        if (inputLimit(connection) > 0 && refs.isEmpty()) {
+            return RunOutcome.Failed(
+                AgentError.Schema("参考图装配失败（人物参考照缺失或合成失败），已中止本次生成")
+            )
+        }
         val request = ImageGenRequest(
             model = connection.model,
             prompt = prompt,
@@ -122,7 +129,7 @@ class OutfitImageGenerator(private val container: AppContainer) {
         var candidates: List<GeneratedImage>? = null
         var recorded = false
         return try {
-            imageModel(connection.spec).generate(request).collect { ev ->
+            imageModel(connection).generate(request).collect { ev ->
                 when (ev) {
                     is ImageGenEvent.Started -> {}
                     is ImageGenEvent.Progress -> onProgress(ev.message)

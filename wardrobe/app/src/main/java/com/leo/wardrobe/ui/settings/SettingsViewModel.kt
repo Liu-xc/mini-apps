@@ -263,7 +263,12 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 ),
             )
         } else {
-            imagePresetOptions.find { it.id == ui.presetId }?.imageModels.orEmpty()
+            // it-081/A-2：异步任务型（aitryon 系）UI 不放出——app 走同步传输链路，
+            // 放出即「可选必败」（it-077 拍板二期开放）
+            imagePresetOptions.find { it.id == ui.presetId }
+                ?.imageModels
+                .orEmpty()
+                .filter { it.imageProtocol != com.leo.libs.agent.ImageProtocol.DASHSCOPE_ASYNC_TASK }
         }
 
     fun saveImageConnection(ui: ImageConnectionUi, keyInput: String) {

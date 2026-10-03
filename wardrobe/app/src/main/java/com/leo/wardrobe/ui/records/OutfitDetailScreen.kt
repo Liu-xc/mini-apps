@@ -49,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -98,7 +99,9 @@ fun OutfitDetailScreen(
     val outfit = remember(outfitId, data) { data.outfitById(outfitId) }
 
     if (outfit == null) {
-        onBack()
+        // it-081/U-1：导航副作用移入 LaunchedEffect（同 ItemDetailScreen）
+        LaunchedEffect(outfitId) { onBack() }
+        Box(Modifier.fillMaxSize())
         return
     }
 

@@ -48,9 +48,11 @@ class ImageParamEncoderTest {
     }
 
     @Test
-    fun `invalid declared numeric parameter is omitted`() {
-        val encoded = encodeImageParams(model.params, mapOf("seed" to ""))
+    fun `invalid declared numeric parameter falls back to its default`() {
+        // it-081/A-13：非法值不再被丢弃而是回退 default
+        val encoded = encodeImageParams(model.params, mapOf("seed" to "", "watermark" to "yes"))
 
-        assertFalse(encoded.containsKey("seed"))
+        assertEquals("0", encoded.getValue("seed").toString())
+        assertEquals("false", encoded.getValue("watermark").toString())
     }
 }
