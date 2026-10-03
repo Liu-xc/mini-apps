@@ -31,6 +31,9 @@ captures/
 # 应用发布包：仅本地分发，不入仓库
 dist/
 
+# it-080：本地 API 密钥（体验包构建注入 BuildConfig），绝不入库——见 AGENTS.md 密钥红线
+keys.local.properties
+
 # Python 运行产物（.agents/skills 脚本）
 __pycache__/
 *.pyc

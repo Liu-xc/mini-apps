@@ -178,3 +178,10 @@
 - **决策**：`libs/agent` 建统一 `ModelCatalog`（`ProviderSpec`/`ModelSpec`，capability=CHAT/IMAGE_GEN 分轨声明；聊天 preset 扩容 deepseek/moonshot/dashscope/volc-ark/siliconflow 全为 OpenAI 兼容纯数据零代码——ADR-002 红利兑现）；生图新增 `ImageModel` 轨（协议三枚举 OPENAI_IMAGES_SYNC/DASHSCOPE_SYNC/DASHSCOPE_ASYNC_TASK，同步/异步在适配器内消化为 `Flow<ImageGenEvent>`；模型专属参数按 `ModelSpec.params` 声明式透传，UI 动态渲染高级面板）。wardrobe 侧按用途分轨路由：聊天连接与生图连接各自独立偏好（`aiPresetId/aiModel` vs `aiImagePresetId/aiImageModel`），Key 按厂商 id 一把双轨共用（自定义生图独立槽位 custom-image）。
 - **理由**：一个厂商往往双能力（百炼=Qwen 聊天+生图、火山=豆包+Seedream、硅基流动=聚合两者），两套注册表会让同一把 Key 配两遍；LiteLLM 未归一异步任务型生图（issue #28763）必须自建；参数透传避免为每个厂商开关建抽象字段（OpenRouter supported_parameters 思想）。
 - **后果**：模型 id 漂移靠目录数据随版本更新（UI 保留自定义兜底）；百炼 aitryon（URL-only）SDK 传输已实现单测覆盖但 UI 二期开放；`OutfitImage` 增 source/model/prompt 溯源字段（向后兼容）；演示模式生图一律假实现不出网（与聊天轨「有 Key 真连」不同，简化取舍已注记）。
+
+## ADR-031 体验包内置真实 Key：本地文件构建注入 + 首启补缺（2026-10-03，it-080）
+- **背景**：体验包（`-PdemoDefault=true`）装上仍需 W11 手动配 Key 才能真实聊天/生图；Leo 提供三把真实 Key 要求内置（自用定位，不做开销防护）。
+- **决策**：Key 明文只存 `wardrobe/keys.local.properties`（根 .gitignore 忽略，AGENTS.md 密钥红线）；仅 demoDefault 构建读取注入 `BuildConfig.BUILTIN_KEY_*`（常规构建恒空串）；`WardrobeApp` 首启经 `BuiltinKeysSeeder` 对当前 namespace（mock_agent/agent）**补缺预填，不覆盖**用户已配槽位。
+- **理由**：补缺语义保证「用户改过/清除过」优先于内置值（BYOK 主权不破坏）；注入绑 demoDefault 而非独立开关，体验包语义单一（装上即用）；Key 不落 Keystore 之外的任何应用数据面——预填后即走 it-041 加密存储链路，与手工配置完全同轨。
+- **后果**：体验包 APK 内含真实 Key，**不得分发给不可信对象**（自用可接受）；换 Key 改 properties 重建即可；`BuiltinKeysSeeder.seedInto` 语义由单测锁死（空填/不覆盖/幂等）。
+

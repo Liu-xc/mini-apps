@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- **feat(wardrobe)**: it-080 体验包内置 BYOK Key——本地 `keys.local.properties`（git 忽略，AGENTS.md 密钥红线）经 demoDefault 构建注入 BuildConfig，首启 `BuiltinKeysSeeder` 对未配置 presetId 补缺预填（glm/siliconflow/mimo-tp，不覆盖已配）；常规构建恒空串零行为，补缺语义 3 单测锁死。详 [it-080](wardrobe/specs/iterations/it-080-builtin-keys-experience-pack.md)、ADR-031。
+
 - **fix(wardrobe)**: it-079 修复真实生图漏传参考长图与数值 seed 被编码为字符串的问题，按模型参数类型编码请求并明确单张拼贴长图的生成指令；补回归测试，模拟器完成非 demo SiliconFlow/Qwen 实际调用。详 [it-079](wardrobe/specs/iterations/it-079-real-imagegen-missing-reference-hotfix.md)。
 
 - **fix(wardrobe)**: it-078 修复演示生图将有效的 1×1 半透明蓝 PNG 拉伸为候选图、生成态转瞬即逝的问题；改为回放包内穿搭样张，增加可见 loading 时长，样张缺失时显示失败态。详 [it-078](wardrobe/specs/iterations/it-078-demo-imagegen-blue-placeholder-hotfix.md)。

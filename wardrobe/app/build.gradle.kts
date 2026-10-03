@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -40,11 +42,21 @@ android {
         vectorDrawables { useSupportLibrary = true }
         // it-045：-PdemoDefault=true 出「演示数据体验包」——新装即进演示模式；
         // 常规构建恒为 false，行为与 it-015 完全一致（设置页/5 连点仍可双向切换）
-        buildConfigField(
-            "boolean",
-            "DEMO_DEFAULT",
-            (providers.gradleProperty("demoDefault").orNull == "true").toString(),
-        )
+        val demoDefault = providers.gradleProperty("demoDefault").orNull == "true"
+        buildConfigField("boolean", "DEMO_DEFAULT", demoDefault.toString())
+        // it-080 / ADR-031：体验包内置 BYOK Key——demoDefault 构建时从 wardrobe/keys.local.properties
+        // （git 忽略，见 AGENTS.md 密钥红线）读取注入；文件缺失/常规构建恒空串，行为不变。
+        val builtinKeys = if (demoDefault) {
+            val f = rootProject.projectDir.resolve("keys.local.properties")
+            if (f.isFile) Properties().apply { f.inputStream().use { load(it) } }
+                .mapValues { it.value.toString().trim() }
+            else emptyMap()
+        } else emptyMap<String, String>()
+        fun builtinKey(presetId: String): String =
+            "\"" + (builtinKeys[presetId] ?: "").replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+        buildConfigField("String", "BUILTIN_KEY_GLM", builtinKey("glm"))
+        buildConfigField("String", "BUILTIN_KEY_SILICONFLOW", builtinKey("siliconflow"))
+        buildConfigField("String", "BUILTIN_KEY_MIMO_TP", builtinKey("mimo-tp"))
     }
 
     buildTypes {
