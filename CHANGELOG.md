@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-083 生图 prompt 按「是否带参考长图」分支——纯文生图模型（Kolors/Z-Image）不再收到「根据输入长图/拼贴」的无图指令（出图画成衣架陈列的根因），图生图分支强调「衣架/人台上的衣物穿到真人身上」；两分支统一追加「不得出现衣架、人台、假人、平铺陈列」负面约束。详 [it-083](wardrobe/specs/iterations/it-083-prompt-worn-not-displayed.md)。
 - **fix(wardrobe)**: it-082 修复 SiliconFlow Kolors 生图默认 seed=-1 必吃 400（code 20015）——目录如实声明 min=0，编码层 INT 低于声明 min 改为省略字段交服务端自选（-1 仍是 UI 随机语义；DashScope 系 -1 官方随机不受影响）；Mac curl 同构请求实锤定位+回归测试锁定。详 [it-082](wardrobe/specs/iterations/it-082-kolors-seed-hotfix.md)。
 - **feat(wardrobe)**: it-080 体验包内置 BYOK Key——本地 `keys.local.properties`（git 忽略，AGENTS.md 密钥红线）经 demoDefault 构建注入 BuildConfig，首启 `BuiltinKeysSeeder` 对未配置 presetId 补缺预填（glm/siliconflow/mimo-tp，不覆盖已配）；常规构建恒空串零行为，补缺语义 3 单测锁死。详 [it-080](wardrobe/specs/iterations/it-080-builtin-keys-experience-pack.md)、ADR-031。
 

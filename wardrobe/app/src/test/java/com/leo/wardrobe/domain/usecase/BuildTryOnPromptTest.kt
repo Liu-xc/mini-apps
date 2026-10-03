@@ -38,4 +38,22 @@ class BuildTryOnPromptTest {
         val prompt = BuildTryOnPrompt.build(emptyList(), "", "")
         assertFalse(prompt.contains("衣物清单："))
     }
+
+    @Test
+    fun `纯文生图分支不提长图并带衣架负面约束`() {
+        // it-083：inputImages=0 的模型拿不到长图，文案不得引导模型画拼贴陈列
+        val prompt = BuildTryOnPrompt.build(listOf(item("白衬衫", "白色")), "", "", hasReferenceImage = false)
+        assertFalse(prompt.contains("长图"))
+        assertFalse(prompt.contains("拼贴"))
+        assertTrue(prompt.contains("真人模特"))
+        assertTrue(prompt.contains("衣物必须穿在真人身上"))
+    }
+
+    @Test
+    fun `参考图分支强调衣物穿到真人身上`() {
+        val prompt = BuildTryOnPrompt.build(listOf(item("风衣", "卡其")), "", "", hasReferenceImage = true)
+        assertTrue(prompt.contains("穿到真人身上"))
+        assertTrue(prompt.contains("挂在衣架上或平铺陈列"))
+        assertTrue(prompt.contains("不得出现衣架、人台、假人模特、平铺陈列"))
+    }
 }

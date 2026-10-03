@@ -142,14 +142,19 @@ fun GenerateWorkbench(
     val scope = rememberCoroutineScope()
     val generator = vm.imageGenerator
 
-    // 候选挑选序（随 phase 变化重置；动作栏与滚动区共用）
-    var chosen by remember(phase) { mutableStateOf(0) }
-    var prompt by remember(outfit?.id) {
-        mutableStateOf(OutfitImageGenerator.promptOf(items, scene = "", personNote = personNote))
-    }
-
     // it-077 十四次修订：就地换模型——本地连接态，切换即写偏好并生效（生成中锁定）
     var conn by remember(connection) { mutableStateOf(connection) }
+
+    val modelTakesImages = (conn.modelSpec?.inputImages?.first ?: 1) > 0
+
+    // it-083：prompt 文案按「是否随附参考长图」分支（纯文生图模型不提长图，防画成衣架陈列）；
+    // 键含 modelTakesImages——就地换模型跨档（0..0 ↔ 1..1）时重置为对应模板
+    var prompt by remember(outfit?.id, modelTakesImages) {
+        mutableStateOf(OutfitImageGenerator.promptOf(items, scene = "", personNote = personNote, hasReferenceImage = modelTakesImages))
+    }
+
+    // 候选挑选序（随 phase 变化重置；动作栏与滚动区共用）
+    var chosen by remember(phase) { mutableStateOf(0) }
 
     // 高级参数面板（按模型记忆，拍板①）
     var paramValues by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
@@ -167,7 +172,6 @@ fun GenerateWorkbench(
         composedPreview = vm.imageComposer.composeToExportFile(items, prompt, person?.refImageFile)
     }
 
-    val modelTakesImages = (conn.modelSpec?.inputImages?.first ?: 1) > 0
     var modelMenu by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
 

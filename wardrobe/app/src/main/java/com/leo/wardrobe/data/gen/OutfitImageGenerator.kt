@@ -230,8 +230,8 @@ class OutfitImageGenerator(private val container: AppContainer) {
         private const val JPEG_QUALITY = 90
 
         /** 生成 sheet 与顾问工具共用的提示词口径 */
-        fun promptOf(items: List<Item>, scene: String, personNote: String): String =
-            BuildTryOnPrompt.build(items, scene, personNote)
+        fun promptOf(items: List<Item>, scene: String, personNote: String, hasReferenceImage: Boolean = true): String =
+            BuildTryOnPrompt.build(items, scene, personNote, hasReferenceImage)
 
     }
 }

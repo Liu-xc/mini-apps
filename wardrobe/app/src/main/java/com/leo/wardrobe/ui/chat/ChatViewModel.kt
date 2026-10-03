@@ -358,6 +358,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         val person = snapshot.persons.find { it.id == personId }
         val prompt = com.leo.wardrobe.data.gen.OutfitImageGenerator.promptOf(
             items, sceneHint, container.prefs.personNote.first(),
+            // it-083：纯文生图模型不带参考长图，prompt 不提长图防画成衣架陈列
+            hasReferenceImage = (conn.modelSpec?.inputImages?.first ?: 1) > 0,
         )
         return when (
             val r = generator.run(
