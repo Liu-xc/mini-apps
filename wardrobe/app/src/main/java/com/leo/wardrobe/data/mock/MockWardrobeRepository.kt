@@ -185,9 +185,10 @@ class MockWardrobeRepository(seed: WardrobeData = MockWardrobeData.create()) : W
     override suspend fun deleteWishItem(id: String) {
         _data.value = _data.value.copy(
             wishItems = _data.value.wishItems.filterNot { it.id == id },
+            // it-081/D-1：与 Impl 统一——移除引用；仅两段全空的组合删除，含已有件的保留待升级
             wishOutfits = _data.value.wishOutfits
                 .map { w -> w.copy(wishItemIds = w.wishItemIds - id) }
-                .filter { it.wishItemIds.isNotEmpty() },
+                .filter { it.wishItemIds.isNotEmpty() || it.itemIds.isNotEmpty() },
         )
     }
 

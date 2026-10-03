@@ -144,4 +144,44 @@ class WishRepositoryTest {
         assertEquals("x", slot.id.removePrefix("wish:"))
         assertEquals(WardrobeCategory.SHOES, slot.category)
     }
+    // ---- it-081/D-1 回归：心愿穿搭生命周期（购齐待升级是合法态，不再被 cleaned 静默删除） ----
+
+    @Test
+    fun `purchaseAllThenReloadKeepsWishOutfitAndPromoteWorks`() = runTest {
+        val r = repo()
+        val p = r.ensureDefaultPerson()
+        r.upsertItem(Item(id = "it9", personId = p.id, category = WardrobeCategory.TOP, name = "衬衫", imageFile = "a.webp"))
+        val w1 = seedWish(r, p.id, "wi1")
+        seedWish(r, p.id, "wi2")
+        r.createWishOutfit(p.id, itemIds = listOf("it9"), wishItemIds = listOf("wi1", "wi2"))
+        // 逐件购齐（旧语义下：wishItemIds 清空 → 重启 cleaned 即删除该实体，预览图孤儿化）
+        r.purchaseWishItem("wi1", Item(id = "i1", personId = p.id, category = w1.category, name = "大衣A", imageFile = "b.webp"))
+        r.purchaseWishItem("wi2", Item(id = "i2", personId = p.id, category = w1.category, name = "大衣B", imageFile = "c.webp"))
+        assertTrue(r.data.value.wishOutfits.single().wishItemIds.isEmpty())
+
+        // 模拟重启：同 store 新实例（onLoad cleaned()）
+        val r2 = WardrobeRepositoryImpl(newStore(), images)
+        val kept = r2.data.value.wishOutfits.singleOrNull()
+        assertNotNull("购齐待升级的心愿穿搭在重启清洗后必须保留", kept)
+        // 一键升级仍可用
+        val outfit = r2.promoteWishOutfit(kept!!.id)
+        assertEquals(listOf("it9", "i1", "i2"), outfit.itemIds)
+        assertTrue(r2.data.value.wishOutfits.isEmpty())
+    }
+
+    @Test
+    fun `deleteLastWishItemKeepsOutfitContainingRealItems`() = runTest {
+        val r = repo()
+        val p = r.ensureDefaultPerson()
+        r.upsertItem(Item(id = "it8", personId = p.id, category = WardrobeCategory.TOP, name = "衬衫", imageFile = "a.webp"))
+        seedWish(r, p.id, "wi1")
+        r.createWishOutfit(p.id, itemIds = listOf("it8"), wishItemIds = listOf("wi1"))
+        // 删掉最后一件愿望件：组合仍含已有件 → 保留（不再随「变空」一并删除）
+        r.deleteWishItem("wi1")
+        val kept = r.data.value.wishOutfits.singleOrNull()
+        assertNotNull(kept)
+        assertTrue(kept!!.wishItemIds.isEmpty())
+        assertEquals(listOf("it8"), kept.itemIds)
+    }
 }
+

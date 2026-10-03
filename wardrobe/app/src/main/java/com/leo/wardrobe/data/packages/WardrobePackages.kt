@@ -96,12 +96,22 @@ class WardrobePackages(
                 if (missing.size > 3) " 等" else ""
         }
         val bad = mutableListOf<String>()
+        val unreadable = mutableListOf<String>()
         referenced.forEach { name ->
-            val bytes = pkg.imageBytes(name)
-            if (bytes != null && !images.isDecodableImage(bytes)) bad += name
+            // it-081/D-3：zip 条目数据损坏（CRC 等）在此拦为理由，不再向上抛异常崩 App
+            val bytes = runCatching { pkg.imageBytes(name) }.getOrNull()
+            if (bytes == null) {
+                if (pkg.hasImage(name)) unreadable += name
+            } else if (!images.isDecodableImage(bytes)) {
+                bad += name
+            }
+        }
+        if (unreadable.isNotEmpty()) {
+            reasons += "无法读取的图片 ${unreadable.size} 张：${unreadable.take(3).joinToString(" / ")}" +
+                if (unreadable.size > 3) " 等" else ""
         }
         if (bad.isNotEmpty()) {
-            reasons += "无法解码的图片 ${bad.size} 张：${bad.take(3).joinToString(" / ")}" +
+            reasons += "无法解码或超出尺寸上限（边长>${ImageFileStore.PACKAGE_MAX_SIDE}）的图片 ${bad.size} 张：${bad.take(3).joinToString(" / ")}" +
                 if (bad.size > 3) " 等" else ""
         }
         if (reasons.isNotEmpty()) {
@@ -141,10 +151,9 @@ class WardrobePackages(
 
         when (mode) {
             ImportMode.MERGE -> {
-                val merged = mergeWardrobe(local, incoming)
-                val keptRefs = merged.referencedImages()
-                repo.replaceAll(merged)
-                localRefs.filterNot { it in keptRefs }.forEach { runCatching { images.delete(it) } }
+                // it-081/D-8：删恒空分支——mergeWardrobe 永不删本地实体（本地有包无 → 保留），
+                // 合并结果必然引用全部本地文件，不存在可回收的旧图；回收仅 REPLACE 有意义
+                repo.replaceAll(mergeWardrobe(local, incoming))
             }
             ImportMode.REPLACE -> {
                 repo.replaceAll(incoming)

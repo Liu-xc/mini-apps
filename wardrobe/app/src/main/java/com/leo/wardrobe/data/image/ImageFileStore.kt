@@ -104,10 +104,18 @@ class ImageFileStore(
         clear.toFloat() / pixels.size >= CUTOUT_ALPHA_RATIO
     }.getOrDefault(false)
 
-    /** it-024 数据包导入：包内图片字节 → 解码/缩放/WebP 压缩 → 以新 uuid.webp 落盘；不可解码返回 null */
+    /** it-024 数据包导入：包内图片字节 → 解码/缩放/WebP 压缩 → 以新 uuid.webp 落盘；不可解码返回 null。
+     *  it-081/D-11：先探 bounds 按 inSampleSize 预降采样再解码——超大分辨率包不再全量解码（OOM 防护） */
     suspend fun putPackageImage(bytes: ByteArray): String? = withContext(Dispatchers.IO) {
         runCatching {
-            val raw = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching null
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            val opts = BitmapFactory.Options().apply {
+                // 仅对超出安全解码边长的大图粗降采样（2 幂），常规 ≤2048 的图保持精确 scaleDown 路径
+                val side = maxOf(bounds.outWidth, bounds.outHeight)
+                if (side > DECODE_SAFE_SIDE) inSampleSize = greatestPowerOf2AtLeast(side / MAX_SIDE)
+            }
+            val raw = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return@runCatching null
             val scaled = scaleDown(raw)
             val buffer = ByteArrayOutputStream()
             val ok = compressWebp(scaled, buffer)
@@ -117,11 +125,19 @@ class ImageFileStore(
         }.getOrNull()
     }
 
-    /** it-024 预检：包内图片可解码性（魔数+尺寸探针，不解全图） */
-    fun isDecodableImage(bytes: ByteArray): Boolean = runCatching {
+    /** it-081/D-11：降采样倍数取 2 的幂（inSampleSize 契约），≥1 */
+    private fun greatestPowerOf2AtLeast(n: Int): Int {
+        var p = 1
+        while (p < n) p = p shl 1
+        return p
+    }
+
+    /** it-024 预检：包内图片可解码性（魔数+尺寸探针，不解全图）；边长超 [maxSide] 视为不可用（D-11 OOM 防护） */
+    fun isDecodableImage(bytes: ByteArray, maxSide: Int = PACKAGE_MAX_SIDE): Boolean = runCatching {
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
-        opts.outWidth > 0 && opts.outHeight > 0
+        opts.outWidth > 0 && opts.outHeight > 0 &&
+            opts.outWidth <= maxSide && opts.outHeight <= maxSide
     }.getOrDefault(false)
 
     private fun compressWebp(bitmap: Bitmap, out: java.io.OutputStream): Boolean =
@@ -190,6 +206,10 @@ class ImageFileStore(
 
     companion object {
         const val MAX_SIDE = 1440
+
+        /** it-081/D-11：数据包图片预检边长上限（超出拒绝导入）与解码安全边长（超出按 2 幂粗降采样） */
+        const val PACKAGE_MAX_SIDE = 8192
+        private const val DECODE_SAFE_SIDE = 2048
         const val QUALITY = 82
         private const val TAG = "Wardrobe"
 

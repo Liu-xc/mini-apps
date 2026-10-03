@@ -39,10 +39,21 @@ class WardrobeRepositoryImpl(
     // ---- Person ----
 
     override suspend fun ensureDefaultPerson(): Person {
-        data.value.persons.firstOrNull()?.let { return it }
-        val p = Person(newId(), "我", "🙂", createdAt = now())
-        mutate { it.copy(persons = it.persons + p) }
-        return p
+        // it-081/D-5：存在性判断挪进临界区——锁外预读在 init 与用户动作并发时
+        // 可双双判定为空、产出两个「我」
+        var existing: Person? = null
+        var created: Person? = null
+        mutate {
+            existing = it.persons.firstOrNull()
+            if (existing != null) {
+                it
+            } else {
+                val p = Person(newId(), "我", "🙂", createdAt = now())
+                created = p
+                it.copy(persons = it.persons + p)
+            }
+        }
+        return existing ?: created!!
     }
 
     override suspend fun addPerson(name: String, emoji: String): Person {
@@ -200,11 +211,16 @@ class WardrobeRepositoryImpl(
     // ---- WearLog（it-018 阶段A） ----
 
     override suspend fun addWearLog(outfitId: String, at: Long): WearLog {
-        val outfit = data.value.outfits.firstOrNull { it.id == outfitId }
-            ?: throw IllegalArgumentException("outfit 不存在: $outfitId")
-        val log = WearLog(newId(), outfit.personId, outfitId, at, now())
-        mutate { it.copy(wearLogs = it.wearLogs + log) }
-        return log
+        // it-081/D-5：存在性检查挪进临界区（transform 抛出即整体回滚上抛）
+        var log: WearLog? = null
+        mutate { d ->
+            val outfit = d.outfits.firstOrNull { it.id == outfitId }
+                ?: throw IllegalArgumentException("outfit 不存在: $outfitId")
+            val l = WearLog(newId(), outfit.personId, outfitId, at, now())
+            log = l
+            d.copy(wearLogs = d.wearLogs + l)
+        }
+        return log!!
     }
 
     override suspend fun deleteWearLogsOf(outfitId: String, from: Long, to: Long) {
@@ -229,41 +245,46 @@ class WardrobeRepositoryImpl(
         mutate { d ->
             d.copy(
                 wishItems = d.wishItems.filterNot { it.id == id },
-                // 从心愿穿搭移除该愿望件；不变量（至少一件愿望单品）被破坏的组合一并删除
+                // it-081/D-1：从心愿穿搭移除该愿望件——与 purchaseWishItem 统一为「移除引用」语义，
+                // 含已有件（itemIds 非空）的组合保留为「可升级/可继续编辑」态；
+                // 仅两段全空的组合（纯愿望组合且愿望全删）才删除，与 cleaned() 保留条件一致
                 wishOutfits = d.wishOutfits
                     .map { w -> w.copy(wishItemIds = w.wishItemIds - id) }
-                    .filter { it.wishItemIds.isNotEmpty() },
+                    .filter { it.wishItemIds.isNotEmpty() || it.itemIds.isNotEmpty() },
             )
         }
         image?.let { images.delete(it) }
     }
 
     override suspend fun purchaseWishItem(wishItemId: String, item: Item): Item {
-        val wish = data.value.wishItems.firstOrNull { it.id == wishItemId }
-            ?: throw IllegalArgumentException("wishItem 不存在: $wishItemId")
-        val created = item.copy(
-            id = item.id.ifBlank { newId() },
-            personId = wish.personId,
-            createdAt = now(),
-            updatedAt = now(),
-        )
+        // it-081/D-5：存在性检查挪进临界区
+        var created: Item? = null
         mutate { d ->
+            val wish = d.wishItems.firstOrNull { it.id == wishItemId }
+                ?: throw IllegalArgumentException("wishItem 不存在: $wishItemId")
+            val c = item.copy(
+                id = item.id.ifBlank { newId() },
+                personId = wish.personId,
+                createdAt = now(),
+                updatedAt = now(),
+            )
+            created = c
             d.copy(
-                items = d.items + created,
+                items = d.items + c,
                 wishItems = d.wishItems.replaceBy(wishItemId, { w -> w.id }) { w ->
-                    w.copy(purchasedAt = now(), purchasedItemId = created.id, updatedAt = now())
+                    w.copy(purchasedAt = now(), purchasedItemId = c.id, updatedAt = now())
                 },
                 // 转正联动：含该愿望件的心愿穿搭把它移入已有件部分
                 wishOutfits = d.wishOutfits.map { w ->
                     if (wishItemId in w.wishItemIds) {
-                        w.copy(wishItemIds = w.wishItemIds - wishItemId, itemIds = w.itemIds + created.id)
+                        w.copy(wishItemIds = w.wishItemIds - wishItemId, itemIds = w.itemIds + c.id)
                     } else {
                         w
                     }
                 },
             )
         }
-        return created
+        return created!!
     }
 
     override suspend fun createWishOutfit(
@@ -320,22 +341,25 @@ class WardrobeRepositoryImpl(
     }
 
     override suspend fun promoteWishOutfit(id: String): Outfit {
-        val wish = data.value.wishOutfits.firstOrNull { it.id == id }
-            ?: throw IllegalArgumentException("wishOutfit 不存在: $id")
-        if (wish.wishItemIds.isNotEmpty()) throw IllegalStateException("还有 ${wish.wishItemIds.size} 件愿望单品未购入")
-        val outfit = Outfit(
-            id = newId(),
-            personId = wish.personId,
-            itemIds = wish.itemIds,
-            tags = wish.tags,
-            effectImages = wish.previewImages,
-            createdAt = now(),
-            updatedAt = now(),
-        )
+        // it-081/D-5：检查与构造挪进临界区
+        var outfit: Outfit? = null
         mutate { d ->
-            d.copy(outfits = d.outfits + outfit, wishOutfits = d.wishOutfits.filterNot { w -> w.id == id })
+            val wish = d.wishOutfits.firstOrNull { it.id == id }
+                ?: throw IllegalArgumentException("wishOutfit 不存在: $id")
+            if (wish.wishItemIds.isNotEmpty()) throw IllegalStateException("还有 ${wish.wishItemIds.size} 件愿望单品未购入")
+            val o = Outfit(
+                id = newId(),
+                personId = wish.personId,
+                itemIds = wish.itemIds,
+                tags = wish.tags,
+                effectImages = wish.previewImages,
+                createdAt = now(),
+                updatedAt = now(),
+            )
+            outfit = o
+            d.copy(outfits = d.outfits + o, wishOutfits = d.wishOutfits.filterNot { w -> w.id == id })
         }
-        return outfit
+        return outfit!!
     }
 
     // ---- Note ----
@@ -368,14 +392,16 @@ private fun WardrobeData.cleaned(): WardrobeData {
     }
     // it-018：打卡记录的 outfit/person 悬空引用一并清洗
     val validWearLogs = wearLogs.filter { it.personId in personIds && it.outfitId in outfitIds }
-    // it-019：心愿域清洗——悬空引用移除，且心愿穿搭必须保留至少一件愿望单品（不变量）
+    // it-019：心愿域清洗——悬空引用移除。it-081/D-1：保留条件改为「两段任一非空」——
+    // 「全部购齐、等待一键升级」（wishItemIds 空、itemIds 非空）是合法业务状态，
+    // 原「至少一件愿望单品」伪不变量与 purchase→promote 生命周期冲突（重启即静默丢实体）
     val validWishItems = wishItems.filter { it.personId in personIds }
         .map { w -> if (w.purchasedItemId != null && w.purchasedItemId !in itemIds) w.copy(purchasedItemId = null) else w }
     val validWishItemIds = validWishItems.map { it.id }.toSet()
     val validWishOutfits = wishOutfits
         .filter { it.personId in personIds }
         .map { w -> w.copy(itemIds = w.itemIds.filter { id -> id in itemIds }, wishItemIds = w.wishItemIds.filter { id -> id in validWishItemIds }) }
-        .filter { it.wishItemIds.isNotEmpty() }
+        .filter { it.wishItemIds.isNotEmpty() || it.itemIds.isNotEmpty() }
     return copy(
         items = validItems,
         outfits = validOutfits,

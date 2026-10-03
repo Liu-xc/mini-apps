@@ -51,6 +51,11 @@ class AppContainer(private val context: Context) {
     val repository: WardrobeRepository =
         if (demo) MockWardrobeRepository(loadMockData()) else WardrobeRepositoryImpl(snapshotStore, imageStore)
 
+    /** it-081/D-2：真实数据 wardrobe.json 主/bak 双损坏（已隔离为 .corrupt-*，当前以空数据启动）——
+     *  UI 应提示用户抢救 .corrupt 文件；演示模式不适用 */
+    val dataLoadFailed: Boolean get() = !demo && repository.let { it is WardrobeRepositoryImpl } &&
+        snapshotStore.loadFailed
+
     /** it-024：数据包导出/导入（演示模式下入口置灰，服务层再兜底拒绝） */
     val packages = com.leo.wardrobe.data.packages.WardrobePackages(repository, snapshotStore, imageStore, demo)
 

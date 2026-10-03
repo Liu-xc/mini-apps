@@ -10,7 +10,8 @@ interface WishRepository {
     /** 新增或更新愿望单品（id 已存在则更新，updatedAt 刷新） */
     suspend fun upsertWishItem(item: WishItem)
 
-    /** 删除愿望单品：级联删商品图、从所有心愿穿搭 wishItemIds 移除（因此变空的心愿穿搭一并删除） */
+    /** 删除愿望单品：级联删商品图、从所有心愿穿搭 wishItemIds 移除引用；仅两段（已有件/愿望件）全空的组合随之删除——
+     *  含已有件的组合保留为可升级态（it-081/D-1，与 purchaseWishItem 的「移入 itemIds」语义统一） */
     suspend fun deleteWishItem(id: String)
 
     /** 购入转正：创建正式 Item + 回填 purchasedAt/purchasedItemId；含该愿望件的心愿穿搭自动把它移入 itemIds */
