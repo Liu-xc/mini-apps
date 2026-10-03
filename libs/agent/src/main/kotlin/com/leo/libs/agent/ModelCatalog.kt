@@ -362,7 +362,9 @@ object ModelCatalog {
                     ImageParamSpec("batch_size", "张数", ParamType.INT, default = JsonPrimitive(1), min = 1.0, max = 4.0),
                     ImageParamSpec("size", "尺寸", ParamType.ENUM, listOf("1024x1024", "960x1280", "768x1344", "1440x720", "1248x832"), JsonPrimitive("1024x1024")),
                     ImageParamSpec("negative_prompt", "负向词", ParamType.TEXT, default = JsonPrimitive("")),
-                    ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(-1)),
+                    // it-082：min 如实声明服务端约束（SiliconFlow code 20015 要求 ≥0）；
+                    // default 保持 -1=UI 随机语义，编码层低于 min 时省略字段
+                    ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(-1), min = 0.0),
                 ),
             ),
             ModelSpec(

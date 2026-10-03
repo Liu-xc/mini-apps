@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- **fix(wardrobe)**: it-082 修复 SiliconFlow Kolors 生图默认 seed=-1 必吃 400（code 20015）——目录如实声明 min=0，编码层 INT 低于声明 min 改为省略字段交服务端自选（-1 仍是 UI 随机语义；DashScope 系 -1 官方随机不受影响）；Mac curl 同构请求实锤定位+回归测试锁定。详 [it-082](wardrobe/specs/iterations/it-082-kolors-seed-hotfix.md)。
 - **feat(wardrobe)**: it-080 体验包内置 BYOK Key——本地 `keys.local.properties`（git 忽略，AGENTS.md 密钥红线）经 demoDefault 构建注入 BuildConfig，首启 `BuiltinKeysSeeder` 对未配置 presetId 补缺预填（glm/siliconflow/mimo-tp，不覆盖已配）；常规构建恒空串零行为，补缺语义 3 单测锁死。详 [it-080](wardrobe/specs/iterations/it-080-builtin-keys-experience-pack.md)、ADR-031。
 
 - **fix(wardrobe)**: it-079 修复真实生图漏传参考长图与数值 seed 被编码为字符串的问题，按模型参数类型编码请求并明确单张拼贴长图的生成指令；补回归测试，模拟器完成非 demo SiliconFlow/Qwen 实际调用。详 [it-079](wardrobe/specs/iterations/it-079-real-imagegen-missing-reference-hotfix.md)。

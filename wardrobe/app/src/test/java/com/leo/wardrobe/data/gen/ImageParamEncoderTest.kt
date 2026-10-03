@@ -5,6 +5,7 @@ import com.leo.libs.agent.ModelSpec
 import com.leo.libs.agent.ParamType
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -54,5 +55,21 @@ class ImageParamEncoderTest {
 
         assertEquals("0", encoded.getValue("seed").toString())
         assertEquals("false", encoded.getValue("watermark").toString())
+    }
+
+    @Test
+    fun `int below declared min is omitted for server-side default`() {
+        // it-082：Kolors seed=-1（随机语义）+ min=0（SiliconFlow 20015 要求 ≥0）→ 省略字段
+        val spec = ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(-1), min = 0.0)
+
+        val omitted = encodeImageParams(listOf(spec), mapOf("seed" to "-1"))
+        assertFalse("低于 min 的 INT 应省略字段", omitted.containsKey("seed"))
+
+        val ok = encodeImageParams(listOf(spec), mapOf("seed" to "5"))
+        assertEquals("5", ok.getValue("seed").toString())
+
+        // 未声明 min 的模型（DashScope 系）-1 是官方随机语义，原样透传
+        val noMin = ImageParamSpec("seed", "种子", ParamType.INT, default = JsonPrimitive(-1))
+        assertEquals(-1L, encodeImageParams(listOf(noMin), mapOf("seed" to "-1")).getValue("seed").jsonPrimitive.long)
     }
 }

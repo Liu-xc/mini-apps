@@ -4,6 +4,7 @@ import com.leo.libs.agent.ImageParamSpec
 import com.leo.libs.agent.ParamType
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /** Keep declared boolean and numeric model parameters as JSON primitives of the declared type. */
 internal fun encodeImageParams(
@@ -23,9 +24,13 @@ internal fun encodeImageParams(
             ParamType.FLOAT -> value.toDoubleOrNull()?.takeIf { it.isFinite() }?.let { JsonPrimitive(it) }
             ParamType.ENUM, ParamType.TEXT, null -> JsonPrimitive(value)
         }
-        // it-081/A-13：非法值回退声明默认值，不再静默丢参——缺 size 等必填参数
-        // 只会在服务端变 400 才暴露；未声明的 key（spec=null）维持原样字符串透传
+        // it-082：INT 值低于声明 min → 省略字段交服务端自选（如 Kolors seed=-1 表随机，
+        // SiliconFlow 要求 ≥0，原样发送即 400 code 20015）；未声明 min 的模型（DashScope 系
+        // -1=官方随机语义）不受影响，原样透传
+        val intBelowMin = spec?.type == ParamType.INT && spec.min != null &&
+            encoded?.longOrNull != null && encoded.longOrNull!! < spec.min!!
         when {
+            intBelowMin -> null
             encoded != null -> key to encoded
             spec != null -> key to spec.default
             else -> null
