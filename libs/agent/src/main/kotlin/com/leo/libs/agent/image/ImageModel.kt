@@ -1,13 +1,17 @@
 package com.leo.libs.agent.image
 
 import com.leo.libs.agent.AgentError
+import com.leo.libs.agent.ApiKeyStore
+import com.leo.libs.agent.ImageProtocol
 import com.leo.libs.agent.ProviderSpec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
+import okhttp3.OkHttpClient
 
 /**
  * 生图轨请求（it-077）。具名参数只做最小归一（prompt / 参考图 / resolution → size），
  * 其余模型专属开关经 [extra] 按目录 params 声明原样透传进请求体——不为每个厂商开关建抽象字段。
+ * 注意：[extra] 与 [resolution] 均落 size 字段时 **extra 覆盖 resolution**（请求体 put 顺序，it-081 注明）。
  */
 data class ImageGenRequest(
     /** ProviderSpec.models 里的模型 id */
@@ -56,4 +60,21 @@ sealed interface ImageGenEvent {
 interface ImageModel {
     val provider: ProviderSpec
     fun generate(request: ImageGenRequest): Flow<ImageGenEvent>
+
+    companion object {
+        /**
+         * 协议路由工厂（it-081/O-2）：按模型声明的 [ImageProtocol] 选择实现——
+         * 「选哪个适配器」是 SDK 职责，不泄漏给消费方；异步任务型返回 [DashScopeTaskImageModel]，
+         * 其余（含未声明协议的自定义模型）返回 [OkHttpImageModel]。
+         */
+        fun of(
+            provider: ProviderSpec,
+            model: String,
+            apiKeys: ApiKeyStore,
+            client: OkHttpClient = OkHttpImageModel.defaultClient(),
+        ): ImageModel = when (provider.model(model)?.imageProtocol) {
+            ImageProtocol.DASHSCOPE_ASYNC_TASK -> DashScopeTaskImageModel(provider, apiKeys, client)
+            else -> OkHttpImageModel(provider, apiKeys, client)
+        }
+    }
 }

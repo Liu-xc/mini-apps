@@ -91,6 +91,24 @@ data class ProviderSpec(
     val imageBaseUrl: String? = null,
     val models: List<ModelSpec> = emptyList(),
 ) {
+    init {
+        // it-081/O-1：聊天轨双写期防漂移——preset 与 models 都声明聊天档位时，两边模型 id
+        // 必须一致且 preset.id 必须等于本 id（Key 槽位按 id 取）。漏同步在这里立刻炸出，不再静默漂移
+        //（chatPreset.models 仅在 models 无 CHAT 条目时才作为派生源，双写不一致意味着两事实源分叉）。
+        chatPreset?.let { preset ->
+            require(preset.id == id) {
+                "ProviderSpec $id 的 chatPreset.id=${preset.id} 与自身 id 不一致（Key 槽位会取错）"
+            }
+        }
+        val chatSpecIds = models.filter { Capability.CHAT in it.capabilities }.map { it.id }.toSet()
+        if (chatSpecIds.isNotEmpty() && chatPreset != null) {
+            val presetIds = chatPreset.models.map { it.name }.toSet()
+            require(chatSpecIds == presetIds) {
+                "ProviderSpec $id 聊天双清单不一致：models(chat)=${chatSpecIds.sorted()} vs preset=${presetIds.sorted()}"
+            }
+        }
+    }
+
     /**
      * 聊天模型目录：显式声明优先；未声明时从 [chatPreset].models 派生
      * （glm/mimo 的 M0 校准档位继续由 preset 承载，目录不重复维护）。

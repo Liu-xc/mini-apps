@@ -1,5 +1,8 @@
 package com.leo.libs.agent
 
+import com.leo.libs.agent.image.DashScopeTaskImageModel
+import com.leo.libs.agent.image.ImageModel
+import com.leo.libs.agent.image.OkHttpImageModel
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,5 +99,35 @@ class ModelCatalogTest {
         // 同一 ProviderSpec 声明聊天端点 + 生图端点 = 消费方按 provider.id 存取同一把 Key
         val dual = ModelCatalog.all.filter { it.chatPreset != null && it.imageBaseUrl != null }.map { it.id }
         assertTrue(dual.containsAll(listOf("glm", "dashscope", "volc-ark", "siliconflow")))
+    }
+    @Test
+    fun `聊天双清单一致 - 双写厂商 preset 与 models 完全同步`() {
+        // it-081/O-1：ProviderSpec init 已有 require，本测试确保目录实例化即校验
+        //（目录若漂移，任一访问 ModelCatalog 的测试都会在此先炸出可读信息）
+        ModelCatalog.all.forEach { spec ->
+            val chatIds = spec.models.filter { Capability.CHAT in it.capabilities }.map { it.id }.toSet()
+            spec.chatPreset?.let { preset ->
+                assertEquals("厂商 ${spec.id} preset.id 应与 spec.id 一致", spec.id, preset.id)
+                if (chatIds.isNotEmpty()) {
+                    assertEquals(
+                        "厂商 ${spec.id} 聊天双清单漂移",
+                        chatIds,
+                        preset.models.map { it.name }.toSet(),
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `协议路由工厂 - 异步任务型路由到 Task 适配器`() {
+        val provider = ModelCatalog.dashscope
+        val keys = com.leo.libs.agent.InMemoryApiKeyStore()
+        val task = ImageModel.of(provider, "aitryon-plus", keys)
+        assertTrue(task is DashScopeTaskImageModel)
+        val sync = ImageModel.of(provider, "qwen-image-edit-plus", keys)
+        assertTrue(sync is OkHttpImageModel)
+        val unknown = ImageModel.of(provider, "不存在模型", keys)
+        assertTrue(unknown is OkHttpImageModel)
     }
 }

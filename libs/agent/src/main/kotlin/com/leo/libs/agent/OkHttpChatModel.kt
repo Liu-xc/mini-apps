@@ -4,6 +4,7 @@ import com.leo.libs.agent.internal.SseDecoder
 import com.leo.libs.agent.internal.StreamAssembler
 import com.leo.libs.agent.internal.WireChatRequest
 import com.leo.libs.agent.internal.WireChatResponse
+import com.leo.libs.agent.internal.await
 import com.leo.libs.agent.internal.toCompletion
 import com.leo.libs.agent.internal.toWire
 import com.leo.libs.agent.internal.wireJson
@@ -41,11 +42,11 @@ class OkHttpChatModel(
     private val endpoint: String get() = preset.baseUrl.trimEnd('/') + "/chat/completions"
 
     override suspend fun complete(request: ChatRequest): ChatCompletion = withContext(Dispatchers.IO) {
-        // 阻塞式 execute 必须在 IO 线程——直接在 Main 上调会 NetworkOnMainThreadException
-        // （it-041 阶段 A 模拟器实测抓到，M1 单测环境未覆盖）
+        // it-081/A-3：enqueue + 取消桥接——连接/DNS/响应头阶段用户取消即断，
+        // 不再后台跑完并计费（原阻塞式 execute 仅在 SSE 逐行循环的 ensureActive 处可观察取消）
         val call = newCall(request, stream = false)
         try {
-            call.execute().use { resp ->
+            call.await().use { resp ->
                 val body = resp.body?.string().orEmpty()
                 if (!resp.isSuccessful) {
                     throw AgentError.fromHttp(resp.code, body, resp.header("Retry-After"))
@@ -60,8 +61,9 @@ class OkHttpChatModel(
     override fun stream(request: ChatRequest): Flow<ChatEvent> = flow {
         val call = newCall(request, stream = true)
         val assembler = StreamAssembler(preset.quirks)
+        var sawDone = false
         try {
-            call.execute().use { resp ->
+            call.await().use { resp ->
                 val body = resp.body ?: throw AgentError.Network(IOException("空响应体"))
                 if (!resp.isSuccessful) {
                     throw AgentError.fromHttp(resp.code, body.string(), resp.header("Retry-After"))
@@ -70,16 +72,17 @@ class OkHttpChatModel(
                 for (line in body.charStream().buffered().lineSequence()) {
                     currentCoroutineContext().ensureActive()
                     val payload = decoder.onLine(line) ?: continue
-                    if (payload == DONE) break
+                    if (payload == DONE) {
+                        sawDone = true
+                        break
+                    }
                     assembler.feed(payload).forEach { emit(it) }
                 }
                 decoder.flush()?.takeIf { it != DONE }?.let { assembler.feed(it) }
             }
-            emit(assembler.completed())
+            emit(assembler.completed(sawDone))
         } catch (e: IOException) {
             throw AgentError.Network(e)
-        } finally {
-            call.cancel()
         }
     }.flowOn(Dispatchers.IO)
 

@@ -76,9 +76,17 @@ internal class StreamAssembler(private val quirks: Quirks) {
         return events
     }
 
-    fun completed(): ChatEvent.Completed {
+    /**
+     * 流终结装配（it-081/A-4 增强）：[sawDone] = 传输层确认收到过 [DONE] 哨兵。
+     * 已收增量但既无 finish_reason 也未见 [DONE]（对端「干净」关流——移动网络切换/代理掐流）时，
+     * 半截回答按可恢复错误抛出，不再静默装配成正常完成落进会话。
+     */
+    fun completed(sawDone: Boolean = false): ChatEvent.Completed {
         if (!sawDelta && finishReason == null) {
             throw AgentError.Provider(-1, "流式响应中断且无内容")
+        }
+        if (sawDelta && finishReason == null && !sawDone) {
+            throw AgentError.Provider(-1, "流式响应中途断开（已收 ${text.length} 字），回答不完整")
         }
         val message = Message(
             role = Role.Assistant,

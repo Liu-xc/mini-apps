@@ -67,7 +67,12 @@ class FileSessionStore(private val directory: File) : SessionStore {
         if (!file.exists()) return emptyList()
         return runCatching {
             Json.decodeFromString(ListSerializer(Message.serializer()), file.readText())
-        }.getOrElse { emptyList() } // 损坏文件按空会话处理，不崩
+        }.getOrElse {
+            // it-081/A-9：损坏文件先改名隔离再按空会话处理——否则下一次 append 会以空表
+            // 覆写原文件，把「损坏」治愈成不可逆的数据丢失
+            runCatching { file.renameTo(File(directory, "${file.name}.corrupt-${System.currentTimeMillis()}")) }
+            emptyList()
+        }
     }
 
     private fun writeAtomic(file: File, list: List<Message>) {

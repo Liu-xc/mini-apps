@@ -4,16 +4,14 @@ import com.leo.libs.agent.AgentError
 import com.leo.libs.agent.ApiKeyStore
 import com.leo.libs.agent.ImageProtocol
 import com.leo.libs.agent.ProviderSpec
+import com.leo.libs.agent.internal.await
 import java.io.IOException
 import java.util.Base64
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -25,13 +23,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 
 /**
  * 同步生图传输（it-077）：一个类吃下两种同步协议——
@@ -66,8 +61,13 @@ class OkHttpImageModel(
             throw e
         } catch (e: AgentError) {
             emit(ImageGenEvent.Failed(e))
-        } catch (e: IOException) {
-            emit(ImageGenEvent.Failed(AgentError.Network(e)))
+        } catch (e: Exception) {
+            // it-081/A-7：非 IO 运行时异常（坏 base64、意外 JSON 形状）也归一为 Failed 终态，
+            // 不再以 Flow 异常击穿 collector（与 ImageGenEvent 契约「终态两种之后正常结束」对齐）
+            emit(ImageGenEvent.Failed(
+                if (e is IOException) AgentError.Network(e)
+                else AgentError.Provider(-1, "生图失败：${e.message ?: e.javaClass.simpleName}")
+            ))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -148,21 +148,8 @@ class OkHttpImageModel(
     private fun endpoint(path: String): String = provider.imageBaseUrl!!.trimEnd('/') + path
 
     /**
-     * 异步桥接（it-077 live 补修）：挂起等响应，协程取消即刻 [Call.cancel]——
-     * 此前阻塞式 execute 不响应取消，用户点「取消」后请求仍在后台跑完并计费。
+     * 挂起等响应的桥接已上收 internal HttpExt（it-081/O-4，与聊天轨共享）。
      */
-    private suspend fun Call.await(): Response = suspendCancellableCoroutine { cont ->
-        enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                cont.resume(response)
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                cont.resumeWithException(e)
-            }
-        })
-        cont.invokeOnCancellation { runCatching { cancel() } }
-    }
 
     private suspend fun postJson(url: String, body: JsonObject, key: String): JsonObject {
         val request = Request.Builder()

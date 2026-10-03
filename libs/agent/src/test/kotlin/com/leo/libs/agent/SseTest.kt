@@ -58,7 +58,7 @@ class StreamAssemblerTest {
             listOf<ChatEvent>(ChatEvent.TextDelta("你"), ChatEvent.TextDelta("好")),
             events,
         )
-        val done = a.completed() as ChatEvent.Completed
+        val done = a.completed(sawDone = true) as ChatEvent.Completed
         assertEquals("你好", done.completion.message.text)
         assertTrue(done.completion.message.toolCalls.isEmpty())
         assertEquals(Usage(), done.completion.usage)
@@ -84,9 +84,20 @@ class StreamAssemblerTest {
         val ev = a.feed("""{"choices":[{"delta":{"reasoning_content":"思考中"}}]}""")
         assertEquals(listOf<ChatEvent>(ChatEvent.ThinkingDelta("思考中")), ev)
         a.feed("""{"choices":[{"delta":{"content":"答"}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}""")
-        val done = a.completed() as ChatEvent.Completed
+        val done = a.completed(sawDone = true) as ChatEvent.Completed
         assertEquals(Usage(10, 5, 15), done.completion.usage)
         assertEquals("答", done.completion.message.text)
+    }
+
+    @Test fun `中途断开无 finish_reason 无 DONE - 按可恢复错误抛出`() {
+        val a = StreamAssembler(quirks)
+        a.feed("""{"choices":[{"delta":{"content":"半截"}}]}""")
+        try {
+            a.completed()
+            fail("应抛 AgentError.Provider")
+        } catch (e: com.leo.libs.agent.AgentError.Provider) {
+            assertTrue(e.message!!.contains("中途断开"))
+        }
     }
 
     @Test fun `reasoningField 关闭时忽略推理字段`() {

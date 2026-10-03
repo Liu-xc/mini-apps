@@ -3,6 +3,7 @@ package com.leo.libs.agent.image
 import com.leo.libs.agent.AgentError
 import com.leo.libs.agent.ApiKeyStore
 import com.leo.libs.agent.ProviderSpec
+import com.leo.libs.agent.internal.await
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -18,9 +19,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -64,8 +62,12 @@ class DashScopeTaskImageModel(
             throw e
         } catch (e: AgentError) {
             emit(ImageGenEvent.Failed(e))
-        } catch (e: IOException) {
-            emit(ImageGenEvent.Failed(AgentError.Network(e)))
+        } catch (e: Exception) {
+            // it-081/A-7：运行时异常归一为 Failed 终态，不再击穿 collector
+            emit(ImageGenEvent.Failed(
+                if (e is IOException) AgentError.Network(e)
+                else AgentError.Provider(-1, "生图失败：${e.message ?: e.javaClass.simpleName}")
+            ))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -148,19 +150,7 @@ class DashScopeTaskImageModel(
         }.getOrElse { e -> throw if (e is AgentError) e else AgentError.Network(e as? IOException ?: IOException(e)) }
     }
 
-    /** 异步桥接（it-077 live 补修）：协程取消即刻取消 HTTP 请求，同 OkHttpImageModel */
-    private suspend fun Call.await(): okhttp3.Response = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-        enqueue(object : okhttp3.Callback {
-            override fun onResponse(call: Call, response: okhttp3.Response) {
-                cont.resume(response)
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                cont.resumeWithException(e)
-            }
-        })
-        cont.invokeOnCancellation { runCatching { cancel() } }
-    }
+    /** 异步桥接已上收 internal HttpExt（it-081/O-4，与聊天轨/同步适配器共享） */
 
     private suspend fun execute(request: Request): JsonObject = runCatching {
         client.newCall(request).await().use { resp ->
